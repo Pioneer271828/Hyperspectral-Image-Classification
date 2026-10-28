@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。",
+  "modules": [
+    {"id": "baseline", "paths": ["smoke_test.py", "scripts/validate_baseline.py", "docs/migration/baseline-source.json"], "tests": ["tests/test_interaction_modules.py", "smoke_test.py"], "depends_on": []},
+    {"id": "C0", "paths": ["model/interaction_config.py", "model/checkpoint_io.py", "interaction_ablation_presets.py", "run_paper_ablation.py"], "extension": "配置校验、运行身份、消融登记", "depends_on": ["baseline"]},
+    {"id": "C1", "paths": ["loadData/"], "extension": "数据登记、固定/空间划分及访问协议", "depends_on": ["C0"]},
+    {"id": "M2", "paths": ["model/variable_channel_adapter.py"], "depends_on": ["C0"]},
+    {"id": "M3", "paths": ["model/learnable_superpixel_graph.py", "createGraph/"], "depends_on": ["C1", "M2"]},
+    {"id": "M5", "paths": ["model/VCASAHGCN.py", "model/SAHGCN.py"], "depends_on": ["M2", "M3"]},
+    {"id": "M8", "paths": ["model/VCASAHGCN.py", "model/checkpoint_io.py"], "depends_on": ["M5"]},
+    {"id": "E0", "paths": ["model/utils.py", "export_interaction_diagnostics.py"], "depends_on": ["M8"]},
+    {"id": "M6", "paths": ["model/region_pixel_alignment.py", "model/cross_branch_interaction.py"], "depends_on": ["M5", "E0"]},
+    {"id": "M7", "paths": ["model/graph_edge_update.py"], "depends_on": ["M6"]},
+    {"id": "M4", "paths": [], "extension": "区域表示与像素残差分工", "depends_on": ["M3", "M5", "E0"]},
+    {"id": "M1", "paths": [], "extension": "真实波段子集与元数据同步", "depends_on": ["C1", "M2"]},
+    {"id": "E1", "paths": [], "extension": "覆盖度描述与调制", "depends_on": ["M1", "E0"]},
+    {"id": "E4a", "paths": [], "extension": "语义映射、固定预算适配及留出协议", "depends_on": ["C1", "M8", "E0"]}
+  ],
+  "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
+  "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
+}

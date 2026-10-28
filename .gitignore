@@ -39,6 +39,8 @@ Thumbs.db
 /experiments/
 /results/
 /logs/
+/runs/
+*.bundle
 /tmp/
 /_*/
 /audit_outputs/
