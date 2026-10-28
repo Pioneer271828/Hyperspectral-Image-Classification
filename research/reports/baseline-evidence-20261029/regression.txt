@@ -1,0 +1,23 @@
+test_dense_sparse_pool_and_empty_region (test_interaction_modules.AlignmentTests.test_dense_sparse_pool_and_empty_region) ... ok
+test_global_control_is_independent_of_correspondence (test_interaction_modules.AlignmentTests.test_global_control_is_independent_of_correspondence) ... ok
+test_soft_assignment_gradient_and_constant_preservation (test_interaction_modules.AlignmentTests.test_soft_assignment_gradient_and_constant_preservation) ... ok
+test_all_presets_static_learned_variable_bands_backward (test_interaction_modules.BackboneTests.test_all_presets_static_learned_variable_bands_backward) ... ok
+test_checkpoint_roundtrip_and_legacy_loading (test_interaction_modules.BackboneTests.test_checkpoint_roundtrip_and_legacy_loading) ... ok
+test_default_keys_and_initialization_preserved (test_interaction_modules.BackboneTests.test_default_keys_and_initialization_preserved) ... ok
+test_single_dataset_wrapper_and_domainbn (test_interaction_modules.BackboneTests.test_single_dataset_wrapper_and_domainbn) ... ok
+test_zero_interaction_matches_original_forward (test_interaction_modules.BackboneTests.test_zero_interaction_matches_original_forward) ... ok
+test_invalid_weights_rejected (test_interaction_modules.EdgeUpdateTests.test_invalid_weights_rejected) ... ok
+test_isolated_nodes_and_zero_mix (test_interaction_modules.EdgeUpdateTests.test_isolated_nodes_and_zero_mix) ... ok
+test_sparse_support_normalization_and_gradients (test_interaction_modules.EdgeUpdateTests.test_sparse_support_normalization_and_gradients) ... ok
+test_chunked_checkpoint_matches_outputs_and_gradients (test_interaction_modules.InteractionTests.test_chunked_checkpoint_matches_outputs_and_gradients) ... ok
+test_direction_and_gate_gradients (test_interaction_modules.InteractionTests.test_direction_and_gate_gradients) ... ok
+test_none_and_zero_strength_are_identity (test_interaction_modules.InteractionTests.test_none_and_zero_strength_are_identity) ... ok
+test_cli_prefix_and_presets (test_interaction_modules.PipelineTests.test_cli_prefix_and_presets) ... ok
+test_fixed_count_splits_are_disjoint (test_interaction_modules.PipelineTests.test_fixed_count_splits_are_disjoint) ... ok
+test_recorded_dataset_seed_survives_skipped_domains (test_interaction_modules.PipelineTests.test_recorded_dataset_seed_survives_skipped_domains) ... ok
+test_synthetic_train_save_reload_and_export (test_interaction_modules.PipelineTests.test_synthetic_train_save_reload_and_export) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 4.682s
+
+OK
