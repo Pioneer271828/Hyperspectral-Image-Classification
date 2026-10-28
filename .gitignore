@@ -1,0 +1,56 @@
+# Python and environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+
+# Editors and local configuration
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Datasets, checkpoints and generated arrays
+/dataset/*
+!/dataset/README.md
+/weights/
+*.pt
+*.pth
+*.ckpt
+*.mat
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# Experiment outputs and temporary working files
+/experiments/
+/results/
+/logs/
+/tmp/
+/_*/
+/audit_outputs/
+/results_honghu_replacement/
+/figures_honghu_replacement/
+/dataset_cube_figures/
+/paper_*figures/
+/paper_*maps/
+/paper_vca_visualizations/
+*.log
+
+# Generated presentations and documents
+*.pptx
+*.docx
+*.xlsx
