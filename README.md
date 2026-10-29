@@ -14,7 +14,7 @@
 - [C0 交付报告与验收边界](research/reports/C0_配置与实验记录模块交付_2026-10-29.md)
 - [C1b 空间访问契约与使用边界](docs/guides/spatial-protocol.md)、[验证报告](research/reports/C1b_空间访问契约_20261029.md)
 - [C1c 严格多块训练入口](docs/guides/spatial-training.md)、[两步闭环验收报告](research/reports/C1c_严格空间训练闭环_20261029.md)
-- [M2 VCA 元数据、坏波段与缓存契约](docs/guides/vca.md)
+- [M2 VCA 元数据、坏波段与缓存契约](docs/guides/vca.md)、[GPU 验收报告](research/reports/M2_VCA接口与缓存回归_20261029.md)
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
 
