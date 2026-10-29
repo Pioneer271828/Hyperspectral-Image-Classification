@@ -1,6 +1,6 @@
 # E0a：冻结预测的确定性评估基础
 
-当前是待远程验收的候选实现。用户要求容器恢复前继续开发，所有代码执行/依赖安装/检查/测试仍只允许在 `ssh rmvision` 训练容器；本轮没有运行本文件的命令。M8 上游也待验收，不能把它当作已验证依赖。
+本模块最初在容器不可用时实现，当前恢复远程验收。所有代码执行/依赖安装/检查/测试仍只允许在 `ssh rmvision` 训练容器。M8 上游已通过验收，入口继续要求其成功 manifest 与匹配源码；本模块实际结果以交付报告为准。
 
 E0 拆分为 E0a 指标/空间/分支/稀疏图摘要与冻结导出，E0b 再做敏感度、遮挡、区域替换、删边干预、成本 profiling 与成组统计。小目标/细窄结构的预声明定义和干预实验后续单独验收。本轮不修改训练、损失、采样、选模或已有导出器。
 
@@ -55,9 +55,12 @@ python export_research_diagnostics.py \
 OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_e0a.py \
   --expected-commit <E0a实际完整SHA> \
   --m8-manifest <成功的M8验收manifest.json> \
+  --real-data-root /home/train/hsi-pioneer271828/datasets/current \
   --out-dir /home/train/hsi-pioneer271828/runs/e0a-validation-<唯一批次>
 ```
 
-候选包含13项新测试，预计全量98项（已验收78 + M8待验收7 + E0a待验收13）。入口会跑全量测试、CPU/CUDA smoke 和冻结 fixture CLI；fixture checkpoint 是明确标识的字节文件，不是真实模型，没有分类结论。真实冻结预测另按上面的导出入口核对，不能以 fixture 代替真实研究验收。
+包含13项针对性测试，预计全量98项（上游85 + E0a13）。入口会跑全量测试、CPU/CUDA smoke 和冻结 fixture CLI；fixture checkpoint 是明确标识的字节文件，不是真实模型，没有分类结论。
 
-本轮未执行任何测试、静态检查或导出，没有验收标签、真实数据结果或速度/精度主张。E0b 的模型干预与多次实验配对统计后续单独实施，不把相邻像素当作独立重复。
+指定 `--real-data-root` 时，从成功 M8 manifest 的 default 训练 attempt 读取实际 checkpoint，核查 C0 产物指纹、原始数据、plan/statistics 和保存配置；只在原 test 块推理，冻结三路预测和 eval mask。用独立导出器生成报告，与已验收 M8 的完整混淆矩阵及 OA/AA_supported/Kappa 核对，并用 sklearn 核对支持类 macro-F1。参数/缓冲和输入产物前后须不变，没有新的优化步骤。额外捕获首个 test 块的初始稀疏图单独报告，不能当作整景图摘要。
+
+真实冻结预测的来源代码为本次实际完整 SHA，checkpoint 权重来自 M8 验证选模结果，二者分别记录。输入指纹与保存配置一致才能继续；不重新拟合统计、改测试划分或根据指标选模型。这是评价链路核对，E0b 的模型干预与多次实验配对统计后续单独实施，不把相邻像素当作独立重复。
