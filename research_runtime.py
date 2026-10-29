@@ -169,6 +169,15 @@ class RunRecord:
         self.manifest["budget"] = {**self.config.budget, "steps_per_epoch": steps,
                                    "optimizer_steps": (self.config.training.epochs + 1) * steps}
         self.save()
+        self._verify_previous()
+
+    def record_protocol_data(self, fingerprints):
+        """Allow protocol adapters to record raw data/geometry identities without legacy masks."""
+        self.manifest["prepared_data"] = fingerprints
+        self.save()
+        self._verify_previous()
+
+    def _verify_previous(self):
         if self.previous:
             directory, prior = self.previous
             if self.manifest["prepared_data"] != prior["prepared_data"]:

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "name": "paviau_spatial_smoke",
+  "dataset": "paviaU",
+  "device": "cpu",
+  "model": {"graph_mode": "learned", "latent_channels": 8, "adapter_embed_dim": 8, "norm_type": "group_norm"},
+  "training": {"epochs": 0, "steps_per_epoch": 2, "val_interval": 1, "seed": 2026, "primary_checkpoint": "val_loss"},
+  "tile_size": 32,
+  "gap": 2,
+  "split_seed": 2026
+}
