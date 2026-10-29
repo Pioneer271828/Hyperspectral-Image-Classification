@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "module": "M8",
+  "issue": 17,
+  "pr": 18,
+  "status": "pending_remote_validation",
+  "baseline_commit": "b2809302a44d1ff454004361a42d34001235616d",
+  "candidate_commit": "c092a7e6f93b80a4acaade0c42f7c998cbfeb06d",
+  "branch": "codex/issue-17-m8-fusion",
+  "candidate_pushed_to_github": true,
+  "tested_commit": null,
+  "source_hash": null,
+  "tests_executed": false,
+  "training_executed": false,
+  "planned_existing_tests": 78,
+  "planned_new_tests": 7,
+  "planned_gpu_training_steps": 6,
+  "blocking_condition": "ssh rmvision: repeated connection close, banner exchange timeout and TCP connect timeout",
+  "validation_tag_created": false,
+  "windows_execution_used": false,
+  "next_action": "Restore SSH access, synchronize the actual branch HEAD to an independent container checkout, verify the full SHA and clean worktree, then run scripts/validate_m8.py."
+}

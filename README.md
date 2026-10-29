@@ -17,7 +17,7 @@
 - [M2 VCA 元数据、坏波段与缓存契约](docs/guides/vca.md)、[GPU 验收报告](research/reports/M2_VCA接口与缓存回归_20261029.md)
 - [M3 区域图状态、无标签对照与手工注入](docs/guides/graph-state.md)、[GPU 验收报告](research/reports/M3_区域图契约与无标签对照_20261029.md)
 - [M5 两阶段骨干、图契约与消融配置](docs/guides/backbone-stages.md)、[GPU 验收报告](research/reports/M5_统一两阶段骨干与图契约接入_20261029.md)
-- [M8 固定融合、可选 logits 与损失分项](docs/guides/fusion-losses.md)
+- [M8 固定融合、可选 logits 与损失分项](docs/guides/fusion-losses.md)、[待远程验收状态](research/reports/M8_实现与待远程验收_20261029.md)：实现已推送，SSH 恢复后验收
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
 
