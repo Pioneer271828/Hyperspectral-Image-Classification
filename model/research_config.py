@@ -44,6 +44,7 @@ def _group(cls, value):
 
 @dataclass(frozen=True)
 class ModelConfig:
+    alph: float = 0.8
     latent_channels: int = 128
     adapter_embed_dim: int = 64
     wavelength_min: float = 400.0
@@ -162,6 +163,8 @@ class ResearchConfig:
         for group in (self.model, self.interaction, self.loss, self.training, self.data, self.augmentation):
             _group(type(group), asdict(group))
         m, t, d, a = self.model, self.training, self.data, self.augmentation
+        if not 0 <= m.alph <= 1:
+            raise ValueError("model.alph must be in [0,1]")
         for key in ("latent_channels", "adapter_embed_dim", "learned_assignment_dim"):
             if getattr(m, key) <= 0:
                 raise ValueError(f"model.{key} must be positive")

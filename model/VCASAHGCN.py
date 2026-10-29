@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from model.SAHGCN import HGNN_conv
 from model.learnable_superpixel_graph import LearnableSuperpixelGraph
 from model.graph_state import GraphState
+from model.branch_fusion import fixed_fusion, validate_alph
 from model.variable_channel_adapter import VariableChannelAdapter
 from model.region_pixel_alignment import RegionPixelAlignment, pool_regions, broadcast_regions
 from model.cross_branch_interaction import BidirectionalSelectiveInteraction
@@ -275,6 +276,7 @@ class VCASAHGCNBackbone(nn.Module):
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
+        validate_alph(alph)
         self.alph = alph
         self.norm_type = norm_type
         if graph_mode not in ["static", "learned"]:
@@ -452,10 +454,13 @@ class VCASAHGCNBackbone(nn.Module):
         )
         if self.interaction_config.active and return_graph_info:
             graph_info["interaction"] = interaction_info
-        fused = self.alph * cnn_result + (1.0 - self.alph) * hgnn_result
+        fused = self.fuse_features(cnn_result, hgnn_result)
         if return_graph_info:
             return fused, hgnn_result, cnn_result, graph_info
         return fused, hgnn_result, cnn_result
+
+    def fuse_features(self, cnn_features, graph_features):
+        return fixed_fusion(cnn_features, graph_features, self.alph)
 
     def cnn_stage1(self, cnn_input, dataset_name=None):
         height, width, _ = cnn_input.shape
@@ -552,6 +557,18 @@ class MultiDatasetVCASAHGCN(nn.Module):
         self.hgnn_heads[dataset_name] = nn.Linear(64, class_count)
         self.cnn_heads[dataset_name] = nn.Linear(64, class_count)
 
+    def predict_features(self, dataset_name, fused, graph_features, cnn_features, return_logits=False):
+        heads = ((self.heads[dataset_name], fused), (self.hgnn_heads[dataset_name], graph_features),
+                 (self.cnn_heads[dataset_name], cnn_features))
+        if return_logits:
+            return tuple(head(features) for head, features in heads)
+        # Keep the original per-head linear -> softmax evaluation order.
+        return tuple(F.softmax(head(features), -1) for head, features in heads)
+
+    def fuse_and_predict(self, cnn_features, graph_features, dataset_name, return_logits=False):
+        fused = self.backbone.fuse_features(cnn_features, graph_features)
+        return self.predict_features(dataset_name, fused, graph_features, cnn_features, return_logits)
+
     def forward(
         self,
         dataset_name,
@@ -564,6 +581,7 @@ class MultiDatasetVCASAHGCN(nn.Module):
         return_graph_info=False,
         return_diagnostics=False,
         graph_state=None,
+        return_logits=False,
     ):
         features = self.backbone.forward_features(
             x,
@@ -581,9 +599,7 @@ class MultiDatasetVCASAHGCN(nn.Module):
             fused, hgnn_result, cnn_result, graph_info = features
         else:
             fused, hgnn_result, cnn_result = features
-        y = F.softmax(self.heads[dataset_name](fused), -1)
-        y_hgnn = F.softmax(self.hgnn_heads[dataset_name](hgnn_result), -1)
-        y_cnn = F.softmax(self.cnn_heads[dataset_name](cnn_result), -1)
+        y, y_hgnn, y_cnn = self.predict_features(dataset_name, fused, hgnn_result, cnn_result, return_logits)
         if return_graph_info:
             return y, y_hgnn, y_cnn, graph_info
         return y, y_hgnn, y_cnn
@@ -644,7 +660,7 @@ class VCASAHGCN(nn.Module):
             **adapter_kwargs,
         )
 
-    def forward(self, x, return_graph_info=False, return_diagnostics=False, graph_state=None):
+    def forward(self, x, return_graph_info=False, return_diagnostics=False, graph_state=None, return_logits=False):
         wavelengths = self.wavelengths if hasattr(self, "wavelengths") else None
         fwhm = self.fwhm if hasattr(self, "fwhm") else None
         return self.model(
@@ -658,4 +674,5 @@ class VCASAHGCN(nn.Module):
             return_graph_info=return_graph_info,
             return_diagnostics=return_diagnostics,
             graph_state=graph_state,
+            return_logits=return_logits,
         )
