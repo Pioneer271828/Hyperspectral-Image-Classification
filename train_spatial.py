@@ -17,6 +17,7 @@ from loadData.spatial_protocol import forward_partition
 from loadData.spatial_tiles import make_tile_plan, validate_tile_plan, fit_tile_statistics, observe_tile, tile_slice, tile_coverage
 from research_runtime import (RunRecord, AlreadyCompleted, code_snapshot, require_frozen_code, tensor_hash, write_json)
 from train_vca_multidataset import supervised_loss
+from model.task_losses import detached_loss_values
 
 class SpatialConfig:
     """Separate explicit schema; unused legacy data/augmentation switches cannot enter silently."""
@@ -101,8 +102,9 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None):
                                 {'params':heads,'lr':cfg.training.head_lr}],weight_decay=cfg.training.weight_decay)
     scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=.5,patience=20)
     rng=np.random.default_rng(cfg.training.seed)
-    history=[];best=None;updates=0
+    history=[];loss_history=[];best=None;updates=0
     for epoch in range(cfg.training.epochs+1):
+        component_sums={}
         for _ in range(cfg.training.steps_per_epoch):
             tile=train_tiles[int(rng.integers(len(train_tiles)))];obs=observe_tile(cube,plan,stats,tile)
             model.train();optimizer.zero_grad()
@@ -110,13 +112,17 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None):
             local=torch.as_tensor(np.array(labels[tile_slice(tile)],copy=True).reshape(-1),device=cfg.device,dtype=torch.long)
             mask=(local>0)[:,None].expand(-1,classes)
             onehot=torch.nn.functional.one_hot((local-1).clamp_min(0),classes).float()*mask
-            loss=supervised_loss(outputs,{'train_gt_onehot':onehot,'train_label_mask':mask.float()},'train',
+            components=supervised_loss(outputs,{'train_gt_onehot':onehot,'train_label_mask':mask.float()},'train',
                 class_balance=cfg.loss.balanced,cnn_loss_weight=cfg.loss.cnn_loss_weight,
                 graph_branch_loss_weight=cfg.loss.graph_branch_loss_weight,
                 graph_loss_weights={'compactness':cfg.loss.graph_compactness_weight,
-                    'entropy':cfg.loss.graph_entropy_weight,'balance':cfg.loss.graph_balance_weight})
+                    'entropy':cfg.loss.graph_entropy_weight,'balance':cfg.loss.graph_balance_weight},return_components=True)
+            loss=components['total']
             if not torch.isfinite(loss):raise ValueError('Nonfinite loss')
             loss.backward();optimizer.step();updates+=1
+            for key,value in detached_loss_values(components).items():component_sums[key]=component_sums.get(key,0.)+value
+        loss_history.append({'epoch':epoch,'optimizer_steps':updates,'mean_per_step':
+                             {key:value/cfg.training.steps_per_epoch for key,value in component_sums.items()}})
         if epoch%cfg.training.val_interval==0 or epoch==cfg.training.epochs:
             val=evaluate(model,cube,labels,plan,stats,'val',dataset,classes,wave,scale)
             scheduler.step(val['nll'])
@@ -129,7 +135,7 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None):
     # First semantic test-label access for evaluation occurs after checkpoint selection.
     test=evaluate(selected,cube,labels,plan,stats,'test',dataset,classes,wave,scale)
     result={'schema_version':1,'protocol':'spatial_tiles_v1','run_id':record.run_id,'optimizer_steps':updates,
-            'selection':cfg.training.primary_checkpoint,'history':history,'test':test,
+            'selection':cfg.training.primary_checkpoint,'history':history,'loss_component_history':loss_history,'test':test,
             'coverage':tile_coverage(labels,plan,classes),'plan_hash':plan['plan_hash'],
             'statistics_hash':stats['statistics_hash'],'scope':'independent block contexts; not scene-wide inference'}
     write_json(record.metrics_path,result)

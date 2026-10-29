@@ -12,6 +12,7 @@ from model import VCASAHGCN, utils
 from model.interaction_config import add_interaction_arguments, interaction_kwargs, InteractionConfig
 from model.checkpoint_io import save_model_checkpoint
 from model.research_config import ResearchConfig
+from model.task_losses import probability_loss_components, detached_loss_values
 
 try:
     from tqdm.auto import tqdm
@@ -293,24 +294,13 @@ def make_train_input(
 
 
 def supervised_loss(outputs, item, split, class_balance=False, graph_loss_weights=None,
-                    cnn_loss_weight=1.0, graph_branch_loss_weight=1.0):
-    y, y_hgnn, y_cnn = outputs[:3]
+                    cnn_loss_weight=1.0, graph_branch_loss_weight=1.0, return_components=False):
     onehot = item["{}_gt_onehot".format(split)]
     mask = item["{}_label_mask".format(split)]
-    loss = (
-        utils.compute_loss(y, onehot, mask, class_balance=class_balance)
-        + graph_branch_loss_weight * utils.compute_loss(y_hgnn, onehot, mask, class_balance=class_balance)
-        + cnn_loss_weight * utils.compute_loss(y_cnn, onehot, mask, class_balance=class_balance)
-    )
-    if len(outputs) > 3 and graph_loss_weights is not None:
-        graph_info = outputs[3]
-        loss = (
-            loss
-            + graph_loss_weights["compactness"] * graph_info.get("compactness_loss", 0.0)
-            + graph_loss_weights["entropy"] * graph_info.get("assignment_entropy_loss", 0.0)
-            + graph_loss_weights["balance"] * graph_info.get("assignment_balance_loss", 0.0)
-        )
-    return loss
+    components = probability_loss_components(outputs, onehot, mask, class_balance=class_balance,
+        graph_loss_weights=graph_loss_weights, cnn_loss_weight=cnn_loss_weight,
+        graph_branch_loss_weight=graph_branch_loss_weight)
+    return components if return_components else components['total']
 
 
 def apply_stable_preset(args):
@@ -373,6 +363,7 @@ def evaluate_split(model, datasets, split):
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Multi-dataset VCA-SAHGCN training")
+    parser.add_argument("--alph", type=float, default=0.8, help="Fixed CNN fusion coefficient in [0,1]")
     add_interaction_arguments(parser)
     parser.add_argument("--cnn-loss-weight", type=float, default=1.0)
     parser.add_argument("--graph-branch-loss-weight", type=float, default=1.0)
@@ -577,9 +568,11 @@ def train(args, run_record=None):
         desc="epochs",
         dynamic_ncols=True,
     )
+    loss_component_history = []
     for epoch in epoch_iter:
         model.train()
         running_loss = 0.0
+        component_sums = {}
         sampled_names = rng.choice(names, size=steps_per_epoch, replace=True)
         step_iter = make_progress(
             sampled_names,
@@ -609,7 +602,7 @@ def train(args, run_record=None):
                 superpixel_scale=item["superpixel_scale"],
                 return_graph_info=args.graph_mode == "learned" or interaction_config.active,
             )
-            loss = supervised_loss(
+            components = supervised_loss(
                 outputs,
                 item,
                 "train",
@@ -621,12 +614,18 @@ def train(args, run_record=None):
                     "entropy": args.graph_entropy_weight,
                     "balance": args.graph_balance_weight,
                 },
+                return_components=True,
             )
+            loss = components['total']
             loss.backward()
             optimizer.step()
             running_loss += float(loss.detach().cpu())
+            for key, value in detached_loss_values(components).items():
+                component_sums[key] = component_sums.get(key, 0.0) + value
 
         avg_train_loss = running_loss / steps_per_epoch
+        loss_component_history.append({'epoch': epoch, 'mean_per_step':
+                                       {key: value / steps_per_epoch for key, value in component_sums.items()}})
         should_validate = (epoch % args.val_interval == 0) or (epoch == args.epochs)
         val_loss = None
         macro_oa = None
@@ -781,6 +780,7 @@ def train(args, run_record=None):
             "model_config": model.export_config(),
             "parameter_count": sum(parameter.numel() for parameter in model.parameters()),
             "interaction_diagnostics": interaction_diagnostics,
+            "loss_component_history": loss_component_history,
             "datasets": names,
             "seed": args.seed,
             "config": {
