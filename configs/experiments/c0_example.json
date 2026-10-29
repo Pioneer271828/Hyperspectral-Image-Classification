@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "name": "c0_paviau_plan",
+  "device": "cpu",
+  "model": {
+    "graph_mode": "learned",
+    "latent_channels": 64,
+    "adapter_embed_dim": 32,
+    "adapter_chunk_pixels": 32768,
+    "norm_type": "domain_bn"
+  },
+  "interaction": {},
+  "loss": {},
+  "training": {"epochs": 500, "steps_per_epoch": 3, "seed": 2026, "val_interval": 10},
+  "data": {"datasets": ["paviaU"], "protocol": "legacy_random_pixel"},
+  "augmentation": {}
+}

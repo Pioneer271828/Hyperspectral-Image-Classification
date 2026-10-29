@@ -6,10 +6,12 @@
 
 ## 模块化搭建入口
 
-以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。当前先固定工程基线，随后进行 C0 配置与运行记录。
+以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。基线与 C0 已完成工程验收，下一步建议 C1 数据与划分协议。
 
 - [基线来源与指纹](docs/migration/source-inventory.md)、[本次模块报告](research/reports/baseline_2026-10-29.md)
 - [远程测试与同步指南](docs/guides/remote-validation.md)
+- [C0 配置、运行记录与消融清单](docs/guides/c0-experiments.md)：先 dry-run，按相同身份验证跳过或保留失败重试
+- [C0 交付报告与验收边界](research/reports/C0_配置与实验记录模块交付_2026-10-29.md)
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
 
