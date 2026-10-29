@@ -6,7 +6,7 @@
 
 ## 模块化搭建入口
 
-以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。基线与 C0 已完成工程验收，下一步建议 C1 数据与划分协议。
+以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。基线、C0 和 C1 的工程验收见下列报告；当前 M2 整理 VCA 接口与缓存回归，正式精度实验分别验收。
 
 - [基线来源与指纹](docs/migration/source-inventory.md)、[本次模块报告](research/reports/baseline_2026-10-29.md)
 - [远程测试与同步指南](docs/guides/remote-validation.md)
@@ -14,6 +14,7 @@
 - [C0 交付报告与验收边界](research/reports/C0_配置与实验记录模块交付_2026-10-29.md)
 - [C1b 空间访问契约与使用边界](docs/guides/spatial-protocol.md)、[验证报告](research/reports/C1b_空间访问契约_20261029.md)
 - [C1c 严格多块训练入口](docs/guides/spatial-training.md)、[两步闭环验收报告](research/reports/C1c_严格空间训练闭环_20261029.md)
+- [M2 VCA 元数据、坏波段与缓存契约](docs/guides/vca.md)、[GPU 验收报告](research/reports/M2_VCA接口与缓存回归_20261029.md)
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
 
