@@ -6,7 +6,7 @@
 
 ## 模块化搭建入口
 
-以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。基线、C0、C1、M2 和 M3 的工程验收见下列报告，正式精度实验分别验收；下一模块为 M5 两阶段骨干接口整理。
+以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。基线、C0、C1、M2、M3 和 M5 的工程验收见下列报告，正式精度实验分别验收；下一模块为 M8 融合、分类头与损失契约。
 
 - [基线来源与指纹](docs/migration/source-inventory.md)、[本次模块报告](research/reports/baseline_2026-10-29.md)
 - [远程测试与同步指南](docs/guides/remote-validation.md)
@@ -16,7 +16,7 @@
 - [C1c 严格多块训练入口](docs/guides/spatial-training.md)、[两步闭环验收报告](research/reports/C1c_严格空间训练闭环_20261029.md)
 - [M2 VCA 元数据、坏波段与缓存契约](docs/guides/vca.md)、[GPU 验收报告](research/reports/M2_VCA接口与缓存回归_20261029.md)
 - [M3 区域图状态、无标签对照与手工注入](docs/guides/graph-state.md)、[GPU 验收报告](research/reports/M3_区域图契约与无标签对照_20261029.md)
-- [M5 两阶段骨干、图契约与消融配置](docs/guides/backbone-stages.md)
+- [M5 两阶段骨干、图契约与消融配置](docs/guides/backbone-stages.md)、[GPU 验收报告](research/reports/M5_统一两阶段骨干与图契约接入_20261029.md)
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
 
