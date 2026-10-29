@@ -393,6 +393,8 @@ def build_parser():
     parser.add_argument("--graph-mode", type=str, default="static", choices=["static", "learned"],
                         help="Use precomputed LDA-SLIC graphs or learn sparse assignments and graphs end to end.")
     parser.add_argument("--learned-assignment-dim", type=int, default=32)
+    parser.add_argument("--graph-assignment-mode", default="learned", choices=["learned", "fixed_grid"])
+    parser.add_argument("--graph-adjacency-mode", default="learned", choices=["learned", "fixed_local"])
     parser.add_argument("--learned-assignment-radius", type=int, default=1)
     parser.add_argument("--learned-graph-radius", type=int, default=1)
     parser.add_argument("--learned-assignment-temperature", type=float, default=1.0)
@@ -798,6 +800,8 @@ def train(args, run_record=None):
                 "locality_window": args.locality_window,
                 "norm_type": args.norm_type,
                 "graph_mode": args.graph_mode,
+                "graph_assignment_mode": args.graph_assignment_mode,
+                "graph_adjacency_mode": args.graph_adjacency_mode,
                 "learned_assignment_dim": args.learned_assignment_dim,
                 "learned_assignment_radius": args.learned_assignment_radius,
                 "learned_graph_radius": args.learned_graph_radius,

@@ -61,6 +61,8 @@ class ModelConfig:
     learned_assignment_temperature: float = 1.0
     learned_assignment_spatial_sigma: float = 1.0
     learned_graph_spatial_sigma: float = 1.5
+    graph_assignment_mode: str = "learned"
+    graph_adjacency_mode: str = "learned"
 
 
 @dataclass(frozen=True)
@@ -179,6 +181,10 @@ class ResearchConfig:
                    (d.protocol, ("legacy_random_pixel",))]
         if any(v not in allowed for v, allowed in choices):
             raise ValueError("Unknown model, selection or data protocol mode")
+        if m.graph_assignment_mode not in ("learned", "fixed_grid") or m.graph_adjacency_mode not in ("learned", "fixed_local"):
+            raise ValueError("Unknown graph assignment/adjacency mode")
+        if m.graph_mode == "static" and (m.graph_assignment_mode != "learned" or m.graph_adjacency_mode != "learned"):
+            raise ValueError("Graph builder controls require graph_mode=learned")
         if t.eval_checkpoint not in ("primary", "last", "val_loss", "macro_oa", *d.datasets):
             raise ValueError("Invalid eval_checkpoint")
         if t.epochs < 0 or t.steps_per_epoch < 0 or not 0 <= t.seed < 2 ** 32 or t.val_interval <= 0:
