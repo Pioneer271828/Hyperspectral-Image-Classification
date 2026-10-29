@@ -6,6 +6,7 @@ import torch.nn.functional as F
 
 from model.SAHGCN import HGNN_conv
 from model.learnable_superpixel_graph import LearnableSuperpixelGraph
+from model.graph_state import GraphState
 from model.variable_channel_adapter import VariableChannelAdapter
 from model.region_pixel_alignment import RegionPixelAlignment, pool_regions, broadcast_regions
 from model.cross_branch_interaction import BidirectionalSelectiveInteraction
@@ -269,6 +270,8 @@ class VCASAHGCNBackbone(nn.Module):
         graph_update_mode="none",
         graph_update_dim=32,
         graph_update_mix=0.5,
+        graph_assignment_mode="learned",
+        graph_adjacency_mode="learned",
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
@@ -277,6 +280,12 @@ class VCASAHGCNBackbone(nn.Module):
         if graph_mode not in ["static", "learned"]:
             raise ValueError("graph_mode must be one of: static, learned")
         self.graph_mode = graph_mode
+        if graph_assignment_mode not in ("learned", "fixed_grid") or graph_adjacency_mode not in ("learned", "fixed_local"):
+            raise ValueError("Unknown graph assignment/adjacency mode")
+        if graph_mode == "static" and (graph_assignment_mode != "learned" or graph_adjacency_mode != "learned"):
+            raise ValueError("Graph builder controls require graph_mode=learned")
+        self.graph_assignment_mode = graph_assignment_mode
+        self.graph_adjacency_mode = graph_adjacency_mode
         self.interaction_config = InteractionConfig(**interaction_kwargs(locals()))
         self.dataset_names = _safe_dataset_names(dataset_names)
         self.adapter = VariableChannelAdapter(
@@ -406,9 +415,15 @@ class VCASAHGCNBackbone(nn.Module):
         superpixel_scale=100,
         return_graph_info=False,
         return_diagnostics=False,
+        graph_state=None,
     ):
         if return_diagnostics and not return_graph_info:
             raise ValueError("return_diagnostics requires return_graph_info=True")
+        if graph_state is not None:
+            if Q is not None or A is not None:
+                raise ValueError("Pass graph_state or Q/A, not both")
+            if not isinstance(graph_state, GraphState):
+                raise ValueError("graph_state must be GraphState")
         height, width, _ = x.shape
         spectral_x, extra_x = self._split_spectral_extra(x, wavelengths)
         latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm)
@@ -420,33 +435,61 @@ class VCASAHGCNBackbone(nn.Module):
         clean_x = torch.squeeze(noise, 0).permute([1, 2, 0])
 
         graph_info = {}
-        if self.graph_mode == "learned":
-            Q, A, graph_info = self.learnable_graph(clean_x, superpixel_scale)
+        if graph_state is not None:
+            Q, A, graph_info = graph_state.validate(clean_x).to_legacy()
+        elif self.graph_mode == "learned":
+            state = self.learnable_graph.build_graph(
+                clean_x, superpixel_scale, assignment_mode=self.graph_assignment_mode,
+                adjacency_mode=self.graph_adjacency_mode,
+            )
+            Q, A, graph_info = state.to_legacy()
         elif Q is None or A is None:
             raise ValueError("static graph mode requires Q and A")
 
-        if self.interaction_config.active:
-            cnn_result, hgnn_result, interaction_info = self._interactive_features(
-                clean_x, Q, A, dataset_name, return_graph_info, return_diagnostics,
-            )
-            if return_graph_info:
-                graph_info["interaction"] = interaction_info
-        else:
-            cnn_result = torch.unsqueeze(clean_x.permute([2, 0, 1]), 0)
-            for block in self.CNN_Branch:
-                cnn_result = block(cnn_result, dataset_name)
-            cnn_result = torch.squeeze(cnn_result, 0).permute([1, 2, 0]).reshape([height * width, -1])
-            hgnn_result = self.HGNN_Branch(clean_x, Q, A, dataset_name=dataset_name)
+        region_input = pool_regions(Q, clean_x.reshape(height * width, 64))
+        cnn_result, hgnn_result, interaction_info = self.forward_stages(
+            clean_x, region_input, Q, A, dataset_name, return_graph_info, return_diagnostics,
+        )
+        if self.interaction_config.active and return_graph_info:
+            graph_info["interaction"] = interaction_info
         fused = self.alph * cnn_result + (1.0 - self.alph) * hgnn_result
         if return_graph_info:
             return fused, hgnn_result, cnn_result, graph_info
         return fused, hgnn_result, cnn_result
 
-    def _interactive_features(self, x, Q, A, dataset_name, collect_stats, return_diagnostics):
-        height, width, channels = x.shape
-        cnn = self.CNN_Branch[0](x.permute(2, 0, 1).unsqueeze(0), dataset_name)
-        pixels = cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 128)
-        regions = self.HGNN_Branch.forward_stage1(pool_regions(Q, x.reshape(-1, channels)), A, dataset_name)
+    def cnn_stage1(self, cnn_input, dataset_name=None):
+        height, width, _ = cnn_input.shape
+        cnn = self.CNN_Branch[0](cnn_input.permute(2, 0, 1).unsqueeze(0), dataset_name)
+        return cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 128)
+
+    def cnn_stage2(self, pixels, image_shape, dataset_name=None):
+        height, width = image_shape
+        cnn = pixels.reshape(height, width, 128).permute(2, 0, 1).unsqueeze(0)
+        cnn = self.CNN_Branch[1](cnn, dataset_name)
+        return cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 64)
+
+    def graph_stage1(self, region_input, adjacency, dataset_name=None):
+        return self.HGNN_Branch.forward_stage1(region_input, adjacency, dataset_name)
+
+    def graph_stage2(self, regions, adjacency, dataset_name=None):
+        return self.HGNN_Branch.forward_stage2(regions, adjacency, dataset_name)
+
+    def forward_stages(self, cnn_input, region_input, Q, A, dataset_name=None,
+                       collect_stats=False, return_diagnostics=False):
+        """One schedule: stage1 -> optional messages/edges -> stage2.
+
+        CNN input [H,W,64] and region input [M,64] are independent arguments,
+        so future CNN-only transforms can be applied before this dispatcher.
+        Q maps the same H*W pixels to M regions; A is the initial region graph.
+        """
+        if (cnn_input.ndim != 3 or cnn_input.shape[-1] != 64 or min(cnn_input.shape[:2]) <= 0
+                or region_input.ndim != 2 or region_input.shape[1] != 64):
+            raise ValueError("Stage inputs must be nonempty [H,W,64] and [M,64]")
+        height, width, _ = cnn_input.shape
+        if Q.shape != (height * width, region_input.shape[0]) or A.shape != (region_input.shape[0], region_input.shape[0]):
+            raise ValueError("Stage Q/A shapes do not match pixels/regions")
+        pixels = self.cnn_stage1(cnn_input, dataset_name)
+        regions = self.graph_stage1(region_input, A, dataset_name)
         info = {}
         if self.interaction is not None:
             # Both messages use the same pre-interaction snapshot (no update-order bias).
@@ -465,10 +508,8 @@ class VCASAHGCNBackbone(nn.Module):
             info.update(edge_info)
         if return_diagnostics and "cnn_to_graph_gate" in info:
             info["cnn_to_graph_gate_pixels"] = broadcast_regions(Q, info["cnn_to_graph_gate"]).detach()
-        cnn = pixels.reshape(height, width, 128).permute(2, 0, 1).unsqueeze(0)
-        cnn = self.CNN_Branch[1](cnn, dataset_name)
-        cnn = cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 64)
-        regions = self.HGNN_Branch.forward_stage2(regions, A, dataset_name)
+        cnn = self.cnn_stage2(pixels, (height, width), dataset_name)
+        regions = self.graph_stage2(regions, A, dataset_name)
         return cnn, broadcast_regions(Q, regions), info
 
 
@@ -522,6 +563,7 @@ class MultiDatasetVCASAHGCN(nn.Module):
         superpixel_scale=100,
         return_graph_info=False,
         return_diagnostics=False,
+        graph_state=None,
     ):
         features = self.backbone.forward_features(
             x,
@@ -533,6 +575,7 @@ class MultiDatasetVCASAHGCN(nn.Module):
             superpixel_scale=superpixel_scale,
             return_graph_info=return_graph_info,
             return_diagnostics=return_diagnostics,
+            graph_state=graph_state,
         )
         if return_graph_info:
             fused, hgnn_result, cnn_result, graph_info = features
@@ -601,17 +644,18 @@ class VCASAHGCN(nn.Module):
             **adapter_kwargs,
         )
 
-    def forward(self, x, return_graph_info=False, return_diagnostics=False):
+    def forward(self, x, return_graph_info=False, return_diagnostics=False, graph_state=None):
         wavelengths = self.wavelengths if hasattr(self, "wavelengths") else None
         fwhm = self.fwhm if hasattr(self, "fwhm") else None
         return self.model(
             "default",
             x,
-            self.Q,
-            self.A,
+            self.Q if graph_state is None else None,
+            self.A if graph_state is None else None,
             wavelengths=wavelengths,
             fwhm=fwhm,
             superpixel_scale=self.superpixel_scale,
             return_graph_info=return_graph_info,
             return_diagnostics=return_diagnostics,
+            graph_state=graph_state,
         )

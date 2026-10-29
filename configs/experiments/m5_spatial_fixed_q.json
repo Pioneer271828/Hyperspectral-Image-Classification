@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "name": "m5_paviau_fixed_q",
+  "dataset": "paviaU",
+  "device": "cuda",
+  "model": {"graph_mode": "learned", "graph_assignment_mode": "fixed_grid", "latent_channels": 64, "adapter_embed_dim": 32, "norm_type": "group_norm"},
+  "training": {"epochs": 0, "steps_per_epoch": 2, "val_interval": 1, "seed": 2026, "primary_checkpoint": "val_loss"},
+  "tile_size": 32,
+  "gap": 2,
+  "split_seed": 2026
+}
