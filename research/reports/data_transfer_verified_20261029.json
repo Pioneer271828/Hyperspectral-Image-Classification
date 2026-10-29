@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "local-dataset-20261029-850ce34e74ea",
+  "status": "verified",
+  "source_directory": "F:\\E2E_VCA\\dataset",
+  "manifest_sha256": "850ce34e74ea116211a0d4c95178f33d213cf44c487f58f543dc021cfa671132",
+  "verified_files": 71,
+  "verified_bytes": 1426421671,
+  "datasets": {
+    "paviaU": {
+      "image_shape": [
+        610,
+        340,
+        103
+      ],
+      "image_storage_type": "double",
+      "label_shape": [
+        610,
+        340
+      ],
+      "foreground_class_count": 9,
+      "unlabeled_pixels": 164624,
+      "keys_verified": true
+    },
+    "xuzhou": {
+      "image_shape": [
+        500,
+        260,
+        436
+      ],
+      "image_storage_type": "double",
+      "label_shape": [
+        500,
+        260
+      ],
+      "foreground_class_count": 9,
+      "unlabeled_pixels": 61123,
+      "keys_verified": true
+    },
+    "whu-honghu": {
+      "image_shape": [
+        940,
+        475,
+        270
+      ],
+      "image_storage_type": "single",
+      "label_shape": [
+        940,
+        475
+      ],
+      "foreground_class_count": 22,
+      "unlabeled_pixels": 59807,
+      "keys_verified": true
+    },
+    "WHUL": {
+      "image_shape": [
+        550,
+        400,
+        270
+      ],
+      "image_storage_type": "single",
+      "label_shape": [
+        550,
+        400
+      ],
+      "foreground_class_count": 9,
+      "unlabeled_pixels": 15458,
+      "keys_verified": true
+    },
+    "whu-hanchuan": {
+      "image_shape": [
+        1217,
+        303,
+        274
+      ],
+      "image_storage_type": "single",
+      "label_shape": [
+        1217,
+        303
+      ],
+      "foreground_class_count": 16,
+      "unlabeled_pixels": 111221,
+      "keys_verified": true
+    },
+    "laoyuhesidi": {
+      "image_shape": [
+        391,
+        550,
+        32
+      ],
+      "image_storage_type": "uint16",
+      "label_shape": [
+        391,
+        550
+      ],
+      "foreground_class_count": 8,
+      "unlabeled_pixels": 180710,
+      "keys_verified": true
+    }
+  },
+  "data_root": "/home/train/hsi-pioneer271828/datasets/snapshots/local-dataset-20261029-850ce34e74ea/dataset",
+  "duration_seconds": 3.636,
+  "scope": "File hashes, MAT/NPY shape/key/label checks only; no model execution or training"
+}
