@@ -497,11 +497,8 @@ class VCASAHGCNBackbone(nn.Module):
         regions = self.graph_stage1(region_input, A, dataset_name)
         info = {}
         if self.interaction is not None:
-            # Both messages use the same pre-interaction snapshot (no update-order bias).
-            region_at_pixels = self.alignment.to_pixels(regions, Q) if self.interaction.graph_to_cnn is not None else None
-            pixels_at_regions = self.alignment.to_regions(pixels, Q) if self.interaction.cnn_to_graph is not None else None
-            pixels, regions, message_info = self.interaction(
-                pixels, regions, region_at_pixels, pixels_at_regions,
+            pixels, regions, message_info = self.interaction.forward_aligned(
+                pixels, regions, Q, self.alignment,
                 collect_stats=collect_stats, return_diagnostics=return_diagnostics,
             )
             info.update(message_info)
