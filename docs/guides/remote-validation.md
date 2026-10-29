@@ -41,4 +41,14 @@ python smoke_test.py --device cuda
 
 CUDA 不可用会报错；`--skip-cuda` 仅用于明确标注的 CPU 验收。每条检查有独立日志和超时，manifest 保存实际命令、时长、包版本及失败状态；相同输出目录不能复用。运行后再次核对代码未变。这个入口专用于冻结基线；后续模型模块应从已命名基线建立相关回归，而非改写其原始指纹。
 
+通过 SSH 运行时建议将验收入口也重定向到远程文件：
+
+```bash
+nohup /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_baseline.py \
+  --expected-commit <完整40位SHA> --out-dir /workspace/hsi-artifacts/<run_id> \
+  > /workspace/hsi-artifacts/<run_id>-launcher.txt 2>&1 < /dev/null &
+```
+
+启动后读取远程 manifest 与日志，`status=passed` 才表示完成。启动成功或进程退出本身不等于测试通过；保留中断与失败运行，重试使用新 run_id。
+
 合成测试确认当前链路、梯度与序列化能工作，不产生真实数据 OA/AA/Kappa 或跨传感器结论。新研究模块仍需对应真实协议、预算控制和消融。
