@@ -1,0 +1,465 @@
+{
+  "schema_version": 1,
+  "module": "M3",
+  "issue": 13,
+  "pr": 14,
+  "baseline_commit": "d9007c36ec54cf3c882e36e64cd2eeac55f40168",
+  "tested_commit": "cacbc29a886a60feab673bdfcd02330b8d0c705b",
+  "branch": "codex/issue-13-m3-graph",
+  "source_hash": "8f2eed28a173a91b9b72630d02555bf4b2c0030b37b7546816a7f2785ed2627c",
+  "status": "passed",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "unit_tests": 71,
+  "new_m3_tests": 10,
+  "checks": [
+    {
+      "name": "unit",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cpu",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cpu"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cuda",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cuda"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "legacy_equivalence": [
+    {
+      "shape": [
+        7,
+        9,
+        6
+      ],
+      "scale": 9,
+      "Q_A_losses_gradients_exact": true
+    },
+    {
+      "shape": [
+        12,
+        12,
+        6
+      ],
+      "scale": 16,
+      "Q_A_losses_gradients_exact": true
+    },
+    {
+      "shape": [
+        3,
+        7,
+        6
+      ],
+      "scale": 4,
+      "Q_A_losses_gradients_exact": true
+    }
+  ],
+  "real_checks": [
+    {
+      "dataset": "paviaU",
+      "raw_shape": [
+        610,
+        340,
+        103
+      ],
+      "image_sha256": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "spatial_global_ids_disjoint": true,
+      "selected_tiles": [
+        {
+          "id": 0,
+          "partition": "train",
+          "box": [
+            2,
+            30,
+            2,
+            30
+          ]
+        },
+        {
+          "id": 2,
+          "partition": "val",
+          "box": [
+            2,
+            30,
+            66,
+            94
+          ]
+        },
+        {
+          "id": 11,
+          "partition": "test",
+          "box": [
+            34,
+            62,
+            2,
+            30
+          ]
+        }
+      ],
+      "controls": [
+        {
+          "assignment_mode": "fixed_grid",
+          "adjacency_mode": "fixed_local",
+          "train_optimizer_steps": 0,
+          "gradient_parameters": [],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            784
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 0,
+          "max_A0_row_error": 0,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 0
+          }
+        },
+        {
+          "assignment_mode": "fixed_grid",
+          "adjacency_mode": "learned",
+          "train_optimizer_steps": 1,
+          "gradient_parameters": [
+            "feature_norm.weight",
+            "feature_norm.bias",
+            "graph_query.weight",
+            "graph_key.weight"
+          ],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            784
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 0,
+          "max_A0_row_error": 1.1920928955078125e-7,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 0
+          }
+        },
+        {
+          "assignment_mode": "learned",
+          "adjacency_mode": "learned",
+          "train_optimizer_steps": 1,
+          "gradient_parameters": [
+            "feature_norm.weight",
+            "feature_norm.bias",
+            "pixel_query.weight",
+            "seed_key.weight",
+            "graph_query.weight",
+            "graph_key.weight"
+          ],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            5776
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 1.7881393432617188e-7,
+          "max_A0_row_error": 1.1920928955078125e-7,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 2.9802322387695312e-8
+          }
+        }
+      ]
+    },
+    {
+      "dataset": "xuzhou",
+      "raw_shape": [
+        500,
+        260,
+        436
+      ],
+      "image_sha256": "3733fd46e7bb17b9db037700c36e245feb915326749abf5d8fc6ce0d6234e3c3",
+      "plan_hash": "ebeeac91e44c5adf926258ef3633222ad4f578da06e67743f38f8710d19a429e",
+      "statistics_hash": "0ef962c3407d6251ac64a90906b101d7e778342349bd74441dfb8bf30173c9bb",
+      "spatial_global_ids_disjoint": true,
+      "selected_tiles": [
+        {
+          "id": 0,
+          "partition": "train",
+          "box": [
+            2,
+            30,
+            2,
+            30
+          ]
+        },
+        {
+          "id": 5,
+          "partition": "val",
+          "box": [
+            2,
+            30,
+            162,
+            190
+          ]
+        },
+        {
+          "id": 2,
+          "partition": "test",
+          "box": [
+            2,
+            30,
+            66,
+            94
+          ]
+        }
+      ],
+      "controls": [
+        {
+          "assignment_mode": "fixed_grid",
+          "adjacency_mode": "fixed_local",
+          "train_optimizer_steps": 0,
+          "gradient_parameters": [],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            784
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 0,
+          "max_A0_row_error": 0,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 0
+          }
+        },
+        {
+          "assignment_mode": "fixed_grid",
+          "adjacency_mode": "learned",
+          "train_optimizer_steps": 1,
+          "gradient_parameters": [
+            "feature_norm.weight",
+            "feature_norm.bias",
+            "graph_query.weight",
+            "graph_key.weight"
+          ],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            784
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 0,
+          "max_A0_row_error": 1.1920928955078125e-7,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 0
+          }
+        },
+        {
+          "assignment_mode": "learned",
+          "adjacency_mode": "learned",
+          "train_optimizer_steps": 1,
+          "gradient_parameters": [
+            "feature_norm.weight",
+            "feature_norm.bias",
+            "pixel_query.weight",
+            "seed_key.weight",
+            "graph_query.weight",
+            "graph_key.weight"
+          ],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            5776
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 2.384185791015625e-7,
+          "max_A0_row_error": 1.1920928955078125e-7,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 4.470348358154297e-8
+          }
+        }
+      ]
+    },
+    {
+      "dataset": "whu-honghu",
+      "raw_shape": [
+        940,
+        475,
+        270
+      ],
+      "image_sha256": "394eebb36e70931711b02d127f73c641ad67a83a5bbfc5294b695b2f7336dfce",
+      "plan_hash": "7a51de8b3a6bc68e6d4cc0d4afaca7cd48f5a9169eb4aa1b53a0a3c341e05af4",
+      "statistics_hash": "7b75985d43e8e580ff7e27f0179bb4faece34a5c298ad649120483cbadb193c7",
+      "spatial_global_ids_disjoint": true,
+      "selected_tiles": [
+        {
+          "id": 0,
+          "partition": "train",
+          "box": [
+            2,
+            30,
+            2,
+            30
+          ]
+        },
+        {
+          "id": 3,
+          "partition": "val",
+          "box": [
+            2,
+            30,
+            98,
+            126
+          ]
+        },
+        {
+          "id": 10,
+          "partition": "test",
+          "box": [
+            2,
+            30,
+            322,
+            350
+          ]
+        }
+      ],
+      "controls": [
+        {
+          "assignment_mode": "fixed_grid",
+          "adjacency_mode": "fixed_local",
+          "train_optimizer_steps": 0,
+          "gradient_parameters": [],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            784
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 0,
+          "max_A0_row_error": 0,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 0
+          }
+        },
+        {
+          "assignment_mode": "fixed_grid",
+          "adjacency_mode": "learned",
+          "train_optimizer_steps": 1,
+          "gradient_parameters": [
+            "feature_norm.weight",
+            "feature_norm.bias",
+            "graph_query.weight",
+            "graph_key.weight"
+          ],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            784
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 0,
+          "max_A0_row_error": 1.7881393432617188e-7,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 0
+          }
+        },
+        {
+          "assignment_mode": "learned",
+          "adjacency_mode": "learned",
+          "train_optimizer_steps": 1,
+          "gradient_parameters": [
+            "feature_norm.weight",
+            "feature_norm.bias",
+            "pixel_query.weight",
+            "seed_key.weight",
+            "graph_query.weight",
+            "graph_key.weight"
+          ],
+          "all_present_gradients_finite_nonzero": true,
+          "region_counts": [
+            49
+          ],
+          "assignment_nnz": [
+            5776
+          ],
+          "graph_nnz": [
+            361
+          ],
+          "max_Q_row_error": 2.384185791015625e-7,
+          "max_A0_row_error": 2.384185791015625e-7,
+          "train_revisit_max_diff": {
+            "Q": 0,
+            "A0": 4.470348358154297e-8
+          }
+        }
+      ]
+    }
+  ],
+  "real_check_peak_allocated_bytes": 66039808,
+  "real_check_peak_reserved_bytes": 75497472,
+  "artifacts": "/home/train/hsi-pioneer271828/runs/m3-validation-01",
+  "failed_attempts": [],
+  "limitations": [
+    "Label-free numerical probes, no classification accuracy claim.",
+    "One small block per partition/dataset; no full image or cross-sensor experiment.",
+    "New GraphState builder and controls not yet integrated into backbone/CLI; scheduled M5.",
+    "GraphState validation/diagnostics synchronize GPU; no performance claim."
+  ]
+}
