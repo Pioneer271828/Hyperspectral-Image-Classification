@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "module": "E0a",
+  "issue": 19,
+  "pr": 20,
+  "status": "passed",
+  "candidate_source_commit": "1b3bd443b2590d3c693aefaee84cca5104602351",
+  "tested_commit": "6114e561771f9f491694af062df8a3168ded3806",
+  "branch": "codex/issue-19-e0a-evaluation",
+  "source_hash": "9cba46a05b8592031099f5247174a577350a27eeda256dff5a89a54a406520b2",
+  "accepted_m8_commit": "4675ed200e5b2f8f3699de750fc5cfac8e7b1f0c",
+  "python": "3.12.3 (main, Jan 17 2025, 18:03:48) [GCC 13.3.0]",
+  "torch": "2.7.0a0+ecf3bae40a.nv25.02",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "unit_tests": 98,
+  "new_e0a_tests": 13,
+  "checks": [
+    {
+      "name": "unit",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cpu",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cpu"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cuda",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cuda"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "fixture_export": {
+    "status": "passed",
+    "count": 11,
+    "oa": 0.9090909090909091,
+    "missing_class_ids": [
+      3
+    ],
+    "synthetic_only": true
+  },
+  "real_data_validation": {
+    "status": "passed",
+    "dataset": "paviaU",
+    "checkpoint": "/home/train/hsi-pioneer271828/runs/m8-validation-01/training/m8_paviau_default-s2026-f6c7d41fdaa6c1b9b8bd/attempts/0001/model.pt",
+    "optimizer_steps": 0,
+    "test_tile_count": 41,
+    "count": 6205,
+    "missing_class_ids": [
+      3,
+      7
+    ],
+    "macro_class_ids": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      8,
+      9
+    ],
+    "aa_full": null,
+    "confusion_matches_m8": true,
+    "metric_differences": {
+      "oa": 0,
+      "aa": 0,
+      "kappa": 0
+    },
+    "macro_f1_sklearn_difference": 0,
+    "parameters_and_buffers_unchanged": true,
+    "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+    "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+    "fused_spatial_counts": {
+      "1": {
+        "boundary": 0,
+        "interior": 6205
+      },
+      "2": {
+        "boundary": 0,
+        "interior": 6205
+      },
+      "3": {
+        "boundary": 0,
+        "interior": 6205
+      }
+    },
+    "branch_strata": {
+      "both_correct": {
+        "count": 0,
+        "fused_correct": 0,
+        "fused_accuracy": null
+      },
+      "cnn_only_correct": {
+        "count": 385,
+        "fused_correct": 0,
+        "fused_accuracy": 0
+      },
+      "graph_only_correct": {
+        "count": 210,
+        "fused_correct": 0,
+        "fused_accuracy": 0
+      },
+      "both_wrong": {
+        "count": 5610,
+        "fused_correct": 195,
+        "fused_accuracy": 0.034759358288770054
+      }
+    },
+    "first_tile_graph": {
+      "scope": "first_test_tile_only",
+      "tile": {
+        "id": 11,
+        "partition": "test",
+        "box": [
+          34,
+          62,
+          2,
+          30
+        ]
+      },
+      "node_count": 16,
+      "stored_edge_count": 100,
+      "positive_edge_count": 100,
+      "self_loop_count": 16,
+      "max_out_degree": 9,
+      "mean_out_degree": 6.25,
+      "isolated_without_nonself_neighbors": 0,
+      "weak_component_count": 1,
+      "largest_weak_component": 16,
+      "max_row_mass_error": 7.450580596923828e-8,
+      "weight_change_mean": null,
+      "weight_change_max": null,
+      "support_change_count": null,
+      "comparison_available": false,
+      "connectivity": "weak_undirected_projection"
+    }
+  },
+  "artifacts": "/home/train/hsi-pioneer271828/runs/e0a-validation-01",
+  "code_directory": "/workspace/hsi-e0a",
+  "test_failures": [],
+  "limits": [
+    "PaviaU checkpoint received only M8's two-step engineering training; no accuracy or complementarity claim.",
+    "Classes 3 and 7 absent in test support; full-class AA remains undefined.",
+    "No valid four-neighbor labeled class boundary in the current evaluation mask; all boundary bands are N/A.",
+    "Sparse graph report covers the first test tile only.",
+    "E0b interventions, thin structure metrics, cost profiling and paired inference remain deferred."
+  ]
+}

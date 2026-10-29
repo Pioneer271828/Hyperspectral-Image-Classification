@@ -6,7 +6,7 @@
 
 ## 模块化搭建入口
 
-以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。基线、C0、C1、M2、M3、M5 和 M8 已有工程验收；下一步验收独立草稿分支中的 [E0a 候选](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/20)，正式精度实验分别验收。
+以[研究主清单](research/研究内容整合与详细搭建测试计划_2026-10-28.md)为工作依据，按照[模块交付计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)逐项搭建。每完成一个模块，独立版本管理、远程验收并暂停评审。基线、C0、C1、M2、M3、M5、M8 和 E0a 已有工程验收；下一模块为 M6 对齐与选择性交互，正式精度实验分别验收。
 
 - [基线来源与指纹](docs/migration/source-inventory.md)、[本次模块报告](research/reports/baseline_2026-10-29.md)
 - [远程测试与同步指南](docs/guides/remote-validation.md)
@@ -18,6 +18,7 @@
 - [M3 区域图状态、无标签对照与手工注入](docs/guides/graph-state.md)、[GPU 验收报告](research/reports/M3_区域图契约与无标签对照_20261029.md)
 - [M5 两阶段骨干、图契约与消融配置](docs/guides/backbone-stages.md)、[GPU 验收报告](research/reports/M5_统一两阶段骨干与图契约接入_20261029.md)
 - [M8 固定融合、可选 logits 与损失分项](docs/guides/fusion-losses.md)、[GPU 验收报告](research/reports/M8_固定融合与损失契约验收_20261029.md)
+- [E0a 冻结预测、边界与分支纠错诊断](docs/guides/evaluation-e0a.md)、[冻结预测验收报告](research/reports/E0a_冻结预测评估与诊断验收_20261029.md)
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
 
