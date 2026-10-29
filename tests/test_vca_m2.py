@@ -60,6 +60,9 @@ class VCAContractTests(unittest.TestCase):
         with torch.no_grad():
             before = self.adapter(self.x, self.wave)
         self.adapter(self.x, self.wave).square().mean().backward()
+        # Warm the old weights after backward, immediately before eval-mode step.
+        with torch.no_grad():
+            self.adapter(self.x, self.wave)
         optimizer.step()
         self.assert_fresh()
         with torch.no_grad():
@@ -213,7 +216,7 @@ class VCAContractTests(unittest.TestCase):
 
     def test_uncovered_anchors_are_finite_and_zero(self):
         self.adapter.locality_window = 1e-5
-        y, info = self.adapter(self.x[..., :1], [1000.], return_attention=True)
+        y, info = self.adapter(self.x[..., :1], [1010.], return_attention=True)
         self.assertEqual(info['anchor_valid'].sum().item(), 0)
         torch.testing.assert_close(y, torch.zeros_like(y))
         self.assertTrue(torch.isfinite(info['attention']).all())

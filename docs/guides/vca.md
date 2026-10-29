@@ -37,11 +37,11 @@ eval 不会关闭梯度。eval+autograd 始终重新构建注意力计算图，q
 
 ```bash
 OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_m2.py \
-  --expected-commit <完整SHA> \
+  --expected-commit <完整SHA> --device cuda \
   --data-root /home/train/hsi-pioneer271828/datasets/current \
   --out-dir /home/train/hsi-pioneer271828/runs/m2-<唯一批次>
 ```
 
-入口要求容器、正确 SHA、干净工作树、checkout 外的新产物目录，运行完整单元测试和 CPU smoke，并对比基准提交的旧 VCA 输出、梯度和 state_dict。真实 PaviaU/Xuzhou/HongHu 各取固定 12×12 小块、全波段，三种模式各一步优化并检查缓存与 fresh 结果。小块内缩放仅用于数值检查，不代表正式空间训练统计或精度评估。标签不参与本验收。失败记录保留，重试使用新目录。
+入口要求容器、正确 SHA、干净工作树、checkout 外的新产物目录，运行完整 CPU 单元测试和 CPU smoke，并对比基准提交的旧 VCA 输出、梯度和 state_dict。指定 `--device cuda` 时另运行 CUDA smoke，真实小块在 GPU 执行；默认 cpu 便于独立复核。真实 PaviaU/Xuzhou/HongHu 各取固定 12×12 小块、全波段，三种模式各一步优化并检查缓存与 fresh 结果。小块内缩放仅用于数值检查，不代表正式空间训练统计或精度评估。标签不参与本验收。失败记录保留，重试使用新目录。
 
-M2 证明接口和梯度链路可用，不证明三种模式的精度优劣。正式精度比较需要冻结同一主干、划分、容量和预算，另立实验 Issue。GPU 与长训练不属于本次验收。
+M2 证明接口和梯度链路可用，不证明三种模式的精度优劣。正式精度比较需要冻结同一主干、划分、容量和预算，另立实验 Issue。用户已授权 GPU 小规模验收，长训练不属于本次验收。
