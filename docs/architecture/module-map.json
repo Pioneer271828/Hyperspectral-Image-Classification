@@ -4,7 +4,7 @@
   "modules": [
     {"id": "baseline", "paths": ["smoke_test.py", "scripts/validate_baseline.py", "docs/migration/baseline-source.json"], "tests": ["tests/test_interaction_modules.py", "smoke_test.py"], "depends_on": []},
     {"id": "C0", "paths": ["model/research_config.py", "research_runtime.py", "research_ablation_presets.py", "run_research_ablation.py", "configs/experiments/", "model/interaction_config.py", "model/checkpoint_io.py"], "tests": ["tests/test_research_c0.py", "tests/test_interaction_modules.py"], "guide": "docs/guides/c0-experiments.md", "depends_on": ["baseline"]},
-    {"id": "C1", "paths": ["loadData/"], "extension": "数据登记、固定/空间划分及访问协议", "depends_on": ["C0"]},
+    {"id": "C1", "paths": ["loadData/dataset_registry.py", "loadData/fixed_splits.py", "loadData/spatial_protocol.py", "prepare_data_protocol.py", "prepare_spatial_protocol.py"], "tests": ["tests/test_data_c1a.py", "tests/test_spatial_c1b.py"], "guide": "docs/guides/spatial-protocol.md", "extension": "空间 API 已建立，严格训练调度接入另行交付", "depends_on": ["C0"]},
     {"id": "M2", "paths": ["model/variable_channel_adapter.py"], "depends_on": ["C0"]},
     {"id": "M3", "paths": ["model/learnable_superpixel_graph.py", "createGraph/"], "depends_on": ["C1", "M2"]},
     {"id": "M5", "paths": ["model/VCASAHGCN.py", "model/SAHGCN.py"], "depends_on": ["M2", "M3"]},
