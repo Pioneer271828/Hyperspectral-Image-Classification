@@ -3,7 +3,7 @@
   "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。",
   "modules": [
     {"id": "baseline", "paths": ["smoke_test.py", "scripts/validate_baseline.py", "docs/migration/baseline-source.json"], "tests": ["tests/test_interaction_modules.py", "smoke_test.py"], "depends_on": []},
-    {"id": "C0", "paths": ["model/interaction_config.py", "model/checkpoint_io.py", "interaction_ablation_presets.py", "run_paper_ablation.py"], "extension": "配置校验、运行身份、消融登记", "depends_on": ["baseline"]},
+    {"id": "C0", "paths": ["model/research_config.py", "research_runtime.py", "research_ablation_presets.py", "run_research_ablation.py", "configs/experiments/", "model/interaction_config.py", "model/checkpoint_io.py"], "tests": ["tests/test_research_c0.py", "tests/test_interaction_modules.py"], "guide": "docs/guides/c0-experiments.md", "depends_on": ["baseline"]},
     {"id": "C1", "paths": ["loadData/"], "extension": "数据登记、固定/空间划分及访问协议", "depends_on": ["C0"]},
     {"id": "M2", "paths": ["model/variable_channel_adapter.py"], "depends_on": ["C0"]},
     {"id": "M3", "paths": ["model/learnable_superpixel_graph.py", "createGraph/"], "depends_on": ["C1", "M2"]},

@@ -10,6 +10,7 @@
 
 - [基线来源与指纹](docs/migration/source-inventory.md)、[本次模块报告](research/reports/baseline_2026-10-29.md)
 - [远程测试与同步指南](docs/guides/remote-validation.md)
+- [C0 配置、运行记录与消融清单](docs/guides/c0-experiments.md)：先 dry-run，按相同身份验证跳过或保留失败重试
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
 

@@ -11,6 +11,7 @@ from loadData import data_read, data_reader, split_data
 from model import VCASAHGCN, utils
 from model.interaction_config import add_interaction_arguments, interaction_kwargs, InteractionConfig
 from model.checkpoint_io import save_model_checkpoint
+from model.research_config import ResearchConfig
 
 try:
     from tqdm.auto import tqdm
@@ -370,7 +371,7 @@ def evaluate_split(model, datasets, split):
     return torch.stack(losses).mean(), oas, pred_hists
 
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(description="Multi-dataset VCA-SAHGCN training")
     add_interaction_arguments(parser)
     parser.add_argument("--cnn-loss-weight", type=float, default=1.0)
@@ -443,44 +444,25 @@ def main():
     parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--metrics-json", type=str, default=None)
     parser.add_argument("--experiment-name", type=str, default=None)
-    args = parser.parse_args()
+    return parser
+
+
+def main(argv=None):
+    return train(build_parser().parse_args(argv))
+
+
+def train(args, run_record=None):
+    if args.no_wavelength_attention:
+        args.adapter_attention_mode = "index"
+    apply_stable_preset(args)
+    resolved = ResearchConfig.from_legacy(args)
     interaction_options = interaction_kwargs(args)
     interaction_config = InteractionConfig(**interaction_options)
-    if not np.isfinite([args.cnn_loss_weight, args.graph_branch_loss_weight]).all() or min(args.cnn_loss_weight, args.graph_branch_loss_weight) < 0:
-        raise ValueError("Auxiliary branch loss weights must be finite and nonnegative")
     # The seed previously controlled splits only; also seed weights and training randomness.
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
-
-    if args.no_wavelength_attention:
-        args.adapter_attention_mode = "index"
-    apply_stable_preset(args)
-    if not 0 <= args.train_drop_band_ratio < 1:
-        raise ValueError("--train-drop-band-ratio must be in [0, 1)")
-    if not 0 <= args.train_band_mixup_ratio <= 1:
-        raise ValueError("--train-band-mixup-ratio must be in [0, 1]")
-    if not 0 <= args.train_band_mixup_prob <= 1:
-        raise ValueError("--train-band-mixup-prob must be in [0, 1]")
-    if args.train_band_mixup_ratio > 0 and args.train_band_mixup_alpha <= 0:
-        raise ValueError("--train-band-mixup-alpha must be positive when band mixup is enabled")
-    if args.train_band_mixup_neighbors < 1:
-        raise ValueError("--train-band-mixup-neighbors must be positive")
-    if args.val_interval <= 0:
-        raise ValueError("--val-interval must be positive")
-    if args.adapter_chunk_pixels < 0:
-        raise ValueError("--adapter-chunk-pixels must be non-negative")
-    if args.learned_assignment_dim <= 0:
-        raise ValueError("--learned-assignment-dim must be positive")
-    if args.learned_assignment_radius < 0 or args.learned_graph_radius < 0:
-        raise ValueError("learned graph radii must be non-negative")
-    if args.learned_assignment_temperature <= 0:
-        raise ValueError("--learned-assignment-temperature must be positive")
-    if args.learned_assignment_spatial_sigma <= 0 or args.learned_graph_spatial_sigma <= 0:
-        raise ValueError("learned graph spatial sigmas must be positive")
-    if min(args.graph_compactness_weight, args.graph_entropy_weight, args.graph_balance_weight) < 0:
-        raise ValueError("graph regularization weights must be non-negative")
 
     device = torch.device(args.device)
     dataset_names = [name.strip() for name in args.datasets.split(",") if name.strip()]
@@ -498,29 +480,18 @@ def main():
     if len(datasets) == 0:
         raise RuntimeError("no dataset was prepared")
 
+    if run_record is not None:
+        run_record.record_data(datasets)
+
     class_counts = {name: item["class_num"] for name, item in datasets.items()}
-    model = VCASAHGCN.MultiDatasetVCASAHGCN(
-        class_counts,
-        latent_channels=args.latent_channels,
-        adapter_embed_dim=args.adapter_embed_dim,
-        wavelength_min=args.wavelength_min,
-        wavelength_max=args.wavelength_max,
-        locality_sigma=args.locality_sigma,
-        locality_window=args.locality_window,
-        adapter_attention_mode=args.adapter_attention_mode,
-        adapter_chunk_pixels=args.adapter_chunk_pixels,
-        adapter_checkpoint_chunks=not args.no_adapter_checkpoint,
-        norm_type=args.norm_type,
-        graph_mode=args.graph_mode,
-        learned_assignment_dim=args.learned_assignment_dim,
-        learned_assignment_radius=args.learned_assignment_radius,
-        learned_graph_radius=args.learned_graph_radius,
-        learned_assignment_temperature=args.learned_assignment_temperature,
-        learned_assignment_spatial_sigma=args.learned_assignment_spatial_sigma,
-        learned_graph_spatial_sigma=args.learned_graph_spatial_sigma,
-        **interaction_options,
-    ).to(device)
+    model = resolved.build_model(class_counts).to(device)
     model.training_config = vars(args).copy()
+    model.training_config["research_config"] = resolved.to_dict()
+    if run_record is not None:
+        run_record.record_model(model)
+        model.training_config["research_run"] = {"run_id": run_record.run_id,
+                                                  "attempt": run_record.attempt.name,
+                                                  "config_hash": resolved.config_hash}
     model.training_config["dataset_seeds"] = {
         name: int(item.get("seed", args.seed + index)) for index, (name, item) in enumerate(datasets.items())
     }
@@ -854,6 +825,8 @@ def main():
             "eval_checkpoint_path": eval_path,
             "test": test_metrics,
         }
+        if run_record is not None:
+            payload["research_run"] = model.training_config["research_run"]
         with open(args.metrics_json, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
         print("write metrics json:", args.metrics_json)
