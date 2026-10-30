@@ -87,7 +87,7 @@ def prediction_equivalence(actual, expected):
     import torch
     differences = []
     for observed, reference in zip(actual, expected):
-        if (not torch.allclose(observed, reference, rtol=1e-6, atol=1e-6)
+        if (not torch.allclose(observed, reference, rtol=1e-6, atol=2e-5)
                 or not torch.equal(observed.argmax(-1), reference.argmax(-1))):
             raise AssertionError('Diagnostic probe changed probabilities beyond tolerance or class IDs')
         differences.append(float((observed - reference).abs().max()))

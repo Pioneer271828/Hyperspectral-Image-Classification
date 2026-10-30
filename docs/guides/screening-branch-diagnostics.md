@@ -15,7 +15,7 @@ OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python -u scripts/diagno
 
 运行前校验当前完整SHA、干净工作树与CUDA；训练campaign必须完成且无锁。诊断代码允许新增，但模型、数据处理、原训练、既有评价和实验配置相对训练commit必须相同。核查训练manifest内的所有产物hash、共有初始化、数据身份、模型侧边配置与保存协议；结束后再次核对原产物、原始数据、模型参数/缓冲和诊断代码不变。
 
-GPU稀疏归约的浮点次序会导致普通重复推理也有微小概率差异。首块核查诊断开/关时采用`rtol=1e-6, atol=1e-6`，同时强制三路预测类别完全相同；全分区融合混淆矩阵须与原训练结果逐项一致，NLL差须不超过`1e-6`。这不改变选模或评分规则，原始差异写入报告。
+GPU稀疏归约的浮点次序会导致普通重复推理也有微小概率差异。三组两分区实测中，普通重复推理最大概率差约`1.09e-5`，诊断开/关不超过同一量级，类别均一致。首块核查采用`rtol=1e-6, atol=2e-5`，同时强制三路预测类别完全相同；全分区融合混淆矩阵须与原训练结果逐项一致，NLL差须不超过`1e-6`。这不改变选模或评分规则，原始差异写入报告。
 
 输出在checkout外的新目录，包括带命令/身份/失败记录的`manifest.json`、汇总`branch-audit.json`、每组每分区的`*-report.json`、`*-tiles.json`及`*-predictions.npz`。NPZ只含计分像素：truth、global_ids、tile_ids、probabilities，概率轴固定为fused/graph/cnn；还有可用的像素门控值。cnn_to_graph原本是区域门，使用原Q广播到像素，均值按有标签像素加权；它不是区域均值或校准可靠度。Add的门值为常数1，不能当作学习出的门。
 

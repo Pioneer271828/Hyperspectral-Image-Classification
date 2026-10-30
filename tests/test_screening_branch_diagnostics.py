@@ -51,8 +51,8 @@ class TargetAttributionTests(unittest.TestCase):
 class FrozenCollectionTests(unittest.TestCase):
     def test_roundoff_tolerance_never_accepts_changed_prediction_ids(self):
         reference = torch.tensor([[.2, .8]])
-        actual = reference + torch.tensor([[5e-7, -5e-7]])
-        self.assertLess(prediction_equivalence([actual], [reference])[0], 1e-6)
+        actual = reference + torch.tensor([[1e-5, -1e-5]])
+        self.assertLess(prediction_equivalence([actual], [reference])[0], 2e-5)
         with self.assertRaises(AssertionError):
             prediction_equivalence([reference + .001], [reference])
         with self.assertRaises(AssertionError):
