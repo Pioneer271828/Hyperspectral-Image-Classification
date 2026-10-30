@@ -5,7 +5,7 @@ import json
 import numpy as np
 import torch
 
-from scripts.diagnose_screening_branches import summarize, target_confusion, describe, collect_partition
+from scripts.diagnose_screening_branches import summarize, target_confusion, describe, collect_partition, prediction_equivalence
 from train_spatial import SpatialConfig, evaluate
 from loadData.spatial_tiles import make_tile_plan, fit_tile_statistics
 
@@ -49,6 +49,16 @@ class TargetAttributionTests(unittest.TestCase):
 
 
 class FrozenCollectionTests(unittest.TestCase):
+    def test_roundoff_tolerance_never_accepts_changed_prediction_ids(self):
+        reference = torch.tensor([[.2, .8]])
+        actual = reference + torch.tensor([[5e-7, -5e-7]])
+        self.assertLess(prediction_equivalence([actual], [reference])[0], 1e-6)
+        with self.assertRaises(AssertionError):
+            prediction_equivalence([reference + .001], [reference])
+        with self.assertRaises(AssertionError):
+            prediction_equivalence([torch.tensor([[.5000001, .4999999]])],
+                                   [torch.tensor([[.4999999, .5000001]])])
+
     def test_requesting_gates_preserves_eval_outputs_state_and_coordinate_order(self):
         torch.manual_seed(12)
         config = SpatialConfig({'name': 'frozen_gate_fixture', 'dataset': 'paviaU',

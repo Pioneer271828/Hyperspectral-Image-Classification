@@ -82,6 +82,18 @@ def describe(values):
             'min': float(values.min()), 'max': float(values.max())}
 
 
+def prediction_equivalence(actual, expected):
+    """CUDA sparse reductions can differ slightly even between plain eval passes."""
+    import torch
+    differences = []
+    for observed, reference in zip(actual, expected):
+        if (not torch.allclose(observed, reference, rtol=1e-6, atol=1e-6)
+                or not torch.equal(observed.argmax(-1), reference.argmax(-1))):
+            raise AssertionError('Diagnostic probe changed probabilities beyond tolerance or class IDs')
+        differences.append(float((observed - reference).abs().max()))
+    return differences
+
+
 def collect_partition(model, cube, labels, plan, stats, partition, dataset, wave, scale, class_ids,
                       focus_class=6, confused_as=2):
     """Use the strict forward entry; request diagnostic tensors without changing its math."""
@@ -99,6 +111,7 @@ def collect_partition(model, cube, labels, plan, stats, partition, dataset, wave
     tile_reports = []
     nll_sum = 0.0
     diagnostic_checked = False
+    diagnostic_probe_differences = None
     def diagnostics_only(module, positional, keywords):
         return positional, {**keywords, 'return_diagnostics': True}
     hook = model.register_forward_pre_hook(diagnostics_only, with_kwargs=True)
@@ -112,9 +125,7 @@ def collect_partition(model, cube, labels, plan, stats, partition, dataset, wave
                 if not diagnostic_checked:
                     hook.remove()
                     plain = forward_partition(model, dataset, observation, wave, scale)
-                    for actual, expected in zip(outputs[:3], plain[:3]):
-                        if not torch.allclose(actual, expected, rtol=1e-6, atol=1e-7):
-                            raise AssertionError('Requesting diagnostics changed predictions')
+                    diagnostic_probe_differences = prediction_equivalence(outputs[:3], plain[:3])
                     hook = model.register_forward_pre_hook(diagnostics_only, with_kwargs=True)
                     diagnostic_checked = True
                 ys, xs = tile_slice(tile)
@@ -181,6 +192,7 @@ def collect_partition(model, cube, labels, plan, stats, partition, dataset, wave
             'focus_fused_as_confused': describe(values[fused_wrong_as]),
             'focus_fused_correct': describe(values[focus & (score[:, 0].argmax(1) + 1 == focus_class)])}
     summary.update(tile_count=len(tile_reports), diagnostic_flag_equivalent=True,
+                   diagnostic_probe_max_abs_differences=diagnostic_probe_differences,
                    state_unchanged=True, gate_weighting='labeled pixels; cnn_to_graph region gates broadcast via Q',
                    gate_semantics='mode add yields constant ones; learned scalar gates are not calibrated reliability')
     return summary, payload, tile_reports
