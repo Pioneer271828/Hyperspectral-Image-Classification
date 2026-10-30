@@ -17,6 +17,30 @@
     {"id": "E1", "paths": [], "extension": "覆盖度描述与调制", "depends_on": ["M1", "E0"]},
     {"id": "E4a", "paths": [], "extension": "语义映射、固定预算适配及留出协议", "depends_on": ["C1", "M8", "E0"]}
   ],
+  "research_candidates": [
+    {
+      "id": "R-MITA",
+      "status": "planned",
+      "issue": 25,
+      "target_modules": ["M6", "E3"],
+      "source": "https://arxiv.org/abs/2602.01219v6",
+      "guide": "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md",
+      "proposed_paths": ["model/mita_region_message.py"],
+      "gate": "Frozen branch diagnostics first; M6 message prototype and E3 support routing are separate tasks",
+      "changes_default": false
+    },
+    {
+      "id": "R-REDUNDANCY",
+      "status": "planned",
+      "issue": 25,
+      "target_modules": ["E0", "M5", "M6"],
+      "source": "https://arxiv.org/abs/2601.22841v2",
+      "guide": "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md",
+      "proposed_paths": ["evaluation/representation_redundancy.py"],
+      "gate": "Representation diagnostics before width experiments; preserve observation B and VCA K",
+      "changes_default": false
+    }
+  ],
   "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
   "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
 }
