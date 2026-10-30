@@ -68,7 +68,7 @@ def evaluate(model,cube,labels,plan,stats,partition,dataset,classes,wave,scale):
             'kappa':(oa-expected)/(1-expected) if expected<1 else None,'count':total,
             'support':support.tolist(),'missing_classes':(np.flatnonzero(support==0)+1).tolist(),'confusion':confusion.tolist()}
 
-def train_blocks(config,cube,labels,raw_identity,record,wave=None):
+def train_blocks(config,cube,labels,raw_identity,record,wave=None,model_initializer=None,progress_callback=None):
     cfg=config.research;v=config.values;dataset=v['dataset']
     classes=DATASETS[dataset][2]
     if cube.ndim!=3 or labels.shape!=cube.shape[:2]:raise ValueError('Image/label shape mismatch')
@@ -94,9 +94,13 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None):
     torch.manual_seed(cfg.training.seed)
     if cfg.device.startswith('cuda') and not torch.cuda.is_available():raise ValueError('CUDA unavailable')
     model=cfg.build_model({dataset:classes}).to(cfg.device)
+    initialization=model_initializer(model) if model_initializer is not None else None
     record.record_model(model)
+    if initialization is not None:
+        record.manifest['initialization']=initialization;record.save()
     model.training_config={'spatial_config':config.to_dict(),'plan_hash':plan['plan_hash'],
                            'statistics_hash':stats['statistics_hash'],'run_id':record.run_id}
+    if initialization is not None:model.training_config['initialization']=initialization
     heads=list(model.heads.parameters())+list(model.hgnn_heads.parameters())+list(model.cnn_heads.parameters())
     optimizer=torch.optim.Adam([{'params':model.backbone.parameters(),'lr':cfg.training.lr},
                                 {'params':heads,'lr':cfg.training.head_lr}],weight_decay=cfg.training.weight_decay)
@@ -120,7 +124,12 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None):
             loss=components['total']
             if not torch.isfinite(loss):raise ValueError('Nonfinite loss')
             loss.backward();optimizer.step();updates+=1
-            for key,value in detached_loss_values(components).items():component_sums[key]=component_sums.get(key,0.)+value
+            detached=detached_loss_values(components)
+            for key,value in detached.items():component_sums[key]=component_sums.get(key,0.)+value
+            if progress_callback is not None:
+                progress_callback({'phase':'train','epoch':epoch,'optimizer_steps':updates,
+                    'total_optimizer_steps':config.budget['optimizer_steps'],'tile_id':tile['id'],
+                    'loss':detached['total'],'learning_rates':[group['lr'] for group in optimizer.param_groups]})
         loss_history.append({'epoch':epoch,'optimizer_steps':updates,'mean_per_step':
                              {key:value/cfg.training.steps_per_epoch for key,value in component_sums.items()}})
         if epoch%cfg.training.val_interval==0 or epoch==cfg.training.epochs:
@@ -130,6 +139,9 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None):
             history.append({'epoch':epoch,'optimizer_steps':updates,'val':val})
             if best is None or criterion<best:
                 best=criterion;save_model_checkpoint(model,record.save_path)
+            if progress_callback is not None:
+                progress_callback({'phase':'validation','epoch':epoch,'optimizer_steps':updates,
+                    'total_optimizer_steps':config.budget['optimizer_steps'],'val':val,'best_criterion':best})
     save_model_checkpoint(model,record.attempt/'last.pt')
     selected,_,_=restore_spatial_checkpoint(record.save_path,record.attempt/'protocol.json',record.attempt/'statistics.json',cfg.device)
     # First semantic test-label access for evaluation occurs after checkpoint selection.
@@ -153,7 +165,7 @@ def restore_spatial_checkpoint(checkpoint,protocol,statistics,device='cpu'):
         raise ValueError('Checkpoint belongs to a different spatial protocol/statistics')
     return model,plan,stats
 
-def execute(config,root,code,data_loader,resume=False):
+def execute(config,root,code,data_loader,resume=False,model_initializer=None,progress_callback=None):
     record=RunRecord(root,config,code,resume=resume)
     with record:
         with (record.attempt/'training.log').open('w',encoding='utf-8') as log:
@@ -162,7 +174,8 @@ def execute(config,root,code,data_loader,resume=False):
                     require_frozen_code(code)
                     try:
                         cube,labels,identity,wave=data_loader()
-                        train_blocks(config,cube,labels,identity,record,wave=wave)
+                        train_blocks(config,cube,labels,identity,record,wave=wave,
+                            model_initializer=model_initializer,progress_callback=progress_callback)
                     finally:require_frozen_code(code)
                 except AlreadyCompleted:raise
                 except BaseException:
