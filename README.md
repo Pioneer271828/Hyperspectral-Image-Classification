@@ -19,6 +19,7 @@
 - [M5 两阶段骨干、图契约与消融配置](docs/guides/backbone-stages.md)、[GPU 验收报告](research/reports/M5_统一两阶段骨干与图契约接入_20261029.md)
 - [M8 固定融合、可选 logits 与损失分项](docs/guides/fusion-losses.md)、[GPU 验收报告](research/reports/M8_固定融合与损失契约验收_20261029.md)
 - [E0a 冻结预测、边界与分支纠错诊断](docs/guides/evaluation-e0a.md)、[冻结预测验收报告](research/reports/E0a_冻结预测评估与诊断验收_20261029.md)
+- [完整初筛三路逐类诊断入口](docs/guides/screening-branch-diagnostics.md)、[CNN/Graph/融合错误与门控报告](research/reports/M6_冻结三路逐类错误与门控诊断_20261030.md)
 - [M6 对齐与选择性交互契约](docs/guides/interaction-m6.md)、[GPU 验收报告](research/reports/M6_对齐与选择性交互验收_20261029.md)
 - [机器可读模块索引](docs/architecture/module-map.json)、[协作流程](CONTRIBUTING.md)、[智能体入口](AGENTS.md)
 - [长期结构 RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md)：未来目标目录仍按模块渐进实施
