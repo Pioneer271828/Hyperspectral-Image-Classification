@@ -133,3 +133,4 @@ Linked research documents retain their original filenames; many are currently wr
 - [MASK-1 explicit reversible weight masks](docs/guides/reversible-weight-masks.md): opt-in synthetic training validation; no automatic pruning or speed claim.
 - [MASK-2 masked-training checkpoints](docs/guides/masked-training-checkpoints.md): explicit weight/mask/optimizer/RNG recovery for isolated experiments; default training is unchanged.
 - [M1 real spectral subsets and synchronized metadata](docs/guides/observation-sampling-m1.md): independent data API; cross-sensor protocols and accuracy experiments remain separate.
+- [E4a-1 frozen cross-sensor few-shot protocol](docs/guides/transfer-protocol-e4a.md): PaviaU to Xuzhou, explicit target-label budget and spatial access boundaries; no zero-shot claim.

@@ -18,7 +18,7 @@
     {"id": "M4", "paths": [], "extension": "区域表示与像素残差分工", "depends_on": ["M3", "M5", "E0"]},
     {"id": "M1", "paths": ["loadData/observation_sampling.py"], "tests":["tests/test_observation_sampling.py","scripts/validate_m1.py"], "guide":"docs/guides/observation-sampling-m1.md", "extension": "真实波段子集与元数据同步；训练与跨传感器精度另验收", "depends_on": ["C1", "M2"]},
     {"id": "E1", "paths": [], "extension": "覆盖度描述与调制", "depends_on": ["M1", "E0"]},
-    {"id": "E4a", "paths": [], "extension": "语义映射、固定预算适配及留出协议", "depends_on": ["C1", "M8", "E0"]}
+    {"id": "E4a", "paths": ["loadData/transfer_protocol.py","configs/protocols/paviau_to_xuzhou_g3.json"], "tests":["tests/test_transfer_protocol.py","scripts/prepare_transfer_protocol.py"], "guide":"docs/guides/transfer-protocol-e4a.md", "extension": "G3协议准备；训练入口与G2共享语义映射另验收", "depends_on": ["C1", "M8", "E0"]}
   ],
   "research_focus": {"as_of": "2026-10-31", "axes": ["region_pixel_complementarity", "cross_sensor_spectral_adaptation", "pruning_and_quantization"], "primary_goal": "improve_accuracy_on_all_three_axes", "secondary_goal": "speed_under_predeclared_accuracy_constraint", "guide": "research/三主线研究重心与剪枝量化及论文用途_20261031.md"},
   "research_candidates": [
@@ -50,6 +50,7 @@
   "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
   "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
 }
+
 
 
 
