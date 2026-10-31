@@ -110,3 +110,5 @@ CUDA 可用时可将 `--device cpu` 改成 `--device cuda`。检查点需同时�
 - 传感器波长元数据中存在近似值，说明见 `loadData/data_read.py`。功能验证不代表分类精度提升或跨传感器泛化已获验证。
 - 本地原 Git 远程地址为 `https://gitee.com/lbxhhh/hyper-spectr.git`；原 README 保存在 [docs/SAHGCN.original.md](docs/SAHGCN.original.md)，其中的论文描述用于保留来源信息。本整理仓库不声明为该论文的官方仓库。
 - 导入时源目录没有发现许可证文件，因此没有替原作者添加授权条款。
+
+- [E0b验证区坐标敏感性诊断](docs/guides/coordinate-interventions.md)（Issue #31）
