@@ -2,6 +2,7 @@
   "schema_version": 1,
   "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。",
   "modules": [
+    {"id":"MASK-2", "paths":["compression/masked_checkpoint.py"], "tests":["tests/test_masked_checkpoint.py"], "guide":"docs/guides/masked-training-checkpoints.md", "depends_on":["MASK-1"]},
     {"id":"MASK-1", "paths":["compression/"], "tests":["tests/test_weight_masks.py"], "guide":"docs/guides/reversible-weight-masks.md", "depends_on":["M5"]},
     {"id":"MON-01", "paths":["monitoring/"], "tests":["tests/test_monitoring_statistics.py"], "guide":"docs/guides/monitoring-readonly.md", "depends_on":["M5","E0"]},
     {"id": "baseline", "paths": ["smoke_test.py", "scripts/validate_baseline.py", "docs/migration/baseline-source.json"], "tests": ["tests/test_interaction_modules.py", "smoke_test.py"], "depends_on": []},
@@ -49,6 +50,7 @@
   "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
   "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
 }
+
 
 
 

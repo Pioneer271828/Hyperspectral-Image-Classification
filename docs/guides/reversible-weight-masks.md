@@ -48,3 +48,5 @@ CUBLAS_WORKSPACE_CONFIG=:4096:8 MASK_DEVICE=cuda OMP_NUM_THREADS=1 /home/rmvisio
 ```
 
 Single-process eager execution only. Dynamic mask schedules, sparse kernels, physical structural pruning, AMP/DDP/compile, masked checkpoint resume, optimizer-state rollback and training callbacks remain outside scope. Sparse value count alone is not a speed measurement. Candidate selection, equal-budget dense recovery controls and at least three paired seeds must be planned separately before claiming accuracy improvements or cross-sensor benefits.
+
+MASK-2 now provides a separate [explicit masked-training checkpoint API](masked-training-checkpoints.md). The legacy-save restrictions above remain; the default training CLI is not integrated.

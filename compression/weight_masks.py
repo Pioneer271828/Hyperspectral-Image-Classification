@@ -73,7 +73,8 @@ class MaskedWeights:
             self.detach()
             raise
         def reject_legacy_state(module, prefix, keep_vars):
-            raise RuntimeError('Active masks cannot use legacy state_dict/checkpoints; detach first. mask_plan is not a training checkpoint.')
+            if not getattr(self, '_checkpoint_export', False):
+                raise RuntimeError('Active masks cannot use legacy state_dict/checkpoints; detach first. mask_plan is not a training checkpoint.')
         self._state_guard = self.model.register_state_dict_pre_hook(reject_legacy_state)
         return self
 
@@ -96,6 +97,25 @@ class MaskedWeights:
         self.detach()
         return False
 
+    def _checkpoint_payload(self):
+        """Internal explicit export; the legacy state_dict guard remains active otherwise."""
+        if not self.active: raise RuntimeError('Active masks required')
+        self._checkpoint_export = True
+        try:
+            state = {k:v.detach().cpu().clone() for k,v in self.model.state_dict().items()}
+        finally:
+            self._checkpoint_export = False
+        snapshots = {}
+        for path, (module, original, keep, restore) in zip(self._masks, self._attached):
+            prefix = path[:-len('weight')]
+            state[path] = state.pop(prefix+'parametrizations.weight.original')
+            exported_mask = state.pop(prefix+'parametrizations.weight.0.keep')
+            if not torch.equal(exported_mask, self._masks[path].cpu()):
+                raise ValueError('Active mask was externally modified')
+            snapshots[path] = restore.detach().cpu().clone()
+        if any('parametrizations.' in key for key in state):
+            raise ValueError('Unmanaged parametrizations cannot be checkpointed')
+        return state, snapshots
     def mask_plan(self):
         """Portable fixed masks only, NOT a model/optimizer training checkpoint."""
         return {'schema_version': 1, 'kind': 'explicit_weight_mask_plan',
@@ -108,4 +128,5 @@ class MaskedWeights:
                 or plan['kind'] != 'explicit_weight_mask_plan'):
             raise ValueError('Unsupported mask plan')
         return cls(model, plan['masks'], recovery=recovery)
+
 
