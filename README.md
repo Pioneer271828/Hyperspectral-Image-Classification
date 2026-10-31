@@ -113,3 +113,4 @@ CUDA 可用时可将 `--device cpu` 改成 `--device cuda`。检查点需同时�
 
 - [E0b验证区坐标敏感性诊断](docs/guides/coordinate-interventions.md)（Issue #31）
 - [E0b坐标敏感性验收报告](research/reports/E0b_验证区冻结坐标敏感性_20261031.md)
+- [B0坐标同预算重训协议](docs/guides/coordinate-retraining.md)（Issue #33）

@@ -1,5 +1,6 @@
 """Strict independent-block training using C0 attempts and the existing dual branch model."""
 from dataclasses import asdict
+from loadData.coordinate_observation import coordinate_observation, MODES
 from pathlib import Path
 import argparse
 import contextlib
@@ -24,8 +25,9 @@ class SpatialConfig:
     def __init__(self,value):
         defaults={'schema_version':1,'name':'spatial','dataset':'paviaU','device':'cpu','model':{},
                   'interaction':{},'loss':{},'training':{},'tile_size':32,'gap':2,'split_seed':2026}
-        if not isinstance(value,dict) or set(value)-set(defaults):raise ValueError('Unknown spatial config fields')
+        if not isinstance(value,dict) or set(value)-set(defaults)-{'coordinate_mode'}:raise ValueError('Unknown spatial config fields')
         values={**defaults,**value}
+        if values.get('coordinate_mode','absolute') not in MODES:raise ValueError('Invalid coordinate_mode')
         if type(values['schema_version']) is not int or values['schema_version']!=1:raise ValueError('Unsupported schema')
         if values['dataset'] not in DATASETS:raise ValueError('Unregistered dataset')
         self.research=ResearchConfig.from_dict({k:values[k] for k in ('name','device','model','interaction','loss','training')}
@@ -44,15 +46,17 @@ class SpatialConfig:
     @property
     def budget(self):return self.research.budget
 
-def evaluate(model,cube,labels,plan,stats,partition,dataset,classes,wave,scale):
+def evaluate(model,cube,labels,plan,stats,partition,dataset,classes,wave,scale,coordinate_mode=None):
     """Streaming confusion and NLL; missing classes stay explicit."""
+    mode = getattr(model,'training_config',{}).get('spatial_config',{}).get('coordinate_mode','absolute') if coordinate_mode is None else coordinate_mode
+    if mode not in MODES:raise ValueError('Invalid coordinate_mode')
     model.eval()
     confusion=np.zeros((classes,classes),dtype=np.int64)
     nll=0.0
     with torch.no_grad():
         for tile in plan['tiles']:
             if tile['partition']!=partition:continue
-            obs=observe_tile(cube,plan,stats,tile)
+            obs=coordinate_observation(observe_tile(cube,plan,stats,tile),mode)
             output=forward_partition(model,dataset,obs,wave,scale)[0].cpu().numpy()
             target=np.asarray(labels[tile_slice(tile)]).reshape(-1).astype(np.int64)
             valid=target>0
@@ -110,7 +114,7 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None,model_initiali
     for epoch in range(cfg.training.epochs+1):
         component_sums={}
         for _ in range(cfg.training.steps_per_epoch):
-            tile=train_tiles[int(rng.integers(len(train_tiles)))];obs=observe_tile(cube,plan,stats,tile)
+            tile=train_tiles[int(rng.integers(len(train_tiles)))];obs=coordinate_observation(observe_tile(cube,plan,stats,tile),v.get('coordinate_mode','absolute'))
             model.train();optimizer.zero_grad()
             outputs=forward_partition(model,dataset,obs,wave,scale)
             local=torch.as_tensor(np.array(labels[tile_slice(tile)],copy=True).reshape(-1),device=cfg.device,dtype=torch.long)
@@ -202,3 +206,4 @@ def main():
     print(execute(config,a.out_root,code,loader,a.resume)['status'],flush=True)
 
 if __name__=='__main__':main()
+
