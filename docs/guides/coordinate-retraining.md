@@ -7,3 +7,5 @@ SpatialConfig可显式携带coordinate_mode，写入checkpoint的training_config
 入口scripts/run_coordinate_screening.py沿用prepare/benchmark/run及--expected-commit/--data-root/--out-root。benchmark是30步GPU闭环（包含其自有选模后测试，不参与主结果）；主实验顺序预定absolute/relative/zero，串行运行，各自验证选模后只测试一次，不据测试结果改方案。共享初始化写到独立输出目录。resume只跳过已验证完整结果，失败尝试保留并从共同初始状态重试，不续接优化器。
 
 预声明：主比较为验证NLL，OA、逐类、AA及测试为辅助报告；单种子仅初筛，不能声称稳定提升。三条件结束前不改配置；不改默认模型。预计30分钟，所有执行通过ssh rmvision；不操作其他项目、依赖或旧实验目录。资源不足保留失败记录，不通过缩短预算制造可比结论。
+
+恢复摘要约定（Issue #39）：status表示实验completed，attempt/verified_attempt指向已验证成功产物；operation_status、operation_attempt、operation_elapsed_seconds记录本次操作。恢复跳过保留原训练耗时与每步统计。若原摘要缺失或为旧skipped摘要，从成功manifest恢复壁钟耗时并标elapsed_seconds_source=completed_manifest_wall_time，每步耗时未知记null，不以跳过耗时替代。恢复仍是跳过成功/失败重试，不是优化器断点续训。
