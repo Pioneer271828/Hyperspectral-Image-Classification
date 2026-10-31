@@ -23,7 +23,7 @@
   "research_focus": {"as_of": "2026-10-31", "axes": ["region_pixel_complementarity", "cross_sensor_spectral_adaptation", "pruning_and_quantization"], "primary_goal": "improve_accuracy_on_all_three_axes", "secondary_goal": "speed_under_predeclared_accuracy_constraint", "guide": "research/三主线研究重心与剪枝量化及论文用途_20261031.md"},
   "research_candidates": [
     {"id":"R-MONITORING", "status":"partial", "implemented_stages":["MON-0/1 limited readonly API"], "pending_stages":["MON-2","MON-3","MON-4"], "issue":37, "guide":"research/统一训练监测搭建与训练接入计划_20261031.md", "stages":["MON-0","MON-1","MON-2","MON-3","MON-4"], "proposed_paths":["monitoring/","tests/test_monitoring_statistics.py"], "default_enabled":false, "changes_default":false, "automatic_pruning":false},
-    {"id":"R-COMPRESSION", "status":"partial", "implemented_stages":["explicit reversible elementwise mask API"], "pending_stages":["candidate_selection","structured_pruning","quantization","accuracy_experiments"], "issue":35, "target_modules":["E0","M5","M6","E4a"], "stages":["redundancy_activity_diagnostics","structured_pruning","quantization","combined_deployment"], "changes_default":false},
+    {"id":"R-COMPRESSION", "status":"partial", "implemented_stages":["explicit reversible elementwise mask API","masked training checkpoint API"], "pending_stages":["candidate_selection","structured_pruning","quantization","accuracy_experiments"], "issue":35, "target_modules":["E0","M5","M6","E4a"], "stages":["redundancy_activity_diagnostics","structured_pruning","quantization","combined_deployment"], "changes_default":false},
     {
       "id": "R-MITA",
       "status": "planned",
@@ -50,6 +50,7 @@
   "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
   "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
 }
+
 
 
 
