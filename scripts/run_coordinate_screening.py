@@ -126,16 +126,9 @@ def run_one(variant, config, state, shared_digest, root, code, loader, resume=Fa
     # execute redirects stdout while training; each variant has its own detailed training.log.
     result = execute(config, root / 'training', code, loader, resume=resume,
         model_initializer=paired_initializer(state, shared_digest, config.training.seed), progress_callback=progress)
-    if result['status'] == 'skipped':
-        attempt = root / 'training' / result['run_id'] / 'attempts' / result['verified_attempt']
-        original = json.loads((attempt / 'manifest.json').read_text(encoding='utf-8-sig'))
-        if original.get('initialization', {}).get('state_digest') != shared_digest:
-            raise ValueError('Previous completed run used a different initialization')
+    from scripts.screening_summary import screening_summary
     elapsed = time.perf_counter() - started
-    summary = {'variant': variant, 'status': result['status'], 'run_id': result['run_id'],
-               'attempt': result['attempt'], 'elapsed_seconds': elapsed, 'shared_state_digest': shared_digest,
-               'optimizer_steps_budget': config.budget['optimizer_steps'],
-               'median_train_step_seconds': statistics.median(train_times[4:]) if len(train_times) > 4 else None}
+    summary = screening_summary(variant, config, result, root, shared_digest, elapsed, train_times)
     write_json(root / (variant + '-result.json'), summary)
     print(json.dumps(summary), flush=True)
     return summary
@@ -188,4 +181,5 @@ def main():
 
 
 if __name__ == '__main__': main()
+
 
