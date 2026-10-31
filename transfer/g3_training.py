@@ -105,9 +105,22 @@ def _update(model,scene,tile,local_labels,config,optimizer,head_only=False):
     return detached_loss_values(components)
 
 
+def source_train_counts(scene,labels):
+    if list(np.shape(labels))!=scene.plan['shape']:raise ValueError('Source label shape mismatch')
+    counts=np.zeros(scene.classes,dtype=np.int64)
+    for tile in scene.plan['tiles']:
+        if tile['partition']!='train':continue
+        local=np.asarray(labels[tile_slice(tile)])
+        if not np.isfinite(local).all() or not np.equal(local,np.floor(local)).all() or (local<0).any() or (local>scene.classes).any():
+            raise ValueError('Invalid source training labels')
+        counts+=np.bincount(local.astype(np.int64).ravel(),minlength=scene.classes+1)[1:]
+    if (counts==0).any():raise ValueError('Source train classes missing; no split redraw')
+    return counts.tolist()
+
 def train_source(scene,source_labels,base,folder,*,steps,val_every,model_seed,sampler_seed,device,task_hash,progress=None):
     """Only this source scene and its labels are available to this stage."""
     if type(steps) is not int or steps<=0 or type(val_every) is not int or val_every<=0:raise ValueError('Positive source budget required')
+    counts=source_train_counts(scene,source_labels)
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     model,config=build_model(base,scene.dataset,scene.classes,model_seed,device)
     config=SpatialConfig(config.to_dict()|{'training':config.to_dict()['training']|{'epochs':0,'steps_per_epoch':steps}})
@@ -132,7 +145,7 @@ def train_source(scene,source_labels,base,folder,*,steps,val_every,model_seed,sa
             if progress:progress({'phase':'source_val','step':step,'budget':steps,'val_nll':val['nll']})
     selected=load_model_checkpoint(folder/'model.pt',device)
     result={'status':'completed','optimizer_steps':steps,'selection':'source_val_nll','selected_step':min(history,key=lambda x:x['val']['nll'])['step'],
-            'history':history,'trace':trace,'initial_backbone_hash':initial_backbone,'source_test_evaluated':False,'checkpoint_sha256':hash_file(folder/'model.pt'),
+            'history':history,'trace':trace,'source_train_counts':counts,'initial_backbone_hash':initial_backbone,'source_test_evaluated':False,'checkpoint_sha256':hash_file(folder/'model.pt'),
             'sidecar_sha256':hash_file(folder/'model.pt.json'),'backbone_hash':state_hash(selected.backbone),'resolved_config':config.to_dict()}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
     return selected,result
@@ -186,6 +199,7 @@ def evaluate_target(scene,support,labels,checkpoint,*,expected_checkpoint_hash,e
         if tile['partition']=='test':released[tile_slice(tile)]=target_labels_for_tile(labels,scene.plan,support,tile['id'],phase='final_test',final_checkpoint_sha256=expected_checkpoint_hash)
     return evaluate(model,scene.cube,released,scene.plan,scene.stats,'test',scene.dataset,scene.classes,
                     np.asarray(scene.bands.wavelengths,dtype=np.float32),100)
+
 
 
 

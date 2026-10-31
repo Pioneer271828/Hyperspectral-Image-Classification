@@ -114,6 +114,16 @@ class TransferTrainingTests(unittest.TestCase):
                 adapt_target(target,support,base,folder,method=METHODS[0],source=None,steps=2,
                     model_seed=1,head_seed=2,sampler_seed=3,device=self.device(),task_hash='task')
 
+    def test_missing_source_class_rejected_before_training(self):
+        config,base,(scene,labels,_,_,_)=fixture()
+        from transfer.g3_training import train_source
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError,'classes missing'):
+                train_source(scene,np.ones_like(labels),base,Path(directory)/'source',steps=2,val_every=1,
+                    model_seed=1,sampler_seed=2,device=self.device(),task_hash='fixture')
+            self.assertFalse((Path(directory)/'source').exists())
+
 if __name__=='__main__':unittest.main()
+
 
 

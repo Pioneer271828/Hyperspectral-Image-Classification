@@ -12,7 +12,7 @@ from research_runtime import code_snapshot,require_frozen_code,external_director
 from loadData.transfer_protocol import validate_config,_validate_record,make_support,freeze_task
 from loadData.spatial_tiles import make_tile_plan,observe_tile
 from loadData.observation_sampling import BandMetadata,sample
-from transfer.g3_training import Scene,METHODS,train_source,adapt_target,evaluate_target
+from transfer.g3_training import Scene,METHODS,train_source,adapt_target,evaluate_target,source_train_counts
 ROOT=Path(__file__).resolve().parent
 
 
@@ -74,7 +74,7 @@ def campaign(task,plans,support,base,out,*,device,mode,data_root=None,progress=N
         result={'status':'passed','scope':'preflight_no_training','task_hash':task_hash,'source_bands':len(source.bands.band_ids),
                 'target_bands':len(target.bands.band_ids),'source_statistics_hash':source.stats['statistics_hash'],
                 'target_statistics_hash':target.stats['statistics_hash'],'support_labels':len(support['indices']),
-                'target_label_values_loaded':False,'optimizer_steps':0}
+                'target_label_values_loaded':False,'source_train_counts':source_train_counts(source,source_labels),'optimizer_steps':0}
         for role,scene in [('source',source),('target',target)]:
             tile=next(t for t in scene.plan['tiles'] if t['partition']=='train')
             _,record=sample(observe_tile(scene.cube,scene.plan,scene.stats,tile),scene.bands,{'mode':'none'})
@@ -155,4 +155,5 @@ def main():
     finally:write_json(out/'manifest.json',manifest)
 
 if __name__=='__main__':main()
+
 
