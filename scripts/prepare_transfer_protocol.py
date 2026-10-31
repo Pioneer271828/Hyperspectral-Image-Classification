@@ -45,7 +45,7 @@ def main():
             if tile['partition']=='train':
                 released+=int((target_labels_for_tile(labels,plans['target'],supports['10'],tile['id'],phase='adapt')>0).sum())
         assert released==90
-        poisoned=labels.copy()
+        poisoned=labels.astype(np.int64,copy=True)
         from loadData.spatial_tiles import tile_slice
         for tile in plans['target']['tiles']:
             if tile['partition']!='train':poisoned[tile_slice(tile)]=-999
@@ -68,3 +68,4 @@ def main():
     finally:write_json(out/'manifest.json',manifest)
 
 if __name__=='__main__':main()
+
