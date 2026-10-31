@@ -112,3 +112,4 @@ CUDA 可用时可将 `--device cpu` 改成 `--device cuda`。检查点需同时�
 - 导入时源目录没有发现许可证文件，因此没有替原作者添加授权条款。
 
 - [E0b验证区坐标敏感性诊断](docs/guides/coordinate-interventions.md)（Issue #31）
+- [E0b坐标敏感性验收报告](research/reports/E0b_验证区冻结坐标敏感性_20261031.md)
