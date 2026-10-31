@@ -135,3 +135,4 @@ Linked research documents retain their original filenames; many are currently wr
 - [M1 real spectral subsets and synchronized metadata](docs/guides/observation-sampling-m1.md): independent data API; cross-sensor protocols and accuracy experiments remain separate.
 - [E4a-1 frozen cross-sensor few-shot protocol](docs/guides/transfer-protocol-e4a.md): PaviaU to Xuzhou, explicit target-label budget and spatial access boundaries; no zero-shot claim.
 - [E4a-2 G3 training entry point](docs/guides/g3-training.md): source-only pretraining, fresh target heads and fixed-budget adaptation; full pilot results are assessed separately.
+- [G3-P1 full-budget pilot preregistration and run record](research/reports/G3P1_跨传感器完整初筛运行记录_20261101.md): completion and accuracy are reported separately.
