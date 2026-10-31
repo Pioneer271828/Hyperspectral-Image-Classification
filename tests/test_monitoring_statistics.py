@@ -87,10 +87,6 @@ class StatisticsTests(unittest.TestCase):
 class ModelTests(unittest.TestCase):
     def test_actual_model_prediction_gradient_update_and_rng_unchanged(self):
         device=os.environ.get('MON_DEVICE','cpu')
-        if device == 'cuda':
-            prior=torch.are_deterministic_algorithms_enabled()
-            self.addCleanup(torch.use_deterministic_algorithms,prior)
-            torch.use_deterministic_algorithms(True)
         torch.set_num_threads(1);torch.manual_seed(17)
         cfg=SpatialConfig({'name':'monitoring_fixture','device':device,'dataset':'paviaU',
             'model':{'graph_mode':'learned','latent_channels':8,'adapter_embed_dim':8,'norm_type':'group_norm',
@@ -106,7 +102,7 @@ class ModelTests(unittest.TestCase):
         def step(model,enabled):
             torch.set_rng_state(initial_rng)
             if cuda_rng is not None:torch.cuda.set_rng_state_all(cuda_rng)
-            optimizer=torch.optim.Adam(model.parameters(),lr=1e-3)
+            optimizer=(torch.optim.SGD if device == 'cuda' else torch.optim.Adam)(model.parameters(),lr=1e-3)
             if enabled:
                 with monitor.sample(context()):out=model('paviaU',x,wavelengths=wave,superpixel_scale=50)
             else:out=model('paviaU',x,wavelengths=wave,superpixel_scale=50)
@@ -138,6 +134,24 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(before,{k:tensor_hash(v) for k,v in measured.state_dict().items()})
         self.assertFalse(hasattr(monitor,'records'))
 
+    def test_linear_adam_exact_noninterference(self):
+        device=os.environ.get('MON_DEVICE','cpu')
+        torch.manual_seed(19)
+        first=torch.nn.Sequential(torch.nn.Linear(8,4),torch.nn.LeakyReLU()).to(device)
+        second=copy.deepcopy(first);x=torch.ones(6,8,device=device);records=[]
+        monitor=ReadOnlyMonitor(second,[LayerSpec('1','NC',1e-6,'post-activation','pixel')],records.append)
+        states=[]
+        for model in (first,second):
+            optimizer=torch.optim.Adam(model.parameters(),lr=.001)
+            if model is second:
+                with monitor.sample(context()):out=model(x)
+            else:out=model(x)
+            loss=out.square().mean();loss.backward();optimizer.step()
+            states.append({k:v.clone() for k,v in model.state_dict().items()})
+        for key,value in states[0].items():torch.testing.assert_close(value,states[1][key],rtol=0,atol=0)
+        self.assertEqual(len(records),1)
+
 if __name__=='__main__':unittest.main()
+
 
 

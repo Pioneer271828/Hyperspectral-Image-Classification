@@ -38,3 +38,5 @@ CUBLAS_WORKSPACE_CONFIG=:4096:8 MON_DEVICE=cuda OMP_NUM_THREADS=1 /home/rmvision
 
 Selected modules must actually be called in a sample; otherwise the sample raises an explicit measurement error. In this backbone the HGNN convolution is sometimes evaluated through a functional path bypassing its module forward; observe the called normalization wrapper instead of silently accepting an unused convolution hook.
 
+
+Validation scope: CPU actual-model Adam forward/backward/update comparison; GPU actual-model SGD comparison under CUDA sparse roundoff tolerance, plus an exact GPU linear/LeakyReLU Adam control. The current adaptive_avg_pool2d CUDA backward lacks a deterministic implementation, so the full learned-graph CUDA Adam step is not claimed bitwise invariant. All failed probes are retained; tests do not change the model's normal optimizer.
