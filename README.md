@@ -127,3 +127,5 @@ The current [three research axes and pruning/quantization plan](research/三主�
 The [unified training monitoring implementation and integration plan](research/统一训练监测搭建与训练接入计划_20261031.md) is **planned**, not implemented (Issue #37).
 
 Linked research documents retain their original filenames; many are currently written in Chinese.
+
+- [MON-0/1 read-only activation and weight measurements](docs/guides/monitoring-readonly.md): opt-in API; later monitoring integration stages remain planned.

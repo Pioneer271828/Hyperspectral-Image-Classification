@@ -2,6 +2,7 @@
   "schema_version": 1,
   "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。",
   "modules": [
+    {"id":"MON-01", "paths":["monitoring/"], "tests":["tests/test_monitoring_statistics.py"], "guide":"docs/guides/monitoring-readonly.md", "depends_on":["M5","E0"]},
     {"id": "baseline", "paths": ["smoke_test.py", "scripts/validate_baseline.py", "docs/migration/baseline-source.json"], "tests": ["tests/test_interaction_modules.py", "smoke_test.py"], "depends_on": []},
     {"id": "C0", "paths": ["model/research_config.py", "research_runtime.py", "research_ablation_presets.py", "run_research_ablation.py", "configs/experiments/", "model/interaction_config.py", "model/checkpoint_io.py"], "tests": ["tests/test_research_c0.py", "tests/test_interaction_modules.py"], "guide": "docs/guides/c0-experiments.md", "depends_on": ["baseline"]},
     {"id": "C1", "paths": ["loadData/dataset_registry.py", "loadData/fixed_splits.py", "loadData/spatial_protocol.py", "loadData/spatial_tiles.py", "prepare_data_protocol.py", "prepare_spatial_protocol.py", "train_spatial.py"], "tests": ["tests/test_data_c1a.py", "tests/test_spatial_c1b.py", "tests/test_spatial_training.py"], "guide": "docs/guides/spatial-training.md", "extension": "分区独立多块训练闭环；正式多折评价另立实验任务", "depends_on": ["C0"]},
@@ -47,6 +48,7 @@
   "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
   "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
 }
+
 
 
 
