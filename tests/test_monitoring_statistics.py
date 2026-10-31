@@ -73,6 +73,9 @@ class StatisticsTests(unittest.TestCase):
         with self.assertRaises(OSError):
             with ReadOnlyMonitor(model,[spec],broken_sink).sample(context()):model(torch.ones(3,2))
         self.assertFalse(model[0]._forward_hooks)
+        with self.assertRaisesRegex(RuntimeError,'not called'):
+            with monitor.sample(context()):pass
+        self.assertFalse(model[0]._forward_hooks)
         bad=context();bad['partition']='test'
         with self.assertRaises(ValueError):
             with monitor.sample(bad):pass
@@ -93,7 +96,7 @@ class ModelTests(unittest.TestCase):
         x=torch.randn(12,12,8,device=device);wave=torch.linspace(400,900,6,device=device)
         specs=[LayerSpec('backbone.adapter','HWC',1e-6,'post-adapter','pixel'),
                LayerSpec('backbone.CNN_Branch.0','NCHW',1e-6,'post-block','pixel'),
-               LayerSpec('backbone.HGNN_Branch.hgc1','NC',1e-6,'pre-normalization','region')]
+               LayerSpec('backbone.HGNN_Branch.batch_normalzation2','NC',1e-6,'post-normalization','region')]
         records=[];monitor=ReadOnlyMonitor(measured,specs,records.append)
         initial_rng=torch.get_rng_state();cuda_rng=torch.cuda.get_rng_state_all() if device=='cuda' else None
         def step(model,enabled):
@@ -132,3 +135,4 @@ class ModelTests(unittest.TestCase):
         self.assertFalse(hasattr(monitor,'records'))
 
 if __name__=='__main__':unittest.main()
+

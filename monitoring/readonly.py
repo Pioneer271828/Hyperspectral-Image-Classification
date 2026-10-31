@@ -65,7 +65,7 @@ class ChannelStats:
         def elements(x): return (x/self.count).tolist() if self.count else [None]*self.channels
         return {'channels': self.channels, 'count_per_channel': self.count, 'valid_blocks': self.blocks,
             'epsilon': self.epsilon, 'mean': self.mean.tolist() if self.count else [None]*self.channels,
-            'variance_population': elements(self.m2), 'rms': elements(self.square.sqrt()*math.sqrt(self.count)) if self.count else [None]*self.channels,
+            'variance_population': elements(self.m2), 'rms': (self.square/self.count).sqrt().tolist() if self.count else [None]*self.channels,
             'mean_absolute': elements(self.absolute), 'positive_rate': elements(self.positive),
             'negative_rate': elements(self.negative), 'near_zero_rate': elements(self.near),
             'response_rate': elements(self.positive+self.negative),
@@ -163,7 +163,10 @@ class ReadOnlyMonitor:
         try:
             for spec in self.specs: handles.append(self.model.get_submodule(spec.path).register_forward_hook(hook(spec)))
             yield self
+            missing = [s.path for s in self.specs if counts.get(s.path, 0) == 0]
+            if missing: raise RuntimeError('Selected modules were not called: ' + ', '.join(missing))
         finally:
             for handle in handles: handle.remove()
             with _LOCK: _ACTIVE.discard(self.model)
+
 

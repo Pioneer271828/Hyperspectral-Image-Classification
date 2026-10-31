@@ -35,3 +35,5 @@ Remote regression commands:
 OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 MON_DEVICE=cuda OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python -m unittest discover -s tests -p test_monitoring_statistics.py -v
 ```
+
+Selected modules must actually be called in a sample; otherwise the sample raises an explicit measurement error. In this backbone the HGNN convolution is sometimes evaluated through a functional path bypassing its module forward; observe the called normalization wrapper instead of silently accepting an unused convolution hook.
