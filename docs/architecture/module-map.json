@@ -16,14 +16,14 @@
     {"id": "M6", "paths": ["model/region_pixel_alignment.py", "model/cross_branch_interaction.py"], "tests": ["tests/test_interaction_m6.py", "scripts/validate_m6.py"], "guide": "docs/guides/interaction-m6.md", "depends_on": ["M5", "E0"]},
     {"id": "M7", "paths": ["model/graph_edge_update.py"], "depends_on": ["M6"]},
     {"id": "M4", "paths": [], "extension": "区域表示与像素残差分工", "depends_on": ["M3", "M5", "E0"]},
-    {"id": "M1", "paths": [], "extension": "真实波段子集与元数据同步", "depends_on": ["C1", "M2"]},
+    {"id": "M1", "paths": ["loadData/observation_sampling.py"], "tests":["tests/test_observation_sampling.py","scripts/validate_m1.py"], "guide":"docs/guides/observation-sampling-m1.md", "extension": "真实波段子集与元数据同步；训练与跨传感器精度另验收", "depends_on": ["C1", "M2"]},
     {"id": "E1", "paths": [], "extension": "覆盖度描述与调制", "depends_on": ["M1", "E0"]},
     {"id": "E4a", "paths": [], "extension": "语义映射、固定预算适配及留出协议", "depends_on": ["C1", "M8", "E0"]}
   ],
   "research_focus": {"as_of": "2026-10-31", "axes": ["region_pixel_complementarity", "cross_sensor_spectral_adaptation", "pruning_and_quantization"], "primary_goal": "improve_accuracy_on_all_three_axes", "secondary_goal": "speed_under_predeclared_accuracy_constraint", "guide": "research/三主线研究重心与剪枝量化及论文用途_20261031.md"},
   "research_candidates": [
     {"id":"R-MONITORING", "status":"partial", "implemented_stages":["MON-0/1 limited readonly API"], "pending_stages":["MON-2","MON-3","MON-4"], "issue":37, "guide":"research/统一训练监测搭建与训练接入计划_20261031.md", "stages":["MON-0","MON-1","MON-2","MON-3","MON-4"], "proposed_paths":["monitoring/","tests/test_monitoring_statistics.py"], "default_enabled":false, "changes_default":false, "automatic_pruning":false},
-    {"id":"R-COMPRESSION", "status":"partial", "implemented_stages":["explicit reversible elementwise mask API","masked training checkpoint API"], "pending_stages":["candidate_selection","structured_pruning","quantization","accuracy_experiments"], "issue":35, "target_modules":["E0","M5","M6","E4a"], "stages":["redundancy_activity_diagnostics","structured_pruning","quantization","combined_deployment"], "changes_default":false},
+    {"id":"R-COMPRESSION", "status":"partial", "implementation_frozen":true, "reason":"Prioritize M1 and E4a before pruning accuracy experiments", "implemented_stages":["explicit reversible elementwise mask API","masked training checkpoint API"], "pending_stages":["candidate_selection","structured_pruning","quantization","accuracy_experiments"], "issue":35, "target_modules":["E0","M5","M6","E4a"], "stages":["redundancy_activity_diagnostics","structured_pruning","quantization","combined_deployment"], "changes_default":false},
     {
       "id": "R-MITA",
       "status": "planned",
@@ -50,6 +50,7 @@
   "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
   "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
 }
+
 
 
 
