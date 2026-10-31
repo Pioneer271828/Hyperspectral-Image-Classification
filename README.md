@@ -8,6 +8,7 @@ This repository was organized from an existing research workspace. It retains th
 
 Follow the [research master checklist](research/研究内容整合与详细搭建测试计划_2026-10-28.md) and the [module implementation plan](research/模块化搭建与测试消融实施计划_2026-10-28.md). Each module is versioned and validated remotely, followed by a pause for review. Engineering validation has been completed for the baseline, C0, C1, M2, M3, M5, M8, E0a, and M6. M7 candidate-edge reweighting remains in the engineering roadmap; formal accuracy experiments are assessed separately. The current research priorities and monitoring plan are linked below.
 
+- [G3 cross-sensor pilot results and per-class analysis](research/reports/G3P1_跨传感器完整初筛结果与逐类分析_20261101.md): single-seed, 10 labels per target class; full fine-tuning reached 68.79% OA versus 57.25% from scratch, with additional source pretraining cost. Stable gains remain unverified.
 - [Baseline provenance and fingerprints](docs/migration/source-inventory.md), [baseline validation report](research/reports/baseline_2026-10-29.md)
 - [Remote validation and synchronization guide](docs/guides/remote-validation.md)
 - [C0 configuration, run records, and ablation checklist](docs/guides/c0-experiments.md): start with a dry run; verify matching run identity before skipping completed work or retrying failed attempts
