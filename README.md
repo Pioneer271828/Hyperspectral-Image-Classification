@@ -124,6 +124,9 @@ The current [three research axes and pruning/quantization plan](research/三主�
 2. Cross-sensor spectral adaptation.
 3. Pruning and quantization, followed by speed optimization under a predefined accuracy constraint.
 
-The [unified training monitoring implementation and integration plan](research/统一训练监测搭建与训练接入计划_20261031.md) is **planned**, not implemented (Issue #37).
+The [unified training monitoring implementation and integration plan](research/统一训练监测搭建与训练接入计划_20261031.md) has an initial opt-in MON-0/1 API (Issue #43); gradient/update monitoring and probe integration remain **planned** (Issue #37).
 
 Linked research documents retain their original filenames; many are currently written in Chinese.
+
+- [MON-0/1 read-only activation and weight measurements](docs/guides/monitoring-readonly.md): opt-in API; later monitoring integration stages remain planned.
+
