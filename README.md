@@ -115,3 +115,5 @@ CUDA 可用时可将 `--device cpu` 改成 `--device cuda`。检查点需同时�
 - [E0b坐标敏感性验收报告](research/reports/E0b_验证区冻结坐标敏感性_20261031.md)
 - [B0坐标同预算重训协议](docs/guides/coordinate-retraining.md)（Issue #33）
 - [B0坐标重训启动与预验收记录](research/reports/E0b_B0坐标重训启动与验收_20261031.md)（完整训练状态见报告）
+
+当前研究重心：[三条主线与剪枝量化计划](research/三主线研究重心与剪枝量化及论文用途_20261031.md)，均以尽可能提升精度为首要目标。
