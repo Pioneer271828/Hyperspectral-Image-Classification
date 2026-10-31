@@ -87,6 +87,10 @@ class StatisticsTests(unittest.TestCase):
 class ModelTests(unittest.TestCase):
     def test_actual_model_prediction_gradient_update_and_rng_unchanged(self):
         device=os.environ.get('MON_DEVICE','cpu')
+        if device == 'cuda':
+            prior=torch.are_deterministic_algorithms_enabled()
+            self.addCleanup(torch.use_deterministic_algorithms,prior)
+            torch.use_deterministic_algorithms(True)
         torch.set_num_threads(1);torch.manual_seed(17)
         cfg=SpatialConfig({'name':'monitoring_fixture','device':device,'dataset':'paviaU',
             'model':{'graph_mode':'learned','latent_channels':8,'adapter_embed_dim':8,'norm_type':'group_norm',
@@ -135,4 +139,5 @@ class ModelTests(unittest.TestCase):
         self.assertFalse(hasattr(monitor,'records'))
 
 if __name__=='__main__':unittest.main()
+
 
