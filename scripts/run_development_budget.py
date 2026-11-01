@@ -19,6 +19,8 @@ def main():
     for name in ('development-root','protocol-root','data-root','out-dir'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--source-run',type=Path,required=True)
     p.add_argument('--seed',type=int,choices=(2036,2046,2056),default=2036)
+    p.add_argument('--low-backbone-lr',action='store_true',help='Single full-finetune5000 run at1e-5; requires matching cached baseline')
+    p.add_argument('--baseline-run',type=Path)
     args=p.parse_args();code=code_snapshot()
     if sys.platform!='linux' or not Path('/.dockerenv').exists() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize or not torch.cuda.is_available():
         p.error('Require container, CUDA, assertions and clean exact SHA')
@@ -40,6 +42,12 @@ def main():
     bands=BandMetadata(identity['image_sha256'],tuple(range(len(wave))),tuple(wave),'nm','approximate',(True,)*len(wave))
     scene=prepare_scene(cube,bands,plan,record)
     base=json.loads((Path(__file__).resolve().parents[1]/'configs/experiments/screen_m6_none.json').read_text())
+    if args.low_backbone_lr:
+        if args.baseline_run is None:p.error('Cached baseline required')
+        from train_spatial import SpatialConfig
+        original=SpatialConfig(base)
+        assert original.research.training.lr==5e-5 and original.research.training.head_lr==5e-4
+        base['training']['lr']=1e-5
     torch.set_num_threads(1);out.mkdir(parents=True,exist_ok=False)
     receipt={'status':'running','code':code,'scope':'single_seed_paired_budget_validation_only','command':[sys.executable,*sys.argv]}
     write_json(out/'manifest.json',receipt)
@@ -63,24 +71,44 @@ def main():
         source=load_model_checkpoint(args.source_run/'source/model.pt','cuda')
         receipt['source_checkpoint_sha256']=source_result['checkpoint_sha256']
         receipt['source_extra_updates']=10000
+        baseline=None
+        if args.low_backbone_lr:
+            baseline_manifest=json.loads((args.baseline_run/'manifest.json').read_text())
+            assert baseline_manifest['status']=='passed' and baseline_manifest['code']['commit']=='2c63ab7f42c480a1c37aea3238a9806926de76b4'
+            assert baseline_manifest['development_hash']==record['validation_hash']
+            assert baseline_manifest['source_checkpoint_sha256']==source_result['checkpoint_sha256']
+            baseline_folder=args.baseline_run/'source_pretrained_full_finetune-5000'
+            baseline_path=baseline_folder/'result.json';baseline=json.loads(baseline_path.read_text())
+            hashes[str(baseline_path)]=hash_file(baseline_path)
+            for name,key in [('model.pt','checkpoint_sha256'),('model.pt.json','sidecar_sha256')]:
+                path=baseline_folder/name;assert hash_file(path)==baseline[key];hashes[str(path)]=baseline[key]
+            assert baseline['steps']==5000 and baseline['development_hash']==record['validation_hash']
         runs=[]
-        write_json(out/'preregistered-settings.json',{'seed':args.seed,'budgets':[1000,5000],'val_every':100,'methods':['target_scratch_full','source_pretrained_full_finetune'],'development_hash':record['validation_hash'],'test_evaluation':False})
-        for method in ('target_scratch_full','source_pretrained_full_finetune'):
-            for budget in (1000,5000):
+        budgets=(5000,) if args.low_backbone_lr else (1000,5000)
+        methods=('source_pretrained_full_finetune',) if args.low_backbone_lr else ('target_scratch_full','source_pretrained_full_finetune')
+        write_json(out/'preregistered-settings.json',{'seed':args.seed,'budgets':budgets,'val_every':100,'methods':methods,'backbone_lr':1e-5 if args.low_backbone_lr else 5e-5,'head_lr':5e-4,'development_hash':record['validation_hash'],'test_evaluation':False})
+        for method in methods:
+            for budget in budgets:
                 started=time.monotonic()
                 result=adapt(scene,record,base,out/f'{method}-{budget}',method=method,source=source,steps=budget,val_every=100,device='cuda',seed=args.seed,progress=lambda event:write_json(out/'progress.json',event))
                 best=min(result['validation'],key=lambda row:row['nll'])
+                if baseline is not None:
+                    assert result['initial_backbone_hash']==baseline['initial_backbone_hash']
+                    assert result['initial_head_hash']==baseline['initial_head_hash']
+                    assert [x['tile_id'] for x in result['trace']]==[x['tile_id'] for x in baseline['trace']]
+                    receipt['baseline_result_sha256']=hashes[str(baseline_path)]
                 runs.append({'method':method,'budget':budget,'selected':best,'wall_seconds':time.monotonic()-started,'initial_backbone_hash':result['initial_backbone_hash'],'initial_head_hash':result['initial_head_hash'],'sampled_tiles':[x['tile_id'] for x in result['trace']]})
                 write_json(out/'runs.json',runs)
         assert len({r['initial_head_hash'] for r in runs})==1
-        for index in (0,2):
-            assert runs[index]['sampled_tiles']==runs[index+1]['sampled_tiles'][:1000]
-            assert runs[index]['initial_backbone_hash']==runs[index+1]['initial_backbone_hash']
-        assert runs[2]['initial_backbone_hash']==source_result['backbone_hash']
+        if not args.low_backbone_lr:
+            for index in (0,2):
+                assert runs[index]['sampled_tiles']==runs[index+1]['sampled_tiles'][:1000]
+                assert runs[index]['initial_backbone_hash']==runs[index+1]['initial_backbone_hash']
+        assert next(r for r in runs if r['method']=='source_pretrained_full_finetune')['initial_backbone_hash']==source_result['backbone_hash']
         receipt['runs']=[{k:v for k,v in r.items() if k!='sampled_tiles'} for r in runs]
         require_frozen_code(code)
         assert all(hash_file(x)==v for x,v in hashes.items()) and hash_file(image)==identity['image_sha256']
-        receipt.update(status='passed',optimizer_steps=12000,validation_labels=45,test_evaluated=False,
+        receipt.update(status='passed',optimizer_steps=sum(budgets)*len(methods),validation_labels=45,test_evaluated=False,
                        raw_label_file_loaded=False,development_hash=record['validation_hash'])
     except BaseException as error:
         receipt.update(status='failed',error=repr(error));raise
