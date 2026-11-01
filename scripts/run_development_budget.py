@@ -9,6 +9,7 @@ from research_runtime import code_snapshot,external_directory,hash_file,require_
 from loadData.observation_sampling import BandMetadata
 from transfer.development_training import prepare_scene,adapt
 from model.checkpoint_io import load_model_checkpoint
+from model.research_config import digest
 import time
 
 
@@ -17,6 +18,7 @@ def main():
     p.add_argument('--expected-commit',required=True)
     for name in ('development-root','protocol-root','data-root','out-dir'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--source-run',type=Path,required=True)
+    p.add_argument('--seed',type=int,choices=(2036,2046,2056),default=2036)
     args=p.parse_args();code=code_snapshot()
     if sys.platform!='linux' or not Path('/.dockerenv').exists() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize or not torch.cuda.is_available():
         p.error('Require container, CUDA, assertions and clean exact SHA')
@@ -46,7 +48,14 @@ def main():
         source_manifest=json.loads((args.source_run/'manifest.json').read_text())
         assert source_manifest['status']=='passed' and source_result['source_test_evaluated'] is False
         assert source_manifest['code']['commit']=='8fdab9b031727b1058e408cb8e2c3e5feee0a727'
-        assert source_manifest['task_hash']=='22345436b815a9a85fa75b421bb8a6796767e159261417b61ddf958d7321969a'
+        source_task_path=args.source_run/'frozen-task.json'
+        source_task=json.loads(source_task_path.read_text())
+        hashes[str(source_task_path)]=hash_file(source_task_path)
+        assert source_task['task_hash']==digest({k:v for k,v in source_task.items() if k!='task_hash'})
+        assert source_manifest['task_hash']==source_task['task_hash']
+        assert source_task['config']['model_seed']==args.seed
+        assert source_task['source_identity']==task['source_identity']
+        assert source_task['target_identity']==task['target_identity']
         for name,key in [('model.pt','checkpoint_sha256'),('model.pt.json','sidecar_sha256')]:
             source_path=args.source_run/'source'/name
             assert hash_file(source_path)==source_result[key]
@@ -55,11 +64,11 @@ def main():
         receipt['source_checkpoint_sha256']=source_result['checkpoint_sha256']
         receipt['source_extra_updates']=10000
         runs=[]
-        write_json(out/'preregistered-settings.json',{'seed':2036,'budgets':[1000,5000],'val_every':100,'methods':['target_scratch_full','source_pretrained_full_finetune'],'development_hash':record['validation_hash'],'test_evaluation':False})
+        write_json(out/'preregistered-settings.json',{'seed':args.seed,'budgets':[1000,5000],'val_every':100,'methods':['target_scratch_full','source_pretrained_full_finetune'],'development_hash':record['validation_hash'],'test_evaluation':False})
         for method in ('target_scratch_full','source_pretrained_full_finetune'):
             for budget in (1000,5000):
                 started=time.monotonic()
-                result=adapt(scene,record,base,out/f'{method}-{budget}',method=method,source=source,steps=budget,val_every=100,device='cuda',progress=lambda event:write_json(out/'progress.json',event))
+                result=adapt(scene,record,base,out/f'{method}-{budget}',method=method,source=source,steps=budget,val_every=100,device='cuda',seed=args.seed,progress=lambda event:write_json(out/'progress.json',event))
                 best=min(result['validation'],key=lambda row:row['nll'])
                 runs.append({'method':method,'budget':budget,'selected':best,'wall_seconds':time.monotonic()-started,'initial_backbone_hash':result['initial_backbone_hash'],'initial_head_hash':result['initial_head_hash'],'sampled_tiles':[x['tile_id'] for x in result['trace']]})
                 write_json(out/'runs.json',runs)
