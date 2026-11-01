@@ -6,7 +6,7 @@ from loadData.spatial_tiles import validate_tile_plan,tile_slice
 from model.research_config import digest
 from model.checkpoint_io import save_model_checkpoint
 from research_runtime import write_json,hash_file
-from transfer.g3_training import Scene,build_target,_optimizer,_update,_forward
+from transfer.g3_training import Scene,build_target,_optimizer,_update,_forward,state_hash,head_hash
 
 
 def validate(record,plan):
@@ -53,6 +53,7 @@ def sparse_labels(record,plan,name):
 
 def evaluate_validation(model,scene,record):
     labels=sparse_labels(record,scene.plan,'validation_support');total=correct=0;nll=0.
+    matrix=np.zeros((scene.classes,scene.classes),dtype=np.int64)
     model.eval()
     with torch.no_grad():
         for tile in record['roles']:
@@ -62,22 +63,27 @@ def evaluate_validation(model,scene,record):
             original=scene.plan['tiles'][tile['id']]
             output=_forward(model,scene,original)[0].detach().cpu().numpy()
             target=target[valid]-1;probs=output[valid]
-            correct+=int((probs.argmax(1)==target).sum());total+=len(target)
+            prediction=probs.argmax(1)
+            matrix+=np.bincount(target*scene.classes+prediction,minlength=scene.classes**2).reshape(scene.classes,scene.classes)
+            correct+=int((prediction==target).sum());total+=len(target)
             nll-=float(np.log(np.maximum(probs[np.arange(len(target)),target],1e-8)).sum())
     if total!=45:raise ValueError('Validation label budget differs from45')
-    return {'nll':nll/total,'oa':correct/total,'count':total}
+    return {'nll':nll/total,'oa':correct/total,'count':total,'confusion':matrix.tolist(),
+            'support':matrix.sum(1).tolist(),'recall':(np.diag(matrix)/matrix.sum(1)).tolist()}
 
 
-def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036):
+def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036,progress=None):
     validate(record,scene.plan)
     if type(steps) is not int or steps<=0 or type(val_every) is not int or val_every<=0:raise ValueError('Positive budgets required')
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     model,config=build_target(base,scene,method,source,model_seed=seed,head_seed=seed+2,device=device)
+    initial_backbone=state_hash(model.backbone);initial_heads=head_hash(model)
     optimizer=_optimizer(model,config);labels=sparse_labels(record,scene.plan,'train_support')
     tiles=[scene.plan['tiles'][t['id']] for t in record['roles'] if t['role']=='devtrain' and (labels[tile_slice(t)]>0).any()]
     rng=np.random.default_rng(seed+4);torch.manual_seed(seed);history=[];trace=[];best=float('inf')
     model.training_config={'development_hash':record['validation_hash'],'statistics_hash':scene.stats['statistics_hash'],
-                           'method':method,'selection':record['selection'],'training_labels':90,'validation_labels':45}
+                           'method':method,'selection':record['selection'],'training_labels':90,'validation_labels':45,
+                           'optimizer_budget':steps,'model_seed':seed,'head_seed':seed+2,'sampler_seed':seed+4}
     for step in range(1,steps+1):
         tile=tiles[int(rng.integers(len(tiles)))];loss=_update(model,scene,tile,labels[tile_slice(tile)],config,optimizer,head_only=method=='source_pretrained_head_only')
         trace.append({'step':step,'tile_id':tile['id'],'loss':loss})
@@ -85,11 +91,14 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
             val=evaluate_validation(model,scene,record)
             if not np.isfinite(val['nll']):raise ValueError('Nonfinite validation')
             history.append({'step':step,**val})
+            if progress:progress({'method':method,'budget':steps,'step':step,'validation':val})
             if val['nll']<best:
                 best=val['nll'];model.training_config['selected_step']=step
                 save_model_checkpoint(model,folder/'model.pt')
     result={'status':'completed','steps':steps,'trace':trace,'validation':history,
             'selected_step':min(history,key=lambda x:x['nll'])['step'],'test_evaluated':False,
+            'initial_backbone_hash':initial_backbone,'initial_head_hash':initial_heads,
+            'final_backbone_hash':state_hash(model.backbone),'final_head_hash':head_hash(model),
             'development_hash':record['validation_hash'],'checkpoint_sha256':hash_file(folder/'model.pt'),
             'sidecar_sha256':hash_file(folder/'model.pt.json')}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
