@@ -123,10 +123,11 @@ class CoverageIntegrationTests(unittest.TestCase):
         for attention in ('wavelength','index','uniform'):
             model=self.model(adapter_attention_mode=attention).eval();x,wave,meta=self.inputs()
             with torch.no_grad():model.backbone.coverage_modulation.generator[2].bias.fill_(.7)
-            cases=[None,replace(meta,wavelength_quality='index_only')]
-            if attention!='wavelength':cases.append(meta)
-            for item in cases:
-                out=self.call(model,x,wave,item,return_graph_info=True,return_diagnostics=True)
+            indexed=replace(meta,wavelengths=tuple(np.linspace(0,1,8)),wavelength_unit='normalized',wavelength_quality='index_only')
+            cases=[(wave,None),(torch.tensor(indexed.wavelengths,device=self.device,dtype=x.dtype),indexed)]
+            if attention!='wavelength':cases.append((wave,meta))
+            for actual_wave,item in cases:
+                out=self.call(model,x,actual_wave,item,return_graph_info=True,return_diagnostics=True)
                 self.assertEqual(out[3]['coverage']['usable_anchors'],0)
                 self.assertIsNotNone(out[3]['coverage']['fallback_reason'])
             norm=replace(meta,wavelengths=tuple((w-400)/2100 for w in meta.wavelengths),wavelength_unit='normalized')
@@ -274,6 +275,41 @@ class CoverageIntegrationTests(unittest.TestCase):
         from loadData.data_read import read_band_metadata
         self.assertEqual(read_band_metadata('xuzhou',8).wavelength_quality,'approximate')
         self.assertEqual(read_band_metadata('unknown',8).wavelength_quality,'index_only')
+
+    def test_legacy_trainer_optimizes_and_resumes_with_metadata_identity(self):
+        from test_interaction_modules import synthetic_item
+        from test_research_c0 import tiny_config
+        from run_research_ablation import execute_one
+        import train_vca_multidataset as train
+        value=tiny_config().to_dict();value['device']=self.device
+        value['model']['coverage_mode']='affine';cfg=ResearchConfig.from_dict(value)
+        item=synthetic_item()
+        for k,v in item.items():
+            if isinstance(v,torch.Tensor):item[k]=v.to(self.device)
+        item['coverage_metadata']=BandMetadata('legacy',tuple(range(12)),tuple(item['wavelengths'].cpu().tolist()),'nm','approximate',(True,)*12)
+        with tempfile.TemporaryDirectory() as root,patch.object(train,'prepare_dataset',return_value=item):
+            result=execute_one(cfg,root,code_snapshot())
+            self.assertEqual(result['status'],'completed')
+            folder=Path(root)/result['run_id']/'attempts'/result['attempt']
+            model=load_model_checkpoint(folder/'model.pt',self.device)
+            self.assertGreater(float(model.backbone.coverage_modulation.generator[2].weight.abs().max()),0)
+            self.assertIn('coverage_input_metadata',model.training_config)
+            with patch.object(torch.optim,'Adam',side_effect=AssertionError('must skip')):
+                self.assertEqual(execute_one(cfg,root,code_snapshot(),resume=True)['status'],'skipped')
+            item['coverage_metadata']=replace(item['coverage_metadata'],wavelength_quality='verified')
+            with self.assertRaises(ValueError):execute_one(cfg,root,code_snapshot(),resume=True)
+
+    def test_dynamic_head_and_legacy_single_wrapper_preserve_device_and_mode(self):
+        from model.VCASAHGCN import VCASAHGCN
+        model=self.model().double().eval();model.add_dataset_head('b',4)
+        self.assertFalse(model.training)
+        self.assertTrue(all(p.device.type==torch.device(self.device).type and p.dtype==torch.float64 for p in model.parameters()))
+        self.assertFalse(model.backbone.coverage_modulation.training)
+        x,wave,meta=self.inputs();q=torch.nn.functional.one_hot(torch.arange(42)%6,6).float().to(self.device);a=torch.eye(6,device=self.device)
+        wrapper=VCASAHGCN(6,7,8,3,q,a,.8,wavelengths=wave,latent_channels=8,adapter_embed_dim=8,
+            norm_type='group_norm',coverage_mode='affine').to(self.device).eval()
+        out=wrapper(x,coverage_metadata=meta)
+        self.assertTrue(all(p.shape==(42,3) for p in out))
 
 
 if __name__=='__main__':unittest.main()
