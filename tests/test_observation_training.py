@@ -106,13 +106,18 @@ class ObservationTrainingTests(unittest.TestCase):
         self.scene.bands=replace(self.bands,fwhm=(2.,)*8,fwhm_unit='nm')
         p=self.policy([{'mode':'random_subset','keep_fraction':.01}]); tile=self.tile('devtrain')
         model,_=build_target(self.base,self.scene,'target_scratch_full',None,model_seed=64,head_seed=66,device=self.device)
-        seen=[]
-        def hook(_,args,kwargs):seen.append((args[0].shape[-1],len(kwargs['wavelengths']),kwargs['fwhm'].detach().cpu().tolist()))
+        seen=[]; normalized=[]; attention=model.backbone.adapter._get_attention
+        def get_attention(positions,widths):
+            normalized.append(widths.detach().cpu().clone());return attention(positions,widths)
+        def hook(_,args,kwargs):seen.append((args[0].shape[-1],len(kwargs['wavelengths']),kwargs['fwhm'].detach().cpu().tolist(),kwargs['fwhm_unit']))
         h=model.backbone.adapter.register_forward_pre_hook(hook,with_kwargs=True)
         view=p.view(self.scene,self.record,tile,phase='training',step=1)
-        output=_forward(model,self.scene,tile,observation_view=view)[0]
+        with patch.object(model.backbone.adapter,'_get_attention',side_effect=get_attention):
+            output=_forward(model,self.scene,tile,observation_view=view)[0]
         (-output[:,0].clamp_min(1e-8).log().mean()).backward();h.remove()
-        self.assertEqual(seen,[(1,1,[2.])]);self.assertTrue(torch.isfinite(output).all())
+        self.assertEqual(seen,[(1,1,[2.],'nm')]);self.assertTrue(torch.isfinite(output).all())
+        adapter=model.backbone.adapter
+        torch.testing.assert_close(normalized[0],torch.tensor([2./(adapter.wavelength_max-adapter.wavelength_min)]))
         self.assertTrue(any(x.grad is not None and torch.isfinite(x.grad).all() and x.grad.abs().max()>0 for x in model.backbone.adapter.parameters()))
 
     def test_default_matches_actual_parent_short_training(self):

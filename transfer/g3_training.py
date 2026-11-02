@@ -95,6 +95,8 @@ def _forward(model,scene,tile,*,observation_view=None):
                 or view.bands.source_id!=scene.bands.source_id or len(view.bands.wavelengths)!=obs.spectral.shape[-1]):
             raise ValueError('Preselected observation identity/geometry mismatch')
     extra = {} if observation_view is None or view.bands.fwhm is None else {'fwhm': np.asarray(view.bands.fwhm,dtype=np.float32)}
+    if observation_view is not None:
+        extra.update(wavelength_unit=view.bands.wavelength_unit, fwhm_unit=view.bands.fwhm_unit or 'auto')
     return forward_partition(model,scene.dataset,view.observation,np.asarray(view.bands.wavelengths,dtype=np.float32),
                              50 if scene.dataset=='paviaU' else 100,**extra)
 
