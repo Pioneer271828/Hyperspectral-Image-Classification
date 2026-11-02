@@ -455,6 +455,8 @@ class VCASAHGCNBackbone(nn.Module):
         return_graph_info=False,
         return_diagnostics=False,
         graph_state=None,
+        wavelength_unit="auto",
+        fwhm_unit="auto",
     ):
         if return_diagnostics and not return_graph_info:
             raise ValueError("return_diagnostics requires return_graph_info=True")
@@ -465,7 +467,9 @@ class VCASAHGCNBackbone(nn.Module):
                 raise ValueError("graph_state must be GraphState")
         height, width, _ = x.shape
         spectral_x, extra_x = self._split_spectral_extra(x, wavelengths)
-        latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm)
+        metadata_units = {} if wavelength_unit == fwhm_unit == "auto" else {
+            "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}
+        latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm, **metadata_units)
         x = torch.cat((latent_x, extra_x), dim=2)
 
         noise = torch.unsqueeze(x.permute([2, 0, 1]), 0)
@@ -636,6 +640,8 @@ class MultiDatasetVCASAHGCN(nn.Module):
         return_diagnostics=False,
         graph_state=None,
         return_logits=False,
+        wavelength_unit="auto",
+        fwhm_unit="auto",
     ):
         features = self.backbone.forward_features(
             x,
@@ -648,6 +654,8 @@ class MultiDatasetVCASAHGCN(nn.Module):
             return_graph_info=return_graph_info,
             return_diagnostics=return_diagnostics,
             graph_state=graph_state,
+            **({} if wavelength_unit == fwhm_unit == "auto" else {
+                "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}),
         )
         if return_graph_info:
             fused, hgnn_result, cnn_result, graph_info = features

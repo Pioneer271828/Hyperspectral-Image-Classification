@@ -76,6 +76,18 @@ def verify_run_artifacts(folder):
     result = json.loads((folder / 'result.json').read_text())
     sidecar = json.loads((folder / 'model.pt.json').read_text())
     info = sidecar['training_config']
+    if 'observation_policy_hash' in result or 'observation_policy_hash' in info:
+        from transfer.observation_policy import ObservationPolicy
+        policy = ObservationPolicy(json.loads((folder / 'observation-policy.json').read_text()))
+        _require(result.get('observation_policy_hash') == info.get('observation_policy_hash') == policy.policy_hash,
+                 'observation policy identity')
+        value = policy.to_dict()
+        _require(value['updates'] == result.get('steps') and value['identity']['development_hash'] == result.get('development_hash')
+                 and value['identity']['statistics_hash'] == info.get('statistics_hash')
+                 and result.get('observation_selection_condition') == info.get('observation_selection_condition') == 'full',
+                 'observation budget/data/selection')
+        _require(all(row.get('observation') == policy.training_record(row['step']) for row in result['trace']),
+                 'observation schedule trace')
     keys = ('resolved_config', 'runtime_config', 'runtime_config_hash')
     _require(all(key in record for record in (result, info) for key in keys),
              'legacy/missing provenance; audit original trace and sidecar, do not rewrite history')
