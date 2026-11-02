@@ -107,7 +107,7 @@ class CoverageProbe(SpectralProbe):
         self.common_initial=digest({n:tensor_hash(v) for n,v in model.backbone.state_dict().items() if not n.startswith('coverage_modulation.')})
         self.coverage={'parameters':0,'train_calls':0,'probes':[],'gradients':[]}
         if layer is None:return
-        self.initial={n:p.detach().cpu().clone() for n,p in layer.named_parameters()}
+        self.coverage_initial={n:p.detach().cpu().clone() for n,p in layer.named_parameters()}
         self.coverage['parameters']=sum(p.numel() for p in layer.parameters())
         def forward(module,args,out):
             if not model.training:return
@@ -124,7 +124,7 @@ class CoverageProbe(SpectralProbe):
     def finish(self,policy,updates):
         result=super().finish(policy,updates)
         if self.layer is not None:
-            self.coverage['parameter_max_updates']={n:float((p.detach().cpu()-self.initial[n]).abs().max()) for n,p in self.layer.named_parameters()}
+            self.coverage['parameter_max_updates']={n:float((p.detach().cpu()-self.coverage_initial[n]).abs().max()) for n,p in self.layer.named_parameters()}
             require(self.coverage['parameters']==194 and self.coverage['train_calls']==updates
                 and all(x['finite'] for x in self.coverage['gradients']) and self.coverage['gradients']
                 and all(v>0 for v in self.coverage['parameter_max_updates'].values()),'E1 parameters did not learn')
