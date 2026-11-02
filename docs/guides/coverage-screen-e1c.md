@@ -2,6 +2,8 @@
 
 [Issue #89](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/89) / [PR #90](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/90) depends on [E1-B](coverage-integration-e1b.md). E1-C1 delivers control implementation, an immutable experiment runner and a short engineering preflight. The full accuracy batch is a separate execution/acceptance step. Reuse the accepted in-repository E1 operator, [pinned FiLM/DOFA review](../references/e1-reference-review.json), `ObservationPolicy`, development trainer, spectral observer and existing GPU controller. No external code/dependency, source pretraining, main merge or automatic compression change is involved.
 
+E1-C2 execution has started under [Issue #91](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/91), using the exact frozen source/plan on GPU2/5/6. The [execution and results report](../../research/reports/E1C2_五组覆盖调制三种子完整配对结果_20261102.md) owns current completion/acceptance status. No interim efficacy conclusion or parameter change is authorized by that status update.
+
 ## Five paired arms
 
 All enabled arms use the same194-parameter MLP (hidden16/value_dim1), zero output initialization, strength0.1, geometry sigma0.08/window0.16 and local initialization seed0. Four controls transform only the MLP input; the original physical `CoverageDescription` and the true support mask are retained.
