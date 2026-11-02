@@ -1,4 +1,5 @@
 import inspect
+from dataclasses import replace
 import numpy as np
 import torch
 import torch.nn as nn
@@ -9,6 +10,8 @@ from model.learnable_superpixel_graph import LearnableSuperpixelGraph
 from model.graph_state import GraphState
 from model.branch_fusion import fixed_fusion, validate_alph
 from model.variable_channel_adapter import VariableChannelAdapter
+from model.coverage_config import coverage_options, strip_default_coverage
+from model.observation_coverage import CoverageConfig, CoverageModulation, describe, validate_binding
 from model.region_pixel_alignment import RegionPixelAlignment, pool_regions, broadcast_regions
 from model.region_residual_decomposition import RegionResidualDecomposition
 from model.cross_branch_interaction import BidirectionalSelectiveInteraction
@@ -304,6 +307,13 @@ class VCASAHGCNBackbone(nn.Module):
         graph_assignment_mode="learned",
         graph_adjacency_mode="learned",
         region_residual_mode="none",
+        coverage_mode="none",
+        coverage_hidden=16,
+        coverage_strength=0.1,
+        coverage_sigma=0.08,
+        coverage_window=0.16,
+        coverage_init_seed=0,
+        coverage_descriptor_version=1,
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
@@ -322,6 +332,8 @@ class VCASAHGCNBackbone(nn.Module):
         if region_residual_mode not in RegionResidualDecomposition.MODES:
             raise ValueError("Unknown region_residual_mode")
         self.region_residual_mode = region_residual_mode
+        self.coverage_settings = coverage_options(locals())
+        self.coverage_mode = coverage_mode
         self.interaction_config = InteractionConfig(**interaction_kwargs(locals()))
         self.dataset_names = _safe_dataset_names(dataset_names)
         self.adapter = VariableChannelAdapter(
@@ -338,6 +350,12 @@ class VCASAHGCNBackbone(nn.Module):
             checkpoint_chunks=adapter_checkpoint_chunks,
         )
         self.channel = self.adapter.out_channels + extra_channels
+        self.coverage_modulation = (CoverageModulation(latent_channels, adapter_value_dim,
+            mode=coverage_mode, hidden=coverage_hidden, strength=coverage_strength,
+            init_seed=coverage_init_seed, descriptor_version=coverage_descriptor_version)
+            if coverage_mode != 'none' else None)
+        self.coverage_config = (CoverageConfig(wavelength_min, wavelength_max, coverage_sigma, coverage_window)
+                                if coverage_mode != 'none' else None)
 
         layers_count = 2
         self.CNN_denoise = nn.ModuleList()
@@ -457,6 +475,8 @@ class VCASAHGCNBackbone(nn.Module):
         graph_state=None,
         wavelength_unit="auto",
         fwhm_unit="auto",
+        coverage_metadata=None,
+        coverage_reference_nm=None,
     ):
         if return_diagnostics and not return_graph_info:
             raise ValueError("return_diagnostics requires return_graph_info=True")
@@ -469,7 +489,27 @@ class VCASAHGCNBackbone(nn.Module):
         spectral_x, extra_x = self._split_spectral_extra(x, wavelengths)
         metadata_units = {} if wavelength_unit == fwhm_unit == "auto" else {
             "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}
-        latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm, **metadata_units)
+        coverage_info = None
+        if self.coverage_modulation is None:
+            latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm, **metadata_units)
+        else:
+            validate_binding(coverage_metadata, wavelengths, fwhm, spectral_x.shape[-1],
+                             spectral_x.device, spectral_x.dtype, wavelength_unit, fwhm_unit)
+            latent_x, observed = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm,
+                                              return_attention=True, **metadata_units)
+            physical_mode = self.adapter.attention_mode == 'wavelength'
+            coverage = describe(coverage_metadata if physical_mode else None, observed['anchors'],
+                self.coverage_config, normalized_reference_nm=coverage_reference_nm if physical_mode else None)
+            coverage = replace(coverage, usable=coverage.usable & observed['anchor_valid'].bool())
+            latent_x = self.coverage_modulation(latent_x, coverage)
+            if return_graph_info:
+                reason = coverage.diagnostics['fallback_reason'] if physical_mode else 'adapter_mode_'+self.adapter.attention_mode
+                coverage_info = {'mode':self.coverage_mode,'fallback_reason':reason,
+                    'metadata_hash':getattr(coverage_metadata,'fingerprint',None),
+                    'usable_anchors':int(coverage.usable.sum()), 'latent_channels':self.adapter.latent_channels,
+                    'settings':dict(self.coverage_settings),'description':dict(coverage.diagnostics)}
+                if return_diagnostics:coverage_info.update(features=coverage.features.detach().clone(),
+                                                          usable=coverage.usable.detach().clone())
         x = torch.cat((latent_x, extra_x), dim=2)
 
         noise = torch.unsqueeze(x.permute([2, 0, 1]), 0)
@@ -488,6 +528,7 @@ class VCASAHGCNBackbone(nn.Module):
             Q, A, graph_info = state.to_legacy()
         elif Q is None or A is None:
             raise ValueError("static graph mode requires Q and A")
+        if coverage_info is not None:graph_info['coverage'] = coverage_info
 
         cnn_input = clean_x
         if self.region_residual is None:
@@ -592,7 +633,7 @@ class MultiDatasetVCASAHGCN(nn.Module):
             self.cnn_heads[dataset_name] = nn.Linear(64, class_count)
 
     def export_config(self):
-        kwargs = dict(self.backbone_kwargs)
+        kwargs = strip_default_coverage(self.backbone_kwargs)
         kwargs["dataset_names"] = list(self.heads.keys())
         return {"format_version": 1, "class_counts": {name: head.out_features for name, head in self.heads.items()},
                 "backbone_kwargs": kwargs}
@@ -642,6 +683,8 @@ class MultiDatasetVCASAHGCN(nn.Module):
         return_logits=False,
         wavelength_unit="auto",
         fwhm_unit="auto",
+        coverage_metadata=None,
+        coverage_reference_nm=None,
     ):
         features = self.backbone.forward_features(
             x,
@@ -656,6 +699,8 @@ class MultiDatasetVCASAHGCN(nn.Module):
             graph_state=graph_state,
             **({} if wavelength_unit == fwhm_unit == "auto" else {
                 "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}),
+            **({} if self.backbone.coverage_modulation is None else {
+                'coverage_metadata':coverage_metadata,'coverage_reference_nm':coverage_reference_nm}),
         )
         if return_graph_info:
             fused, hgnn_result, cnn_result, graph_info = features
@@ -722,7 +767,8 @@ class VCASAHGCN(nn.Module):
             **adapter_kwargs,
         )
 
-    def forward(self, x, return_graph_info=False, return_diagnostics=False, graph_state=None, return_logits=False):
+    def forward(self, x, return_graph_info=False, return_diagnostics=False, graph_state=None, return_logits=False,
+                *, coverage_metadata=None, coverage_reference_nm=None):
         wavelengths = self.wavelengths if hasattr(self, "wavelengths") else None
         fwhm = self.fwhm if hasattr(self, "fwhm") else None
         return self.model(
@@ -737,4 +783,6 @@ class VCASAHGCN(nn.Module):
             return_diagnostics=return_diagnostics,
             graph_state=graph_state,
             return_logits=return_logits,
+            **({} if self.model.backbone.coverage_modulation is None else {
+                'coverage_metadata':coverage_metadata,'coverage_reference_nm':coverage_reference_nm}),
         )
