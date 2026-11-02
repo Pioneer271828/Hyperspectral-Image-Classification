@@ -14,7 +14,7 @@ import torch
 
 from joint_baseline import NAMES, forward, load_config, readout, verify_prepared
 from loadData.dataset_registry import file_hash
-from model.checkpoint_io import save_model_checkpoint
+from model.checkpoint_io import load_model_checkpoint,save_model_checkpoint
 from model.research_config import digest
 from model import utils
 from research_runtime import external_directory, tensor_hash, write_json
@@ -308,7 +308,8 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
         model.training_config['checkpoint_optimizer_step']=state['best_step']
         save_model_checkpoint(model,directory/'primary.pt')
         _atomic_torch_save(state['best_probabilities'],directory/'selected-probabilities.pt')
-        check,values=validation_snapshot(model,items)
+        restored=load_model_checkpoint(directory/'primary.pt',device=device)
+        check,values=validation_snapshot(restored,items)
         max_error=0.
         for n in NAMES:
             for phase in ('train','val'):
