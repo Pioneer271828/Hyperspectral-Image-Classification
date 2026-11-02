@@ -124,6 +124,7 @@ class M1CampaignTests(unittest.TestCase):
     def test_summary_uses_sample_sd_and_rejects_broken_pair_identity(self):
         with tempfile.TemporaryDirectory() as d:
             plan=freeze_plan(code_snapshot(),{'development_hash':spec()['development_hash'],'files':{}},Path(d)/'full')
+            plan['plan_hash']=digest(plan)  # aggregation-only fixture; file/plan validation is tested separately
             for i,seed in enumerate(SEEDS):
                 for mode in MODES:
                     path=case_path(plan,seed,mode);path.mkdir(parents=True)
