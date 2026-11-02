@@ -13,11 +13,12 @@ def main():
     from loadData.spatial_tiles import make_tile_plan
     from loadData.transfer_protocol import make_support,validate_support,freeze_task,validate_config,target_labels_for_tile
     from research_runtime import code_snapshot,external_directory,require_frozen_code,write_json
+    from transfer.container_runtime import training_container_kind
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--config',type=Path,default=ROOT/'configs/protocols/paviau_to_xuzhou_g3.json')
     p.add_argument('--expected-commit',required=True);p.add_argument('--data-root',type=Path,required=True);p.add_argument('--out-dir',type=Path,required=True)
     args=p.parse_args();code=code_snapshot()
-    if sys.platform!='linux' or not Path('/.dockerenv').exists() or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit:
+    if not training_container_kind() or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit:
         p.error('Use training container with clean exact SHA and assertions')
     config=json.loads(args.config.read_text(encoding='utf-8-sig'));validate_config(config)
     out=external_directory(args.out_dir);out.mkdir(parents=True,exist_ok=False)
