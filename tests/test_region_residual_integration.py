@@ -69,21 +69,35 @@ class RegionResidualIntegrationTests(unittest.TestCase):
             self.assertEqual(set(old.state_dict()), set(new.state_dict()))
             for key, value in old.state_dict().items():
                 torch.testing.assert_close(value, new.state_dict()[key], rtol=0, atol=0, msg=key)
-            x, wave = self.inputs(); a=x.clone().requires_grad_(); b=x.clone().requires_grad_()
+            x, wave = self.inputs()
+            rtol = atol = 0
+            if self.device.startswith('cuda'):
+                # Independent FP32 GPU backward passes also differ current/current.
+                # Keep native FP32 initialization/forward checks, and use stricter
+                # FP64 for paired gradient/buffer equivalence; production is unchanged.
+                old.eval(); new.eval()
+                with torch.no_grad():
+                    left=old('a',x,wavelengths=wave,superpixel_scale=9)
+                    right=new('a',x,wavelengths=wave,superpixel_scale=9)
+                for p,q in zip(left,right):
+                    torch.testing.assert_close(p,q,rtol=1e-5,atol=1e-6)
+                old.train().double(); new.train().double()
+                x=x.double(); wave=wave.double(); rtol,atol=1e-9,1e-10
+            a=x.clone().requires_grad_(); b=x.clone().requires_grad_()
             expected=old('a', a, wavelengths=wave, superpixel_scale=9, return_graph_info=True)
             actual=new('a', b, wavelengths=wave, superpixel_scale=9, return_graph_info=True)
             self.assertEqual(set(expected[3]), set(actual[3]))
             for left, right in zip(expected[:3], actual[:3]):
-                torch.testing.assert_close(left, right, rtol=1e-5, atol=1e-6)
+                torch.testing.assert_close(left, right, rtol=rtol, atol=atol)
             for outputs in (expected, actual):
                 sum(-p[:,0].clamp_min(1e-8).log().mean() for p in outputs[:3]).backward()
-            torch.testing.assert_close(a.grad, b.grad, rtol=2e-4, atol=2e-6)
+            torch.testing.assert_close(a.grad, b.grad, rtol=rtol, atol=atol)
             for (name, p), (_, q) in zip(old.named_parameters(), new.named_parameters()):
                 self.assertEqual(p.grad is None, q.grad is None, name)
                 if p.grad is not None:
-                    torch.testing.assert_close(p.grad, q.grad, rtol=2e-4, atol=2e-6, msg=name)
+                    torch.testing.assert_close(p.grad, q.grad, rtol=rtol, atol=atol, msg=name)
             for name, value in old.named_buffers():
-                torch.testing.assert_close(value, dict(new.named_buffers())[name], rtol=0, atol=0)
+                torch.testing.assert_close(value, dict(new.named_buffers())[name], rtol=rtol, atol=atol)
 
     def test_enabled_modes_preserve_existing_weight_and_head_rng_initialization(self):
         torch.manual_seed(512); reference=self.model(); rng=torch.random.get_rng_state().clone()
