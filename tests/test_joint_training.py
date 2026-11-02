@@ -179,6 +179,25 @@ class JointTrainingTests(unittest.TestCase):
             meta=json.loads((path/'primary.pt.json').read_text())['training_config']
             self.assertEqual(meta['joint_runtime']['executed_optimizer_steps'],12)
             self.assertEqual(meta['checkpoint_optimizer_step'],result['result']['selected_step'])
+            identity=json.loads((path/'identity.json').read_text())
+            self.assertEqual(identity['settings']['optimizer_steps'],12)
+            self.assertEqual(identity['execution_device'],device)
+
+    def test_scheduler_decay_spanning_interruption_is_preserved(self):
+        opts=settings()
+        # Test-only early decay exercises continuation; CLI plan still fixes patience20.
+        opts['scheduler']={**opts['scheduler'],'patience':0}
+        items=tiny_items()
+        for item in items.values(): item['zeros']=torch.zeros(item['height']*item['width'])
+        with tempfile.TemporaryDirectory() as temp:
+            a,b=Path(temp)/'a',Path(temp)/'b'
+            run_training(opts,items,a,PROVENANCE,SOURCE,device='cpu')
+            run_training(opts,items,b,PROVENANCE,SOURCE,device='cpu',stop_after=5)
+            run_training(opts,items,b,PROVENANCE,SOURCE,device='cpu',resume=True)
+            expected,actual=checkpoints(a),checkpoints(b)
+            self.assertLess(actual['optimizer']['param_groups'][0]['lr'],5e-5)
+            for key in ('model','optimizer','scheduler','trace','history'):
+                self.assertEqual(_tree_fingerprint(expected[key]),_tree_fingerprint(actual[key]),key)
 
 
 if __name__=='__main__': unittest.main()

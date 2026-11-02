@@ -207,7 +207,9 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
     schedule=schedule_for(settings)
     if stop_after is not None and (type(stop_after)is not int or not 0<stop_after<len(schedule)):
         raise ValueError('Interruption cursor must be inside the declared budget')
-    identity={'protocol':settings['protocol'],'settings_hash':digest(settings),
+    execution_device=str(torch.device(device or settings['config']['device']))
+    identity={'protocol':settings['protocol'],'settings_hash':digest(settings),'settings':settings,
+              'execution_device':execution_device,
               'consumer_source_hash':source['source_hash'],'prepared':provenance,
               'schedule_sha256':digest(schedule)}
     directory=external_directory(directory)
@@ -223,7 +225,7 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
                 if finish_guard: finish_guard()
                 return _completed(directory,identity,settings,schedule)
         else: write_json(identity_path,identity)
-        device=torch.device(device or settings['config']['device'])
+        device=torch.device(execution_device)
         config=ResearchConfig.from_dict(settings['config'])
         torch.manual_seed(settings['model_seed']); np.random.seed(settings['model_seed'])
         random.seed(settings['model_seed'])
@@ -325,7 +327,9 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
                 'per_dataset_updates':dict(Counter(schedule)),'selected_step':state['best_step'],
                 'selected_validation':check,'selected_probability_max_abs_error':max_error,
                 'last_model_fingerprint':state['state_fingerprints']['model'],
-                'artifacts':artifacts,'test_scoring':False}
+                'artifacts':artifacts,'test_scoring':False,
+                'execution':{'device':str(device),'visible_cuda_devices':os.environ.get('CUDA_VISIBLE_DEVICES'),
+                             'torch_version':torch.__version__,'cuda_version':torch.version.cuda}}
         with (directory/'result.json').open('x',encoding='utf-8') as stream:
             json.dump(result,stream,indent=2,ensure_ascii=False,allow_nan=False)
         return {'operation':'completed','updates_this_call':len(schedule)-start_cursor,
