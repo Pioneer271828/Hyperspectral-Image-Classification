@@ -18,9 +18,9 @@ from model.research_config import (ResearchConfig, ModelConfig, DataConfig,
 from model.interaction_config import InteractionConfig
 from research_runtime import external_directory, tensor_hash, write_json
 
-NAMES = ('paviaU', 'xuzhou', 'WHUL')
+NAMES = ('paviaU', 'xuzhou', 'whu-honghu')
 COUNTS = {'paviaU': [432, 219, 42125], 'xuzhou': [692, 348, 67837],
-          'WHUL': [2051, 1028, 201463]}
+          'whu-honghu': [3881, 1947, 380865]}
 PHASES = ('train', 'val')
 
 
@@ -38,7 +38,7 @@ def graph_random_state(seed):
 def load_config(path):
     config = ResearchConfig.from_dict(json.loads(Path(path).read_text(encoding='utf-8')))
     # Protocol identity is explicit: this entry is not a generic hyperparameter search.
-    fixed = (config.name == 'base97_joint_v1' and config.device == 'cuda'
+    fixed = (config.name == 'base97_joint_honghu_v1' and config.device == 'cuda'
              and config.model == ModelConfig(latent_channels=64, adapter_embed_dim=32,
                                              adapter_attention_mode='index', adapter_chunk_pixels=16384)
              and config.data == DataConfig(datasets=list(NAMES))

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "base97_joint_v1",
+  "name": "base97_joint_honghu_v1",
   "device": "cuda",
   "model": {
     "latent_channels": 64,
@@ -25,7 +25,7 @@
     "eval_checkpoint": "primary"
   },
   "data": {
-    "datasets": ["paviaU", "xuzhou", "WHUL"],
+    "datasets": ["paviaU", "xuzhou", "whu-honghu"],
     "samples_type": "ratio",
     "train_ratio": 0.01,
     "val_ratio": 0.005,

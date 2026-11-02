@@ -27,21 +27,22 @@ torch.set_num_threads(1)
 def tiny_items():
     rng = torch.Generator().manual_seed(123)
     items = {}
-    for name, bands in zip(NAMES, (7,11,13)):
-        item = {'name': name, 'seed': 64, 'height': 6, 'width': 6, 'bands': bands,
-                'class_num': 9, 'superpixel_scale': 6,
-                'Q': torch.nn.functional.one_hot(torch.arange(36)%6,6).float().to_sparse().coalesce(),
-                'A': torch.eye(6)+torch.ones(6,6)/6,
-                'net_input': torch.rand(6,6,bands+2,generator=rng),
+    for name, bands, classes, side in zip(NAMES, (7,11,13), (9,9,22), (6,6,8)):
+        pixels = side*side
+        item = {'name': name, 'seed': 64, 'height': side, 'width': side, 'bands': bands,
+                'class_num': classes, 'superpixel_scale': side,
+                'Q': torch.nn.functional.one_hot(torch.arange(pixels)%side,side).float().to_sparse().coalesce(),
+                'A': torch.eye(side)+torch.ones(side,side)/side,
+                'net_input': torch.rand(side,side,bands+2,generator=rng),
                 'wavelengths': torch.linspace(450,950,bands), 'fwhm': None}
-        for phase, offset in (('train',0),('val',9)):
-            labels = torch.zeros(36)
-            labels[offset:offset+9] = torch.arange(1,10)
-            onehot = torch.zeros(36,9)
-            onehot[torch.arange(offset,offset+9),torch.arange(9)] = 1
+        for phase, offset in (('train',0),('val',classes)):
+            labels = torch.zeros(pixels)
+            labels[offset:offset+classes] = torch.arange(1,classes+1)
+            onehot = torch.zeros(pixels,classes)
+            onehot[torch.arange(offset,offset+classes),torch.arange(classes)] = 1
             item[phase+'_samples_gt'] = labels
             item[phase+'_gt_onehot'] = onehot
-            item[phase+'_label_mask'] = (labels>0).float()[:,None].expand(36,9).clone()
+            item[phase+'_label_mask'] = (labels>0).float()[:,None].expand(pixels,classes).clone()
         items[name] = item
     return items
 
@@ -179,8 +180,9 @@ class JointBaselineTests(unittest.TestCase):
         # Memory chunking is execution-only; use FP64 to assess numerical equivalence.
         torch.manual_seed(64)
         kwargs = dict(latent_channels=8,adapter_embed_dim=8,adapter_attention_mode='index',norm_type='domain_bn')
-        plain = MultiDatasetVCASAHGCN(dict.fromkeys(NAMES,9),**kwargs).double()
-        chunks = MultiDatasetVCASAHGCN(dict.fromkeys(NAMES,9),adapter_chunk_pixels=5,**kwargs).double()
+        class_counts = dict(zip(NAMES,(9,9,22)))
+        plain = MultiDatasetVCASAHGCN(class_counts,**kwargs).double()
+        chunks = MultiDatasetVCASAHGCN(class_counts,adapter_chunk_pixels=5,**kwargs).double()
         chunks.load_state_dict(plain.state_dict())
         for name,item in tiny_items().items():
             outputs = []
