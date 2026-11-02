@@ -53,4 +53,6 @@ The second command exercises the synthetic three-task short loop on GPU; ratio, 
 
 ## Next gate
 
+[BASE-97B](joint-training-base97b.md) now supplies the formal random schedule/budget and continuation entry, authenticated import of this frozen preparation, and a separately named12-update engineering profile. The next accuracy batch uses its explicit full profile after batch registration; it does not continue the round-robin six-step experiment.
+
 After engineering acceptance, stop and report each dataset's actual participation, loss/branch readouts and restoration evidence. Do not interpret six updates as accuracy evidence. Register the full random-schedule batch separately with fixed split/graph/initialization identities, seed repetitions, source/target access, update budget and validation selection. Later cross-sensor evaluation requires a source checkpoint that excluded the target dataset; the three-dataset joint checkpoint cannot serve as an unseen-target source model.
