@@ -82,18 +82,28 @@ def _optimizer(model,config):
     return torch.optim.Adam(groups,weight_decay=config.training.weight_decay)
 
 
-def _forward(model,scene,tile):
-    obs=observe_tile(scene.cube,scene.plan,scene.stats,tile)
-    view,_=sample(obs,scene.bands,{'mode':'none'})
+def _forward(model,scene,tile,*,observation_view=None):
+    if observation_view is None:
+        obs=observe_tile(scene.cube,scene.plan,scene.stats,tile)
+        view,_=sample(obs,scene.bands,{'mode':'none'})
+    else:
+        view=observation_view
+        obs=view.observation
+        y0,y1,x0,x1=tile['box'];yy,xx=np.mgrid[y0:y1,x0:x1]
+        if (tile!=scene.plan['tiles'][tile['id']] or obs.plan_hash!=scene.plan['plan_hash']
+                or obs.partition!=tile['partition'] or not np.array_equal(obs.global_ids,yy*scene.plan['shape'][1]+xx)
+                or view.bands.source_id!=scene.bands.source_id or len(view.bands.wavelengths)!=obs.spectral.shape[-1]):
+            raise ValueError('Preselected observation identity/geometry mismatch')
+    extra = {} if observation_view is None or view.bands.fwhm is None else {'fwhm': np.asarray(view.bands.fwhm,dtype=np.float32)}
     return forward_partition(model,scene.dataset,view.observation,np.asarray(view.bands.wavelengths,dtype=np.float32),
-                             50 if scene.dataset=='paviaU' else 100)
+                             50 if scene.dataset=='paviaU' else 100,**extra)
 
 
-def _update(model,scene,tile,local_labels,config,optimizer,head_only=False):
+def _update(model,scene,tile,local_labels,config,optimizer,head_only=False,*,observation_view=None):
     model.train()
     if head_only:model.backbone.eval()
     optimizer.zero_grad(set_to_none=True)
-    outputs=_forward(model,scene,tile)
+    outputs=_forward(model,scene,tile,**({} if observation_view is None else {'observation_view':observation_view}))
     local=torch.as_tensor(np.array(local_labels,copy=True).reshape(-1),device=next(model.parameters()).device,dtype=torch.long)
     valid=local>0
     if not valid.any() or (local[valid]>scene.classes).any():raise ValueError('Training tile needs valid released labels')

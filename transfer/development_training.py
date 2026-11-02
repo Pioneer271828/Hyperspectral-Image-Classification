@@ -53,7 +53,12 @@ def sparse_labels(record,plan,name):
     return result
 
 
-def evaluate_validation(model,scene,record):
+def evaluate_validation(model,scene,record,*,observation_policy=None,condition='full'):
+    if observation_policy is None and condition!='full':raise ValueError('Perturbation condition requires frozen policy')
+    expected=getattr(model,'training_config',{}).get('observation_policy_hash')
+    if expected is not None and (observation_policy is None or observation_policy.policy_hash!=expected):
+        raise ValueError('Reload the matching frozen observation policy for this checkpoint')
+    if observation_policy is not None:observation_policy.validate(scene,record)
     labels=sparse_labels(record,scene.plan,'validation_support');total=correct=0;nll=0.
     matrix=np.zeros((scene.classes,scene.classes),dtype=np.int64)
     model.eval()
@@ -63,7 +68,8 @@ def evaluate_validation(model,scene,record):
             target=labels[tile_slice(tile)].reshape(-1);valid=target>0
             if not valid.any():continue
             original=scene.plan['tiles'][tile['id']]
-            output=_forward(model,scene,original)[0].detach().cpu().numpy()
+            extra={} if observation_policy is None else {'observation_view':observation_policy.view(scene,record,original,phase='validation',condition=condition)}
+            output=_forward(model,scene,original,**extra)[0].detach().cpu().numpy()
             target=target[valid]-1;probs=output[valid]
             prediction=probs.argmax(1)
             matrix+=np.bincount(target*scene.classes+prediction,minlength=scene.classes**2).reshape(scene.classes,scene.classes)
@@ -74,9 +80,10 @@ def evaluate_validation(model,scene,record):
             'support':matrix.sum(1).tolist(),'recall':(np.diag(matrix)/matrix.sum(1)).tolist()}
 
 
-def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036,progress=None,sampling='uniform'):
+def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036,progress=None,sampling='uniform',observation_policy=None):
     validate(record,scene.plan)
     if type(steps) is not int or steps<=0 or type(val_every) is not int or val_every<=0:raise ValueError('Positive budgets required')
+    if observation_policy is not None:observation_policy.validate(scene,record,steps)
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     model,config=build_target(base,scene,method,source,model_seed=seed,head_seed=seed+2,device=device)
     config=resolve_budget(config,steps,val_every)
@@ -91,11 +98,18 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
     records=run_fields(config,phase='development',method=method,head_seed=seed+2,sampler_seed=seed+4,
                        val_every=val_every,selection=record['selection'],sampling=sampler.metadata,optimizer=optimizer)
     model.training_config.update(records)
+    policy_fields={} if observation_policy is None else {'observation_policy_hash':observation_policy.policy_hash,
+                                                        'observation_selection_condition':'full'}
+    model.training_config.update(policy_fields)
+    if observation_policy is not None:write_json(folder/'observation-policy.json',observation_policy.to_dict())
     for step in range(1,steps+1):
-        tile,anchor=sampler.draw(rng);loss=_update(model,scene,tile,labels[tile_slice(tile)],config,optimizer,head_only=method=='source_pretrained_head_only')
-        trace.append({'step':step,'tile_id':tile['id'],'loss':loss,**({'anchor_class':anchor} if anchor is not None else {})})
+        tile,anchor=sampler.draw(rng)
+        extra={} if observation_policy is None else {'observation_view':observation_policy.view(scene,record,tile,phase='training',step=step)}
+        loss=_update(model,scene,tile,labels[tile_slice(tile)],config,optimizer,head_only=method=='source_pretrained_head_only',**extra)
+        trace.append({'step':step,'tile_id':tile['id'],'loss':loss,**({'anchor_class':anchor} if anchor is not None else {}),
+                      **({} if observation_policy is None else {'observation':observation_policy.training_record(step)})})
         if step%val_every==0 or step==steps:
-            val=evaluate_validation(model,scene,record)
+            val=evaluate_validation(model,scene,record,**({} if observation_policy is None else {'observation_policy':observation_policy}))
             if not np.isfinite(val['nll']):raise ValueError('Nonfinite validation')
             history.append({'step':step,**val})
             if progress:progress({'method':method,'budget':steps,'step':step,'validation':val})
@@ -108,7 +122,7 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
             'final_backbone_hash':state_hash(model.backbone),'final_head_hash':head_hash(model),
             'development_hash':record['validation_hash'],'checkpoint_sha256':hash_file(folder/'model.pt'),
             'sidecar_sha256':hash_file(folder/'model.pt.json'),'sampler':sampler.metadata,
-            **records}
+            **records,**policy_fields}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
     verify_run_artifacts(folder)
     return result
