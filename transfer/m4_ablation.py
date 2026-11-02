@@ -117,6 +117,7 @@ class Participation:
         self.state['initial_shared_backbone_hash'] = digest({k: tensor_hash(v) for k, v in model.backbone.state_dict().items()
                                                             if not k.startswith('region_residual.')})
         self.state['initial_head_hash'] = head_hash(model)
+        self.state['total_parameters'] = sum(p.numel() for p in model.parameters())
         layer = model.backbone.region_residual
         self.initial = {} if layer is None else {k: p.detach().cpu().clone() for k, p in layer.named_parameters()}
         self.state['new_parameters'] = sum(p.numel() for p in layer.parameters()) if layer is not None else 0
@@ -256,18 +257,23 @@ def run_case(plan, scene, record, seed, mode, *, device='cuda', resume=False):
         return {**receipt, 'operation': 'verified_existing'}
     path.mkdir(parents=True, exist_ok=False)  # atomic case ownership; never overwrite an old attempt
     receipt = {'status': 'running', 'seed': seed, 'mode': mode, 'plan_hash': plan['plan_hash'],
-               'pid': os.getpid(), 'artifact_dir': str(path / 'training'), 'started_unix': time.time()}
+               'pid': os.getpid(), 'artifact_dir': str(path / 'training'), 'started_unix': time.time(),
+               'device': str(device), 'visible_gpu': os.environ.get('CUDA_VISIBLE_DEVICES'),
+               'torch': torch.__version__, 'cuda': torch.version.cuda}
     write_json(path / 'case.json', receipt)
     observer = Participation(plan['updates']); build = development.build_target
     def builder(*args, **kwargs):
         model, config = build(*args, **kwargs); observer.attach(model); return model, config
     base = copy.deepcopy(plan['base']); base['model']['region_residual_mode'] = mode
     try:
+        if str(device).startswith('cuda'): torch.cuda.reset_peak_memory_stats(device)
         with patch.object(development, 'build_target', side_effect=builder):
             result = development.adapt(scene, record, base, path / 'training', steps=plan['updates'],
                 val_every=plan['val_every'], seed=seed, device=device, sampling='class_first',
                 progress=lambda event: write_json(path / 'progress.json', event))
         participation = observer.finish(mode, plan['updates'])
+        participation['peak_training_allocated_bytes'] = (torch.cuda.max_memory_allocated(device)
+                                                         if str(device).startswith('cuda') else None)
         review = selected_review(path / 'training', scene, record, device)
         review['participation'] = participation
         write_json(path / 'review.json', review)

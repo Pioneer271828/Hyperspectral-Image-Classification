@@ -142,6 +142,31 @@ class M4CampaignTests(unittest.TestCase):
             self.assertEqual(saved['jobs'][2]['status'],'not_started_after_failure')
             self.assertFalse((Path(plan['output'])/'.controller.lock').exists())
 
+    def test_candidate_rule_requires_capacity_gain_and_uses_sample_standard_deviation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            smoke,_,_=self.fixture(Path(directory)); inputs=copy.deepcopy(smoke['inputs'])
+            inputs['development_hash']=spec()['development_hash']
+            plan=freeze_plan(code_snapshot(),inputs,Path(directory)/'full')
+            values={'none':[.6,.7,.8],'capacity_control':[.7,.6,.8],
+                    'x_residual':[.8,.7,.9],'residual_only':[.4,.5,.6]}
+            for i,seed in enumerate(plan['seeds']):
+                for mode in MODES:
+                    path=case_path(plan,seed,mode); path.mkdir(parents=True)
+                    score=values[mode][i]
+                    write_json(path/'review.json',{'selected_step':100,'metrics':{'fused':
+                        {'oa':score,'aa':score,'kappa':score,'macro_f1':score}}})
+            def completed(plan,seed,mode):
+                return {k:str(seed) for k in ('shared_initialization_hash','initial_head_hash',
+                        'sample_trace_hash','statistics_hash')}|{'started_unix':0.,'finished_unix':1.}
+            with patch('transfer.m4_ablation.verified_case',side_effect=completed):
+                summary=summarize(plan)
+                self.assertEqual(summary['decision'],'development_candidate_pending_confirmation')
+                self.assertAlmostEqual(summary['summary']['none']['oa']['sample_sd'],.1)
+                for seed in plan['seeds']:
+                    write_json(case_path(plan,seed,'capacity_control')/'review.json',
+                        {'selected_step':100,'metrics':{'fused':{'oa':.95,'aa':.95,'kappa':.95,'macro_f1':.95}}})
+                self.assertEqual(summarize(plan)['decision'],'no_confirmed_residual_gain_keep_baseline')
+
 
 if __name__ == '__main__':
     unittest.main()
