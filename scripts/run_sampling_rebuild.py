@@ -25,6 +25,13 @@ DEVELOPMENT_HASH = '1cf6c1394c1f5e6e82c0bf9c1d6c08004b6b477edefcaa73b73fdfe22ecf
 METHODS = ('target_scratch_full', 'source_pretrained_full_finetune')
 
 
+def verify_worker_modes(source_only, source_root, skip_source, methods):
+    if sum((bool(source_only), source_root is not None, bool(skip_source))) > 1:
+        raise ValueError('Source training, reuse and skipping are mutually exclusive')
+    if skip_source and list(methods) != ['target_scratch_full']:
+        raise ValueError('Only scratch training may run without source weights')
+
+
 def verify_source_record(campaign, seed_task, result, expected_commit):
     """A partial or differently identified source campaign cannot be reused."""
     assert campaign['status'] == 'passed' and campaign['plan']['source_only'] is True
@@ -123,13 +130,16 @@ def main():
     p.add_argument('--methods', nargs='+', choices=METHODS, default=list(METHODS))
     p.add_argument('--source-only', action='store_true', help='Train source checkpoints only; do not load target inputs')
     p.add_argument('--source-root', type=Path, help='Verified completed source-only campaign; reuse selected weights')
+    p.add_argument('--skip-source', action='store_true', help='Scratch-only worker; no source training or weights needed')
     for name in ('protocol-root', 'development-root', 'data-root', 'out-dir'):
         p.add_argument('--' + name, type=Path, required=True)
     args = p.parse_args(); code = code_snapshot(); kind = training_container_kind()
     if len(set(args.seeds)) != len(args.seeds) or len(set(args.methods)) != len(args.methods):
         p.error('Duplicate seeds or methods')
-    if args.source_only and args.source_root is not None:
-        p.error('Source-only and source reuse are mutually exclusive')
+    try:
+        verify_worker_modes(args.source_only, args.source_root, args.skip_source, args.methods)
+    except ValueError as error:
+        p.error(str(error))
     if (not kind or sys.flags.optimize or code['dirty'] or code['commit'] != args.expected_commit
             or not torch.cuda.is_available() or torch.cuda.device_count() != 1):
         p.error('Require verified container, assertions, clean exact SHA and exactly one visible CUDA GPU')
@@ -161,9 +171,10 @@ def main():
                              'numpy': np.__version__, 'cuda': torch.version.cuda,
                              'visible_gpu': os.environ.get('CUDA_VISIBLE_DEVICES'), 'gpu': torch.cuda.get_device_name(0)},
              'plan': {'source_updates_per_seed': 10000, 'target_updates_per_run': 5000,
-                      'new_source_updates': 0 if args.source_root else 10000 * len(args.seeds),
+                      'new_source_updates': 0 if args.source_root or args.skip_source else 10000 * len(args.seeds),
                       'new_target_updates': 0 if args.source_only else 10000 * len(args.methods) * len(args.seeds),
                       'methods': args.methods, 'source_only': args.source_only,
+                      'skip_source': args.skip_source,
                       'source_root': str(args.source_root) if args.source_root else None,
                       'val_every': 100, 'selection': 'minimum fusion validation NLL, earliest tie',
                       'backbone_lr': 5e-5, 'head_lr': 5e-4,
@@ -185,7 +196,9 @@ def main():
                                     plans['source'], plans['target'], support, task['sensor_evidence'])
             write_json(seed_root / 'frozen-task.json', seed_task)
             before = time.monotonic()
-            if args.source_root:
+            if args.skip_source:
+                source = None
+            elif args.source_root:
                 source, source_result, source_files = verified_source(args.source_root, seed, seed_task, code)
                 frozen.update(source_files)
             else:
@@ -194,7 +207,8 @@ def main():
                     steps=10000, val_every=100, model_seed=seed, sampler_seed=seed + 3,
                     device='cuda', task_hash=seed_task['task_hash'], progress=progress)
                 del source_scene, source_labels
-            state['sources'].append({'seed': seed, 'wall_seconds': time.monotonic() - before,
+            if not args.skip_source:
+                state['sources'].append({'seed': seed, 'wall_seconds': time.monotonic() - before,
                                      'selected_step': source_result['selected_step'],
                                      'checkpoint_sha256': source_result['checkpoint_sha256'],
                                      'best_validation': min(source_result['history'], key=lambda x: x['val']['nll']),
@@ -242,7 +256,8 @@ def main():
         require_frozen_code(code)
         assert all(hash_file(path) == value for path, value in frozen.items())
         pairs = 0 if args.source_only else len(args.seeds) * len(args.methods)
-        assert len(state['pairs']) == pairs and len(state['runs']) == pairs * 2 and len(state['sources']) == len(args.seeds)
+        expected_sources = 0 if args.skip_source else len(args.seeds)
+        assert len(state['pairs']) == pairs and len(state['runs']) == pairs * 2 and len(state['sources']) == expected_sources
         state.update(status='passed', completed_source_updates=state['plan']['new_source_updates'],
                      completed_target_updates=state['plan']['new_target_updates'])
     except BaseException as error:
