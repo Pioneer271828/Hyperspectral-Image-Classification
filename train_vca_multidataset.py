@@ -386,6 +386,9 @@ def build_parser():
     parser.add_argument("--learned-assignment-dim", type=int, default=32)
     parser.add_argument("--graph-assignment-mode", default="learned", choices=["learned", "fixed_grid"])
     parser.add_argument("--graph-adjacency-mode", default="learned", choices=["learned", "fixed_local"])
+    parser.add_argument("--region-residual-mode", default="none",
+                        choices=["none", "capacity_control", "x_residual", "residual_only", "x_region"],
+                        help="M4 CNN input; graph pooling continues to use original shared features.")
     parser.add_argument("--learned-assignment-radius", type=int, default=1)
     parser.add_argument("--learned-graph-radius", type=int, default=1)
     parser.add_argument("--learned-assignment-temperature", type=float, default=1.0)
@@ -802,6 +805,7 @@ def train(args, run_record=None):
                 "graph_mode": args.graph_mode,
                 "graph_assignment_mode": args.graph_assignment_mode,
                 "graph_adjacency_mode": args.graph_adjacency_mode,
+                "region_residual_mode": getattr(args, "region_residual_mode", "none"),
                 "learned_assignment_dim": args.learned_assignment_dim,
                 "learned_assignment_radius": args.learned_assignment_radius,
                 "learned_graph_radius": args.learned_graph_radius,

@@ -64,6 +64,7 @@ class ModelConfig:
     learned_graph_spatial_sigma: float = 1.5
     graph_assignment_mode: str = "learned"
     graph_adjacency_mode: str = "learned"
+    region_residual_mode: str = "none"
 
 
 @dataclass(frozen=True)
@@ -186,6 +187,8 @@ class ResearchConfig:
             raise ValueError("Unknown model, selection or data protocol mode")
         if m.graph_assignment_mode not in ("learned", "fixed_grid") or m.graph_adjacency_mode not in ("learned", "fixed_local"):
             raise ValueError("Unknown graph assignment/adjacency mode")
+        if m.region_residual_mode not in ("none", "capacity_control", "x_residual", "residual_only", "x_region"):
+            raise ValueError("Unknown region_residual_mode")
         if m.graph_mode == "static" and (m.graph_assignment_mode != "learned" or m.graph_adjacency_mode != "learned"):
             raise ValueError("Graph builder controls require graph_mode=learned")
         if t.eval_checkpoint not in ("primary", "last", "val_loss", "macro_oa", *d.datasets):
