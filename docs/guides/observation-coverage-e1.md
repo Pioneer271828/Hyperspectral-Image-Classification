@@ -1,5 +1,7 @@
 # E1-A: standalone observation coverage and modulation
 
+For the subsequent registered backbone/training/checkpoint integration, see [E1-B](coverage-integration-e1b.md). This page retains the E1-A standalone acceptance scope; E1-C accuracy evidence remains separate.
+
 [Issue #85](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/85) follows the negative M1-C development screen. This module supplies an independently testable description and optional affine operator. Existing VCA/backbone/configuration/CLI/checkpoint defaults are unchanged. Production integration is **E1-B**; a registered accuracy comparison comes after integration acceptance.
 
 ## Evidence and reuse

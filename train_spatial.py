@@ -10,6 +10,8 @@ import numpy as np
 import torch
 from scipy.io import loadmat
 from model.research_config import ResearchConfig, digest
+from model.coverage_config import strip_default_coverage, coverage_enabled, coverage_forward_kwargs
+from loadData.observation_sampling import BandMetadata
 from model.checkpoint_io import save_model_checkpoint, load_model_checkpoint
 from model.learnable_superpixel_graph import LearnableSuperpixelGraph
 from loadData.dataset_registry import DATASETS, inspect_dataset
@@ -36,7 +38,7 @@ class SpatialConfig:
         if self.research.training.steps_per_epoch<=0:raise ValueError('Explicit positive steps_per_epoch required')
         if self.research.training.eval_checkpoint!='primary':raise ValueError('Strict adapter evaluates validation-selected primary only')
         make_tile_plan((values['tile_size']*4,values['tile_size']*4),values['tile_size'],values['gap'],values['split_seed'])
-        self.values={**values,'model':asdict(self.research.model),'interaction':asdict(self.research.interaction),
+        self.values={**values,'model':strip_default_coverage(asdict(self.research.model)),'interaction':asdict(self.research.interaction),
                      'loss':asdict(self.research.loss),'training':asdict(self.research.training)}
         self.name=self.research.name
         self.training=self.research.training
@@ -46,18 +48,28 @@ class SpatialConfig:
     @property
     def budget(self):return self.research.budget
 
-def evaluate(model,cube,labels,plan,stats,partition,dataset,classes,wave,scale,coordinate_mode=None):
+
+def _coverage_kwargs(model, metadata):
+    result=coverage_forward_kwargs(model,metadata)
+    if coverage_enabled(model) and metadata is not None and metadata.fwhm is not None:
+        result['fwhm']=np.asarray(metadata.fwhm,dtype=np.float32)
+    return result
+
+def evaluate(model,cube,labels,plan,stats,partition,dataset,classes,wave,scale,coordinate_mode=None,*,coverage_metadata=None):
     """Streaming confusion and NLL; missing classes stay explicit."""
     mode = getattr(model,'training_config',{}).get('spatial_config',{}).get('coordinate_mode','absolute') if coordinate_mode is None else coordinate_mode
     if mode not in MODES:raise ValueError('Invalid coordinate_mode')
     model.eval()
+    if coverage_enabled(model) and coverage_metadata is None:
+        saved=getattr(model,'training_config',{}).get('coverage_input_metadata')
+        if saved is not None:coverage_metadata=BandMetadata(**saved)
     confusion=np.zeros((classes,classes),dtype=np.int64)
     nll=0.0
     with torch.no_grad():
         for tile in plan['tiles']:
             if tile['partition']!=partition:continue
             obs=coordinate_observation(observe_tile(cube,plan,stats,tile),mode)
-            output=forward_partition(model,dataset,obs,wave,scale)[0].cpu().numpy()
+            output=forward_partition(model,dataset,obs,wave,scale,**_coverage_kwargs(model,coverage_metadata))[0].cpu().numpy()
             target=np.asarray(labels[tile_slice(tile)]).reshape(-1).astype(np.int64)
             valid=target>0
             if not valid.any():continue
@@ -72,7 +84,7 @@ def evaluate(model,cube,labels,plan,stats,partition,dataset,classes,wave,scale,c
             'kappa':(oa-expected)/(1-expected) if expected<1 else None,'count':total,
             'support':support.tolist(),'missing_classes':(np.flatnonzero(support==0)+1).tolist(),'confusion':confusion.tolist()}
 
-def train_blocks(config,cube,labels,raw_identity,record,wave=None,model_initializer=None,progress_callback=None):
+def train_blocks(config,cube,labels,raw_identity,record,wave=None,model_initializer=None,progress_callback=None,coverage_metadata=None):
     cfg=config.research;v=config.values;dataset=v['dataset']
     classes=DATASETS[dataset][2]
     if cube.ndim!=3 or labels.shape!=cube.shape[:2]:raise ValueError('Image/label shape mismatch')
@@ -93,7 +105,9 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None,model_initiali
             gh,gw=LearnableSuperpixelGraph._grid_shape(y1-y0,x1-x0,scale)
             if gh*gw<2:raise ValueError('BatchNorm requires at least two graph nodes per train block; increase tile size or explicitly choose group_norm')
     record.record_protocol_data({'raw':raw_identity,'plan_hash':plan['plan_hash'],
-                                 'statistics_hash':stats['statistics_hash'],'wavelength_hash':tensor_hash(wave)})
+                                 'statistics_hash':stats['statistics_hash'],'wavelength_hash':tensor_hash(wave),
+                                 **({'coverage_metadata_hash':getattr(coverage_metadata,'fingerprint',None)}
+                                    if cfg.model.coverage_mode!='none' else {})})
     write_json(record.attempt/'protocol.json',plan);write_json(record.attempt/'statistics.json',stats)
     torch.manual_seed(cfg.training.seed)
     if cfg.device.startswith('cuda') and not torch.cuda.is_available():raise ValueError('CUDA unavailable')
@@ -104,6 +118,7 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None,model_initiali
         record.manifest['initialization']=initialization;record.save()
     model.training_config={'spatial_config':config.to_dict(),'plan_hash':plan['plan_hash'],
                            'statistics_hash':stats['statistics_hash'],'run_id':record.run_id}
+    if coverage_enabled(model):model.training_config['coverage_input_metadata']=json.loads(json.dumps(asdict(coverage_metadata))) if coverage_metadata is not None else None
     if initialization is not None:model.training_config['initialization']=initialization
     heads=list(model.heads.parameters())+list(model.hgnn_heads.parameters())+list(model.cnn_heads.parameters())
     optimizer=torch.optim.Adam([{'params':model.backbone.parameters(),'lr':cfg.training.lr},
@@ -116,7 +131,7 @@ def train_blocks(config,cube,labels,raw_identity,record,wave=None,model_initiali
         for _ in range(cfg.training.steps_per_epoch):
             tile=train_tiles[int(rng.integers(len(train_tiles)))];obs=coordinate_observation(observe_tile(cube,plan,stats,tile),v.get('coordinate_mode','absolute'))
             model.train();optimizer.zero_grad()
-            outputs=forward_partition(model,dataset,obs,wave,scale)
+            outputs=forward_partition(model,dataset,obs,wave,scale,**_coverage_kwargs(model,coverage_metadata))
             local=torch.as_tensor(np.array(labels[tile_slice(tile)],copy=True).reshape(-1),device=cfg.device,dtype=torch.long)
             mask=(local>0)[:,None].expand(-1,classes)
             onehot=torch.nn.functional.one_hot((local-1).clamp_min(0),classes).float()*mask
@@ -177,9 +192,12 @@ def execute(config,root,code,data_loader,resume=False,model_initializer=None,pro
                 try:
                     require_frozen_code(code)
                     try:
-                        cube,labels,identity,wave=data_loader()
+                        supplied=data_loader()
+                        if len(supplied) not in (4,5):raise ValueError('Spatial loader returns 4 values or 5th BandMetadata')
+                        cube,labels,identity,wave=supplied[:4]
                         train_blocks(config,cube,labels,identity,record,wave=wave,
-                            model_initializer=model_initializer,progress_callback=progress_callback)
+                            model_initializer=model_initializer,progress_callback=progress_callback,
+                            coverage_metadata=supplied[4] if len(supplied)==5 else None)
                     finally:require_frozen_code(code)
                 except AlreadyCompleted:raise
                 except BaseException:
@@ -202,6 +220,9 @@ def main():
         cube=loadmat(path,variable_names=[key])[key] if key else np.load(path,mmap_mode='r',allow_pickle=False)
         # Approximate metadata remains explicitly unverified; original adapter semantics retained.
         wave,_=readWavelengths(name,cube.shape[2])
+        if config.research.model.coverage_mode!='none':
+            from loadData.data_read import read_band_metadata
+            return cube,labels,record,wave,read_band_metadata(name,cube.shape[2])
         return cube,labels,record,wave
     print(execute(config,a.out_root,code,loader,a.resume)['status'],flush=True)
 

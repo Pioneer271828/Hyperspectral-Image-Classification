@@ -12,6 +12,7 @@ from model import VCASAHGCN, utils
 from model.interaction_config import add_interaction_arguments, interaction_kwargs, InteractionConfig
 from model.checkpoint_io import save_model_checkpoint
 from model.research_config import ResearchConfig
+from model.coverage_config import coverage_forward_kwargs
 from model.task_losses import probability_loss_components, detached_loss_values
 
 try:
@@ -171,6 +172,8 @@ def prepare_dataset(data_set_name, args, device, seed):
         "net_input": to_tensor(net_input, device),
         "wavelengths": to_tensor(wavelengths.reshape(-1), device),
         "fwhm": None if fwhm is None else to_tensor(fwhm.reshape(-1), device),
+        **({'coverage_metadata':data_read.read_band_metadata(data_set_name,bands)}
+           if getattr(args,'coverage_mode','none')!='none' else {}),
         "train_samples_gt": to_tensor(train_samples_gt, device),
         "test_samples_gt": to_tensor(test_samples_gt, device),
         "val_samples_gt": to_tensor(val_samples_gt, device),
@@ -346,6 +349,7 @@ def evaluate_split(model, datasets, split):
                 wavelengths=item["wavelengths"],
                 fwhm=item["fwhm"],
                 superpixel_scale=item["superpixel_scale"],
+                **coverage_forward_kwargs(model,item.get('coverage_metadata')),
             )
             y = outputs[0]
             loss = utils.compute_loss(y, item["{}_gt_onehot".format(split)], item["{}_label_mask".format(split)])
@@ -389,6 +393,13 @@ def build_parser():
     parser.add_argument("--region-residual-mode", default="none",
                         choices=["none", "capacity_control", "x_residual", "residual_only", "x_region"],
                         help="M4 CNN input; graph pooling continues to use original shared features.")
+    parser.add_argument('--coverage-mode',default='none',choices=['none','affine'])
+    parser.add_argument('--coverage-hidden',type=int,default=16)
+    parser.add_argument('--coverage-strength',type=float,default=.1)
+    parser.add_argument('--coverage-sigma',type=float,default=.08)
+    parser.add_argument('--coverage-window',type=float,default=.16)
+    parser.add_argument('--coverage-init-seed',type=int,default=0)
+    parser.add_argument('--coverage-descriptor-version',type=int,default=1,choices=[1])
     parser.add_argument("--learned-assignment-radius", type=int, default=1)
     parser.add_argument("--learned-graph-radius", type=int, default=1)
     parser.add_argument("--learned-assignment-temperature", type=float, default=1.0)
@@ -477,12 +488,22 @@ def train(args, run_record=None):
         raise RuntimeError("no dataset was prepared")
 
     if run_record is not None:
-        run_record.record_data(datasets)
+        if resolved.model.coverage_mode != 'none':
+            from research_runtime import prepared_fingerprints
+            fingerprints=prepared_fingerprints(datasets)
+            for name,item in datasets.items():
+                fingerprints[name]['coverage_metadata_hash']=getattr(item.get('coverage_metadata'),'fingerprint',None)
+            run_record.record_protocol_data(fingerprints)
+        else:run_record.record_data(datasets)
 
     class_counts = {name: item["class_num"] for name, item in datasets.items()}
     model = resolved.build_model(class_counts).to(device)
     model.training_config = vars(args).copy()
     model.training_config["research_config"] = resolved.to_dict()
+    if resolved.model.coverage_mode != 'none':
+        from dataclasses import asdict
+        model.training_config['coverage_input_metadata']={name:(asdict(item['coverage_metadata'])
+            if item.get('coverage_metadata') is not None else None) for name,item in datasets.items()}
     if run_record is not None:
         run_record.record_model(model)
         model.training_config["research_run"] = {"run_id": run_record.run_id,
@@ -604,6 +625,7 @@ def train(args, run_record=None):
                 fwhm=item["fwhm"],
                 superpixel_scale=item["superpixel_scale"],
                 return_graph_info=args.graph_mode == "learned" or interaction_config.active,
+                **coverage_forward_kwargs(model,item.get('coverage_metadata')),
             )
             components = supervised_loss(
                 outputs,
@@ -740,6 +762,7 @@ def train(args, run_record=None):
                 fwhm=item["fwhm"],
                 superpixel_scale=item["superpixel_scale"],
                 return_graph_info=interaction_config.active,
+                **coverage_forward_kwargs(model,item.get('coverage_metadata')),
             )
             y = outputs[0]
             if len(outputs) > 3:

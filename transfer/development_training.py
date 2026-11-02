@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from loadData.spatial_tiles import validate_tile_plan,tile_slice
 from model.research_config import digest
+from model.coverage_config import coverage_trace
 from model.checkpoint_io import save_model_checkpoint
 from research_runtime import write_json,hash_file
 from transfer.g3_training import Scene,build_target,_optimizer,_update,_forward,state_hash,head_hash
@@ -96,7 +97,8 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
                            'optimizer_budget':steps,'model_seed':seed,'head_seed':seed+2,'sampler_seed':seed+4,
                            'sampler':sampler.metadata}
     records=run_fields(config,phase='development',method=method,head_seed=seed+2,sampler_seed=seed+4,
-                       val_every=val_every,selection=record['selection'],sampling=sampler.metadata,optimizer=optimizer)
+                       val_every=val_every,selection=record['selection'],sampling=sampler.metadata,optimizer=optimizer,
+                       coverage_metadata=scene.bands,model=model)
     model.training_config.update(records)
     policy_fields={} if observation_policy is None else {'observation_policy_hash':observation_policy.policy_hash,
                                                         'observation_selection_condition':'full'}
@@ -107,7 +109,8 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
         extra={} if observation_policy is None else {'observation_view':observation_policy.view(scene,record,tile,phase='training',step=step)}
         loss=_update(model,scene,tile,labels[tile_slice(tile)],config,optimizer,head_only=method=='source_pretrained_head_only',**extra)
         trace.append({'step':step,'tile_id':tile['id'],'loss':loss,**({'anchor_class':anchor} if anchor is not None else {}),
-                      **({} if observation_policy is None else {'observation':observation_policy.training_record(step)})})
+                      **({} if observation_policy is None else {'observation':observation_policy.training_record(step)}),
+                      **coverage_trace(model,extra['observation_view'].bands if observation_policy is not None else scene.bands)})
         if step%val_every==0 or step==steps:
             val=evaluate_validation(model,scene,record,**({} if observation_policy is None else {'observation_policy':observation_policy}))
             if not np.isfinite(val['nll']):raise ValueError('Nonfinite validation')

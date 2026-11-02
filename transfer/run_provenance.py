@@ -1,5 +1,6 @@
 """Effective G3 stage settings and strict, read-only artifact consistency checks."""
 import copy
+from dataclasses import asdict
 import json
 from pathlib import Path
 import numpy as np
@@ -7,6 +8,8 @@ import numpy as np
 from model.research_config import digest
 from research_runtime import hash_file
 from train_spatial import SpatialConfig
+from model.coverage_config import coverage_signature
+from loadData.observation_sampling import BandMetadata
 
 
 def _require(condition, message):
@@ -31,7 +34,7 @@ def resolve_budget(config, steps, val_every=None):
 
 
 def run_fields(config, *, phase, method, head_seed, sampler_seed, val_every,
-               selection, sampling, optimizer, scheduler=None):
+               selection, sampling, optimizer, scheduler=None, coverage_metadata=None, model=None):
     _require(phase in ('source', 'target', 'development'), 'unknown stage')
     model_seed = _seed(config.training.seed, 'model seed')
     _seed(sampler_seed, 'sampler seed')
@@ -66,6 +69,21 @@ def run_fields(config, *, phase, method, head_seed, sampler_seed, val_every,
             ['training.val_interval', 'training.primary_checkpoint', 'training.eval_checkpoint']
             if phase == 'target' else []),
     }
+    if config.research.model.coverage_mode != 'none':
+        _require(isinstance(coverage_metadata,BandMetadata) and model is not None,'E1 runtime metadata/model required')
+        layer=model.backbone.coverage_modulation
+        _require(layer is not None,'configured E1 module not registered')
+        _require(coverage_signature(model.backbone_kwargs)==coverage_signature(resolved['model']),
+                 'E1 actual model/config differ')
+        ids={id(p) for group in optimizer.param_groups for p in group['params']}
+        expected={id(p) for p in layer.parameters() if p.requires_grad}
+        _require(expected <= ids,'E1 trainable parameters missing from optimizer')
+        runtime['coverage']={'schema_version':1,'settings':coverage_signature(resolved['model']),
+            'input_metadata':json.loads(json.dumps(asdict(coverage_metadata))),
+            'input_metadata_hash':coverage_metadata.fingerprint,
+            'registered_parameters':sum(p.numel() for p in layer.parameters()),
+            'optimized_parameters':sum(p.numel() for p in layer.parameters() if id(p) in ids),
+            'optimizer_enrollment_verified':True}
     return {'resolved_config': resolved, 'runtime_config': runtime,
             'runtime_config_hash': digest(runtime)}
 
@@ -76,6 +94,7 @@ def verify_run_artifacts(folder):
     result = json.loads((folder / 'result.json').read_text())
     sidecar = json.loads((folder / 'model.pt.json').read_text())
     info = sidecar['training_config']
+    policy = None
     if 'observation_policy_hash' in result or 'observation_policy_hash' in info:
         from transfer.observation_policy import ObservationPolicy
         policy = ObservationPolicy(json.loads((folder / 'observation-policy.json').read_text()))
@@ -97,6 +116,23 @@ def verify_run_artifacts(folder):
     _require(runtime['schema_version'] == 1, 'runtime schema')
     _require(runtime['resolved_config_hash'] == digest(result['resolved_config']), 'resolved config hash')
     config = SpatialConfig(result['resolved_config'])
+    if config.research.model.coverage_mode != 'none':
+        coverage=runtime.get('coverage',{})
+        _require(coverage.get('schema_version')==1,'missing E1 runtime contract')
+        _require(coverage.get('settings')==coverage_signature(result['resolved_config']['model'])
+                 ==coverage_signature(sidecar['backbone_kwargs']),'E1 config/sidecar settings differ')
+        bands=BandMetadata(**coverage['input_metadata'])
+        _require(bands.fingerprint==coverage['input_metadata_hash'],'E1 base metadata identity')
+        expected=(9+1)*config.research.model.coverage_hidden+2*sidecar['backbone_kwargs'].get('adapter_value_dim',1)*(config.research.model.coverage_hidden+1)
+        _require(coverage.get('registered_parameters')==expected and coverage.get('optimized_parameters')==(0 if runtime['frozen_backbone'] else expected)
+                 and coverage.get('optimizer_enrollment_verified') is True,'E1 parameter enrollment/count')
+        value = None if policy is None else policy.to_dict()
+        if value is not None:_require(bands.fingerprint==value['identity']['metadata_hash'],'E1/policy source metadata differ')
+        for row in result['trace']:
+            expected_hash = (value['training'][row['step']-1]['selected_metadata_hash']
+                if value is not None and policy.training_application=='real_subset' else bands.fingerprint)
+            _require(row.get('coverage_metadata_hash')==expected_hash,'E1 actual observation metadata trace differs')
+    else:_require('coverage' not in runtime,'off run claims E1 runtime')
     steps = runtime['optimizer_steps']; phase = runtime['phase']
     _require(type(steps) is int and steps > 0 and steps == config.budget['optimizer_steps'], 'update budget')
     _require(config.training.epochs == 0, 'one-stage epoch representation')

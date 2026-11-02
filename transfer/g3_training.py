@@ -11,6 +11,7 @@ from loadData.observation_sampling import BandMetadata,sample
 from loadData.transfer_protocol import _validate_record,target_labels_for_tile
 from model.checkpoint_io import save_model_checkpoint,load_model_checkpoint
 from model.research_config import digest
+from model.coverage_config import coverage_forward_kwargs, coverage_enabled, coverage_signature, coverage_trace
 from research_runtime import tensor_hash,hash_file,write_json
 from train_spatial import SpatialConfig,evaluate
 from train_vca_multidataset import supervised_loss
@@ -68,6 +69,8 @@ def build_target(base,scene,method,source,*,model_seed,head_seed,device):
         if source is None:raise ValueError('Selected source checkpoint required')
         if getattr(source.backbone,'region_residual_mode','none')!=model.backbone.region_residual_mode:
             raise ValueError('Source/target region_residual_mode must match for backbone transfer')
+        if (coverage_enabled(source) or coverage_enabled(model)) and coverage_signature(source.backbone_kwargs)!=coverage_signature(model.backbone_kwargs):
+            raise ValueError('Source/target coverage settings must match for backbone transfer')
         model.backbone.load_state_dict(source.backbone.state_dict(),strict=True)
     frozen=method=='source_pretrained_head_only'
     model.backbone.requires_grad_(not frozen)
@@ -97,6 +100,9 @@ def _forward(model,scene,tile,*,observation_view=None):
     extra = {} if observation_view is None or view.bands.fwhm is None else {'fwhm': np.asarray(view.bands.fwhm,dtype=np.float32)}
     if observation_view is not None:
         extra.update(wavelength_unit=view.bands.wavelength_unit, fwhm_unit=view.bands.fwhm_unit or 'auto')
+    extra.update(coverage_forward_kwargs(model,view.bands))
+    if coverage_enabled(model) and view.bands.fwhm is not None:
+        extra['fwhm']=np.asarray(view.bands.fwhm,dtype=np.float32)
     return forward_partition(model,scene.dataset,view.observation,np.asarray(view.bands.wavelengths,dtype=np.float32),
                              50 if scene.dataset=='paviaU' else 100,**extra)
 
@@ -148,18 +154,20 @@ def train_source(scene,source_labels,base,folder,*,steps,val_every,model_seed,sa
     if not tiles:raise ValueError('No source training labels')
     records=run_fields(config,phase='source',method='source_pretrain',head_seed=None,sampler_seed=sampler_seed,
                        val_every=val_every,selection='source_val_nll',sampling={'mode':'uniform','tile_ids':[t['id'] for t in tiles]},
-                       optimizer=optimizer,scheduler=scheduler)
+                       optimizer=optimizer,scheduler=scheduler,coverage_metadata=scene.bands,model=model)
     model.training_config.update(records)
     rng=np.random.default_rng(sampler_seed);torch.manual_seed(model_seed);best=None;history=[];trace=[]
     for step in range(1,steps+1):
         tile=tiles[int(rng.integers(len(tiles)))];loss=_update(model,scene,tile,source_labels[tile_slice(tile)],config,optimizer)
         if step==1 or step%10==0 or step==steps:
-            event={'phase':'source_train','step':step,'budget':steps,'tile_id':tile['id'],'loss':loss}
+            event={'phase':'source_train','step':step,'budget':steps,'tile_id':tile['id'],'loss':loss,
+                   **coverage_trace(model,scene.bands)}
             trace.append(event)
             if progress:progress(event)
         if step%val_every==0 or step==steps:
             val=evaluate(model,scene.cube,source_labels,scene.plan,scene.stats,'val',scene.dataset,scene.classes,
-                         np.asarray(scene.bands.wavelengths,dtype=np.float32),50 if scene.dataset=='paviaU' else 100)
+                         np.asarray(scene.bands.wavelengths,dtype=np.float32),50 if scene.dataset=='paviaU' else 100,
+                         **({'coverage_metadata':scene.bands} if coverage_enabled(model) else {}))
             scheduler.step(val['nll']);history.append({'step':step,'val':val})
             if best is None or val['nll']<best:
                 best=val['nll'];model.training_config['selected_step']=step;save_model_checkpoint(model,folder/'model.pt')
@@ -190,14 +198,15 @@ def adapt_target(scene,support,base,folder,*,method,source,steps,model_seed,head
     optimizer=_optimizer(model,config);rng=np.random.default_rng(sampler_seed);torch.manual_seed(model_seed)
     records=run_fields(config,phase='target',method=method,head_seed=head_seed,sampler_seed=sampler_seed,
                        val_every=None,selection='fixed_final_step',sampling={'mode':'uniform','tile_ids':[t['id'] for t in tiles]},
-                       optimizer=optimizer)
+                       optimizer=optimizer,coverage_metadata=scene.bands,model=model)
     model.training_config.update(records)
     trace=[];frozen=method=='source_pretrained_head_only'
     for step in range(1,steps+1):
         tile=tiles[int(rng.integers(len(tiles)))];labels=target_labels_for_tile(sparse,scene.plan,support,tile['id'],phase='adapt')
         loss=_update(model,scene,tile,labels,config,optimizer,head_only=frozen)
         if step==1 or step%10==0 or step==steps:
-            event={'phase':'target_adapt','method':method,'step':step,'budget':steps,'tile_id':tile['id'],'loss':loss}
+            event={'phase':'target_adapt','method':method,'step':step,'budget':steps,'tile_id':tile['id'],'loss':loss,
+                   **coverage_trace(model,scene.bands)}
             trace.append(event)
             if progress:progress(event)
     unchanged=state_hash(model.backbone)==initial_backbone
@@ -227,7 +236,8 @@ def evaluate_target(scene,support,labels,checkpoint,*,expected_checkpoint_hash,e
     for tile in scene.plan['tiles']:
         if tile['partition']=='test':released[tile_slice(tile)]=target_labels_for_tile(labels,scene.plan,support,tile['id'],phase='final_test',final_checkpoint_sha256=expected_checkpoint_hash)
     return evaluate(model,scene.cube,released,scene.plan,scene.stats,'test',scene.dataset,scene.classes,
-                    np.asarray(scene.bands.wavelengths,dtype=np.float32),100)
+                    np.asarray(scene.bands.wavelengths,dtype=np.float32),100,
+                    **({'coverage_metadata':scene.bands} if coverage_enabled(model) else {}))
 
 
 

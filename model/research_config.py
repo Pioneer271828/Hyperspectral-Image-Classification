@@ -8,6 +8,7 @@ import re
 from types import SimpleNamespace
 
 from model.interaction_config import InteractionConfig
+from model.coverage_config import coverage_options, strip_default_coverage
 
 
 def canonical_json(value):
@@ -65,6 +66,13 @@ class ModelConfig:
     graph_assignment_mode: str = "learned"
     graph_adjacency_mode: str = "learned"
     region_residual_mode: str = "none"
+    coverage_mode: str = "none"
+    coverage_hidden: int = 16
+    coverage_strength: float = 0.1
+    coverage_sigma: float = 0.08
+    coverage_window: float = 0.16
+    coverage_init_seed: int = 0
+    coverage_descriptor_version: int = 1
 
 
 @dataclass(frozen=True)
@@ -164,6 +172,7 @@ class ResearchConfig:
         for group in (self.model, self.interaction, self.loss, self.training, self.data, self.augmentation):
             _group(type(group), asdict(group))
         m, t, d, a = self.model, self.training, self.data, self.augmentation
+        coverage_options(asdict(m))
         if not 0 <= m.alph <= 1:
             raise ValueError("model.alph must be in [0,1]")
         for key in ("latent_channels", "adapter_embed_dim", "learned_assignment_dim"):
@@ -216,7 +225,9 @@ class ResearchConfig:
 
     def to_dict(self):
         self.validate()
-        return asdict(self)
+        result = asdict(self)
+        result['model'] = strip_default_coverage(result['model'])
+        return result
 
     @property
     def config_hash(self):
@@ -230,7 +241,7 @@ class ResearchConfig:
 
     def model_kwargs(self):
         self.validate()
-        return {**asdict(self.model), **asdict(self.interaction)}
+        return {**strip_default_coverage(asdict(self.model)), **asdict(self.interaction)}
 
     def build_model(self, class_counts):
         from model.VCASAHGCN import MultiDatasetVCASAHGCN

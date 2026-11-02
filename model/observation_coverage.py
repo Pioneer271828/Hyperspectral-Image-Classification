@@ -3,7 +3,7 @@
 Coverage geometry is the project's proposed descriptor. The residual affine
 operator independently implements the FiLM mathematical idea (Perez et al.,
 arXiv:1709.07871v2, sec.2.1); no upstream source is incorporated. See
-docs/references/e1-reference-review.json. No existing backbone is modified.
+docs/references/e1-reference-review.json. Production opt-in wiring is E1-B.
 """
 from dataclasses import asdict, dataclass
 import math
@@ -17,6 +17,30 @@ from loadData.observation_sampling import BandMetadata
 FEATURES = ('anchor_position', 'nearest_distance', 'soft_support', 'log_local_count',
             'local_gap_fraction', 'physical_available', 'verified_centers',
             'approximate_centers', 'fwhm_present')
+
+
+def validate_binding(metadata, wavelengths, fwhm, bands, device, dtype, wavelength_unit, fwhm_unit):
+    """Bind declared quality/identity to exactly the values consumed by VCA.
+
+    Model inputs already contain retained valid columns. Auto units are checked
+    against VCA's existing rule, never silently reinterpreted using E1 metadata.
+    """
+    if metadata is None:return
+    require(isinstance(metadata,BandMetadata),'coverage_metadata must be BandMetadata or None')
+    require(len(metadata.band_ids)==bands and all(metadata.valid),'pass only retained valid columns to the model')
+    require(wavelengths is not None,'declared coverage metadata requires actual VCA wavelengths')
+    wave=torch.as_tensor(wavelengths,device=device,dtype=dtype).reshape(-1)
+    expected=torch.as_tensor(metadata.wavelengths,device=device,dtype=dtype)
+    require(wave.shape==expected.shape and torch.equal(wave,expected),'coverage/VCA wavelength values differ')
+    resolved = ('normalized' if wave.max()<=2 and wave.min()>=-.5 else 'nm') if wavelength_unit=='auto' else wavelength_unit
+    require(resolved==metadata.wavelength_unit,'coverage/VCA wavelength units differ; supply explicit units')
+    require((fwhm is None)==(metadata.fwhm is None),'coverage/VCA FWHM availability differs')
+    if fwhm is not None:
+        widths=torch.as_tensor(fwhm,device=device,dtype=dtype).reshape(-1)
+        expected=torch.as_tensor(metadata.fwhm,device=device,dtype=dtype)
+        require(widths.shape==expected.shape and torch.equal(widths,expected),'coverage/VCA FWHM values differ')
+        resolved=('normalized' if widths.max()<=2 else 'nm') if fwhm_unit=='auto' else fwhm_unit
+        require(resolved==metadata.fwhm_unit,'coverage/VCA FWHM units differ; supply explicit units')
 
 
 def require(condition, message):

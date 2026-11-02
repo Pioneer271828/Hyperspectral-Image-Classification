@@ -107,7 +107,8 @@ def training_labels(labels, plan, observation):
         raise ValueError('Supervision outside training partition')
     return np.array(labels.reshape(-1)[ids].reshape(observation.global_ids.shape),copy=True)
 
-def forward_partition(model, dataset, observation, wavelengths=None, superpixel_scale=100, *, fwhm=None, wavelength_unit=None, fwhm_unit=None):
+def forward_partition(model, dataset, observation, wavelengths=None, superpixel_scale=100, *, fwhm=None, wavelength_unit=None, fwhm_unit=None,
+                      coverage_metadata=None, coverage_reference_nm=None):
     import torch
     if model.backbone.graph_mode != 'learned':
         raise ValueError('Strict spatial protocol requires label-free learned graphs')
@@ -119,6 +120,8 @@ def forward_partition(model, dataset, observation, wavelengths=None, superpixel_
     extra = {} if fwhm is None else {'fwhm': torch.as_tensor(fwhm, device=device)}
     if wavelength_unit is not None:extra['wavelength_unit']=wavelength_unit
     if fwhm_unit is not None:extra['fwhm_unit']=fwhm_unit
+    if getattr(model.backbone,'coverage_mode','none')!='none':
+        extra.update(coverage_metadata=coverage_metadata,coverage_reference_nm=coverage_reference_nm)
     return model(dataset,value,wavelengths=wavelengths,superpixel_scale=superpixel_scale,return_graph_info=True,**extra)
 
 def class_coverage(labels, plan):
