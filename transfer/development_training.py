@@ -7,6 +7,7 @@ from model.research_config import digest
 from model.checkpoint_io import save_model_checkpoint
 from research_runtime import write_json,hash_file
 from transfer.g3_training import Scene,build_target,_optimizer,_update,_forward,state_hash,head_hash
+from transfer.tile_sampling import SupportTileSampler
 
 
 def validate(record,plan):
@@ -72,21 +73,22 @@ def evaluate_validation(model,scene,record):
             'support':matrix.sum(1).tolist(),'recall':(np.diag(matrix)/matrix.sum(1)).tolist()}
 
 
-def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036,progress=None):
+def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036,progress=None,sampling='uniform'):
     validate(record,scene.plan)
     if type(steps) is not int or steps<=0 or type(val_every) is not int or val_every<=0:raise ValueError('Positive budgets required')
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     model,config=build_target(base,scene,method,source,model_seed=seed,head_seed=seed+2,device=device)
     initial_backbone=state_hash(model.backbone);initial_heads=head_hash(model)
     optimizer=_optimizer(model,config);labels=sparse_labels(record,scene.plan,'train_support')
-    tiles=[scene.plan['tiles'][t['id']] for t in record['roles'] if t['role']=='devtrain' and (labels[tile_slice(t)]>0).any()]
+    sampler=SupportTileSampler(scene.plan,record['roles'],labels,record['classes'],sampling)
     rng=np.random.default_rng(seed+4);torch.manual_seed(seed);history=[];trace=[];best=float('inf')
     model.training_config={'development_hash':record['validation_hash'],'statistics_hash':scene.stats['statistics_hash'],
                            'method':method,'selection':record['selection'],'training_labels':90,'validation_labels':45,
-                           'optimizer_budget':steps,'model_seed':seed,'head_seed':seed+2,'sampler_seed':seed+4}
+                           'optimizer_budget':steps,'model_seed':seed,'head_seed':seed+2,'sampler_seed':seed+4,
+                           'sampler':sampler.metadata}
     for step in range(1,steps+1):
-        tile=tiles[int(rng.integers(len(tiles)))];loss=_update(model,scene,tile,labels[tile_slice(tile)],config,optimizer,head_only=method=='source_pretrained_head_only')
-        trace.append({'step':step,'tile_id':tile['id'],'loss':loss})
+        tile,anchor=sampler.draw(rng);loss=_update(model,scene,tile,labels[tile_slice(tile)],config,optimizer,head_only=method=='source_pretrained_head_only')
+        trace.append({'step':step,'tile_id':tile['id'],'loss':loss,**({'anchor_class':anchor} if anchor is not None else {})})
         if step%val_every==0 or step==steps:
             val=evaluate_validation(model,scene,record)
             if not np.isfinite(val['nll']):raise ValueError('Nonfinite validation')
@@ -100,6 +102,7 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
             'initial_backbone_hash':initial_backbone,'initial_head_hash':initial_heads,
             'final_backbone_hash':state_hash(model.backbone),'final_head_hash':head_hash(model),
             'development_hash':record['validation_hash'],'checkpoint_sha256':hash_file(folder/'model.pt'),
-            'sidecar_sha256':hash_file(folder/'model.pt.json')}
+            'sidecar_sha256':hash_file(folder/'model.pt.json'),'sampler':sampler.metadata,
+            'resolved_config':config.to_dict()}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
     return result

@@ -43,7 +43,12 @@ class DevelopmentTrainingTests(unittest.TestCase):
             self.assertTrue(set(((yy+y0)*width+xx+x0).tolist())<=allowed)
             return _update(model,scene,tile,local,*args,**kwargs)
         with tempfile.TemporaryDirectory() as root,patch('transfer.development_training._update',side_effect=guarded):
-            result=adapt(scene,record,base,Path(root)/'run',device=os.environ.get('G3_DEVICE','cpu'))
-            self.assertFalse(result['test_evaluated'])
-            self.assertEqual(len(result['validation']),2)
-            self.assertEqual(result['selected_step'],min(result['validation'],key=lambda x:x['nll'])['step'])
+            for mode in ('uniform','class_first'):
+                with self.subTest(sampling=mode):
+                    result=adapt(scene,record,base,Path(root)/mode,device=os.environ.get('G3_DEVICE','cpu'),sampling=mode)
+                    self.assertFalse(result['test_evaluated'])
+                    self.assertEqual(len(result['validation']),2)
+                    self.assertEqual(result['selected_step'],min(result['validation'],key=lambda x:x['nll'])['step'])
+                    self.assertEqual(result['sampler']['mode'],mode)
+                    self.assertNotEqual(result['initial_backbone_hash'],result['final_backbone_hash'])
+                    if mode=='class_first':self.assertTrue(all('anchor_class' in x for x in result['trace']))
