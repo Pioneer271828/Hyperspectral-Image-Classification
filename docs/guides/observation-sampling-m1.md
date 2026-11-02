@@ -1,5 +1,7 @@
 # M1: real spectral subsets and synchronized metadata
 
+The standalone API below now has a separate opt-in [M1-B development-training integration](observation-training-m1.md), with frozen per-update subsets, fixed validation perturbations and checkpoint binding. Existing training defaults remain unchanged; full-budget accuracy evidence is still separate.
+
 `loadData.observation_sampling` is an independent, label-blind data API. It changes the actual spectral dimension B for the entire spatial block, while retaining the observation's coordinates, global pixel IDs, partition and plan identity. It does not modify VCA, old band-drop, default training, losses or sampling budgets. Smaller B is an observation change, not network pruning or changing VCA latent K.
 
 ```python
