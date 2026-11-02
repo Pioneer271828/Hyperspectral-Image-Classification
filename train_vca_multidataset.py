@@ -394,6 +394,7 @@ def build_parser():
                         choices=["none", "capacity_control", "x_residual", "residual_only", "x_region"],
                         help="M4 CNN input; graph pooling continues to use original shared features.")
     parser.add_argument('--coverage-mode',default='none',choices=['none','affine'])
+    parser.add_argument('--coverage-condition',default='continuous',choices=['continuous','anchor_only','binary','shuffled'])
     parser.add_argument('--coverage-hidden',type=int,default=16)
     parser.add_argument('--coverage-strength',type=float,default=.1)
     parser.add_argument('--coverage-sigma',type=float,default=.08)

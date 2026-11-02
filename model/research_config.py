@@ -73,6 +73,7 @@ class ModelConfig:
     coverage_window: float = 0.16
     coverage_init_seed: int = 0
     coverage_descriptor_version: int = 1
+    coverage_condition: str = 'continuous'
 
 
 @dataclass(frozen=True)

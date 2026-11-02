@@ -12,6 +12,8 @@ import torch
 from torch import nn
 
 from loadData.observation_sampling import BandMetadata
+from model.coverage_config import CONDITIONS
+from model.coverage_controls import generator_features
 
 
 FEATURES = ('anchor_position', 'nearest_distance', 'soft_support', 'log_local_count',
@@ -180,11 +182,12 @@ class CoverageModulation(nn.Module):
     export_config() and state_dict(); production checkpoint integration is E1-B.
     """
     def __init__(self, latent_channels, value_dim=1, mode='none', hidden=16,
-                 strength=.1, init_seed=0, descriptor_version=1):
+                 strength=.1, init_seed=0, descriptor_version=1, condition='continuous'):
         super().__init__()
         require(all(type(v) is int and v > 0 for v in (latent_channels, value_dim, hidden)),
                 'positive integer K/value_dim/hidden required')
         require(mode in ('none', 'affine'), 'mode must be none or affine')
+        require(condition in CONDITIONS,'unknown conditioning control')
         require(type(strength) in (int, float) and math.isfinite(strength) and 0 <= strength <= 1,
                 'strength must be finite in [0,1]')
         require(type(init_seed) is int and 0 <= init_seed < 2**32, 'uint32 local initialization seed required')
@@ -192,13 +195,16 @@ class CoverageModulation(nn.Module):
         self.latent_channels, self.value_dim, self.mode = latent_channels, value_dim, mode
         self.hidden, self.strength, self.init_seed = hidden, float(strength), init_seed
         self.descriptor_version = descriptor_version
+        self.condition = condition
         self.generator = (nn.Sequential(_LocalLinear(len(FEATURES), hidden, init_seed), nn.GELU(),
                                        _ZeroLinear(hidden, 2*value_dim)) if mode == 'affine' else None)
 
     def export_config(self):
-        return {k: getattr(self, k) for k in ('latent_channels', 'value_dim', 'mode', 'hidden', 'strength', 'init_seed', 'descriptor_version')}
+        result={k: getattr(self, k) for k in ('latent_channels', 'value_dim', 'mode', 'hidden', 'strength', 'init_seed', 'descriptor_version')}
+        if self.condition!='continuous':result['condition']=self.condition
+        return result
 
-    def forward(self, latent, coverage=None, *, channel_dim=-1):
+    def forward(self, latent, coverage=None, *, channel_dim=-1, anchor_valid=None):
         if self.mode == 'none' or self.strength == 0 or coverage is None:
             return latent
         require(isinstance(latent, torch.Tensor) and latent.layout == torch.strided and latent.ndim >= 2 and latent.numel() > 0
@@ -220,7 +226,8 @@ class CoverageModulation(nn.Module):
             require(p.dtype == latent.dtype and p.device == latent.device, 'move module to latent dtype/device first')
         if not mask.any():
             return latent
-        coefficients = self.generator(f.detach()).reshape(self.latent_channels, 2, self.value_dim).tanh()
+        features=generator_features(coverage,self.condition,self.init_seed,anchor_valid)
+        coefficients = self.generator(features).reshape(self.latent_channels, 2, self.value_dim).tanh()
         x = latent.movedim(channel_dim, -1).unflatten(-1, (self.latent_channels, self.value_dim))
         adjusted = x+self.strength*(coefficients[:, 0]*x+coefficients[:, 1])
         output = torch.where(mask[:, None], adjusted, x).flatten(-2)
