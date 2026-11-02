@@ -8,6 +8,7 @@ from model.checkpoint_io import save_model_checkpoint
 from research_runtime import write_json,hash_file
 from transfer.g3_training import Scene,build_target,_optimizer,_update,_forward,state_hash,head_hash
 from transfer.tile_sampling import SupportTileSampler
+from transfer.run_provenance import resolve_budget,run_fields,verify_run_artifacts
 
 
 def validate(record,plan):
@@ -78,14 +79,18 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
     if type(steps) is not int or steps<=0 or type(val_every) is not int or val_every<=0:raise ValueError('Positive budgets required')
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     model,config=build_target(base,scene,method,source,model_seed=seed,head_seed=seed+2,device=device)
+    config=resolve_budget(config,steps,val_every)
     initial_backbone=state_hash(model.backbone);initial_heads=head_hash(model)
     optimizer=_optimizer(model,config);labels=sparse_labels(record,scene.plan,'train_support')
     sampler=SupportTileSampler(scene.plan,record['roles'],labels,record['classes'],sampling)
     rng=np.random.default_rng(seed+4);torch.manual_seed(seed);history=[];trace=[];best=float('inf')
-    model.training_config={'development_hash':record['validation_hash'],'statistics_hash':scene.stats['statistics_hash'],
+    model.training_config={'phase':'development','development_hash':record['validation_hash'],'statistics_hash':scene.stats['statistics_hash'],
                            'method':method,'selection':record['selection'],'training_labels':90,'validation_labels':45,
                            'optimizer_budget':steps,'model_seed':seed,'head_seed':seed+2,'sampler_seed':seed+4,
                            'sampler':sampler.metadata}
+    records=run_fields(config,phase='development',method=method,head_seed=seed+2,sampler_seed=seed+4,
+                       val_every=val_every,selection=record['selection'],sampling=sampler.metadata,optimizer=optimizer)
+    model.training_config.update(records)
     for step in range(1,steps+1):
         tile,anchor=sampler.draw(rng);loss=_update(model,scene,tile,labels[tile_slice(tile)],config,optimizer,head_only=method=='source_pretrained_head_only')
         trace.append({'step':step,'tile_id':tile['id'],'loss':loss,**({'anchor_class':anchor} if anchor is not None else {})})
@@ -97,12 +102,13 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
             if val['nll']<best:
                 best=val['nll'];model.training_config['selected_step']=step
                 save_model_checkpoint(model,folder/'model.pt')
-    result={'status':'completed','steps':steps,'trace':trace,'validation':history,
+    result={'status':'completed','method':method,'selection':record['selection'],'steps':steps,'trace':trace,'validation':history,
             'selected_step':min(history,key=lambda x:x['nll'])['step'],'test_evaluated':False,
             'initial_backbone_hash':initial_backbone,'initial_head_hash':initial_heads,
             'final_backbone_hash':state_hash(model.backbone),'final_head_hash':head_hash(model),
             'development_hash':record['validation_hash'],'checkpoint_sha256':hash_file(folder/'model.pt'),
             'sidecar_sha256':hash_file(folder/'model.pt.json'),'sampler':sampler.metadata,
-            'resolved_config':config.to_dict()}
+            **records}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
+    verify_run_artifacts(folder)
     return result

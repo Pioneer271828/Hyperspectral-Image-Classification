@@ -36,4 +36,21 @@ The CLI requires a clean exact SHA and training container; smoke/run require CUD
 
 Real preflight does not decode target label values; target label-file bytes are hashed against the protocol for integrity. Synthetic smoke deliberately constructs all fixture arrays up front and is explicitly labelled synthetic, whereas the real stage ordering is tested using dependency guards. No target validation evaluation exists. Python stage functions are a correctness API, not protection against malicious callers or repeated manual test evaluation.
 
-Remaining work: freeze real-pilot resource budget/schedule, run and report the single-seed pilot, then at least three paired repetitions before accuracy claims. Record extra source pretraining cost separately from equal target update budgets. M4/E1 and real-band augmentation follow independent baselines; pruning/quantization remain frozen.
+## Actual stage configuration and provenance (Issue #68)
+
+`resolved_config` remains loadable by `SpatialConfig`: it records the actual model seed and a single inclusive epoch (`epochs=0`, `steps_per_epoch=actual_updates`). Source and development stages also record the actual validation interval in update units and validation-loss selection. These metadata corrections do not change initialization, loss, optimizer settings, sampling or selection. The base template is copied rather than edited.
+
+Both `result.json` and checkpoint `training_config` contain identical `resolved_config`, `runtime_config`, and `runtime_config_hash`. Runtime metadata binds the resolved-config hash, stage/method, model/head/sampler/training-Torch seeds, update budget, validation/selection policy, eligible sampling tiles, initial Adam groups and scheduler settings. Source heads initialize jointly with the model seed, so their separate head seed is null. Target heads are reset with their explicitly recorded seed. Source scheduler settings are initial policy, not an optimizer-state checkpoint.
+
+The fixed-final target stage has no validation interval or scheduler. Its runtime policy identifies unused template checkpoint/validation fields explicitly; scene tile size/gap/split come from the supplied plan, not the template. Development sampling records include the complete support-only sampler metadata. A component config alone is therefore insufficient to replay the G3 runner: use the matching stage runtime record, scene/plan identities and released support manifest.
+
+Each stage verifies its artifacts after completion. New-record final target evaluation verifies them again before evaluating test labels. For a read-only audit in the remote container:
+
+```python
+from transfer.run_provenance import verify_run_artifacts
+verified = verify_run_artifacts('/absolute/external/run/stage')
+```
+
+The verifier checks record equality/hashes, effective budgets/seeds, optimizer settings, sampler-seed replay against recorded training steps/anchors, validation schedule, earliest-minimum or fixed-final selected step, and checkpoint/sidecar hashes. It never rewrites artifacts. Conflicting records fail with `ValueError`. Historical stage records without provenance are rejected by this strict audit with an explicit legacy message; preserve their original files and use a separate evidence-backed correction record. The old final-evaluation path for historical sidecars remains available and is not retroactively labelled provenance-verified.
+
+This is model checkpoint recovery and execution provenance, not exact optimizer/RNG continuation. No long training or new test-based tuning is implied. Current remaining tasks and research priorities are maintained in [the shared audit checklist](../../research/当前搭建状态与审查整改清单_20261102.md); old pilot-stage descriptions above retain their original protocol scope.

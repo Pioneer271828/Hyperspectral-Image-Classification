@@ -15,6 +15,7 @@ from research_runtime import tensor_hash,hash_file,write_json
 from train_spatial import SpatialConfig,evaluate
 from train_vca_multidataset import supervised_loss
 from model.task_losses import detached_loss_values
+from transfer.run_provenance import resolve_budget,run_fields,verify_run_artifacts
 
 METHODS=('target_scratch_full','source_pretrained_head_only','source_pretrained_full_finetune')
 
@@ -47,6 +48,7 @@ def head_hash(model):
 
 def build_model(base,dataset,classes,seed,device):
     value=copy.deepcopy(base);value.update(dataset=dataset,device=device)
+    value['training']={**value.get('training',{}),'seed':seed}
     config=SpatialConfig(value)
     if config.research.model.norm_type!='group_norm' or config.research.interaction.interaction_mode!='none':
         raise ValueError('Frozen G3 baseline uses GroupNorm and no interaction')
@@ -123,12 +125,17 @@ def train_source(scene,source_labels,base,folder,*,steps,val_every,model_seed,sa
     counts=source_train_counts(scene,source_labels)
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     model,config=build_model(base,scene.dataset,scene.classes,model_seed,device)
-    config=SpatialConfig(config.to_dict()|{'training':config.to_dict()['training']|{'epochs':0,'steps_per_epoch':steps}})
-    model.training_config={'task_hash':task_hash,'phase':'source','plan_hash':scene.plan['plan_hash'],'statistics_hash':scene.stats['statistics_hash']}
+    config=resolve_budget(config,steps,val_every)
+    model.training_config={'task_hash':task_hash,'phase':'source','plan_hash':scene.plan['plan_hash'],
+                           'statistics_hash':scene.stats['statistics_hash'],'selection':'source_val_nll'}
     initial_backbone=state_hash(model.backbone)
     optimizer=_optimizer(model,config);scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=.5,patience=20)
     tiles=[t for t in scene.plan['tiles'] if t['partition']=='train' and (source_labels[tile_slice(t)]>0).any()]
     if not tiles:raise ValueError('No source training labels')
+    records=run_fields(config,phase='source',method='source_pretrain',head_seed=None,sampler_seed=sampler_seed,
+                       val_every=val_every,selection='source_val_nll',sampling={'mode':'uniform','tile_ids':[t['id'] for t in tiles]},
+                       optimizer=optimizer,scheduler=scheduler)
+    model.training_config.update(records)
     rng=np.random.default_rng(sampler_seed);torch.manual_seed(model_seed);best=None;history=[];trace=[]
     for step in range(1,steps+1):
         tile=tiles[int(rng.integers(len(tiles)))];loss=_update(model,scene,tile,source_labels[tile_slice(tile)],config,optimizer)
@@ -146,8 +153,9 @@ def train_source(scene,source_labels,base,folder,*,steps,val_every,model_seed,sa
     selected=load_model_checkpoint(folder/'model.pt',device)
     result={'status':'completed','optimizer_steps':steps,'selection':'source_val_nll','selected_step':min(history,key=lambda x:x['val']['nll'])['step'],
             'history':history,'trace':trace,'source_train_counts':counts,'initial_backbone_hash':initial_backbone,'source_test_evaluated':False,'checkpoint_sha256':hash_file(folder/'model.pt'),
-            'sidecar_sha256':hash_file(folder/'model.pt.json'),'backbone_hash':state_hash(selected.backbone),'resolved_config':config.to_dict()}
+            'sidecar_sha256':hash_file(folder/'model.pt.json'),'backbone_hash':state_hash(selected.backbone),**records}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
+    verify_run_artifacts(folder)
     return selected,result
 
 
@@ -160,12 +168,16 @@ def adapt_target(scene,support,base,folder,*,method,source,steps,model_seed,head
     tiles=[t for t in scene.plan['tiles'] if t['partition']=='train' and (sparse[tile_slice(t)]>0).any()]
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     model,config=build_target(base,scene,method,source,model_seed=model_seed,head_seed=head_seed,device=device)
-    config=SpatialConfig(config.to_dict()|{'training':config.to_dict()['training']|{'epochs':0,'steps_per_epoch':steps}})
+    config=resolve_budget(config,steps)
     initial_heads=head_hash(model);initial_backbone=state_hash(model.backbone)
     model.training_config={'task_hash':task_hash,'phase':'target','method':method,'support_hash':support['support_hash'],
                            'plan_hash':scene.plan['plan_hash'],'statistics_hash':scene.stats['statistics_hash'],
-                           'selection':'fixed_final_step','optimizer_steps':steps}
+                           'selection':'fixed_final_step','optimizer_steps':steps,'selected_step':steps}
     optimizer=_optimizer(model,config);rng=np.random.default_rng(sampler_seed);torch.manual_seed(model_seed)
+    records=run_fields(config,phase='target',method=method,head_seed=head_seed,sampler_seed=sampler_seed,
+                       val_every=None,selection='fixed_final_step',sampling={'mode':'uniform','tile_ids':[t['id'] for t in tiles]},
+                       optimizer=optimizer)
+    model.training_config.update(records)
     trace=[];frozen=method=='source_pretrained_head_only'
     for step in range(1,steps+1):
         tile=tiles[int(rng.integers(len(tiles)))];labels=target_labels_for_tile(sparse,scene.plan,support,tile['id'],phase='adapt')
@@ -177,12 +189,13 @@ def adapt_target(scene,support,base,folder,*,method,source,steps,model_seed,head
     unchanged=state_hash(model.backbone)==initial_backbone
     if frozen and not unchanged:raise AssertionError('Frozen backbone parameters/buffers changed')
     save_model_checkpoint(model,folder/'model.pt')
-    result={'status':'completed','method':method,'optimizer_steps':steps,'selection':'fixed_final_step','trace':trace,
+    result={'status':'completed','method':method,'optimizer_steps':steps,'selection':'fixed_final_step','selected_step':steps,'trace':trace,
             'support_hash':support['support_hash'],'target_support_labels':len(support['indices']),'target_validation_labels':0,
             'initial_head_hash':initial_heads,'final_head_hash':head_hash(model),'initial_backbone_hash':initial_backbone,'backbone_unchanged':unchanged,
             'trainable_parameters':sum(p.numel() for p in model.parameters() if p.requires_grad),
-            'checkpoint_sha256':hash_file(folder/'model.pt'),'sidecar_sha256':hash_file(folder/'model.pt.json'),'resolved_config':config.to_dict()}
+            'checkpoint_sha256':hash_file(folder/'model.pt'),'sidecar_sha256':hash_file(folder/'model.pt.json'),**records}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
+    verify_run_artifacts(folder)
     return result
 
 
@@ -190,6 +203,8 @@ def evaluate_target(scene,support,labels,checkpoint,*,expected_checkpoint_hash,e
     if hash_file(checkpoint)!=expected_checkpoint_hash or hash_file(str(checkpoint)+'.json')!=expected_sidecar_hash:raise ValueError('Final checkpoint/sidecar changed')
     model=load_model_checkpoint(checkpoint,device)
     info=model.training_config
+    if 'runtime_config' in info:
+        verify_run_artifacts(Path(checkpoint).parent)
     if any(info.get(k)!=v for k,v in {'task_hash':task_hash,'method':method,'phase':'target',
              'support_hash':support['support_hash'],'plan_hash':scene.plan['plan_hash'],
              'statistics_hash':scene.stats['statistics_hash'],'selection':'fixed_final_step'}.items()):
