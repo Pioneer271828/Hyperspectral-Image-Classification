@@ -20,7 +20,7 @@ Follow the [research master checklist](research/研究内容整合与详细搭�
 - [C1c strict multi-block training](docs/guides/spatial-training.md), [two-step end-to-end validation report](research/reports/C1c_严格空间训练闭环_20261029.md)
 - [M2 VCA metadata, bad-band handling, and cache contract](docs/guides/vca.md), [GPU validation report](research/reports/M2_VCA接口与缓存回归_20261029.md)
 - [M3 regional graph state, label-free controls, and manual injection](docs/guides/graph-state.md), [GPU validation report](research/reports/M3_区域图契约与无标签对照_20261029.md)
-- [M4-A standalone region representation and pixel residual](docs/guides/region-residual-m4.md): five independent modes and synthetic acceptance; backbone/training integration and accuracy evaluation are the next phase
+- [M4-A standalone region representation and pixel residual](docs/guides/region-residual-m4.md), [acceptance report](research/reports/M4A_区域表示与像素残差独立模块验收_20261102.md): five independent modes; 16 CPU/16 CUDA checks and 222 regression tests passed. Backbone/training integration is next, followed by independent accuracy ablations.
 - [M5 two-stage backbone, graph contract, and ablation configurations](docs/guides/backbone-stages.md), [GPU validation report](research/reports/M5_统一两阶段骨干与图契约接入_20261029.md)
 - [M8 fixed fusion, optional logits, and loss components](docs/guides/fusion-losses.md), [GPU validation report](research/reports/M8_固定融合与损失契约验收_20261029.md)
 - [E0a frozen predictions, boundary evaluation, and branch error diagnostics](docs/guides/evaluation-e0a.md), [validation report](research/reports/E0a_冻结预测评估与诊断验收_20261029.md)

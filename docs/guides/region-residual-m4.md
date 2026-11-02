@@ -54,6 +54,8 @@ This saves module configuration/parameters, not optimizer/RNG or exact training 
 
 ## Remote acceptance and next phase
 
+Engineering acceptance passed at `f6e937300b3393e0adf2f685909ce1fc289cf56c`: 16 focused CPU, 16 focused CUDA, all 222 CPU regressions and both original model smokes. [Report, commands and limits](../../research/reports/M4A_区域表示与像素残差独立模块验收_20261102.md); [PR #74](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/74). This records standalone engineering only; the pre-M4 baseline above remains useful for the next integration comparison.
+
 Use a clean, full-history checkout at the exact published SHA in the authorized training container, with an external unique output directory and process-level GPU allocation. Preserve the other projects and existing environment. Run:
 
 ```bash
@@ -64,4 +66,4 @@ python scripts/validate_m4a.py --expected-commit FULL_PUBLISHED_SHA \
 
 The entry verifies container/SHA/history/cleanliness, scope and source fingerprints; it runs focused CPU/CUDA checks, the full CPU regression suite and original CPU/GPU model smoke. Logs/commands/environment/failures are retained outside checkout. The independent tests use hand calculations, analytical/numerical gradients, invariances, no-densification/no-cache checks, exact bypass/RNG tests, save/reload and short synthetic optimization showing the hint/control can actually learn. They do not estimate real-data OA, boundary accuracy or cross-sensor gains.
 
-M4-B must wire both ordinary/interactive paths, original-X regional features and shared Q; preserve default-off behavior and old checkpoint compatibility; add budget/capacity-matched training ablations and actual invocation/gradient/feature-change diagnostics. Establish valid boundary-label coverage before claiming boundary gains. Existing 45-label development validation has no valid boundaries under its declared rule.
+Next, M4-B1 wires both ordinary/interactive paths, original-X regional features and shared Q; preserves default-off behavior and old checkpoint compatibility; verifies invocation/gradient/feature-change diagnostics and a short closed loop, then stops. A separate M4-B2 will run prespecified budget/capacity-matched accuracy ablations. Establish valid boundary-label coverage before claiming boundary gains. Existing 45-label development validation has no valid boundaries under its declared rule.
