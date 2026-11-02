@@ -41,6 +41,14 @@ class DynamicTaskTests(unittest.TestCase):
                           A=torch.eye(5, device=self.device).to_sparse().coalesce())
         return model(task, x, **kwargs)
 
+    def assert_predictions_close(self, actual, expected, graph):
+        # CUDA learned-graph reductions can vary on an unchanged model. State
+        # tensors are still compared bitwise; only these predictions use a
+        # float32 tolerance (unchanged-model probe: max absolute delta 1.5e-8).
+        tolerant = self.device.type == 'cuda' and graph == 'learned'
+        torch.testing.assert_close(actual, expected, rtol=1e-6 if tolerant else 0,
+                                   atol=1e-7 if tolerant else 0)
+
     def test_heads_inherit_placement_dtype_and_model_mode(self):
         for norm in ('domain_bn', 'batch_norm', 'group_norm'):
             for dtype in (torch.float32, torch.float64):
@@ -147,7 +155,7 @@ class DynamicTaskTests(unittest.TestCase):
                 with torch.no_grad():
                     after_output = self.forward(model, 'source')
                 for actual, expected in zip(after_output, before_output):
-                    torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+                    self.assert_predictions_close(actual, expected, graph)
                 for name, value in before.items():
                     torch.testing.assert_close(model.state_dict()[name], value, rtol=0, atol=0, msg=name)
                 target_state = {name: value.clone() for name, value in model.named_buffers()
@@ -220,7 +228,7 @@ class DynamicTaskTests(unittest.TestCase):
                     with torch.no_grad():
                         actual = self.forward(restored, task)
                     for a, b in zip(actual, expected):
-                        torch.testing.assert_close(a, b, rtol=0, atol=0)
+                        self.assert_predictions_close(a, b, graph)
 
 
 if __name__ == '__main__':
