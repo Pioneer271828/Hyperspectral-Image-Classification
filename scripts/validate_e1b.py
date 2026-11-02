@@ -96,7 +96,7 @@ def real_probe(args,out):
     assert all(hash_file(p)==h for p,h in inputs['files'].items())
     result={'status':'passed','scope':'production_integration_engineering_only',
         'updates_total':6,'train_labels':90,'validation_labels':45,'test_evaluated':False,
-        'policy_hash':policy.policy_hash,'training_band_counts':[r['selected_band_count'] for r in policy.to_dict()['training']],
+        'policy_hash':policy.policy_hash,'training_band_counts':[len(r['selected_positions']) for r in policy.to_dict()['training']],
         'probe':probes,'parameter_max_updates':updates,'final_gradients':gradients,
         'registered_parameters':194,'optimizer_enrollment_verified':True,
         'selected_checkpoint_modulation_probability_delta':effect,'selected_checkpoint_validation':val,

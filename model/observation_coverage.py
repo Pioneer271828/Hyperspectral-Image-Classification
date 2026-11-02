@@ -3,7 +3,7 @@
 Coverage geometry is the project's proposed descriptor. The residual affine
 operator independently implements the FiLM mathematical idea (Perez et al.,
 arXiv:1709.07871v2, sec.2.1); no upstream source is incorporated. See
-docs/references/e1-reference-review.json. No existing backbone is modified.
+docs/references/e1-reference-review.json. Production opt-in wiring is E1-B.
 """
 from dataclasses import asdict, dataclass
 import math
