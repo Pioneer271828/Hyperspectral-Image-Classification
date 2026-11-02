@@ -100,6 +100,28 @@ class CoverageIntegrationTests(unittest.TestCase):
         for key,value in [('coverage_mode','bad'),('coverage_hidden',0),('coverage_strength',2),('coverage_window',0),('coverage_init_seed',True),('coverage_sigma',float('nan'))]:
             with self.assertRaises(ValueError):ResearchConfig.from_dict({'model':{key:value}})
 
+    def test_default_short_training_fp64_with_same_version_control(self):
+        # Native adaptive-pool CUDA backward is nondeterministic. Keep original
+        # M1 tests/thresholds unchanged; explicitly type both model and inputs,
+        # and impose stricter bounds on these three numerical comparisons.
+        from test_observation_training import ObservationTrainingTests
+        original_forward=MultiDatasetVCASAHGCN.forward
+        original_compare=ObservationTrainingTests.compare_runs
+        def typed(model,dataset,x,*a,**kw):return original_forward(model,dataset,x.to(torch.float64),*a,**kw)
+        def strict(fixture,a,b,left,right):
+            original_compare(fixture,a,b,left,right)
+            np.testing.assert_allclose([r['nll'] for r in a['validation']],[r['nll'] for r in b['validation']],rtol=0,atol=1e-10)
+            x=load_model_checkpoint(left/'model.pt','cpu').state_dict();y=load_model_checkpoint(right/'model.pt','cpu').state_dict()
+            for k in x:torch.testing.assert_close(x[k],y[k],rtol=0,atol=1e-10,msg=k)
+        previous=torch.get_default_dtype()
+        try:
+            torch.set_default_dtype(torch.float64)
+            with patch.object(MultiDatasetVCASAHGCN,'forward',typed),patch.object(ObservationTrainingTests,'compare_runs',strict):
+                for name in ('test_default_matches_actual_parent_short_training','test_same_version_repeat_numerical_control','test_full_policy_equivalence_and_checkpoint_roundtrip'):
+                    fixture=ObservationTrainingTests(name);fixture.setUp();fixture.device=self.device
+                    getattr(fixture,name)()
+        finally:torch.set_default_dtype(previous)
+
     def test_enabled_initialization_preserves_existing_weights_rng_and_heads(self):
         off=self.model('none');rng=torch.get_rng_state().clone();on=self.model()
         self.assertTrue(torch.equal(rng,torch.get_rng_state()))
