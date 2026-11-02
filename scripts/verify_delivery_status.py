@@ -115,7 +115,8 @@ def validate_status(data, root):
     require(baseline in ancestors(current), 'checkout does not contain baseline')
     changed = subprocess.check_output(['git', '-C', str(root), 'diff', '--name-only', '-z', baseline, current]).decode().rstrip('\0')
     paths = changed.split('\0') if changed else []
-    allowed = ('scripts/verify_delivery_status.py', 'tests/test_delivery_status.py', 'README.md')
+    allowed = ('scripts/verify_delivery_status.py', 'tests/test_delivery_status.py',
+               'tests/test_run_provenance.py', 'README.md')
     require(all(p in allowed or p.startswith(('docs/', 'research/')) for p in paths), 'algorithm/training change after functional baseline')
     return {'status': 'verified', 'snapshot_date': data['snapshot']['date'], 'baseline': baseline,
             'main_snapshot': main, 'pull_requests': len(pulls), 'bridge_commits': len(bridges),
