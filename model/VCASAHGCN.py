@@ -180,23 +180,46 @@ class SharedHGCN(nn.Module):
         self.batch_normalzation2.add_dataset(dataset_name)
 
     def clear_graph_cache(self):
+        """Discard transient dense-to-sparse conversions (never checkpointed)."""
         self._sparse_graph_cache = {}
+
+    def train(self, mode=True):
+        self.clear_graph_cache()
+        return super().train(mode)
+
+    def _apply(self, fn, recurse=True):
+        self.clear_graph_cache()
+        return super()._apply(fn, recurse=recurse)
+
+    def _load_from_state_dict(self, *args, **kwargs):
+        self.clear_graph_cache()
+        return super()._load_from_state_dict(*args, **kwargs)
 
     def _sparse_graph(self, A, dataset_name=None):
         if A.is_sparse:
+            self.clear_graph_cache()
             return A.coalesce()
-        cache_key = (
-            dataset_name or "default",
-            str(A.device),
-            str(A.dtype),
-            tuple(A.shape),
-            int(A.data_ptr()),
-        )
-        cached = self._sparse_graph_cache.get(cache_key)
-        if cached is not None:
-            return cached
+        cache_key = None
+        if (not self.training and not torch.is_grad_enabled()
+                and not torch.is_autocast_enabled(A.device.type)):
+            try:
+                cache_key = (dataset_name or "default", str(A.device), A.dtype,
+                             tuple(A.shape), A._version)
+            except RuntimeError:
+                # Inference tensors have no version counter: always reconvert.
+                pass
+        cached = self._sparse_graph_cache.get(cache_key) if cache_key is not None else None
+        if cached is not None and cached[0] is A:
+            return cached[1]
+        self.clear_graph_cache()
+        # Preserve the legacy conversion dtype and graph math. A fresh conversion
+        # under autograd keeps adjacency derivatives connected to this forward.
         sparse_A = A.to(torch.float32).to_sparse().coalesce()
-        self._sparse_graph_cache[cache_key] = sparse_A
+        if cache_key is not None:
+            # Own one input reference so allocator/identity reuse cannot alias a
+            # different graph; replacing the entry also bounds retained storage.
+            # External storage/.data writes require explicit clear_graph_cache().
+            self._sparse_graph_cache[cache_key] = (A, sparse_A)
         return sparse_A
 
     def _graph_conv(self, conv, x, A_sparse):

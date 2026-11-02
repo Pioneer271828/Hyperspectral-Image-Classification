@@ -37,6 +37,12 @@ python train_vca_multidataset.py --graph-mode learned \
 
 ## 验收
 
+稠密邻接转换缓存修复（Issue #64）：`SharedHGCN` 仅在 eval、无梯度且未开启 autocast 时缓存最近一次稠密图转换，并检查输入对象身份与张量版本。原地修改、不同对象／视图、训练模式切换、设备／dtype 迁移和权重加载后不会继续使用旧缓存。无版本计数器的 inference tensor 直接重算；稀疏图沿用 coalesce 路径。缓存不进入 state_dict，保留原稠密图转换为 float32 的行为。
+
+缓存只支持 PyTorch 能追踪版本的更新；通过 `.data` 或外部共享存储修改图后，调用 `clear_graph_cache()`。梯度开启时重新转换，保证预热推理不会截断之后的邻接梯度；稠密图训练可能因此增加转换成本，当前 G3 稀疏图路径不承担该转换成本。本修复不作精度或速度提升主张。
+
+针对性回归：`python -m unittest discover -s tests -p test_graph_cache.py -v`；同一测试加 `GRAPH_CACHE_DEVICE=cuda` 可在远程 GPU 执行。正式验收结果另见模块交付报告。
+
 仅在 `ssh rmvision` 的独立、冻结 checkout：
 
 ```bash
