@@ -10,6 +10,7 @@ from model.graph_state import GraphState
 from model.branch_fusion import fixed_fusion, validate_alph
 from model.variable_channel_adapter import VariableChannelAdapter
 from model.region_pixel_alignment import RegionPixelAlignment, pool_regions, broadcast_regions
+from model.region_residual_decomposition import RegionResidualDecomposition
 from model.cross_branch_interaction import BidirectionalSelectiveInteraction
 from model.graph_edge_update import GraphEdgeUpdater
 from model.interaction_config import InteractionConfig, interaction_kwargs
@@ -302,6 +303,7 @@ class VCASAHGCNBackbone(nn.Module):
         graph_update_mix=0.5,
         graph_assignment_mode="learned",
         graph_adjacency_mode="learned",
+        region_residual_mode="none",
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
@@ -317,6 +319,9 @@ class VCASAHGCNBackbone(nn.Module):
             raise ValueError("Graph builder controls require graph_mode=learned")
         self.graph_assignment_mode = graph_assignment_mode
         self.graph_adjacency_mode = graph_adjacency_mode
+        if region_residual_mode not in RegionResidualDecomposition.MODES:
+            raise ValueError("Unknown region_residual_mode")
+        self.region_residual_mode = region_residual_mode
         self.interaction_config = InteractionConfig(**interaction_kwargs(locals()))
         self.dataset_names = _safe_dataset_names(dataset_names)
         self.adapter = VariableChannelAdapter(
@@ -411,6 +416,9 @@ class VCASAHGCNBackbone(nn.Module):
             self.edge_updater = GraphEdgeUpdater(
                 channels=128, mode=graph_update_mode, embed_dim=graph_update_dim, mix=graph_update_mix,
             ) if graph_update_mode != "none" else None
+        # M4 initialization is RNG-neutral; default-off keeps legacy state keys.
+        self.region_residual = (RegionResidualDecomposition(64, region_residual_mode)
+                                if region_residual_mode != "none" else None)
 
     def add_dataset(self, dataset_name):
         if dataset_name in self.dataset_names:
@@ -477,9 +485,20 @@ class VCASAHGCNBackbone(nn.Module):
         elif Q is None or A is None:
             raise ValueError("static graph mode requires Q and A")
 
-        region_input = pool_regions(Q, clean_x.reshape(height * width, 64))
+        cnn_input = clean_x
+        if self.region_residual is None:
+            region_input = pool_regions(Q, clean_x.reshape(height * width, 64))
+        else:
+            decomposition = self.region_residual(
+                clean_x.reshape(height * width, 64), Q,
+                return_diagnostics=return_diagnostics)
+            # Z is pooled from original clean_x, never from residual CNN input.
+            region_input = decomposition.region_features
+            cnn_input = decomposition.cnn_input.reshape(height, width, 64)
+            if return_diagnostics:
+                graph_info["region_residual"] = decomposition.diagnostics
         cnn_result, hgnn_result, interaction_info = self.forward_stages(
-            clean_x, region_input, Q, A, dataset_name, return_graph_info, return_diagnostics,
+            cnn_input, region_input, Q, A, dataset_name, return_graph_info, return_diagnostics,
         )
         if self.interaction_config.active and return_graph_info:
             graph_info["interaction"] = interaction_info

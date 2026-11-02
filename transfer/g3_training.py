@@ -66,6 +66,8 @@ def build_target(base,scene,method,source,*,model_seed,head_seed,device):
         for name in ('heads','hgnn_heads','cnn_heads'):getattr(model,name)[scene.dataset].reset_parameters()
     if method!='target_scratch_full':
         if source is None:raise ValueError('Selected source checkpoint required')
+        if getattr(source.backbone,'region_residual_mode','none')!=model.backbone.region_residual_mode:
+            raise ValueError('Source/target region_residual_mode must match for backbone transfer')
         model.backbone.load_state_dict(source.backbone.state_dict(),strict=True)
     frozen=method=='source_pretrained_head_only'
     model.backbone.requires_grad_(not frozen)
