@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "name": "base97_joint_honghu_v1",
+  "name": "base97_joint_honghu_main_v1",
   "device": "cuda",
   "model": {
-    "latent_channels": 64,
-    "adapter_embed_dim": 32,
-    "adapter_attention_mode": "index",
+    "latent_channels": 128,
+    "adapter_embed_dim": 64,
+    "adapter_attention_mode": "wavelength",
     "adapter_chunk_pixels": 16384,
     "adapter_checkpoint_chunks": true,
     "graph_mode": "static",

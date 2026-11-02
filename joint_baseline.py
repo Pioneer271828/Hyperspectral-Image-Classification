@@ -38,9 +38,8 @@ def graph_random_state(seed):
 def load_config(path):
     config = ResearchConfig.from_dict(json.loads(Path(path).read_text(encoding='utf-8')))
     # Protocol identity is explicit: this entry is not a generic hyperparameter search.
-    fixed = (config.name == 'base97_joint_honghu_v1' and config.device == 'cuda'
-             and config.model == ModelConfig(latent_channels=64, adapter_embed_dim=32,
-                                             adapter_attention_mode='index', adapter_chunk_pixels=16384)
+    fixed = (config.name == 'base97_joint_honghu_main_v1' and config.device == 'cuda'
+             and config.model == ModelConfig(adapter_chunk_pixels=16384)
              and config.data == DataConfig(datasets=list(NAMES))
              and config.training == TrainingConfig(seed=64, steps_per_epoch=3, val_interval=10)
              and config.loss == LossConfig() and config.augmentation == AugmentationConfig()

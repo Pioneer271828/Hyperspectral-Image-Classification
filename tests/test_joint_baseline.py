@@ -179,7 +179,7 @@ class JointBaselineTests(unittest.TestCase):
     def test_chunked_projection_preserves_three_task_outputs_and_gradients(self):
         # Memory chunking is execution-only; use FP64 to assess numerical equivalence.
         torch.manual_seed(64)
-        kwargs = dict(latent_channels=8,adapter_embed_dim=8,adapter_attention_mode='index',norm_type='domain_bn')
+        kwargs = dict(latent_channels=8,adapter_embed_dim=8,adapter_attention_mode='wavelength',norm_type='domain_bn')
         class_counts = dict(zip(NAMES,(9,9,22)))
         plain = MultiDatasetVCASAHGCN(class_counts,**kwargs).double()
         chunks = MultiDatasetVCASAHGCN(class_counts,adapter_chunk_pixels=5,**kwargs).double()
