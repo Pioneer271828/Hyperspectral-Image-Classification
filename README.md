@@ -6,6 +6,8 @@ This repository was organized from an existing research workspace. It retains th
 
 ## Modular Development
 
+**Use the [current baseline and delivery guide](docs/guides/current-baseline.md) for cloning, reproducibility and the next task.** The pinned functional reference is `6fa2d06747f79e90f95928b099ba2c3c0b18cbd0`; delivery navigation is on `codex/issue-70-delivery-baseline`. The default `main` branch still lacks the later delivered work. [Delivery status](docs/architecture/delivery-status.json) records exact PR dependencies, bridge commits, engineering/effect scope and pending integration. [Draft integration PR #71](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/71) is available for separate review.
+
 Follow the [research master checklist](research/研究内容整合与详细搭建测试计划_2026-10-28.md) and the [module implementation plan](research/模块化搭建与测试消融实施计划_2026-10-28.md). Each module is versioned and validated remotely, followed by a pause for review. Engineering validation has been completed for the baseline, C0, C1, M2, M3, M5, M8, E0a, and M6. M7 candidate-edge reweighting remains in the engineering roadmap; formal accuracy experiments are assessed separately. The current research priorities and monitoring plan are linked below.
 
 - [G3 paired three-seed replication](research/reports/G3P2_三种子配对复验结果_20261102.md): scratch OA 63.03±1.76% versus full fine-tuning 62.89±4.74%; stable OA gains were not established. Class-average recall improved. Additional pretraining cost and a filesystem timestamp audit limitation are documented.
@@ -34,8 +36,9 @@ Follow the [research master checklist](research/研究内容整合与详细搭�
 For a fresh environment, Python 3.10 or 3.11 is recommended by the original dependency setup, which retains the research environment's `numpy==1.24.3` pin. Install a PyTorch build appropriate for your CUDA environment if GPU training is required. For the existing remote training container, follow the environment notes in the remote guide instead of reinstalling its framework.
 
 ```bash
-git clone https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git
+git clone --branch codex/issue-68-g3-run-provenance https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git
 cd Hyperspectral-Image-Classification
+git switch --detach 6fa2d06747f79e90f95928b099ba2c3c0b18cbd0
 python -m venv .venv
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 # Linux/macOS: source .venv/bin/activate
@@ -45,6 +48,8 @@ python -m unittest discover -s tests -p "test_interaction_modules.py" -v
 ```
 
 The two checks use synthetic data. They cover different band counts, forward and backward passes with static and learnable graphs, interaction, checkpoint handling, and the training-to-diagnostic-export workflow. No real dataset download is required. Run installation and training commands from the repository root.
+
+The commands above pin the functional reference. To include the new delivery-status verifier and ledger, clone the delivery branch and follow the exact-SHA commands in the current baseline guide. Use a full-history checkout; historical source fixtures are part of the regression suite. Keep the existing remote environment when one is already configured.
 
 ## Code Entry Points
 
