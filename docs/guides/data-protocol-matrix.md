@@ -4,6 +4,8 @@
 
 ## Accuracy optimization: preserve the original small training set
 
+**Current dataset choice confirmed by the user: PaviaU/Xuzhou/HongHu (complete `whu-honghu`,22 classes).** The LongKou table below remains historical provenance. The current joint gate retains1%/.5% but freezes its own HongHu indices/counts (3881/1947/380865); it does not claim those historical scores apply to HongHu. See [BASE-97A](joint-baseline-base97.md).
+
 The recovered joint PaviaU/Xuzhou/LongKou experiment used `samples_type=ratio`, `train_ratio=0.01`, `val_ratio=0.005`: per annotated foreground class, take `ceil(N_class*0.01)` training labels and `ceil(N_class*0.005)` validation labels; test on the remainder. Unlabelled pixels are outside that denominator. The `train_num=30` and `val_num=10` flags in the old command do not control ratio mode. [split_data.py](../../loadData/split_data.py) and the first-hand logs agree.
 
 | Dataset | Training | Validation | Test | Total annotated |
@@ -12,11 +14,13 @@ The recovered joint PaviaU/Xuzhou/LongKou experiment used `samples_type=ratio`, 
 | Xuzhou | 692 | 348 | 67,837 | 68,877 |
 | LongKou / WHUL | 2,051 | 1,028 | 201,463 | 204,542 |
 
-**ACC-1P is the primary matched accuracy benchmark:** jointly train on all three datasets with shared VCA/backbone and dataset-specific heads/DomainBN; retain the 1%/0.5% label rule, record actual counts and freeze indices/hashes. Raising the training percentage cannot establish an architectural gain over this benchmark. Optional label-budget curves are separate comparisons with paired controls at every budget. Validation labels also count toward annotation cost.
+**ACC-1P is the primary matched accuracy benchmark:** jointly train on the user-selected PaviaU/Xuzhou/HongHu datasets with shared VCA/backbone and dataset-specific heads/DomainBN; retain the 1%/0.5% label rule, record actual counts and freeze indices/hashes. Raising the training percentage cannot establish an architectural gain over this benchmark. Optional label-budget curves are separate comparisons with paired controls at every budget. Validation labels also count toward annotation cost.
 
 Match data versions, split identities, graph, normalization, attention, training budget and selection before attributing a gain. Full-scene normalization/graphs with random labelled pixels constitute a transductive scene protocol; the historical train-label-guided LDA-SLIC is part of that declared baseline. A spatially isolated experiment answers an additional question and needs its own paired baseline. Historical logs do not contain sufficient source/data/index provenance to guarantee bitwise reconstruction: BASE-97 must publish the new frozen manifest and disclose this gap. Do not recover old cache bugs to match scores.
 
 ## Cross-sensor tasks: record allowed access before percentages
+
+**Strategy accepted by the user on2026-11-03:** retain ACC-1P joint training for network accuracy; use source pretraining → few-shot target adaptation → independent target testing as the current cross-sensor primary. Extend to two-source/one-held-out-target rotations after metadata and protocol acceptance. Zero-label closed-set UDA/DG remains a separate later task with verified shared semantics. [BASE-97A](joint-baseline-base97.md) starts only the joint engineering gate; this decision does not launch all experiments together.
 
 | Protocol family | Target training access | Model selection | Proposed project use |
 |---|---|---|---|
@@ -54,7 +58,7 @@ Begin with an independently assessed INT8 candidate, then consider lower/mixed p
 
 ## Implementation gates and repeat policy
 
-1. BASE-97: independently synchronize LongKou; verify data identities and class coverage; freeze ACC-1P split manifests; confirm three datasets enter a short joint training/checkpoint loop. Register the full-budget batch separately.
+1. BASE-97: independently synchronize complete HongHu; verify data identities and class coverage; freeze ACC-1P split manifests; confirm three datasets enter a short joint training/checkpoint loop. Register the full-budget batch separately.
 2. Establish the matched joint accuracy baseline, then assess one mechanism at a time. Keep strict spatial / few-shot / UDA / DG results in separately named tables.
 3. Before a new cross-sensor protocol, freeze sensor metadata, semantics, source/target access, annotation costs, support/split seeds and selection. Never choose a split by target-test score.
 4. After MON-2/3 and dense-baseline acceptance, independently freeze compression candidates, calibration/context identities, equal-budget recovery controls and speed conditions.

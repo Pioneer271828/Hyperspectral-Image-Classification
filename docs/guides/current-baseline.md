@@ -51,6 +51,8 @@ M4 engineering can start from the verified delivery branch without waiting for m
 
 ## Original accuracy benchmark gate (2026-11-03)
 
+The user subsequently selected **PaviaU/Xuzhou/complete HongHu**, superseding the proposed LongKou task. [BASE-97A](joint-baseline-base97.md) freezes that combination with1%/.5% labels and the recovered HongHu main K128/embed64 wavelength/DomainBN configuration. The historical HongHu mean OA is98.86/98.08/90.10%, macro95.68%; these are recorded old results, not current reproduction. The LongKou records below retain their original scope. Current preparation/short-loop acceptance and full-budget accuracy are separate gates.
+
 [Protocol review #95](data-protocol-matrix.md) confirms the original per-class1% training/0.5% validation rule with ceil rounding (432/219 PaviaU,692/348 Xuzhou,2051/1028 LongKou). Retain that low-label budget for matched joint accuracy improvements. Few-shot/UDA/DG and compression calibration require their own declared access contracts; the review proposes them without changing existing configurations or launching training.
 
 [DIAG-2](../../research/reports/DIAG2_原高精度基线与当前低精度波动诊断_20261103.md) recovered historical three-dataset joint VCA records, including index K64/DomainBN OA98.37/96.93/98.23%. The current target-only90-label spatial development screen is a separate task. Functional source parity does not establish preservation of that joint accuracy. Next recover explicit data/splits/label budgets/static graph/normalization/training/selection identities and validate a matched joint baseline before adding new mechanisms. Keep cache correctness fixes and report historical-source gaps; do not restore old bugs for a score. Strict unseen-sensor evaluation remains a separate protocol.
