@@ -1,6 +1,5 @@
-import copy
 import unittest
-from scripts.diagnose_accuracy_variance import curve_summary, exposure_summary, seed_arm_decomposition
+from scripts.diagnose_accuracy_variance import curve_summary, exposure_summary, seed_arm_decomposition, legacy_summary
 
 
 class AccuracyDiagnosticsTest(unittest.TestCase):
@@ -52,6 +51,14 @@ class AccuracyDiagnosticsTest(unittest.TestCase):
         self.assertAlmostEqual(d['seed_ss_fraction'], 1.)
         self.assertAlmostEqual(d['arm_ss_fraction'], 0.)
         with self.assertRaises(ValueError): seed_arm_decomposition(rows[:-1])
+
+    def test_missing_or_mixed_legacy_is_not_successful_audit(self):
+        with self.assertRaises(ValueError): legacy_summary([])
+        rows = [{'seed': 1, 'datasets': ['a'], 'recorded_test_oa': {'a': .9}},
+                {'seed': 2, 'datasets': ['a'], 'recorded_test_oa': {'a': 1.}}]
+        self.assertAlmostEqual(legacy_summary(rows)['a']['mean'], .95)
+        rows[1]['datasets'] = ['b']
+        with self.assertRaises(ValueError): legacy_summary(rows)
 
 
 if __name__ == '__main__': unittest.main()

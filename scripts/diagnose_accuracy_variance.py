@@ -95,6 +95,16 @@ def seed_arm_decomposition(rows):
             'scope': 'root changes initialization, head and sampler together; no isolated causal attribution'}
 
 
+def legacy_summary(records):
+    require(records and len({r['seed'] for r in records}) == len(records), 'missing/duplicate legacy records')
+    names = records[0]['datasets']
+    require(all(r['datasets'] == names and set(r['recorded_test_oa']) == set(names)
+                for r in records), 'mixed legacy datasets')
+    return {n: {'mean': statistics.mean(r['recorded_test_oa'][n] for r in records),
+                'sample_sd': statistics.stdev(r['recorded_test_oa'][n] for r in records)
+                if len(records) > 1 else None} for n in names}
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--expected-commit', required=True)
@@ -154,12 +164,15 @@ def main():
                 historical.append({'seed': seed, 'curves': curve_summary(r), 'exposure': exposure_summary(r),
                                    'initial_backbone_hash': r['initial_backbone_hash'], 'initial_head_hash': r['initial_head_hash']})
         legacy = []
+        legacy_stats = None
         if a.legacy_dir:
+            require(a.legacy_dir.is_dir(), 'legacy input directory missing')
             for file in sorted(a.legacy_dir.glob('*.json')):
                 r = read(file)
                 if 'test' in r and r.get('experiment') == 'vca_no_wave_attention_k64':
                     legacy.append({'seed': r['seed'], 'config': r['config'], 'datasets': r['datasets'],
                                    'recorded_test_oa': {k: v['oa'] for k, v in r['test'].items()}})
+            legacy_stats = legacy_summary(legacy)
             for file in a.legacy_dir.glob('*.log'):
                 inputs[str(file.resolve())] = hash_file(file)
         require_frozen_code(code)
@@ -167,6 +180,7 @@ def main():
         write_json(out/'diagnosis.json', {'status': 'passed', 'code': code, 'rows': rows,
                    'descriptive_seed_arm_ss': seed_arm_decomposition(cells), 'fingerprints': fingerprints,
                    'historical_m1_full': historical, 'legacy_recorded_not_reproduced': legacy,
+                   'legacy_recorded_summary': legacy_stats,
                    'inputs': inputs, 'new_training_updates': 0, 'new_test_evaluation': False})
         print('passed: saved curves/exposure, all case hashes; no training/test evaluation')
     except BaseException as error:
