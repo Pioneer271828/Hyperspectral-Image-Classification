@@ -45,7 +45,10 @@ class DomainSpecificBatchNorm1d(nn.Module):
 
     def add_dataset(self, dataset_name):
         if dataset_name not in self.norms:
-            self.norms[dataset_name] = nn.BatchNorm1d(next(iter(self.norms.values())).num_features)
+            reference = next(iter(self.norms.values()))
+            norm = nn.BatchNorm1d(reference.num_features).to(reference.weight)
+            norm.train(self.training)
+            self.norms[dataset_name] = norm
 
     def forward(self, x, dataset_name=None):
         if dataset_name is None:
@@ -63,7 +66,10 @@ class DomainSpecificBatchNorm2d(nn.Module):
 
     def add_dataset(self, dataset_name):
         if dataset_name not in self.norms:
-            self.norms[dataset_name] = nn.BatchNorm2d(next(iter(self.norms.values())).num_features)
+            reference = next(iter(self.norms.values()))
+            norm = nn.BatchNorm2d(reference.num_features).to(reference.weight)
+            norm.train(self.training)
+            self.norms[dataset_name] = norm
 
     def forward(self, x, dataset_name=None):
         if dataset_name is None:
@@ -569,13 +575,22 @@ class MultiDatasetVCASAHGCN(nn.Module):
                 "backbone_kwargs": kwargs}
 
     def add_dataset_head(self, dataset_name, class_count):
+        """Register a fresh task; existing optimizers need explicit enrollment."""
         if dataset_name in self.heads:
             raise ValueError("{} already has a dataset head".format(dataset_name))
         class_count = int(class_count)
+        families = (self.heads, self.hgnn_heads, self.cnn_heads)
+        new_heads = []
+        for family in families:
+            reference = next(family.parameters(), None)
+            if reference is None:
+                reference = next(self.backbone.parameters())
+            head = nn.Linear(64, class_count).to(reference)
+            head.train(self.training)
+            new_heads.append(head)
         self.backbone.add_dataset(dataset_name)
-        self.heads[dataset_name] = nn.Linear(64, class_count)
-        self.hgnn_heads[dataset_name] = nn.Linear(64, class_count)
-        self.cnn_heads[dataset_name] = nn.Linear(64, class_count)
+        for family, head in zip(families, new_heads):
+            family[dataset_name] = head
 
     def predict_features(self, dataset_name, fused, graph_features, cnn_features, return_logits=False):
         heads = ((self.heads[dataset_name], fused), (self.hgnn_heads[dataset_name], graph_features),
