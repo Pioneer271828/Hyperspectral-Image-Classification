@@ -25,6 +25,37 @@ DEVELOPMENT_HASH = '1cf6c1394c1f5e6e82c0bf9c1d6c08004b6b477edefcaa73b73fdfe22ecf
 METHODS = ('target_scratch_full', 'source_pretrained_full_finetune')
 
 
+def verify_source_record(campaign, seed_task, result, expected_commit):
+    """A partial or differently identified source campaign cannot be reused."""
+    assert campaign['status'] == 'passed' and campaign['plan']['source_only'] is True
+    assert campaign['code']['commit'] == expected_commit
+    assert seed_task['config']['model_seed'] in campaign['seeds']
+    assert result['status'] == 'completed' and result['optimizer_steps'] == 10000
+    assert result['source_test_evaluated'] is False
+    assert result['selected_step'] == min(result['history'], key=lambda x: x['val']['nll'])['step']
+
+
+def verified_source(root, seed, seed_task, code):
+    root = Path(root)
+    manifest_path = root / 'campaign.json'
+    campaign = json.loads(manifest_path.read_text())
+    folder = root / f'seed-{seed}'
+    task_path = folder / 'frozen-task.json'
+    assert json.loads(task_path.read_text()) == seed_task
+    result_path = folder / 'source/result.json'
+    result = json.loads(result_path.read_text())
+    verify_source_record(campaign, seed_task, result, code['commit'])
+    paths = {str(p): hash_file(p) for p in (manifest_path, task_path, result_path)}
+    for filename, key in (('model.pt', 'checkpoint_sha256'), ('model.pt.json', 'sidecar_sha256')):
+        path = folder / 'source' / filename
+        assert hash_file(path) == result[key]
+        paths[str(path)] = result[key]
+    from transfer.g3_training import state_hash
+    model = load_model_checkpoint(folder / 'source/model.pt', 'cuda')
+    assert state_hash(model.backbone) == result['backbone_hash']
+    return model, result, paths
+
+
 def review_training(result):
     trace = result['trace']
     assert result['status'] == 'completed' and result['steps'] == 5000
@@ -88,14 +119,22 @@ def validation_branches(scene, record, folder):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--expected-commit', required=True)
+    p.add_argument('--seeds', nargs='+', type=int, choices=(2046, 2056), default=[2046, 2056])
+    p.add_argument('--methods', nargs='+', choices=METHODS, default=list(METHODS))
+    p.add_argument('--source-only', action='store_true', help='Train source checkpoints only; do not load target inputs')
+    p.add_argument('--source-root', type=Path, help='Verified completed source-only campaign; reuse selected weights')
     for name in ('protocol-root', 'development-root', 'data-root', 'out-dir'):
         p.add_argument('--' + name, type=Path, required=True)
     args = p.parse_args(); code = code_snapshot(); kind = training_container_kind()
+    if len(set(args.seeds)) != len(args.seeds) or len(set(args.methods)) != len(args.methods):
+        p.error('Duplicate seeds or methods')
+    if args.source_only and args.source_root is not None:
+        p.error('Source-only and source reuse are mutually exclusive')
     if (not kind or sys.flags.optimize or code['dirty'] or code['commit'] != args.expected_commit
             or not torch.cuda.is_available() or torch.cuda.device_count() != 1):
         p.error('Require verified container, assertions, clean exact SHA and exactly one visible CUDA GPU')
     out = external_directory(args.out_dir)
-    for path in (args.protocol_root, args.development_root, args.data_root):
+    for path in (args.protocol_root, args.development_root, args.data_root, *((args.source_root,) if args.source_root else ())):
         path = path.resolve(strict=True)
         if out == path or out in path.parents or path in out.parents:
             p.error('Output overlaps inputs')
@@ -116,13 +155,16 @@ def main():
     base = json.loads((Path(__file__).resolve().parents[1] / 'configs/experiments/screen_m6_none.json').read_text())
     out.mkdir(parents=True, exist_ok=False); torch.set_num_threads(1)
     state = {'status': 'running', 'code': code, 'container': kind, 'pid': os.getpid(),
-             'started_at': datetime.now(timezone.utc).isoformat(), 'seeds': [2046, 2056],
+             'started_at': datetime.now(timezone.utc).isoformat(), 'seeds': args.seeds,
              'development_hash': DEVELOPMENT_HASH, 'input_hashes': frozen, 'test_evaluated': False,
              'environment': {'python': platform.python_version(), 'torch': torch.__version__,
                              'numpy': np.__version__, 'cuda': torch.version.cuda,
                              'visible_gpu': os.environ.get('CUDA_VISIBLE_DEVICES'), 'gpu': torch.cuda.get_device_name(0)},
              'plan': {'source_updates_per_seed': 10000, 'target_updates_per_run': 5000,
-                      'new_source_updates': 20000, 'new_target_updates': 40000,
+                      'new_source_updates': 0 if args.source_root else 10000 * len(args.seeds),
+                      'new_target_updates': 0 if args.source_only else 10000 * len(args.methods) * len(args.seeds),
+                      'methods': args.methods, 'source_only': args.source_only,
+                      'source_root': str(args.source_root) if args.source_root else None,
                       'val_every': 100, 'selection': 'minimum fusion validation NLL, earliest tie',
                       'backbone_lr': 5e-5, 'head_lr': 5e-4,
                       'baseline': 'uniform retrained in this environment; historical controls not pooled'},
@@ -143,24 +185,31 @@ def main():
                                     plans['source'], plans['target'], support, task['sensor_evidence'])
             write_json(seed_root / 'frozen-task.json', seed_task)
             before = time.monotonic()
-            source_scene, source_labels = load_scene(args.data_root, task['source_identity'], plans['source'], with_labels=True)
-            source, source_result = train_source(source_scene, source_labels, base, seed_root / 'source',
-                steps=10000, val_every=100, model_seed=seed, sampler_seed=seed + 3,
-                device='cuda', task_hash=seed_task['task_hash'], progress=progress)
-            del source_scene, source_labels
+            if args.source_root:
+                source, source_result, source_files = verified_source(args.source_root, seed, seed_task, code)
+                frozen.update(source_files)
+            else:
+                source_scene, source_labels = load_scene(args.data_root, task['source_identity'], plans['source'], with_labels=True)
+                source, source_result = train_source(source_scene, source_labels, base, seed_root / 'source',
+                    steps=10000, val_every=100, model_seed=seed, sampler_seed=seed + 3,
+                    device='cuda', task_hash=seed_task['task_hash'], progress=progress)
+                del source_scene, source_labels
             state['sources'].append({'seed': seed, 'wall_seconds': time.monotonic() - before,
                                      'selected_step': source_result['selected_step'],
                                      'checkpoint_sha256': source_result['checkpoint_sha256'],
                                      'best_validation': min(source_result['history'], key=lambda x: x['val']['nll']),
                                      'last_validation': source_result['history'][-1], 'test_evaluated': False})
             save()
+            if args.source_only:
+                del source
+                continue
             raw_target, _ = load_scene(args.data_root, task['target_identity'], plans['target'], with_labels=False)
             target = prepare_scene(raw_target.cube, raw_target.bands, plans['target'], record)
             del raw_target
             controls = {}
             for mode in ('uniform', 'class_first'):
                 (seed_root / mode).mkdir()
-                for method in METHODS:
+                for method in args.methods:
                     require_frozen_code(code); before = time.monotonic()
                     folder = seed_root / mode / f'{method}-5000'
                     result = adapt(target, record, base, folder, method=method, source=source,
@@ -192,8 +241,10 @@ def main():
             del source, target, controls
         require_frozen_code(code)
         assert all(hash_file(path) == value for path, value in frozen.items())
-        assert len(state['pairs']) == 4 and len(state['runs']) == 8 and len(state['sources']) == 2
-        state.update(status='passed', completed_source_updates=20000, completed_target_updates=40000)
+        pairs = 0 if args.source_only else len(args.seeds) * len(args.methods)
+        assert len(state['pairs']) == pairs and len(state['runs']) == pairs * 2 and len(state['sources']) == len(args.seeds)
+        state.update(status='passed', completed_source_updates=state['plan']['new_source_updates'],
+                     completed_target_updates=state['plan']['new_target_updates'])
     except BaseException as error:
         state.update(status='failed', error=repr(error))
         raise
