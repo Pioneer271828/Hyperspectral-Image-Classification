@@ -1,7 +1,9 @@
 """Opt-in BASE-97 preparation and bounded validation; legacy trainer stays intact."""
 import json
 import math
+from contextlib import contextmanager
 from pathlib import Path
+import random
 import time
 
 import numpy as np
@@ -20,6 +22,17 @@ NAMES = ('paviaU', 'xuzhou', 'WHUL')
 COUNTS = {'paviaU': [432, 219, 42125], 'xuzhou': [692, 348, 67837],
           'WHUL': [2051, 1028, 201463]}
 PHASES = ('train', 'val')
+
+
+@contextmanager
+def graph_random_state(seed):
+    """The legacy hypergraph walker uses Python random in addition to NumPy."""
+    previous = random.getstate()
+    try:
+        random.seed(seed)
+        yield
+    finally:
+        random.setstate(previous)
 
 
 def load_config(path):
@@ -108,7 +121,8 @@ def prepare(config, data_root, out_dir, source):
             if [sum(v[j] for v in split['counts'].values()) for j in range(3)] != COUNTS[name]:
                 raise ValueError(f'{name} does not match original annotated population')
             print(f'Preparing {name} with frozen ratio indices', flush=True)
-            item = prepare_dataset(name, args, torch.device('cpu'), split['seed'])
+            with graph_random_state(split['seed']):
+                item = prepare_dataset(name, args, torch.device('cpu'), split['seed'])
             for phase in PHASES:
                 released = item[phase+'_samples_gt'].numpy()
                 expected = np.zeros(labels.size, dtype=np.float32)
@@ -123,6 +137,8 @@ def prepare(config, data_root, out_dir, source):
             write_json(out/(name+'-split.json'), split)
             torch.save(item, out/(name+'-prepared.pt'))
             records[name] = {'raw': record, 'normalization': normalization,
+                             'graph_python_seed': split['seed'],
+                             'graph_numpy_rng': 'legacy split shuffle then graph walk',
                              'split_file': name+'-split.json',
                              'split_sha256': file_hash(out/(name+'-split.json')),
                              'prepared_file': name+'-prepared.pt',

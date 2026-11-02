@@ -4,6 +4,7 @@ from dataclasses import replace
 import json
 import os
 from pathlib import Path
+import random
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -11,7 +12,7 @@ from unittest.mock import patch
 import numpy as np
 import torch
 
-from joint_baseline import (NAMES, _item_fingerprint, load_config, ratio_split,
+from joint_baseline import (NAMES, _item_fingerprint, graph_random_state, load_config, ratio_split,
                             readout, short_loop, validate_split, validation_score, verify_prepared)
 from loadData.dataset_registry import file_hash
 from loadData.split_data import split_data
@@ -46,6 +47,21 @@ def tiny_items():
 
 
 class JointBaselineTests(unittest.TestCase):
+    def test_graph_walk_python_rng_is_repeatable_and_restored_on_failure(self):
+        random.seed(901)
+        initial = random.getstate()
+        values = []
+        for _ in range(2):
+            with graph_random_state(64):
+                values.append(random.choices(range(100),k=30))
+            self.assertEqual(random.getstate(),initial)
+        self.assertEqual(values[0],values[1])
+        with self.assertRaises(RuntimeError):
+            with graph_random_state(65):
+                random.random()
+                raise RuntimeError('preparation failed')
+        self.assertEqual(random.getstate(),initial)
+
     def test_legacy_ratio_permutation_and_rng_state(self):
         labels = np.array([0]*3+[1]*947+[2]*2436).reshape(2,-1)
         for seed in (0,64,2026):
