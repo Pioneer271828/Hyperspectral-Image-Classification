@@ -21,8 +21,11 @@ def schedule(seeds, gpus):
     return [{'seed': seed, 'gpu': gpus[index % len(gpus)]} for index, seed in enumerate(seeds)]
 
 
-def execute(plan, gpus, *, resume=False):
-    verify_plan(plan); root = Path(plan['output'])
+def execute(plan, gpus, *, resume=False, verifier=None, summarizer=None, worker_script=None):
+    verifier = verify_plan if verifier is None else verifier
+    summarizer = summarize if summarizer is None else summarizer
+    worker_script = ROOT / 'scripts/run_m4_ablation.py' if worker_script is None else Path(worker_script)
+    verifier(plan); root = Path(plan['output'])
     require(all(re.fullmatch(r'GPU-[0-9a-fA-F-]+', gpu) for gpu in gpus), 'use explicit GPU UUIDs')
     jobs = schedule(plan['seeds'], gpus)
     lock = root / '.controller.lock'
@@ -45,7 +48,7 @@ def execute(plan, gpus, *, resume=False):
                 for job in list(pending):
                     if job['gpu'] in busy: continue
                     log = (execution / ('seed-' + str(job['seed']) + '.log')).open('xb')
-                    command = [sys.executable, '-u', str(ROOT / 'scripts/run_m4_ablation.py'), 'worker',
+                    command = [sys.executable, '-u', str(worker_script), 'worker',
                                '--plan', str(root / 'plan.json'), '--expected-commit', plan['code']['commit'],
                                '--seed', str(job['seed'])] + (['--resume'] if resume else [])
                     env = dict(os.environ, CUDA_VISIBLE_DEVICES=job['gpu'], OMP_NUM_THREADS='1', MKL_NUM_THREADS='1',
@@ -63,7 +66,7 @@ def execute(plan, gpus, *, resume=False):
                 break
             if active: time.sleep(2)
         require(not failed, 'worker failed; retained artifacts; pending groups not launched')
-        report = summarize(plan); write_json(root / 'paired-results.json', report)
+        report = summarizer(plan); write_json(root / 'paired-results.json', report)
         state.update(status='completed', target_updates=report['target_updates'], decision=report['decision'])
     except BaseException as error:
         state.update(status='failed', error=repr(error)); raise

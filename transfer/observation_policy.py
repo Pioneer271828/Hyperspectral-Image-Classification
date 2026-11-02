@@ -1,6 +1,6 @@
 """Frozen, role-bound real-band schedules for opt-in development training (M1-B)."""
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import numpy as np
 
 from loadData.observation_sampling import BandMetadata, sample, replay, subset_statistics
@@ -50,6 +50,8 @@ class ObservationPolicy:
         require(len(v['training']) == v['updates'] and 'full' in v['validation']
                 and v['validation']['full']['config'] == {'mode': 'none'}, 'missing full validation or schedule')
         bands = BandMetadata(**v['bands'])
+        require(self.training_application in ('real_subset', 'support_zero'), 'unknown training application')
+        require(self.training_application != 'support_zero' or all(bands.valid), 'zero control requires all-valid source columns')
         require(bands.fingerprint == v['identity']['metadata_hash'], 'metadata identity mismatch')
         stub = self._stub(bands, v['identity']['plan_hash'])
         for r in [*v['training'], *v['validation'].values()]:
@@ -61,7 +63,8 @@ class ObservationPolicy:
                                     np.zeros((1, 1, 2), dtype=np.float32), np.zeros((1, 1), dtype=np.int64), plan_hash)
 
     @classmethod
-    def freeze(cls, scene, record, *, updates, training_configs, train_seed, validation_seed, conditions=None):
+    def freeze(cls, scene, record, *, updates, training_configs, train_seed, validation_seed, conditions=None, training_application='real_subset'):
+        require(training_application in ('real_subset', 'support_zero'), 'unknown training application')
         require(type(updates) is int and updates > 0 and training_configs, 'positive budget and explicit training configs required')
         require(all(type(s) is int and 0 <= s < 2**32 for s in (train_seed, validation_seed))
                 and train_seed != validation_seed, 'separate uint32 train/validation seeds required')
@@ -83,6 +86,8 @@ class ObservationPolicy:
                  'train_seed': train_seed, 'validation_seed': validation_seed,
                  'training_configs': deepcopy(training_configs), 'training': training, 'validation': validation,
                  'selection_condition': 'full', 'schedule_rule': 'cycle explicit configs; per-update frozen indices'}
+        # Omit the default field to preserve the exact accepted M1-B policy hashes.
+        if training_application != 'real_subset': value['training_application'] = training_application
         value['policy_hash'] = digest(value)
         return cls(value)
 
@@ -91,6 +96,9 @@ class ObservationPolicy:
 
     @property
     def conditions(self): return tuple(self._value['validation'])
+
+    @property
+    def training_application(self): return self._value.get('training_application', 'real_subset')
 
     def to_dict(self): return deepcopy(self._value)
 
@@ -112,16 +120,31 @@ class ObservationPolicy:
             require(step is None and condition in self.conditions, 'unknown validation condition')
             frozen = self._value['validation'][condition]
         obs = observe_tile(scene.cube, scene.plan, scene.stats, tile)
+        if phase == 'training' and self.training_application == 'support_zero':
+            # Matched historical mechanism: only released train-support pixels are
+            # zeroed; all context pixels, B, centers and coordinates remain present.
+            full, _ = sample(obs, scene.bands, {'mode': 'none'})
+            values = np.array(obs.spectral, copy=True)
+            rows = np.flatnonzero(np.isin(obs.global_ids.reshape(-1), record['train_support']['indices']))
+            dropped = np.setdiff1d(np.arange(len(scene.bands.band_ids)), frozen['selected_positions'])
+            values.reshape(-1, values.shape[-1])[np.ix_(rows, dropped)] = 0.
+            values.setflags(write=False)
+            return replace(full, observation=replace(obs, spectral=values))
         return replay(obs, scene.bands, frozen)
 
     def training_record(self, step):
         require(type(step) is int and 1 <= step <= self._value['updates'], 'update outside frozen schedule')
         r = self._value['training'][step - 1]
-        return {'policy_hash': self.policy_hash, 'record_hash': r['record_hash'],
-                'selected_band_count': len(r['selected_positions'])}
+        result = {'policy_hash': self.policy_hash, 'record_hash': r['record_hash'],
+                  'selected_band_count': len(r['selected_positions'])}
+        if self.training_application == 'support_zero':
+            result.update(training_application='support_zero', selected_band_count=r['source_band_count'],
+                          retained_band_count=len(r['selected_positions']))
+        return result
 
     def selected_statistics(self, scene, *, step):
         """Derived slices only; never pass them back as full-scene normalization."""
+        require(self.training_application == 'real_subset', 'zero control retains full training statistics')
         self.training_record(step)
         return subset_statistics(scene.stats, scene.bands, self._value['training'][step - 1])
 
