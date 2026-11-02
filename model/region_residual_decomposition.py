@@ -1,4 +1,4 @@
-"""Standalone M4 region/pixel decomposition; not wired into the backbone yet."""
+"""M4 region/pixel decomposition used by the backbone's optional input modes."""
 from dataclasses import dataclass, field
 
 import torch

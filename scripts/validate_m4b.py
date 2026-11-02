@@ -164,6 +164,7 @@ def main():
         subprocess.run(['git', '-C', str(ROOT), 'merge-base', '--is-ancestor', BASE, 'HEAD'], check=True)
         paths = subprocess.check_output(['git', '-C', str(ROOT), 'diff', '--name-only', '-z', BASE, 'HEAD']).decode().rstrip('\0')
         allowed = {'model/VCASAHGCN.py', 'model/research_config.py', 'model/checkpoint_io.py',
+                   'model/region_residual_decomposition.py',
                    'train_vca_multidataset.py', 'transfer/g3_training.py', 'tests/test_region_residual_integration.py',
                    'scripts/validate_m4b.py', 'README.md', 'docs/architecture/module-map.json',
                    'docs/guides/region-residual-m4.md', 'docs/guides/g3-training.md'}
