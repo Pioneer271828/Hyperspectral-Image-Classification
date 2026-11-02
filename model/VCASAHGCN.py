@@ -314,6 +314,7 @@ class VCASAHGCNBackbone(nn.Module):
         coverage_window=0.16,
         coverage_init_seed=0,
         coverage_descriptor_version=1,
+        coverage_condition="continuous",
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
@@ -333,6 +334,7 @@ class VCASAHGCNBackbone(nn.Module):
             raise ValueError("Unknown region_residual_mode")
         self.region_residual_mode = region_residual_mode
         self.coverage_settings = coverage_options(locals())
+        if coverage_condition=='continuous':self.coverage_settings.pop('coverage_condition')
         self.coverage_mode = coverage_mode
         self.interaction_config = InteractionConfig(**interaction_kwargs(locals()))
         self.dataset_names = _safe_dataset_names(dataset_names)
@@ -352,7 +354,7 @@ class VCASAHGCNBackbone(nn.Module):
         self.channel = self.adapter.out_channels + extra_channels
         self.coverage_modulation = (CoverageModulation(latent_channels, adapter_value_dim,
             mode=coverage_mode, hidden=coverage_hidden, strength=coverage_strength,
-            init_seed=coverage_init_seed, descriptor_version=coverage_descriptor_version)
+            init_seed=coverage_init_seed, descriptor_version=coverage_descriptor_version,condition=coverage_condition)
             if coverage_mode != 'none' else None)
         self.coverage_config = (CoverageConfig(wavelength_min, wavelength_max, coverage_sigma, coverage_window)
                                 if coverage_mode != 'none' else None)
@@ -501,7 +503,8 @@ class VCASAHGCNBackbone(nn.Module):
             coverage = describe(coverage_metadata if physical_mode else None, observed['anchors'],
                 self.coverage_config, normalized_reference_nm=coverage_reference_nm if physical_mode else None)
             coverage = replace(coverage, usable=coverage.usable & observed['anchor_valid'].bool())
-            latent_x = self.coverage_modulation(latent_x, coverage)
+            latent_x = self.coverage_modulation(latent_x, coverage,
+                **({'anchor_valid':observed['anchor_valid'].bool()} if self.coverage_modulation.condition=='binary' else {}))
             if return_graph_info:
                 reason = coverage.diagnostics['fallback_reason'] if physical_mode else 'adapter_mode_'+self.adapter.attention_mode
                 coverage_info = {'mode':self.coverage_mode,'fallback_reason':reason,

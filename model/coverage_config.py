@@ -3,13 +3,16 @@ import math
 
 COVERAGE_DEFAULTS = dict(coverage_mode='none', coverage_hidden=16, coverage_strength=.1,
                          coverage_sigma=.08, coverage_window=.16, coverage_init_seed=0,
-                         coverage_descriptor_version=1)
+                         coverage_descriptor_version=1, coverage_condition='continuous')
+
+CONDITIONS=('continuous','anchor_only','binary','shuffled')
 
 
 def coverage_options(values):
     result = {k: values.get(k, v) for k, v in COVERAGE_DEFAULTS.items()}
     if result['coverage_mode'] not in ('none', 'affine'):
         raise ValueError('coverage_mode must be none or affine')
+    if result['coverage_condition'] not in CONDITIONS:raise ValueError('Unknown coverage_condition')
     for k in ('coverage_hidden', 'coverage_init_seed', 'coverage_descriptor_version'):
         if type(result[k]) is not int:raise ValueError(k+' must be an integer')
     if result['coverage_hidden'] <= 0 or not 0 <= result['coverage_init_seed'] < 2**32 or result['coverage_descriptor_version'] != 1:
@@ -25,14 +28,18 @@ def coverage_options(values):
 
 def strip_default_coverage(values):
     result = dict(values)
+    # E1-B affine records predate this optional control: keep their hashes too.
+    if result.get('coverage_condition','continuous')=='continuous':result.pop('coverage_condition',None)
     if all(result.get(k,v) == v for k,v in COVERAGE_DEFAULTS.items()):
         for k in COVERAGE_DEFAULTS:result.pop(k,None)
     return result
 
 
 def coverage_signature(values):
-    return {**coverage_options(values), **{k:values[k] for k in
+    result={**coverage_options(values), **{k:values[k] for k in
         ('wavelength_min','wavelength_max','adapter_attention_mode')}}
+    if result['coverage_condition']=='continuous':result.pop('coverage_condition')
+    return result
 
 
 def coverage_enabled(model):
