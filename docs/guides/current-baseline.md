@@ -22,11 +22,11 @@ Use the authorized container and a new checkout, first inspecting any existing c
 git clone --branch codex/issue-70-delivery-baseline \
   https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git hsi-pre-m4-delivery
 cd hsi-pre-m4-delivery
-# Pin the full published delivery SHA recorded in the delivery report/PR.
-git switch --detach PUBLISHED_DELIVERY_SHA
+# Pin the exact tested delivery snapshot.
+git switch --detach 2938698540b4eb51b4098aa781dd5e984b1613e1
 git status --short --branch
 python scripts/verify_delivery_status.py \
-  --expected-commit PUBLISHED_DELIVERY_SHA --out-dir /absolute/external/NEW_DELIVERY_RECEIPT
+  --expected-commit 2938698540b4eb51b4098aa781dd5e984b1613e1 --out-dir /absolute/external/NEW_DELIVERY_RECEIPT
 OMP_NUM_THREADS=1 python -m unittest discover -s tests -p 'test_*.py' -v
 G3_DEVICE=cuda OMP_NUM_THREADS=1 python -m unittest discover -s tests -p test_run_provenance.py -v
 python smoke_test.py --device cuda

@@ -1543,5 +1543,16 @@
       "train_vca_multidataset.py"
     ],
     "rule": "Separate branches/worktrees and unique path owner only when collaboration is explicitly requested; shared interface edits integrated serially"
+  },
+  "delivery_validation": {
+    "tested_commit": "2938698540b4eb51b4098aa781dd5e984b1613e1",
+    "report": "research/reports/交付台账与M4前基线登记验收_20261102.md",
+    "cpu_regression": {"passed": 206, "total": 206},
+    "native_gpu_cases": 11,
+    "cpu_exact_neutrality_control": 1,
+    "delivery_specific_tests": 5,
+    "rejected_cli_inputs": ["wrong_sha", "dirty_checkout", "shallow_history"],
+    "production_implementation_unchanged": true,
+    "scope": "Offline snapshot/clone verification; native GPU stages plus exact CPU numerical control. Main review remains pending."
   }
 }
