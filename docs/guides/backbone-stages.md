@@ -35,6 +35,25 @@ python train_vca_multidataset.py --graph-mode learned \
 
 旧 checkpoint 缺少新字段时，构造器按 learned/learned 填充；没有权重迁移或键重命名。新 checkpoint 通过已有 `.pt.json` 保存图对照。仍使用 state_dict，不直接 pickle GraphState。
 
+## 动态新增任务（Issue #66）
+
+`MultiDatasetVCASAHGCN.add_dataset_head(name, class_count)` 保持原接口与三头结构。新头继承对应分类头族已有参数的设备/dtype（空头族回退到 backbone），运行模式继承外层模型。`backbone.add_dataset` 新建的域 BatchNorm 继承该归一化包装器的设备/dtype 和 train/eval 模式；例如外层训练但 backbone 冻结为 eval 时，新归一化层仍保持 eval。新域使用全新默认仿射参数及运行统计，不复制源域已学习状态，也不改动已有任务。
+
+新增参数默认可训练。已经创建的优化器不会自动发现它们；应在注册任务后创建优化器，或显式加入新头和新域归一化参数。例如保留原优化器状态：
+
+```python
+known = {id(p) for group in optimizer.param_groups for p in group['params']}
+model.add_dataset_head('new_sensor', class_count)
+added = [p for p in model.parameters() if p.requires_grad and id(p) not in known]
+optimizer.add_param_group({'params': added, 'lr': target_lr})
+```
+
+`target_lr`、权重衰减和冻结策略由当前任务明确指定；若需要不同参数组，按头/归一化分别登记。该方法返回值仍为 `None`，不会修改外部优化器，也不会自动继承旧参数的 `requires_grad=False`。DDP 等包装器和编译后的训练图应在任务注册后重新按调用方既有流程构建，本模块未实现运行中结构迁移。
+
+动态新增任务会进入 `export_config()` 的任务列表，现有 checkpoint 接口可重建并恢复三头及域归一化层。checkpoint 加载沿用原有“构建默认 dtype 模型并加载权重、返回 eval”行为；不声称保存运行模式或任意混合 dtype。重复添加分类任务仍报错，重复注册已有归一化域仍保持幂等。
+
+针对性回归：`python -m unittest discover -s tests -p test_dynamic_task_heads.py -v`；设置 `DYNAMIC_HEAD_DEVICE=cuda` 在远程 GPU 验证。非默认 dtype 的验证覆盖分类头及归一化单元，整模型静态/学习图前后向使用现有 float32 路径，不扩展为任意 dtype 支持。
+
 ## 验收
 
 稠密邻接转换缓存修复（Issue #64）：`SharedHGCN` 仅在 eval、无梯度且未开启 autocast 时缓存最近一次稠密图转换，并检查输入对象身份与张量版本。原地修改、不同对象／视图、训练模式切换、设备／dtype 迁移和权重加载后不会继续使用旧缓存。无版本计数器的 inference tensor 直接重算；稀疏图沿用 coalesce 路径。缓存不进入 state_dict，保留原稠密图转换为 float32 的行为。
