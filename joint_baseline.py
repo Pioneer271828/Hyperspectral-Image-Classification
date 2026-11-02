@@ -44,7 +44,7 @@ def ratio_split(labels, seed):
         raise ValueError('Invalid split seed')
     flat = np.asarray(labels).reshape(-1)
     classes = np.unique(flat[flat > 0]).astype(int)
-    if not np.array_equal(classes, np.arange(1, len(classes)+1)):
+    if not len(classes) or not np.array_equal(classes, np.arange(1, len(classes)+1)):
         raise ValueError('Contiguous nonempty foreground classes required')
     rng = np.random.RandomState(seed)
     groups = {phase: [] for phase in ('train', 'val', 'test')}

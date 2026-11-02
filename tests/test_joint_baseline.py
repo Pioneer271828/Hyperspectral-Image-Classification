@@ -170,7 +170,7 @@ class JointBaselineTests(unittest.TestCase):
             outputs = []
             for model in (plain,chunks):
                 model.zero_grad(set_to_none=True)
-                output = model(name,item['net_input'].double(),item['Q'].double(),item['A'].double(),
+                output = model(name,item['net_input'].double(),item['Q'].double(),item['A'].double().to_sparse(),
                                wavelengths=item['wavelengths'].double())
                 sum(-x[:,0].clamp_min(1e-8).log().mean() for x in output).backward()
                 outputs.append(output)
