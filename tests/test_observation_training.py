@@ -43,6 +43,26 @@ class ObservationTrainingTests(unittest.TestCase):
 
     def tile(self, role): return next(t for t in self.plan['tiles'] if self.record['roles'][t['id']]['role'] == role)
 
+    def compare_runs(self, a, b, left, right):
+        self.assertEqual(a['initial_backbone_hash'],b['initial_backbone_hash'])
+        self.assertEqual(a['initial_head_hash'],b['initial_head_hash'])
+        self.assertEqual(a['selected_step'],b['selected_step'])
+        for x,y in zip(a['validation'],b['validation']):
+            self.assertEqual({k:v for k,v in x.items() if k!='nll'},{k:v for k,v in y.items() if k!='nll'})
+            np.testing.assert_allclose(x['nll'],y['nll'],rtol=0,atol=3e-6 if self.device.startswith('cuda') else 0)
+        for x,y in zip(a['trace'],b['trace']):
+            self.assertEqual({k:v for k,v in x.items() if k not in ('loss','observation')},
+                             {k:v for k,v in y.items() if k not in ('loss','observation')})
+            self.assertEqual(set(x['loss']),set(y['loss']))
+            np.testing.assert_allclose(list(x['loss'].values()),list(y['loss'].values()),rtol=0,atol=3e-6 if self.device.startswith('cuda') else 0)
+        if not self.device.startswith('cuda'):
+            self.assertEqual(a['final_backbone_hash'],b['final_backbone_hash']);self.assertEqual(a['final_head_hash'],b['final_head_hash'])
+        # Native FP32 CUDA repeated identical code also differs (~1e-6 measured).
+        # Keep discrete decisions/init exact and bound selected weights separately.
+        x=load_model_checkpoint(left/'model.pt','cpu').state_dict();y=load_model_checkpoint(right/'model.pt','cpu').state_dict()
+        self.assertEqual(set(x),set(y))
+        for k in x:torch.testing.assert_close(x[k],y[k],rtol=0,atol=3e-6 if self.device.startswith('cuda') else 0,msg=k)
+
     def test_frozen_replay_deterministic_independent_rng_and_validation_budget(self):
         np.random.seed(44); torch.manual_seed(44); n=np.random.get_state(); t=torch.get_rng_state().clone()
         p=self.policy(); q=self.policy(updates=4)
@@ -104,15 +124,20 @@ class ObservationTrainingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             a=old.adapt(self.scene,self.record,self.base,Path(root)/'old',device=self.device,seed=64)
             b=adapt(self.scene,self.record,self.base,Path(root)/'new',device=self.device,seed=64)
-            self.assertEqual(a['validation'],b['validation']);self.assertEqual(a['trace'],b['trace'])
-            self.assertEqual(a['final_backbone_hash'],b['final_backbone_hash']);self.assertEqual(a['final_head_hash'],b['final_head_hash'])
+            self.compare_runs(a,b,Path(root)/'old',Path(root)/'new')
+
+    def test_same_version_repeat_numerical_control(self):
+        with tempfile.TemporaryDirectory() as root:
+            a=adapt(self.scene,self.record,self.base,Path(root)/'a',device=self.device,seed=64)
+            b=adapt(self.scene,self.record,self.base,Path(root)/'b',device=self.device,seed=64)
+            self.compare_runs(a,b,Path(root)/'a',Path(root)/'b')
 
     def test_full_policy_equivalence_and_checkpoint_roundtrip(self):
         p=self.policy([{'mode':'none'}])
         with tempfile.TemporaryDirectory() as root:
             a=adapt(self.scene,self.record,self.base,Path(root)/'off',device=self.device,seed=64)
             b=adapt(self.scene,self.record,self.base,Path(root)/'on',device=self.device,seed=64,observation_policy=p)
-            self.assertEqual(a['validation'],b['validation']);self.assertEqual(a['final_backbone_hash'],b['final_backbone_hash'])
+            self.compare_runs(a,b,Path(root)/'off',Path(root)/'on')
             model=load_model_checkpoint(Path(root)/'on/model.pt',self.device)
             with self.assertRaises(ValueError):evaluate_validation(model,self.scene,self.record)
             metric=evaluate_validation(model,self.scene,self.record,observation_policy=p)
