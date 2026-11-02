@@ -106,6 +106,10 @@ class RunProvenanceTests(unittest.TestCase):
         self.assertEqual(base, before)
 
     def test_development_metadata_change_preserves_parent_training(self):
+        # Prove numerical neutrality exactly on single-thread CPU. Independent
+        # CUDA sparse reductions can be amplified by Adam near zero gradients;
+        # the other five tests still use G3_DEVICE for native GPU stage checks.
+        control_device = 'cpu'
         scene, record, base = self.development_fixture()
         old = parent_module('development_training')
         # The parent's imported build_target is also replaced with its actual parent.
@@ -113,20 +117,19 @@ class RunProvenanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             previous = old.adapt(scene, record, base, root / 'parent', seed=512, steps=3, val_every=2,
-                                 sampling='class_first', device=self.device())
+                                 sampling='class_first', device=control_device)
             current = development.adapt(scene, record, base, root / 'current', seed=512, steps=3, val_every=2,
-                                        sampling='class_first', device=self.device())
+                                        sampling='class_first', device=control_device)
             self.assertNotEqual(previous['resolved_config']['training']['seed'], 512)
             for key in ('initial_backbone_hash', 'initial_head_hash', 'selected_step', 'sampler'):
                 self.assertEqual(previous[key], current[key], key)
             self.assertEqual([t['tile_id'] for t in previous['trace']], [t['tile_id'] for t in current['trace']])
             for before, after in zip(previous['trace'], current['trace']):
-                for key in before['loss']:
-                    self.assertAlmostEqual(before['loss'][key], after['loss'][key], delta=2e-5)
-            before = load_model_checkpoint(root / 'parent/model.pt', self.device())
-            after = load_model_checkpoint(root / 'current/model.pt', self.device())
+                self.assertEqual(before['loss'], after['loss'])
+            before = load_model_checkpoint(root / 'parent/model.pt', control_device)
+            after = load_model_checkpoint(root / 'current/model.pt', control_device)
             for key, value in before.state_dict().items():
-                torch.testing.assert_close(after.state_dict()[key], value, rtol=2e-5, atol=2e-6, msg=key)
+                torch.testing.assert_close(after.state_dict()[key], value, rtol=0, atol=0, msg=key)
 
     def test_readonly_verifier_rejects_conflicting_records_and_trace(self):
         scene, record, base = self.development_fixture()
