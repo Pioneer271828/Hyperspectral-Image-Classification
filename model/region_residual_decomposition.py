@@ -81,15 +81,22 @@ class RegionResidualDecomposition(nn.Module):
         for parameter in self.parameters():
             if parameter.dtype != pixels.dtype or parameter.device != pixels.device:
                 raise ValueError('move the M4 module to the X dtype/device before use')
+        # Reject invalid COO indices before coalesce can use them inside a kernel.
+        # Raw value checks are validation-only; pooling still uses differentiable Q.
+        if assignment.is_sparse:
+            with torch.no_grad():
+                indices, values = assignment._indices(), assignment._values()
+                if (indices < 0).any() or any(
+                        (indices[axis] >= assignment.shape[axis]).any() for axis in (0, 1)):
+                    raise ValueError('Q indices out of bounds')
+                if not torch.isfinite(values).all() or (values < 0).any():
+                    raise ValueError('Q must be finite and nonnegative')
         q = assignment.coalesce() if assignment.is_sparse else assignment
         with torch.no_grad():
             if not torch.isfinite(pixels).all():
                 raise ValueError('X must be finite')
             if q.is_sparse:
                 indices, values = q.indices(), q.values()
-                if (indices < 0).any() or any(
-                        (indices[axis] >= q.shape[axis]).any() for axis in (0, 1)):
-                    raise ValueError('Q indices out of bounds')
                 rows = values.new_zeros(q.shape[0]).scatter_add_(0, indices[0], values)
             else:
                 values, rows = q, q.sum(1)

@@ -204,6 +204,17 @@ class RegionResidualTests(unittest.TestCase):
                 q2=q.clone(); q2[1]=self.tensor([0,1,0,0])
                 self.assertGreater(float((layer(x,q2).cnn_input-layer(x,q).cnn_input).abs().max()),1e-3)
 
+    def test_rejects_bad_coo_indices_and_raw_values_before_coalescing(self):
+        x, q = self.fixture()
+        for indices, values in (([[4], [0]], [1.0]), ([[0], [4]], [1.0]),
+                                ([[-1], [0]], [1.0]), ([[0], [0]], [float('nan')]),
+                                ([[0, 0], [0, 0]], [-0.1, 1.1])):
+            bad = torch.sparse_coo_tensor(
+                torch.tensor(indices, device=self.device), self.tensor(values), q.shape,
+                device=self.device, check_invariants=False)
+            with patch.object(torch.Tensor, 'coalesce', side_effect=AssertionError('unsafe kernel reached')):
+                with self.assertRaises(ValueError): self.layer()(x, bad)
+
     def test_rejects_malformed_shapes_values_layout_and_module_state(self):
         x,q=self.fixture()
         cases=[(x[:0],q[:0]),(x,q[:3]),(x,q[:,:0]),(x[:,0],q),
