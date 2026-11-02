@@ -40,6 +40,8 @@ Missing metadata, index-only positions, unresolved normalized physical coordinat
 - Move the module and description to the same device/dtype as latent. Feature schema/order, shapes, devices and finite values are checked. Caller must bind descriptors to the same observation and anchor order; this standalone operator has no knowledge of a dataset/task identity.
 - Save `export_config()` plus `state_dict()` and use strict loading. This is a standalone E1 checkpoint, not an integrated classifier checkpoint or optimizer resume.
 
+The bounded residual and strength.1 are project hypotheses, not the original unrestricted FiLM operator or an empirically optimal setting. FiLM §4.3 reports that restricting its scale harmed its own CLEVR setting. Our initialization/bound are engineering choices whose HSI benefit or cost still needs the registered controls.
+
 Example composition in the **remote training container**:
 
 ```python
@@ -67,3 +69,5 @@ python scripts/validate_e1a.py --expected-commit FULL_SHA --out-dir NEW_EXTERNAL
 The optional real probe is **three optimizer updates** on one released devtrain tile: full, lower-half range crop and middle-gap. A temporary adapter-output hook composes E1 before denoising; E1 parameters are explicitly enrolled in the existing optimizer. The hook is removed, model/trainer source unchanged, outputs external. Record actual B/metadata/support, losses, gradients/updates and frozen-feature interventions. Save/reload the E1-only state and read-only load an existing baseline classifier checkpoint. No model accuracy, devval/test scoring or deployable E1 classifier checkpoint is produced. Native CUDA classifier equality uses a3e-6 bound with same-model repeat noise recorded; standalone identity checks remain exact.
 
 E1-B must later connect explicit configuration/checkpoint/forward contracts, default-off equivalence and observation identity through the real trainer. Only then register matched no-modulation/same-capacity/binary/continuous/shuffled controls under the same augmentation and held-out coverage-range conditions. Preserve full accuracy and per-class/branch analysis. M4 remains disabled; E1-A engineering passing cannot substitute for those effects or actual sensor transfer evidence.
+
+The [E1-A acceptance report](../../research/reports/E1A_观测覆盖描述与独立调制验收_20261102.md) records tested source `aa8bd718c5818f056ef4c197aaf2a59c4109cb1c`: focused CPU/CUDA14 each, fullCPU272, existing M1CUDA9, VCA CUDA lifecycle and the real three-update composition passed. Only engineering acceptance is complete; E1-B integration and E1-C accuracy comparisons remain open.

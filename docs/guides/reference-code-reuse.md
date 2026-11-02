@@ -23,4 +23,4 @@ An implementation Issue should contain these fields:
 | Verification | Original example if useful; default-off, negative, numerical/gradient/checkpoint and real integration checks |
 | Effect | Paired module ablation, per-class/domain readouts, actual runtime/cost and retained failures |
 
-Current next implementation remains M1-C, followed by independent E1. The dynamic/compression/curriculum candidates in the [supplemental plan](../../research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md) do not automatically enable themselves or add a new research axis.
+M1-C development screening and standalone E1-A engineering are complete; current production integration is E1-B, followed by a separately registered efficacy comparison. See the [current task list](../../research/当前搭建状态与审查整改清单_20261102.md) and [E1 paper/code review](../references/e1-reference-review.json). The dynamic/compression/curriculum candidates in the [supplemental plan](../../research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md) do not automatically enable themselves or add a new research axis.
