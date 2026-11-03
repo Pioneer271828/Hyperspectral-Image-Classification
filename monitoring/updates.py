@@ -75,6 +75,9 @@ class UpdateMonitor:
         if any(not isinstance(context[k], str) or not context[k] for k in REQUIRED_CONTEXT-{'step'}):
             raise ValueError('Nonempty identity strings required')
         context = json.loads(json.dumps(context, allow_nan=False))
+        with _LOCK:
+            if self.model in _ACTIVE:
+                raise RuntimeError('Overlapping monitor on this model')
         opt = self.optimizer
         if type(opt) not in (torch.optim.SGD, torch.optim.Adam, torch.optim.AdamW):
             raise ValueError('Only ordinary SGD/Adam/AdamW steps are supported')

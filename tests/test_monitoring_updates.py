@@ -157,6 +157,35 @@ class UpdateTests(unittest.TestCase):
             with mon.sample(context(),contract='fp32_single_backward'):
                 model(torch.ones(1,2,device=DEVICE));model(torch.ones(1,2,device=DEVICE))
         self.check_clean(model,opt)
+
+    def test_actual_three_task_model_state_optimizer_and_rng_noninterference(self):
+        from test_joint_baseline import tiny_items
+        from test_joint_training import settings
+        from model.research_config import ResearchConfig
+        from joint_training import train_step
+        cfg=ResearchConfig.from_dict(settings()['config'])
+        data={n:{k:v.to(DEVICE) if torch.is_tensor(v) else v for k,v in i.items()} for n,i in tiny_items().items()}
+        torch.manual_seed(45)
+        first=cfg.build_model({n:i['class_num'] for n,i in data.items()}).to(DEVICE)
+        second=copy.deepcopy(first);results=[];records=[]
+        for active,model in [(False,first),(True,second)]:
+            opt=torch.optim.SGD(model.parameters(),lr=.001)
+            specs=[ParameterSpec('backbone.CNN_Branch.0.point_conv.weight',0,'pixel_feature')]
+            mon=UpdateMonitor(model,opt,specs,records.append,
+                activations=[LayerSpec('backbone.CNN_Branch.0','NCHW',0,'post-block','pixel')])
+            rng=torch.get_rng_state().clone();cuda_rng=torch.cuda.get_rng_state().clone() if DEVICE=='cuda' else None
+            trace=[]
+            for step,(name,item) in enumerate(data.items()):
+                with mon.sample(context()|{'step':step,'dataset':name},contract='fp32_single_backward',enabled=active):
+                    trace.append(train_step(model,opt,name,item,cfg))
+            self.assertTrue(torch.equal(rng,torch.get_rng_state()))
+            if cuda_rng is not None:self.assertTrue(torch.equal(cuda_rng,torch.cuda.get_rng_state()))
+            results.append({'model':model.state_dict(),'optimizer':opt.state_dict(),
+                'gradients':{n:p.grad for n,p in model.named_parameters()},'trace':trace})
+            self.check_clean(model,opt)
+        torch.testing.assert_close(results[0],results[1],rtol=1e-5,atol=2e-6)
+        self.assertEqual(len(records),3)
+        self.assertTrue(all(r['parameters'][0]['changed_elements']>0 for r in records))
         with self.assertRaisesRegex(RuntimeError,'Repeated'):
             with mon.sample(context(),contract='fp32_single_backward'):
                 out=model(torch.ones(1,2,device=DEVICE)).sum();out.backward(retain_graph=True);out.backward()
