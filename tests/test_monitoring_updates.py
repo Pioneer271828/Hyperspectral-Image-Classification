@@ -163,12 +163,17 @@ class UpdateTests(unittest.TestCase):
         self.check_clean(model,opt)
 
     def test_actual_three_task_model_state_optimizer_and_rng_noninterference(self):
+        for checkpoint in (False,True):
+            with self.subTest(checkpoint=checkpoint):
+                self._actual_model(checkpoint)
+
+    def _actual_model(self,checkpoint):
         from test_joint_baseline import tiny_items
         from test_joint_training import settings
         from model.research_config import ResearchConfig
         from joint_training import train_step
         config=settings()['config']
-        config['model']['adapter_checkpoint_chunks']=False
+        config['model']['adapter_checkpoint_chunks']=checkpoint
         cfg=ResearchConfig.from_dict(config)
         data={n:{k:v.to(DEVICE) if torch.is_tensor(v) else v for k,v in i.items()} for n,i in tiny_items().items()}
         torch.manual_seed(45)
@@ -178,7 +183,7 @@ class UpdateTests(unittest.TestCase):
             opt=torch.optim.SGD(model.parameters(),lr=.001)
             specs=[ParameterSpec('backbone.CNN_Branch.0.point_conv.weight',0,'pixel_feature')]
             mon=UpdateMonitor(model,opt,specs,records.append,
-                activations=[LayerSpec('backbone.CNN_Branch.0','NCHW',0,'post-block','pixel')])
+                activations=[] if checkpoint else [LayerSpec('backbone.CNN_Branch.0','NCHW',0,'post-block','pixel')])
             rng=torch.get_rng_state().clone();cuda_rng=torch.cuda.get_rng_state().clone() if DEVICE=='cuda' else None
             trace=[]
             for step,(name,item) in enumerate(data.items()):

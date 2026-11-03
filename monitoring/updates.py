@@ -40,7 +40,9 @@ class UpdateMonitor:
     """Wrap one existing eager step, without replacing forward/backward/step.
 
     sample(..., contract='fp32_single_backward') is the caller's declaration:
-    one unscaled backward, no accumulation/AMP/closure/checkpoint recomputation.
+    one unscaled backward, no accumulation/AMP/closure. Activation-gradient hooks
+    additionally require a noncheckpointed model; parameter-only sampling reads
+    final gradients at the optimizer boundary and permits checkpoint recomputation.
     Undeclared scaling cannot be inferred from numerical gradients. Errors are
     fail-fast, not transactional: a completed optimizer step is never rolled back.
     """
@@ -85,8 +87,8 @@ class UpdateMonitor:
             raise ValueError('Existing optimizer hooks make measurement order ambiguous')
         if any(g.get('differentiable', False) or g.get('capturable', False) for g in opt.param_groups):
             raise ValueError('Differentiable/captured steps are not supported')
-        if any(getattr(m, 'checkpoint_chunks', False) for m in self.model.modules()):
-            raise ValueError('Checkpoint recomputation is not supported')
+        if self.activations and any(getattr(m, 'checkpoint_chunks', False) for m in self.model.modules()):
+            raise ValueError('Activation-gradient hooks with checkpoint recomputation are unsupported')
         all_params = dict(self.model.named_parameters())
         selected = {}
         storage = set()
