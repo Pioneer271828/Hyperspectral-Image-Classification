@@ -202,6 +202,8 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
                  stop_after=None,device=None,finish_guard=None):
     """No test scoring; interruptions save a cursor without extra validation."""
     from model.research_config import ResearchConfig
+    from joint_calibrated_selection import enabled,validation_candidate,load_selected
+    calibrated_selection=enabled(settings)
     if tuple(items)!=NAMES or any(any(k.startswith('test_') for k in i) for i in items.values()):
         raise ValueError('Exactly three ordered train/validation-only prepared tasks required')
     schedule=schedule_for(settings)
@@ -281,14 +283,20 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
             state['trace'].append(step); state['cursor']=i+1
             end_epoch=state['cursor']%settings['steps_per_epoch']==0
             if end_epoch and epoch in validation_epochs(settings):
-                metric,prob=validation_snapshot(model,items)
+                candidate=model; receipt=None
+                if calibrated_selection:
+                    model.eval()
+                    candidate,receipt=validation_candidate(model,items,
+                        directory/f'raw-validation-{state["cursor"]:06d}.pt')
+                metric,prob=validation_snapshot(candidate,items)
                 scheduler.step(metric['val_loss'])
                 event={'epoch':epoch,'step':state['cursor'],**metric}
                 state['history'].append(event)
                 if metric['macro_oa']>state['best_score']:
                     state.update(best_score=metric['macro_oa'],best_step=state['cursor'],
-                                 best_model={n:t.detach().cpu().clone() for n,t in model.state_dict().items()},
+                                 best_model={n:t.detach().cpu().clone() for n,t in candidate.state_dict().items()},
                                  best_probabilities=prob)
+                    if calibrated_selection: state['best_calibration']=receipt
                 publish('running')
                 print(f'epoch={epoch} step={state["cursor"]} val_nll={metric["val_loss"]:.6f} macro_oa={metric["macro_oa"]:.6f}',flush=True)
             if stop_after is not None and state['cursor']==stop_after:
@@ -306,9 +314,12 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
         save_model_checkpoint(model,directory/'last.pt')
         model.load_state_dict(state['best_model'],strict=True)
         model.training_config['checkpoint_optimizer_step']=state['best_step']
+        if calibrated_selection: model.training_config['bn_calibration']=state['best_calibration']
         save_model_checkpoint(model,directory/'primary.pt')
         _atomic_torch_save(state['best_probabilities'],directory/'selected-probabilities.pt')
-        restored=load_model_checkpoint(directory/'primary.pt',device=device)
+        restored=(load_selected(directory/'primary.pt',items,
+                    directory/f'raw-validation-{state["best_step"]:06d}.pt',device=device)
+                  if calibrated_selection else load_model_checkpoint(directory/'primary.pt',device=device))
         check,values=validation_snapshot(restored,items)
         max_error=0.
         for n in NAMES:

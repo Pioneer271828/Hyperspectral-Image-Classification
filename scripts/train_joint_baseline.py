@@ -20,6 +20,8 @@ def main(argv=None):
     p.add_argument('--out-dir',required=True)
     p.add_argument('--resume',action='store_true')
     p.add_argument('--stop-after',type=int)
+    p.add_argument('--calibrated-selection',action='store_true',
+                   help='BN-ALIGN2 versioned scene-calibrated validation/scheduler/selection; default off')
     a=p.parse_args(argv)
     source=code_snapshot()
     if sys.platform!='linux' or source['dirty'] or source['commit']!=a.expected_commit:
@@ -27,6 +29,9 @@ def main(argv=None):
     plan=load_plan(a.plan)
     baseline,items,provenance=import_preparation(a.prepared_dir,a.data_root,plan,source)
     settings=options(plan,a.profile,a.seed,baseline)
+    if a.calibrated_selection:
+        from joint_calibrated_selection import calibrated_settings
+        settings=calibrated_settings(settings)
     outcome=run_training(settings,items,a.out_dir,provenance,source,resume=a.resume,
                          stop_after=a.stop_after,finish_guard=lambda:require_frozen_code(source))
     print(json.dumps({'operation':outcome['operation'],'updates_this_call':outcome['updates_this_call'],

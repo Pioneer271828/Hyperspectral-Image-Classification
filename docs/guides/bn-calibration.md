@@ -24,3 +24,5 @@ The initial real FP32 live-reference tolerance failed at4.72e-5. A native replay
 Reference/code/license inspection is recorded in [the reuse review](../references/bn-calibration-review.json). This is a small independent adaptation, not a claim of reproducing an external benchmark.
 
 The bounded gate compares all three existing BASE-97C primary models without reselection or gradient updates: original buffers, calibrated saved/reloaded buffers, live denoise batch-stat reference and permuted-domain statistic negative control. Only train/val readouts are evaluated; previous test results are preserved. The reused validation data supports engineering and mechanism checks, not independent confirmation of final accuracy. See the module acceptance report/current plan for actual outcomes.
+
+The delivered [BN-ALIGN2 follow-up](calibrated-selection.md) adds explicit training-time calibrated validation/selection and a complete historical checkpoint replay. It preserves raw optimizer continuation. Current formal-evaluation work is tracked in the shared checklist; BN-ALIGN1's fixed-primary experiment above remains a separate historical scope.
