@@ -78,6 +78,12 @@ class BatchNormCalibrationTests(unittest.TestCase):
         c,_=self.apply(model=a)
         self.assertEqual(state_digest(a),state_digest(b));self.assertEqual(state_digest(a),state_digest(c))
 
+    def test_fp64_strict_reference_with_identical_sparse_graph_coefficients(self):
+        import sys
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+        from validate_bn_calibration import double_reference_check
+        self.assertLess(double_reference_check(self.model,self.items,'a'*64),1e-10)
+
     def test_invalid_policy_context_hash_and_training_mode_rejected(self):
         for key,value in [('mode','unknown'),('context','strict_target_holdout'),('source_checkpoint_sha256','bad')]:
             kwargs=dict(mode=POLICY,context=CONTEXT,source_checkpoint_sha256='a'*64);kwargs[key]=value
@@ -119,6 +125,7 @@ class BatchNormCalibrationTests(unittest.TestCase):
             changed=copy.deepcopy(self.observations);changed[NAMES[0]]['net_input'][0,0,0]+=.1
             with self.assertRaises(ValueError):verify_calibration_binding(restored,changed,context=CONTEXT,source_checkpoint_sha256='a'*64)
             with self.assertRaises(ValueError):verify_calibration_binding(restored,self.observations,context='inductive',source_checkpoint_sha256='a'*64)
+            with self.assertRaises(ValueError):verify_calibration_binding(restored,self.observations,context=CONTEXT,source_checkpoint_sha256='b'*64)
             with torch.no_grad():next(restored.parameters()).add_(.01)
             with self.assertRaises(ValueError):verify_calibration_binding(restored,self.observations,context=CONTEXT,source_checkpoint_sha256='a'*64)
 

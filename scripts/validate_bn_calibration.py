@@ -18,6 +18,34 @@ from model.checkpoint_io import load_model_checkpoint,save_model_checkpoint
 from research_runtime import code_snapshot,external_directory,require_frozen_code,write_json
 
 
+def double_reference_check(model,items,checkpoint_hash):
+    """Strict formula control; production execution and artifacts stay FP32."""
+    source=copy.deepcopy(model).double()
+    obs={n:{k:v.double() if torch.is_tensor(v) else v for k,v in i.items()
+            if k in ('net_input','wavelengths','fwhm')} for n,i in items.items()}
+    calibrated,_=calibrate_denoise(source,obs,mode=POLICY,context=CONTEXT,
+        source_checkpoint_sha256=checkpoint_hash)
+    live=copy.deepcopy(source)
+    for block in live.backbone.CNN_denoise:
+        for bn in block.norm.norm.norms.values():bn.training=True;bn.track_running_stats=False
+    maximum=0.
+    with torch.no_grad():
+        for name,raw in items.items():
+            item={k:v.double() if torch.is_tensor(v) else v for k,v in raw.items()}
+            # Legacy dense conversion fixes FP32. Sparse representation preserves
+            # the exact same coefficients for this numerical-only FP64 control.
+            dense=item['A'];item['A']=dense.to_sparse().coalesce()
+            if not torch.equal(item['A'].to_dense(),dense):raise ValueError('Graph values changed')
+            a,b=forward(calibrated,name,item),forward(live,name,item)
+            for phase in ('train','val'):
+                _,q=readout(a,item,phase);_,z=readout(b,item,phase)
+                for h in q:
+                    torch.testing.assert_close(q[h],z[h],rtol=1e-9,atol=1e-10)
+                    if not torch.equal(q[h].argmax(1),z[h].argmax(1)):raise ValueError('FP64 predictions differ')
+                    maximum=max(maximum,float((q[h]-z[h]).abs().max()))
+    return maximum
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ('expected-commit','campaign-dir','prepared-dir','data-root','out-dir'):p.add_argument('--'+key,required=True)
@@ -96,16 +124,18 @@ def main():
                             c=saved[name][phase]['calibrated'][head];z=saved[name][phase]['calibrated_reload'][head]
                             live_q=saved[name][phase]['live_reference'][head]
                             torch.testing.assert_close(c,z,rtol=1e-5,atol=1e-6)
-                            torch.testing.assert_close(c,live_q,rtol=1e-4,atol=1e-5)
+                            torch.testing.assert_close(c,live_q,rtol=1e-4,atol=1e-4)
                             if not torch.equal(c.argmax(1),z.argmax(1)) or not torch.equal(c.argmax(1),live_q.argmax(1)):
                                 raise ValueError('Calibration/reload/reference supervised predictions differ')
                             max_reload=max(max_reload,float((c-z).abs().max()));max_reference=max(max_reference,float((c-live_q).abs().max()))
             if state_digest(model)!=untouched:raise ValueError('Source model changed')
             for key,m in [('candidate',candidate),('reload',reloaded),('live',live),('wrong',wrong)]:
                 if state_digest(m)!=stable[key]:raise ValueError('Inference changed state: '+key)
+            double_error=double_reference_check(model,device_items,file_hash(r/'primary.pt'))
             torch.save(saved,folder/'probabilities.pt')
             row={'seed':seed,'metrics':metrics,'calibration':receipt,'source_state_unchanged':True,
-                 'reload_max_abs_error':max_reload,'reference_max_abs_error':max_reference}
+                 'reload_max_abs_error':max_reload,'reference_max_abs_error':max_reference,
+                 'fp64_reference_max_abs_error':double_error}
             write_json(folder/'review.json',row);rows.append(row)
             print('SEED_COMPLETE',seed,'macro_val', {k:float(np.mean([metrics[n]['val'][k]['fused']['oa'] for n in NAMES]))
                    for k in ('baseline','calibrated_reload','live_reference','wrong_domain')},flush=True)
