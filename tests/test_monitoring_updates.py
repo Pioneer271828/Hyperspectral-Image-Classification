@@ -189,7 +189,12 @@ class UpdateTests(unittest.TestCase):
             results.append({'model':model.state_dict(),'optimizer':opt.state_dict(),
                 'gradients':{n:p.grad for n,p in model.named_parameters()},'trace':trace})
             self.check_clean(model,opt)
-        torch.testing.assert_close(results[0],results[1],rtol=1e-5,atol=2e-6)
+        for left,right in zip(results[0]['trace'],results[1]['trace']):
+            self.assertEqual(left['dataset'],right['dataset'])
+            torch.testing.assert_close({k:v for k,v in left.items() if k!='dataset'},
+                {k:v for k,v in right.items() if k!='dataset'},rtol=1e-5,atol=2e-6)
+        for key in ('model','optimizer','gradients'):
+            torch.testing.assert_close(results[0][key],results[1][key],rtol=1e-5,atol=2e-6)
         self.assertEqual(len(records),3)
         self.assertTrue(all(r['parameters'][0]['changed_elements']>0 for r in records))
 
