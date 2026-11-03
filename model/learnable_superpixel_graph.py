@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .graph_state import GraphState, graph_diagnostics
+
 
 class LearnableSuperpixelGraph(nn.Module):
     """Build a differentiable sparse pixel assignment and dynamic graph.
@@ -64,7 +66,7 @@ class LearnableSuperpixelGraph(nn.Module):
 
     @staticmethod
     def _grid_shape(height, width, superpixel_scale):
-        if superpixel_scale <= 0:
+        if not math.isfinite(superpixel_scale) or superpixel_scale <= 0:
             raise ValueError("superpixel_scale must be positive")
         step = math.sqrt(float(superpixel_scale))
         grid_height = max(1, int(math.ceil(height / step)))
@@ -233,7 +235,8 @@ class LearnableSuperpixelGraph(nn.Module):
         return graph
 
     def forward(self, features, superpixel_scale):
-        if features.dim() != 3 or features.shape[-1] != self.feature_dim:
+        if (features.dim() != 3 or features.shape[-1] != self.feature_dim
+                or features.shape[0] <= 0 or features.shape[1] <= 0):
             raise ValueError(
                 "features must have shape [H, W, {}], got {}".format(
                     self.feature_dim,
@@ -247,3 +250,67 @@ class LearnableSuperpixelGraph(nn.Module):
         graph = self._build_graph(token_features, auxiliary["grid_shape"])
         auxiliary["graph_nnz"] = graph._nnz()
         return assignment, graph, auxiliary
+
+    def _fixed_assignment(self, features, superpixel_scale):
+        height, width, channels = features.shape
+        gh, gw = self._grid_shape(height, width, superpixel_scale)
+        ids, valid, distances = self._pixel_candidates(height, width, gh, gw, features.device)
+        center = torch.where((self.assignment_offsets == 0).all(dim=1))[0].item()
+        rows = torch.arange(height * width, device=features.device)
+        cols = ids[:, center]
+        Q = torch.sparse_coo_tensor(torch.stack((rows, cols)), features.new_ones(height * width),
+                                    (height * width, gh * gw)).coalesce()
+        normalized = self.feature_norm(features.reshape(-1, channels))
+        tokens, mass = self._sparse_pool(Q, normalized)
+        auxiliary = {'compactness_loss': distances[:, center].to(features.dtype).mean(),
+                     'assignment_entropy_loss': features.new_zeros(()),
+                     'assignment_balance_loss': ((mass / (height * width / (gh * gw)) - 1) ** 2).mean(),
+                     'grid_shape': (gh, gw)}
+        return Q, tokens, auxiliary
+
+    def _fixed_graph(self, tokens, grid_shape):
+        gh, gw = grid_shape
+        rows = torch.arange(gh * gw, device=tokens.device)
+        offsets = self.graph_offsets.to(tokens.device)
+        yy = rows[:, None] // gw + offsets[None, :, 0]
+        xx = rows[:, None] % gw + offsets[None, :, 1]
+        valid = (yy >= 0) & (yy < gh) & (xx >= 0) & (xx < gw)
+        weights = valid.to(tokens.dtype) / valid.sum(1, keepdim=True)
+        indices = torch.stack((rows[:, None].expand_as(yy)[valid], (yy * gw + xx)[valid]))
+        return torch.sparse_coo_tensor(indices, weights[valid], (gh * gw, gh * gw)).coalesce()
+
+    def build_graph(self, features, superpixel_scale, *, assignment_mode='learned',
+                    adjacency_mode='learned', graph_state=None):
+        """New M3 exchange interface; legacy forward remains the learned baseline.
+
+        fixed_grid is label-free one-hot spatial binning; fixed_local is uniform
+        over local region neighbors (including self). These are explicit controls,
+        distinct from the historical label-guided static graph path.
+        """
+        if (features.ndim != 3 or features.shape[-1] != self.feature_dim
+                or min(features.shape[:2]) <= 0):
+            raise ValueError('features must be nonempty [H,W,feature_dim]')
+        if graph_state is not None:
+            if not isinstance(graph_state, GraphState):
+                raise ValueError('graph_state must be GraphState')
+            if assignment_mode != 'learned' or adjacency_mode != 'learned':
+                raise ValueError('Injected graph cannot be combined with builder controls')
+            return graph_state.validate(features)
+        if assignment_mode not in ('learned', 'fixed_grid') or adjacency_mode not in ('learned', 'fixed_local'):
+            raise ValueError('Unknown assignment/adjacency control')
+        if assignment_mode == 'learned':
+            Q, tokens, auxiliary = self._build_assignment(features, superpixel_scale)
+        else:
+            Q, tokens, auxiliary = self._fixed_assignment(features, superpixel_scale)
+        grid_shape = auxiliary['grid_shape']
+        A0 = self._build_graph(tokens, grid_shape) if adjacency_mode == 'learned' else self._fixed_graph(tokens, grid_shape)
+        regularizers = {name: loss for name, loss in auxiliary.items() if name.endswith('_loss')}
+        gh, gw = grid_shape
+        ids = torch.arange(gh * gw, device=features.device)
+        positions = torch.stack(((ids // gw + .5) / gh, (ids % gw + .5) / gw), dim=1).to(features.dtype)
+        diagnostics = graph_diagnostics(Q, A0, grid_shape=grid_shape, assignment_mode=assignment_mode,
+                                        adjacency_mode=adjacency_mode, position_kind='grid_seed_centers',
+                                        assignment_candidates=self.assignment_offsets.shape[0],
+                                        graph_candidates=self.graph_offsets.shape[0])
+        return GraphState(Q, A0, positions, tuple(features.shape[:2]), grid_shape,
+                          regularizers, diagnostics).validate(features)

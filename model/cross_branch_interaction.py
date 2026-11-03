@@ -1,5 +1,6 @@
 """One simultaneous, optionally gated exchange between pixel and region features."""
 
+import math
 import torch
 from torch import nn
 from torch.utils.checkpoint import checkpoint
@@ -30,8 +31,10 @@ class SelectiveMessage(nn.Module):
         return target + self.strength * gate * message, gate
 
     def forward(self, target, source):
-        if target.shape != source.shape:
+        if target.ndim != 2 or source.ndim != 2 or target.shape != source.shape:
             raise ValueError("Align source and target shapes before cross-branch interaction")
+        if target.shape[0] == 0:
+            return target, target.new_empty((0, 1))
         size = self.chunk_size or target.shape[0]
         outputs, gates = [], []
         for start in range(0, target.shape[0], size):
@@ -55,13 +58,30 @@ class BidirectionalSelectiveInteraction(nn.Module):
             raise ValueError("interaction_mode must be none, add or gated")
         if direction not in ("both", "cnn_to_graph", "graph_to_cnn"):
             raise ValueError("Unknown interaction_direction")
-        if channels <= 0 or hidden_dim <= 0 or strength < 0 or chunk_size < 0:
+        if channels <= 0 or hidden_dim <= 0 or not math.isfinite(strength) or strength < 0 or chunk_size < 0:
             raise ValueError("Invalid interaction dimensions, strength or chunk size")
         self.mode, self.direction = mode, direction
         kwargs = dict(channels=channels, hidden_dim=hidden_dim, gated=mode == "gated",
                       strength=strength, chunk_size=chunk_size)
         self.graph_to_cnn = SelectiveMessage(**kwargs) if mode != "none" and direction != "cnn_to_graph" else None
         self.cnn_to_graph = SelectiveMessage(**kwargs) if mode != "none" and direction != "graph_to_cnn" else None
+
+    def forward_aligned(self, pixels, regions, assignment, alignment,
+                        collect_stats=False, return_diagnostics=False):
+        """Align enabled messages from one pre-interaction snapshot, then exchange.
+
+        The alignment is supplied by the caller; it is not registered here, so
+        existing checkpoint keys and the original aligned-message API are kept.
+        This method never changes Q, graph support or the caller's input tensors.
+        """
+        if (pixels.ndim != 2 or regions.ndim != 2 or assignment.ndim != 2
+                or assignment.shape != (pixels.shape[0], regions.shape[0])
+                or pixels.shape[1] != regions.shape[1]):
+            raise ValueError("Expected pixels [N,C], regions [M,C] and assignment [N,M]")
+        region_at_pixels = alignment.to_pixels(regions, assignment) if self.graph_to_cnn is not None else None
+        pixels_at_regions = alignment.to_regions(pixels, assignment) if self.cnn_to_graph is not None else None
+        return self(pixels, regions, region_at_pixels, pixels_at_regions,
+                    collect_stats=collect_stats, return_diagnostics=return_diagnostics)
 
     def forward(self, pixels, regions, region_at_pixels=None, pixels_at_regions=None,
                 collect_stats=False, return_diagnostics=False):

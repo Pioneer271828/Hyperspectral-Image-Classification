@@ -1,22 +1,68 @@
 {
   "schema_version": 1,
-  "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。",
+  "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。delivery_order 是修订后的模块研究顺序，不代表完成状态；已前移验收的接口/协议不重复搭建，整改和当前任务以 current_plan 为准。",
+  "current_plan": "research/当前搭建状态与审查整改清单_20261102.md",
+  "delivery_status": "docs/architecture/delivery-status.json",
+  "baseline_guide": "docs/guides/current-baseline.md",
   "modules": [
+    {"id":"E4a-2", "paths":["transfer/","train_cross_sensor.py"], "tests":["tests/test_transfer_training.py","tests/test_development_training.py","tests/test_run_provenance.py"], "guide":"docs/guides/g3-training.md", "depends_on":["E4a","M1","M5","M8"]},
+    {"id":"MASK-2", "paths":["compression/masked_checkpoint.py"], "tests":["tests/test_masked_checkpoint.py"], "guide":"docs/guides/masked-training-checkpoints.md", "depends_on":["MASK-1"]},
+    {"id":"MASK-1", "paths":["compression/"], "tests":["tests/test_weight_masks.py"], "guide":"docs/guides/reversible-weight-masks.md", "depends_on":["M5"]},
+    {"id":"MON-01", "paths":["monitoring/"], "tests":["tests/test_monitoring_statistics.py"], "guide":"docs/guides/monitoring-readonly.md", "depends_on":["M5","E0"]},
     {"id": "baseline", "paths": ["smoke_test.py", "scripts/validate_baseline.py", "docs/migration/baseline-source.json"], "tests": ["tests/test_interaction_modules.py", "smoke_test.py"], "depends_on": []},
-    {"id": "C0", "paths": ["model/interaction_config.py", "model/checkpoint_io.py", "interaction_ablation_presets.py", "run_paper_ablation.py"], "extension": "配置校验、运行身份、消融登记", "depends_on": ["baseline"]},
-    {"id": "C1", "paths": ["loadData/"], "extension": "数据登记、固定/空间划分及访问协议", "depends_on": ["C0"]},
-    {"id": "M2", "paths": ["model/variable_channel_adapter.py"], "depends_on": ["C0"]},
-    {"id": "M3", "paths": ["model/learnable_superpixel_graph.py", "createGraph/"], "depends_on": ["C1", "M2"]},
-    {"id": "M5", "paths": ["model/VCASAHGCN.py", "model/SAHGCN.py"], "depends_on": ["M2", "M3"]},
-    {"id": "M8", "paths": ["model/VCASAHGCN.py", "model/checkpoint_io.py"], "depends_on": ["M5"]},
-    {"id": "E0", "paths": ["model/utils.py", "export_interaction_diagnostics.py"], "depends_on": ["M8"]},
-    {"id": "M6", "paths": ["model/region_pixel_alignment.py", "model/cross_branch_interaction.py"], "depends_on": ["M5", "E0"]},
+    {"id": "C0", "paths": ["model/research_config.py", "research_runtime.py", "research_ablation_presets.py", "run_research_ablation.py", "configs/experiments/", "model/interaction_config.py", "model/checkpoint_io.py"], "tests": ["tests/test_research_c0.py", "tests/test_interaction_modules.py"], "guide": "docs/guides/c0-experiments.md", "depends_on": ["baseline"]},
+    {"id": "C1", "paths": ["loadData/dataset_registry.py", "loadData/fixed_splits.py", "loadData/spatial_protocol.py", "loadData/spatial_tiles.py", "prepare_data_protocol.py", "prepare_spatial_protocol.py", "train_spatial.py"], "tests": ["tests/test_data_c1a.py", "tests/test_spatial_c1b.py", "tests/test_spatial_training.py"], "guide": "docs/guides/spatial-training.md", "extension": "分区独立多块训练闭环；正式多折评价另立实验任务", "depends_on": ["C0"]},
+    {"id": "M2", "paths": ["model/variable_channel_adapter.py"], "tests": ["tests/test_vca_m2.py", "scripts/validate_m2.py"], "guide": "docs/guides/vca.md", "depends_on": ["C0"]},
+    {"id": "M3", "paths": ["model/graph_state.py", "model/learnable_superpixel_graph.py", "createGraph/"], "tests": ["tests/test_graph_m3.py", "scripts/validate_m3.py"], "guide": "docs/guides/graph-state.md", "depends_on": ["C1", "M2"]},
+    {"id": "M5", "paths": ["model/VCASAHGCN.py", "model/SAHGCN.py", "model/research_config.py", "train_vca_multidataset.py"], "tests": ["tests/test_backbone_m5.py", "tests/test_graph_cache.py", "tests/test_dynamic_task_heads.py", "scripts/validate_m5.py"], "guide": "docs/guides/backbone-stages.md", "depends_on": ["M2", "M3"]},
+    {"id": "M8", "paths": ["model/branch_fusion.py", "model/task_losses.py", "model/VCASAHGCN.py", "model/checkpoint_io.py", "model/research_config.py", "train_spatial.py", "train_vca_multidataset.py"], "tests": ["tests/test_fusion_m8.py", "scripts/validate_m8.py"], "guide": "docs/guides/fusion-losses.md", "depends_on": ["M5"]},
+    {"id": "E0", "paths": ["evaluation/", "export_research_diagnostics.py", "model/utils.py", "export_interaction_diagnostics.py", "scripts/diagnose_screening_branches.py", "scripts/intervene_screening_messages.py", "scripts/intervene_screening_coordinates.py", "scripts/run_coordinate_screening.py", "loadData/coordinate_observation.py"], "tests": ["tests/test_evaluation_e0a.py", "scripts/validate_e0a.py", "tests/test_screening_branch_diagnostics.py", "tests/test_message_interventions.py", "tests/test_coordinate_interventions.py", "tests/test_coordinate_training.py"], "guide": "docs/guides/evaluation-e0a.md", "extension": "E0a三路诊断见docs/guides/screening-branch-diagnostics.md；E0b消息干预见docs/guides/message-interventions.md；其余干预、细结构与成本分别验收", "depends_on": ["M8"]},
+    {"id": "M6", "paths": ["model/region_pixel_alignment.py", "model/cross_branch_interaction.py"], "tests": ["tests/test_interaction_m6.py", "scripts/validate_m6.py"], "guide": "docs/guides/interaction-m6.md", "depends_on": ["M5", "E0"]},
     {"id": "M7", "paths": ["model/graph_edge_update.py"], "depends_on": ["M6"]},
     {"id": "M4", "paths": [], "extension": "区域表示与像素残差分工", "depends_on": ["M3", "M5", "E0"]},
-    {"id": "M1", "paths": [], "extension": "真实波段子集与元数据同步", "depends_on": ["C1", "M2"]},
+    {"id": "M1", "paths": ["loadData/observation_sampling.py"], "tests":["tests/test_observation_sampling.py","scripts/validate_m1.py"], "guide":"docs/guides/observation-sampling-m1.md", "extension": "真实波段子集与元数据同步；训练与跨传感器精度另验收", "depends_on": ["C1", "M2"]},
     {"id": "E1", "paths": [], "extension": "覆盖度描述与调制", "depends_on": ["M1", "E0"]},
-    {"id": "E4a", "paths": [], "extension": "语义映射、固定预算适配及留出协议", "depends_on": ["C1", "M8", "E0"]}
+    {"id": "E4a", "paths": ["loadData/transfer_protocol.py","configs/protocols/paviau_to_xuzhou_g3.json"], "tests":["tests/test_transfer_protocol.py","scripts/prepare_transfer_protocol.py"], "guide":"docs/guides/transfer-protocol-e4a.md", "extension": "G3协议准备；训练入口与G2共享语义映射另验收", "depends_on": ["C1", "M8", "E0"]}
+  ],
+  "research_focus": {"as_of": "2026-10-31", "axes": ["region_pixel_complementarity", "cross_sensor_spectral_adaptation", "pruning_and_quantization"], "primary_goal": "improve_accuracy_on_all_three_axes", "secondary_goal": "speed_under_predeclared_accuracy_constraint", "guide": "research/三主线研究重心与剪枝量化及论文用途_20261031.md"},
+  "research_candidates": [
+    {"id":"R-MONITORING", "status":"partial", "implemented_stages":["MON-0/1 limited readonly API"], "pending_stages":["MON-2","MON-3","MON-4"], "issue":37, "guide":"research/统一训练监测搭建与训练接入计划_20261031.md", "stages":["MON-0","MON-1","MON-2","MON-3","MON-4"], "proposed_paths":["monitoring/","tests/test_monitoring_statistics.py"], "default_enabled":false, "changes_default":false, "automatic_pruning":false},
+    {"id":"R-COMPRESSION", "status":"partial", "implementation_frozen":true, "reason":"Prioritize M1 and E4a before pruning accuracy experiments", "implemented_stages":["explicit reversible elementwise mask API","masked training checkpoint API"], "pending_stages":["candidate_selection","structured_pruning","quantization","accuracy_experiments"], "issue":35, "target_modules":["E0","M5","M6","E4a"], "stages":["redundancy_activity_diagnostics","structured_pruning","quantization","combined_deployment"], "changes_default":false},
+    {
+      "id": "R-MITA",
+      "status": "planned",
+      "issue": 25,
+      "target_modules": ["M6", "E3"],
+      "source": "https://arxiv.org/abs/2602.01219v6",
+      "guide": "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md",
+      "proposed_paths": ["model/mita_region_message.py"],
+      "gate": "Frozen branch diagnostics first; M6 message prototype and E3 support routing are separate tasks",
+      "changes_default": false
+    },
+    {
+      "id": "R-REDUNDANCY",
+      "status": "planned",
+      "issue": 25,
+      "target_modules": ["E0", "M5", "M6"],
+      "source": "https://arxiv.org/abs/2601.22841v2",
+      "guide": "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md",
+      "proposed_paths": ["evaluation/representation_redundancy.py"],
+      "gate": "Representation diagnostics before width experiments; preserve observation B and VCA K",
+      "changes_default": false
+    }
   ],
   "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
-  "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
+  "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M4", "M1", "E1", "M7", "E4a"]
 }
+
+
+
+
+
+
+
+
+
+
+
+

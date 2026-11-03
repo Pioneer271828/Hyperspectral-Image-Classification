@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "module": "M8",
+  "issue": 17,
+  "pr": 18,
+  "baseline_commit": "b2809302a44d1ff454004361a42d34001235616d",
+  "candidate_source_commit": "c092a7e6f93b80a4acaade0c42f7c998cbfeb06d",
+  "tested_commit": "4675ed200e5b2f8f3699de750fc5cfac8e7b1f0c",
+  "branch": "codex/issue-17-m8-fusion",
+  "source_hash": "2e2b374326399e2e43e79586b3683704beb09e4b387072ef004dbf9fed3810ac",
+  "status": "passed",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "unit_tests": 85,
+  "new_m8_tests": 7,
+  "default_legacy_output_loss_and_gradient_exact": true,
+  "checks": [
+    {
+      "name": "unit",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cpu",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cpu"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cuda",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cuda"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "spatial_training": [
+    {
+      "variant": "default",
+      "config": "configs/experiments/m8_spatial_default.json",
+      "run_id": "m8_paviau_default-s2026-f6c7d41fdaa6c1b9b8bd",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "alph": 0.8,
+      "selection": "val_loss",
+      "loss_means": {
+        "fused_supervised": 2.3084914684295654,
+        "graph_supervised": 1.9819381833076477,
+        "cnn_supervised": 2.19739305973053,
+        "weighted_fused_supervised": 2.3084914684295654,
+        "weighted_graph_supervised": 1.9819381833076477,
+        "weighted_cnn_supervised": 2.19739305973053,
+        "graph_compactness": 0.985600471496582,
+        "weighted_graph_compactness": 0.009856004267930984,
+        "graph_entropy": 1.7010372281074524,
+        "weighted_graph_entropy": 0.0017010373412631452,
+        "graph_balance": 0.041923100128769875,
+        "weighted_graph_balance": 0.00041923100070562214,
+        "total": 6.499799013137817
+      },
+      "weighted_sum_error": 2.9060174711048603e-8,
+      "logits_softmax_max_diff": [
+        2.9802322387695312e-8,
+        4.470348358154297e-8,
+        0
+      ],
+      "output_shapes": [
+        [
+          784,
+          9
+        ],
+        [
+          784,
+          9
+        ],
+        [
+          784,
+          9
+        ]
+      ],
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "test_missing_classes": [
+        3,
+        7
+      ]
+    },
+    {
+      "variant": "aux_off",
+      "config": "configs/experiments/m8_spatial_aux_off.json",
+      "run_id": "m8_paviau_aux_off-s2026-33c9c483dbad291e527e",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "alph": 0.8,
+      "selection": "val_loss",
+      "loss_means": {
+        "fused_supervised": 2.3049702644348145,
+        "graph_supervised": 1.9979231357574463,
+        "cnn_supervised": 2.202193260192871,
+        "weighted_fused_supervised": 2.3049702644348145,
+        "weighted_graph_supervised": 0,
+        "weighted_cnn_supervised": 0,
+        "graph_compactness": 0.9854312539100647,
+        "weighted_graph_compactness": 0.009854312054812908,
+        "graph_entropy": 1.700901746749878,
+        "weighted_graph_entropy": 0.0017009018338285387,
+        "graph_balance": 0.04207087866961956,
+        "weighted_graph_balance": 0.00042070877680089325,
+        "total": 2.3169461488723755
+      },
+      "weighted_sum_error": 3.822788130491972e-8,
+      "logits_softmax_max_diff": [
+        2.9802322387695312e-8,
+        4.470348358154297e-8,
+        0
+      ],
+      "output_shapes": [
+        [
+          784,
+          9
+        ],
+        [
+          784,
+          9
+        ],
+        [
+          784,
+          9
+        ]
+      ],
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "test_missing_classes": [
+        3,
+        7
+      ]
+    },
+    {
+      "variant": "alpha035",
+      "config": "configs/experiments/m8_spatial_alpha035.json",
+      "run_id": "m8_paviau_alpha035-s2026-430d62d0217e0a0abfca",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "alph": 0.35,
+      "selection": "val_loss",
+      "loss_means": {
+        "fused_supervised": 2.4440470933914185,
+        "graph_supervised": 1.9845272898674011,
+        "cnn_supervised": 2.196754813194275,
+        "weighted_fused_supervised": 2.4440470933914185,
+        "weighted_graph_supervised": 1.9845272898674011,
+        "weighted_cnn_supervised": 2.196754813194275,
+        "graph_compactness": 0.9858759343624115,
+        "weighted_graph_compactness": 0.009858759120106697,
+        "graph_entropy": 1.701127529144287,
+        "weighted_graph_entropy": 0.001701127621345222,
+        "graph_balance": 0.042166344821453094,
+        "weighted_graph_balance": 0.000421663440647535,
+        "total": 6.637310743331909
+      },
+      "weighted_sum_error": 3.3032847568392754e-9,
+      "logits_softmax_max_diff": [
+        2.9802322387695312e-8,
+        4.470348358154297e-8,
+        0
+      ],
+      "output_shapes": [
+        [
+          784,
+          9
+        ],
+        [
+          784,
+          9
+        ],
+        [
+          784,
+          9
+        ]
+      ],
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "test_missing_classes": [
+        3,
+        7
+      ]
+    }
+  ],
+  "training_process_peak_allocated_bytes": 38130688,
+  "training_process_peak_reserved_bytes": 54525952,
+  "artifacts": "/home/train/hsi-pioneer271828/runs/m8-validation-01",
+  "code_directory": "/workspace/hsi-m8",
+  "test_failures": [],
+  "historical_blocker": "Previous SSH/SCP outages prevented testing; original container recovered before this acceptance.",
+  "alternative_container": {
+    "connection_test": "successful",
+    "container_type": "lxc",
+    "python": "3.10.12",
+    "gpu_count": 8,
+    "gpu_type": "RTX 4090",
+    "actions": "read-only inspection only; no installs, dataset upload, project execution or process changes"
+  },
+  "limits": [
+    "Two optimizer steps per configuration; no convergence or accuracy comparison.",
+    "PaviaU test partition lacks classes 3 and 7.",
+    "Optional logits did not switch the legacy probability training objective.",
+    "E0a remains pending on its separate draft branch."
+  ]
+}

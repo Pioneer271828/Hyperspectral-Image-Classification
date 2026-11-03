@@ -1,0 +1,734 @@
+{
+  "schema_version": 1,
+  "module": "M6",
+  "status": "passed",
+  "scope": "engineering_and_two_step_real_data_checks_only",
+  "branch": "codex/issue-21-m6-interaction",
+  "tested_commit": "e3adf597e0606c7a366db88494856361319e5782",
+  "baseline_commit": "637e21b23481150bc36fb8006c659cc0dc83d021",
+  "source_hash": "79a228f3c6ff7d49d743eb3eb2c56e02c0c0937257f7254bf750e91d4290d8fb",
+  "remote_checkout": "/workspace/hsi-m6",
+  "artifact_root": "/home/train/hsi-pioneer271828/runs/m6-validation-01",
+  "command": "OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_m6.py --expected-commit e3adf597e0606c7a366db88494856361319e5782 --data-root /home/train/hsi-pioneer271828/datasets/current --out-dir /home/train/hsi-pioneer271828/runs/m6-validation-01",
+  "environment": {
+    "python": "3.12.3 (main, Jan 17 2025, 18:03:48) [GCC 13.3.0]",
+    "torch": "2.7.0a0+ecf3bae40a.nv25.02",
+    "gpu": "NVIDIA GeForce RTX 4090"
+  },
+  "checks": [
+    {
+      "name": "unit",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cpu",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cpu"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cuda",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cuda"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "unit_test_count": 109,
+  "new_test_count": 11,
+  "unit_body_seconds": 7.046,
+  "spatial_training": [
+    {
+      "variant": "none",
+      "config": "configs/experiments/m6_spatial_none.json",
+      "run_id": "m6_paviau_none-s2026-1b7ca005827b6d658604",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "interaction": {
+        "alignment_mode": "region",
+        "interaction_mode": "none",
+        "interaction_direction": "both",
+        "interaction_strength": 0.1,
+        "interaction_hidden_dim": 32,
+        "interaction_chunk_pixels": 16384,
+        "graph_update_mode": "none",
+        "graph_update_dim": 32,
+        "graph_update_mix": 0.5
+      },
+      "trace_calls": {},
+      "expected_calls": {
+        "exchange_train": 0,
+        "exchange_eval": 0,
+        "graph_to_cnn": 0,
+        "to_pixels": 0,
+        "cnn_to_graph": 0,
+        "to_regions": 0
+      },
+      "gradient_parameter_tensor_count": 0,
+      "all_observed_gradients_finite_and_twice": true,
+      "required_projection_and_gate_gradients_nonzero": "asserted_by_validator",
+      "train_update_norms": {},
+      "gates": {},
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "frozen_diagnostics": {
+        "status": "passed",
+        "test_tile_count": 41,
+        "count": 6205,
+        "missing_class_ids": [
+          3,
+          7
+        ],
+        "confusion_matches_training": true,
+        "metric_differences": {
+          "oa": 0,
+          "aa": 0,
+          "kappa": 0
+        },
+        "macro_f1_sklearn_difference": 0,
+        "parameters_and_buffers_unchanged": true,
+        "fused_spatial_counts": {
+          "1": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "2": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "3": {
+            "boundary": 0,
+            "interior": 6205
+          }
+        },
+        "branch_strata": {
+          "both_correct": {
+            "count": 0,
+            "fused_correct": 0,
+            "fused_accuracy": null
+          },
+          "cnn_only_correct": {
+            "count": 385,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "graph_only_correct": {
+            "count": 210,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "both_wrong": {
+            "count": 5610,
+            "fused_correct": 195,
+            "fused_accuracy": 0.034759358288770054
+          }
+        }
+      }
+    },
+    {
+      "variant": "add",
+      "config": "configs/experiments/m6_spatial_add.json",
+      "run_id": "m6_paviau_add-s2026-e04a2578ce2aa42ceda5",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "interaction": {
+        "alignment_mode": "region",
+        "interaction_mode": "add",
+        "interaction_direction": "both",
+        "interaction_strength": 0.1,
+        "interaction_hidden_dim": 32,
+        "interaction_chunk_pixels": 16384,
+        "graph_update_mode": "none",
+        "graph_update_dim": 32,
+        "graph_update_mix": 0.5
+      },
+      "trace_calls": {
+        "exchange_train": 2,
+        "to_pixels": 84,
+        "to_regions": 84,
+        "graph_to_cnn": 84,
+        "cnn_to_graph": 84,
+        "exchange_eval": 82
+      },
+      "expected_calls": {
+        "exchange_train": 2,
+        "exchange_eval": 82,
+        "graph_to_cnn": 84,
+        "to_pixels": 84,
+        "cnn_to_graph": 84,
+        "to_regions": 84
+      },
+      "gradient_parameter_tensor_count": 6,
+      "all_observed_gradients_finite_and_twice": true,
+      "required_projection_and_gate_gradients_nonzero": "asserted_by_validator",
+      "train_update_norms": {
+        "graph_to_cnn": [
+          17.836753845214844,
+          18.366065979003906
+        ],
+        "cnn_to_graph": [
+          2.511751890182495,
+          2.436549186706543
+        ]
+      },
+      "gates": {
+        "graph_to_cnn": {
+          "min": 1,
+          "max": 1,
+          "mean": 1,
+          "count": 63840
+        },
+        "cnn_to_graph": {
+          "min": 1,
+          "max": 1,
+          "mean": 1,
+          "count": 1320
+        }
+      },
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "frozen_diagnostics": {
+        "status": "passed",
+        "test_tile_count": 41,
+        "count": 6205,
+        "missing_class_ids": [
+          3,
+          7
+        ],
+        "confusion_matches_training": true,
+        "metric_differences": {
+          "oa": 0,
+          "aa": 0,
+          "kappa": 0
+        },
+        "macro_f1_sklearn_difference": 0,
+        "parameters_and_buffers_unchanged": true,
+        "fused_spatial_counts": {
+          "1": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "2": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "3": {
+            "boundary": 0,
+            "interior": 6205
+          }
+        },
+        "branch_strata": {
+          "both_correct": {
+            "count": 0,
+            "fused_correct": 0,
+            "fused_accuracy": null
+          },
+          "cnn_only_correct": {
+            "count": 325,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "graph_only_correct": {
+            "count": 257,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "both_wrong": {
+            "count": 5623,
+            "fused_correct": 675,
+            "fused_accuracy": 0.12004268184243287
+          }
+        }
+      }
+    },
+    {
+      "variant": "gated",
+      "config": "configs/experiments/m6_spatial_gated.json",
+      "run_id": "m6_paviau_gated-s2026-89936b31d2960fccb5f4",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "interaction": {
+        "alignment_mode": "region",
+        "interaction_mode": "gated",
+        "interaction_direction": "both",
+        "interaction_strength": 0.1,
+        "interaction_hidden_dim": 32,
+        "interaction_chunk_pixels": 16384,
+        "graph_update_mode": "none",
+        "graph_update_dim": 32,
+        "graph_update_mix": 0.5
+      },
+      "trace_calls": {
+        "exchange_train": 2,
+        "to_pixels": 84,
+        "to_regions": 84,
+        "graph_to_cnn": 84,
+        "cnn_to_graph": 84,
+        "exchange_eval": 82
+      },
+      "expected_calls": {
+        "exchange_train": 2,
+        "exchange_eval": 82,
+        "graph_to_cnn": 84,
+        "to_pixels": 84,
+        "cnn_to_graph": 84,
+        "to_regions": 84
+      },
+      "gradient_parameter_tensor_count": 18,
+      "all_observed_gradients_finite_and_twice": true,
+      "required_projection_and_gate_gradients_nonzero": "asserted_by_validator",
+      "train_update_norms": {
+        "graph_to_cnn": [
+          7.652812957763672,
+          8.05506706237793
+        ],
+        "cnn_to_graph": [
+          1.3306751251220703,
+          1.230023980140686
+        ]
+      },
+      "gates": {
+        "graph_to_cnn": {
+          "min": 0.3482370972633362,
+          "max": 0.5412707328796387,
+          "mean": 0.4308080422250848,
+          "count": 63840
+        },
+        "cnn_to_graph": {
+          "min": 0.4088146984577179,
+          "max": 0.5261833071708679,
+          "mean": 0.46070162635861023,
+          "count": 1320
+        }
+      },
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "frozen_diagnostics": {
+        "status": "passed",
+        "test_tile_count": 41,
+        "count": 6205,
+        "missing_class_ids": [
+          3,
+          7
+        ],
+        "confusion_matches_training": true,
+        "metric_differences": {
+          "oa": 0,
+          "aa": 0,
+          "kappa": 0
+        },
+        "macro_f1_sklearn_difference": 0,
+        "parameters_and_buffers_unchanged": true,
+        "fused_spatial_counts": {
+          "1": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "2": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "3": {
+            "boundary": 0,
+            "interior": 6205
+          }
+        },
+        "branch_strata": {
+          "both_correct": {
+            "count": 0,
+            "fused_correct": 0,
+            "fused_accuracy": null
+          },
+          "cnn_only_correct": {
+            "count": 348,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "graph_only_correct": {
+            "count": 98,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "both_wrong": {
+            "count": 5759,
+            "fused_correct": 327,
+            "fused_accuracy": 0.05678069109220351
+          }
+        }
+      }
+    },
+    {
+      "variant": "cnn_to_graph",
+      "config": "configs/experiments/m6_spatial_cnn_to_graph.json",
+      "run_id": "m6_paviau_cnn_to_graph-s2026-e49210fe4ba7f6f38afd",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "interaction": {
+        "alignment_mode": "region",
+        "interaction_mode": "gated",
+        "interaction_direction": "cnn_to_graph",
+        "interaction_strength": 0.1,
+        "interaction_hidden_dim": 32,
+        "interaction_chunk_pixels": 16384,
+        "graph_update_mode": "none",
+        "graph_update_dim": 32,
+        "graph_update_mix": 0.5
+      },
+      "trace_calls": {
+        "exchange_train": 2,
+        "to_regions": 84,
+        "cnn_to_graph": 84,
+        "exchange_eval": 82
+      },
+      "expected_calls": {
+        "exchange_train": 2,
+        "exchange_eval": 82,
+        "graph_to_cnn": 0,
+        "to_pixels": 0,
+        "cnn_to_graph": 84,
+        "to_regions": 84
+      },
+      "gradient_parameter_tensor_count": 9,
+      "all_observed_gradients_finite_and_twice": true,
+      "required_projection_and_gate_gradients_nonzero": "asserted_by_validator",
+      "train_update_norms": {
+        "cnn_to_graph": [
+          1.2256276607513428,
+          1.214492917060852
+        ]
+      },
+      "gates": {
+        "cnn_to_graph": {
+          "min": 0.4057610332965851,
+          "max": 0.5040209293365479,
+          "mean": 0.44261852791815093,
+          "count": 1320
+        }
+      },
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "frozen_diagnostics": {
+        "status": "passed",
+        "test_tile_count": 41,
+        "count": 6205,
+        "missing_class_ids": [
+          3,
+          7
+        ],
+        "confusion_matches_training": true,
+        "metric_differences": {
+          "oa": 0,
+          "aa": 0,
+          "kappa": 0
+        },
+        "macro_f1_sklearn_difference": 0,
+        "parameters_and_buffers_unchanged": true,
+        "fused_spatial_counts": {
+          "1": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "2": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "3": {
+            "boundary": 0,
+            "interior": 6205
+          }
+        },
+        "branch_strata": {
+          "both_correct": {
+            "count": 0,
+            "fused_correct": 0,
+            "fused_accuracy": null
+          },
+          "cnn_only_correct": {
+            "count": 385,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "graph_only_correct": {
+            "count": 87,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "both_wrong": {
+            "count": 5733,
+            "fused_correct": 176,
+            "fused_accuracy": 0.030699459270887842
+          }
+        }
+      }
+    },
+    {
+      "variant": "graph_to_cnn",
+      "config": "configs/experiments/m6_spatial_graph_to_cnn.json",
+      "run_id": "m6_paviau_graph_to_cnn-s2026-0c6a64516d473e70e353",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "interaction": {
+        "alignment_mode": "region",
+        "interaction_mode": "gated",
+        "interaction_direction": "graph_to_cnn",
+        "interaction_strength": 0.1,
+        "interaction_hidden_dim": 32,
+        "interaction_chunk_pixels": 16384,
+        "graph_update_mode": "none",
+        "graph_update_dim": 32,
+        "graph_update_mix": 0.5
+      },
+      "trace_calls": {
+        "exchange_train": 2,
+        "to_pixels": 84,
+        "graph_to_cnn": 84,
+        "exchange_eval": 82
+      },
+      "expected_calls": {
+        "exchange_train": 2,
+        "exchange_eval": 82,
+        "graph_to_cnn": 84,
+        "to_pixels": 84,
+        "cnn_to_graph": 0,
+        "to_regions": 0
+      },
+      "gradient_parameter_tensor_count": 9,
+      "all_observed_gradients_finite_and_twice": true,
+      "required_projection_and_gate_gradients_nonzero": "asserted_by_validator",
+      "train_update_norms": {
+        "graph_to_cnn": [
+          7.652812957763672,
+          8.05490779876709
+        ]
+      },
+      "gates": {
+        "graph_to_cnn": {
+          "min": 0.34822481870651245,
+          "max": 0.5412912964820862,
+          "mean": 0.43079249303143724,
+          "count": 63840
+        }
+      },
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "frozen_diagnostics": {
+        "status": "passed",
+        "test_tile_count": 41,
+        "count": 6205,
+        "missing_class_ids": [
+          3,
+          7
+        ],
+        "confusion_matches_training": true,
+        "metric_differences": {
+          "oa": 0,
+          "aa": 0,
+          "kappa": 0
+        },
+        "macro_f1_sklearn_difference": 0,
+        "parameters_and_buffers_unchanged": true,
+        "fused_spatial_counts": {
+          "1": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "2": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "3": {
+            "boundary": 0,
+            "interior": 6205
+          }
+        },
+        "branch_strata": {
+          "both_correct": {
+            "count": 0,
+            "fused_correct": 0,
+            "fused_accuracy": null
+          },
+          "cnn_only_correct": {
+            "count": 349,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "graph_only_correct": {
+            "count": 211,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "both_wrong": {
+            "count": 5645,
+            "fused_correct": 312,
+            "fused_accuracy": 0.05527015057573074
+          }
+        }
+      }
+    },
+    {
+      "variant": "global",
+      "config": "configs/experiments/m6_spatial_global.json",
+      "run_id": "m6_paviau_global-s2026-364399a4a09c59c96959",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "interaction": {
+        "alignment_mode": "global",
+        "interaction_mode": "gated",
+        "interaction_direction": "both",
+        "interaction_strength": 0.1,
+        "interaction_hidden_dim": 32,
+        "interaction_chunk_pixels": 16384,
+        "graph_update_mode": "none",
+        "graph_update_dim": 32,
+        "graph_update_mix": 0.5
+      },
+      "trace_calls": {
+        "exchange_train": 2,
+        "to_pixels": 84,
+        "to_regions": 84,
+        "graph_to_cnn": 84,
+        "cnn_to_graph": 84,
+        "exchange_eval": 82
+      },
+      "expected_calls": {
+        "exchange_train": 2,
+        "exchange_eval": 82,
+        "graph_to_cnn": 84,
+        "to_pixels": 84,
+        "cnn_to_graph": 84,
+        "to_regions": 84
+      },
+      "gradient_parameter_tensor_count": 18,
+      "all_observed_gradients_finite_and_twice": true,
+      "required_projection_and_gate_gradients_nonzero": "asserted_by_validator",
+      "train_update_norms": {
+        "graph_to_cnn": [
+          7.608466148376465,
+          8.057881355285645
+        ],
+        "cnn_to_graph": [
+          1.3446717262268066,
+          1.2360646724700928
+        ]
+      },
+      "gates": {
+        "graph_to_cnn": {
+          "min": 0.3592802584171295,
+          "max": 0.5397408604621887,
+          "mean": 0.4312820613832402,
+          "count": 63840
+        },
+        "cnn_to_graph": {
+          "min": 0.40552636981010437,
+          "max": 0.5275253653526306,
+          "mean": 0.46138546430703364,
+          "count": 1320
+        }
+      },
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "frozen_diagnostics": {
+        "status": "passed",
+        "test_tile_count": 41,
+        "count": 6205,
+        "missing_class_ids": [
+          3,
+          7
+        ],
+        "confusion_matches_training": true,
+        "metric_differences": {
+          "oa": 0,
+          "aa": 0,
+          "kappa": 0
+        },
+        "macro_f1_sklearn_difference": 0,
+        "parameters_and_buffers_unchanged": true,
+        "fused_spatial_counts": {
+          "1": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "2": {
+            "boundary": 0,
+            "interior": 6205
+          },
+          "3": {
+            "boundary": 0,
+            "interior": 6205
+          }
+        },
+        "branch_strata": {
+          "both_correct": {
+            "count": 0,
+            "fused_correct": 0,
+            "fused_accuracy": null
+          },
+          "cnn_only_correct": {
+            "count": 347,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "graph_only_correct": {
+            "count": 117,
+            "fused_correct": 0,
+            "fused_accuracy": 0
+          },
+          "both_wrong": {
+            "count": 5741,
+            "fused_correct": 316,
+            "fused_accuracy": 0.055042675492074554
+          }
+        }
+      }
+    }
+  ],
+  "total_optimizer_steps": 12,
+  "raw_data_unchanged": true,
+  "training_process_peak_allocated_bytes": 41493504,
+  "training_process_peak_reserved_bytes": 56623104,
+  "limitations": [
+    "Two steps per variant do not establish convergence, accuracy ranking or mechanism benefit.",
+    "Missing test classes 3 and 7; complete nine-class AA unavailable.",
+    "All three real boundary bands empty; boundary metrics N/A.",
+    "Gate summaries aggregate observed train/validation/test messages; they are not calibrated reliability or independent samples.",
+    "No long training, multi-seed research ablation, E0b intervention or end-to-end cost benchmark."
+  ],
+  "started_at_utc": "2026-10-29T17:25:58.847776+00:00",
+  "finished_at_utc": "2026-10-29T17:26:42.523731+00:00"
+}

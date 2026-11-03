@@ -1,0 +1,1558 @@
+{
+  "schema_version": 1,
+  "repository": "Pioneer271828/Hyperspectral-Image-Classification",
+  "snapshot": {
+    "date": "2026-11-02",
+    "scope": "33 PRs and 36 non-PR Issues observed before Issue70; timestamps are source metadata, not independent chronology proof",
+    "source_urls": [
+      "https://api.github.com/repos/Pioneer271828/Hyperspectral-Image-Classification/pulls?state=all&per_page=100",
+      "https://api.github.com/repos/Pioneer271828/Hyperspectral-Image-Classification/issues?state=all&per_page=100"
+    ],
+    "pull_request_count": 33,
+    "open_pull_request_count": 33,
+    "issue_count": 36,
+    "commits_ahead_of_main": 102
+  },
+  "main": {
+    "ref": "main",
+    "commit": "018fe70fcbd3e902cd5fe0a05296bdd1d38d5bfb"
+  },
+  "baseline": {
+    "ref": "codex/issue-68-g3-run-provenance",
+    "commit": "6fa2d06747f79e90f95928b099ba2c3c0b18cbd0",
+    "tested_code_commit": "aa243eef45f4d0bb0868b888c6cc3252ce703e0f",
+    "engineering": "accepted",
+    "is_default_branch": false,
+    "scope": "Current pre-M4 functional baseline; latest aggregate tests plus prior module-specific evidence",
+    "evidence": [
+      "research/reports/G3_实际运行配置与记录一致性修复验收_20261102.md"
+    ],
+    "requires_full_history": true,
+    "source_fingerprint_count": 166
+  },
+  "tracking": {
+    "issue": 70,
+    "module_pull_request": 72,
+    "main_integration_pull_request": 71,
+    "main_integration_ref": "codex/integration-pre-m4-20261102",
+    "main_integration_state": "not_merged",
+    "next_module": "M4",
+    "main_merge_required_before_m4": false,
+    "historical_tracking_gaps": [
+      {"pull_request": 55, "tracked_by_issue": 70, "note": "Separate Issue creation was unconfirmed in PR55; do not invent an Issue55"}
+    ]
+  },
+  "pull_requests": [
+    {
+      "number": 2,
+      "title": "固定工程基线并建立远程 CPU/CUDA 验收与模块协作入口",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/2",
+      "base_ref": "main",
+      "base_sha": "018fe70fcbd3e902cd5fe0a05296bdd1d38d5bfb",
+      "head_ref": "codex/issue-1-baseline",
+      "head_sha": "8fa9155003b0828c38156aa16c2ae6a30284c7d6",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": null,
+      "included_in_baseline": true,
+      "issues": [
+        1
+      ]
+    },
+    {
+      "number": 4,
+      "title": "C0：统一配置、运行身份与可验证恢复的消融清单",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/4",
+      "base_ref": "codex/issue-1-baseline",
+      "base_sha": "8fa9155003b0828c38156aa16c2ae6a30284c7d6",
+      "head_ref": "codex/issue-3-c0-config",
+      "head_sha": "6c5e1b1f231cf8c1ec5667d7b6a574e69618a5cc",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 2,
+      "included_in_baseline": true,
+      "issues": [
+        3
+      ]
+    },
+    {
+      "number": 6,
+      "title": "C1a：登记已验证数据快照并冻结随机像素划分",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/6",
+      "base_ref": "codex/issue-3-c0-config",
+      "base_sha": "6c5e1b1f231cf8c1ec5667d7b6a574e69618a5cc",
+      "head_ref": "codex/issue-c1a-data",
+      "head_sha": "76912eae0ebe8c9f043ba19de024d7c6dc97cd1c",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 4,
+      "included_in_baseline": true,
+      "issues": [
+        5
+      ]
+    },
+    {
+      "number": 8,
+      "title": "C1b：空间观测隔离、训练区统计与构图访问契约",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/8",
+      "base_ref": "codex/issue-c1a-data",
+      "base_sha": "76912eae0ebe8c9f043ba19de024d7c6dc97cd1c",
+      "head_ref": "codex/c1b-spatial",
+      "head_sha": "fb57fb31b755e989488693d7fd990fff933483c5",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 6,
+      "included_in_baseline": true,
+      "issues": [
+        7
+      ]
+    },
+    {
+      "number": 10,
+      "title": "C1c：固定多空间块与 C0 严格训练闭环",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/10",
+      "base_ref": "codex/c1b-spatial",
+      "base_sha": "fb57fb31b755e989488693d7fd990fff933483c5",
+      "head_ref": "codex/c1c-spatial-training",
+      "head_sha": "82d56ebaf6da3a5c391f1e1b78cd5323655bdf19",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 8,
+      "included_in_baseline": true,
+      "issues": [
+        9
+      ]
+    },
+    {
+      "number": 12,
+      "title": "fix(M2): 修复 VCA 陈旧推理缓存与 eval 梯度截断",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/12",
+      "base_ref": "codex/c1c-spatial-training",
+      "base_sha": "82d56ebaf6da3a5c391f1e1b78cd5323655bdf19",
+      "head_ref": "codex/issue-11-m2-vca",
+      "head_sha": "d9007c36ec54cf3c882e36e64cd2eeac55f40168",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 10,
+      "included_in_baseline": true,
+      "issues": [
+        11
+      ]
+    },
+    {
+      "number": 14,
+      "title": "feat(M3): 区域图状态契约与无标签固定网格对照",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/14",
+      "base_ref": "codex/issue-11-m2-vca",
+      "base_sha": "d9007c36ec54cf3c882e36e64cd2eeac55f40168",
+      "head_ref": "codex/issue-13-m3-graph",
+      "head_sha": "b9ef4c98eea3a1df6f4ac4deebc2767fe94050cd",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 12,
+      "included_in_baseline": true,
+      "issues": [
+        13
+      ]
+    },
+    {
+      "number": 16,
+      "title": "refactor(M5): 统一两阶段骨干并接入图契约与消融配置",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/16",
+      "base_ref": "codex/issue-13-m3-graph",
+      "base_sha": "b9ef4c98eea3a1df6f4ac4deebc2767fe94050cd",
+      "head_ref": "codex/issue-15-m5-backbone",
+      "head_sha": "b2809302a44d1ff454004361a42d34001235616d",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 14,
+      "included_in_baseline": true,
+      "issues": [
+        15
+      ]
+    },
+    {
+      "number": 18,
+      "title": "feat(M8): 固定融合、可选 logits 与三头损失分项",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/18",
+      "base_ref": "codex/issue-15-m5-backbone",
+      "base_sha": "b2809302a44d1ff454004361a42d34001235616d",
+      "head_ref": "codex/issue-17-m8-fusion",
+      "head_sha": "0a4984507b64e945f24cc1c83b27e3b9ce4177a8",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 16,
+      "included_in_baseline": true,
+      "issues": [
+        17
+      ]
+    },
+    {
+      "number": 20,
+      "title": "feat(e0a): accept frozen evaluation and branch diagnostics",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/20",
+      "base_ref": "codex/issue-17-m8-fusion",
+      "base_sha": "0a4984507b64e945f24cc1c83b27e3b9ce4177a8",
+      "head_ref": "codex/issue-19-e0a-evaluation",
+      "head_sha": "637e21b23481150bc36fb8006c659cc0dc83d021",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 18,
+      "included_in_baseline": true,
+      "issues": [
+        19
+      ]
+    },
+    {
+      "number": 22,
+      "title": "feat(m6): accept aligned directional interaction and sparse gradient contracts",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/22",
+      "base_ref": "codex/issue-19-e0a-evaluation",
+      "base_sha": "637e21b23481150bc36fb8006c659cc0dc83d021",
+      "head_ref": "codex/issue-21-m6-interaction",
+      "head_sha": "d5b4825bacf823c21109ef0be997ec16921ad3f5",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 20,
+      "included_in_baseline": true,
+      "issues": [
+        21
+      ]
+    },
+    {
+      "number": 24,
+      "title": "feat(experiments): paired M6 screening and completed pilot audit",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/24",
+      "base_ref": "codex/issue-21-m6-interaction",
+      "base_sha": "d5b4825bacf823c21109ef0be997ec16921ad3f5",
+      "head_ref": "codex/issue-23-m6-screening",
+      "head_sha": "d9d540ed74264bb4a8d3b54b2cc6d5d9d5a80d28",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 22,
+      "included_in_baseline": true,
+      "issues": [
+        23
+      ]
+    },
+    {
+      "number": 26,
+      "title": "docs(research): add MiTA candidates and width redundancy validation plan",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/26",
+      "base_ref": "codex/issue-23-m6-screening",
+      "base_sha": "d9d540ed74264bb4a8d3b54b2cc6d5d9d5a80d28",
+      "head_ref": "codex/issue-25-paper-candidates",
+      "head_sha": "6a33755a7753f3401349545939bf6326d5d9afa6",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 24,
+      "included_in_baseline": true,
+      "issues": [
+        25
+      ]
+    },
+    {
+      "number": 28,
+      "title": "feat(diagnostics): audit frozen CNN graph and fused screening errors",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/28",
+      "base_ref": "codex/issue-25-paper-candidates",
+      "base_sha": "6a33755a7753f3401349545939bf6326d5d9afa6",
+      "head_ref": "codex/issue-27-branch-diagnostics",
+      "head_sha": "cac994bf62f5bc010cb16d9e041b129c45fd257e",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 26,
+      "included_in_baseline": true,
+      "issues": [
+        27
+      ]
+    },
+    {
+      "number": 30,
+      "title": "feat(diagnostics): reversible validation message interventions",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/30",
+      "base_ref": "codex/issue-27-branch-diagnostics",
+      "base_sha": "cac994bf62f5bc010cb16d9e041b129c45fd257e",
+      "head_ref": "codex/issue-29-message-intervention",
+      "head_sha": "5029be1a8c00662462e2d76b23f98f9ad45fc11b",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 28,
+      "included_in_baseline": true,
+      "issues": [
+        29
+      ]
+    },
+    {
+      "number": 32,
+      "title": "feat(diagnostics): validation-only frozen coordinate sensitivity",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/32",
+      "base_ref": "codex/issue-29-message-intervention",
+      "base_sha": "5029be1a8c00662462e2d76b23f98f9ad45fc11b",
+      "head_ref": "codex/issue-31-coordinate-intervention",
+      "head_sha": "6a06e808b1915d257770380adec2f3df1d737ba8",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 30,
+      "included_in_baseline": true,
+      "issues": [
+        31
+      ]
+    },
+    {
+      "number": 34,
+      "title": "feat(experiments): paired B0 coordinate retraining",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/34",
+      "base_ref": "codex/issue-31-coordinate-intervention",
+      "base_sha": "6a06e808b1915d257770380adec2f3df1d737ba8",
+      "head_ref": "codex/issue-33-coordinate-retraining",
+      "head_sha": "ee5f0a34c95d045fb1901284d39a9b26b8c77c9c",
+      "state": "open",
+      "draft": true,
+      "merged": false,
+      "base_pr": 32,
+      "included_in_baseline": true,
+      "issues": [
+        33
+      ]
+    },
+    {
+      "number": 36,
+      "title": "docs(research): three accuracy-focused axes and pruning/quantization plan",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/36",
+      "base_ref": "codex/issue-33-coordinate-retraining",
+      "base_sha": "ee5f0a34c95d045fb1901284d39a9b26b8c77c9c",
+      "head_ref": "codex/issue-35-cross-sensor-readiness",
+      "head_sha": "1d895ac544781d11715783f70c95912f789085e5",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 34,
+      "included_in_baseline": true,
+      "issues": [
+        35
+      ]
+    },
+    {
+      "number": 38,
+      "title": "docs: stage unified activation and weight training monitoring",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/38",
+      "base_ref": "codex/issue-35-cross-sensor-readiness",
+      "base_sha": "1d895ac544781d11715783f70c95912f789085e5",
+      "head_ref": "codex/issue-37-monitoring-plan",
+      "head_sha": "c0f438e3abf21738323758d46a89b3569b09953b",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 36,
+      "included_in_baseline": true,
+      "issues": [
+        37
+      ]
+    },
+    {
+      "number": 40,
+      "title": "fix(screening): preserve successful artifacts across repeated resume",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/40",
+      "base_ref": "codex/issue-37-monitoring-plan",
+      "base_sha": "c0f438e3abf21738323758d46a89b3569b09953b",
+      "head_ref": "codex/issue-39-resume-summary",
+      "head_sha": "d60c07a4d7340e78ffd817d042cd7c4174b31938",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 38,
+      "included_in_baseline": true,
+      "issues": [
+        39
+      ]
+    },
+    {
+      "number": 42,
+      "title": "docs: translate project README into English",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/42",
+      "base_ref": "codex/issue-39-resume-summary",
+      "base_sha": "d60c07a4d7340e78ffd817d042cd7c4174b31938",
+      "head_ref": "codex/issue-41-english-readme",
+      "head_sha": "557976099b21b3b5dea42098fa2eed411e2eb045",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 40,
+      "included_in_baseline": true,
+      "issues": [
+        41
+      ]
+    },
+    {
+      "number": 44,
+      "title": "feat(monitoring): opt-in activation frequency and weight statistics",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/44",
+      "base_ref": "codex/issue-41-english-readme",
+      "base_sha": "557976099b21b3b5dea42098fa2eed411e2eb045",
+      "head_ref": "codex/issue-43-monitoring-readonly",
+      "head_sha": "c206762bd7332270642f5f666508614858ad27c3",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 42,
+      "included_in_baseline": true,
+      "issues": [
+        43
+      ]
+    },
+    {
+      "number": 46,
+      "title": "feat(compression): explicit reversible training weight masks",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/46",
+      "base_ref": "codex/issue-43-monitoring-readonly",
+      "base_sha": "c206762bd7332270642f5f666508614858ad27c3",
+      "head_ref": "codex/issue-45-reversible-masks",
+      "head_sha": "7a3e3e1f2c7b3ec12468af14fcc1105147f69e0d",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 44,
+      "included_in_baseline": true,
+      "issues": [
+        45
+      ]
+    },
+    {
+      "number": 48,
+      "title": "feat(compression): masked-training checkpoint and optimizer recovery",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/48",
+      "base_ref": "codex/issue-45-reversible-masks",
+      "base_sha": "7a3e3e1f2c7b3ec12468af14fcc1105147f69e0d",
+      "head_ref": "codex/issue-47-mask-checkpoint",
+      "head_sha": "3a7b21b0c21089407b4416d9cf9873cce0d21a30",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 46,
+      "included_in_baseline": true,
+      "issues": [
+        47
+      ]
+    },
+    {
+      "number": 50,
+      "title": "feat(data): real spectral subsets with synchronized metadata (M1)",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/50",
+      "base_ref": "codex/issue-47-mask-checkpoint",
+      "base_sha": "3a7b21b0c21089407b4416d9cf9873cce0d21a30",
+      "head_ref": "codex/issue-49-spectral-subsets",
+      "head_sha": "978cbc14604a843c5c23a1a1c88dab1e48a41f86",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 48,
+      "included_in_baseline": true,
+      "issues": [
+        49
+      ]
+    },
+    {
+      "number": 52,
+      "title": "feat(protocol): freeze spatial cross-sensor few-shot support task",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/52",
+      "base_ref": "codex/issue-49-spectral-subsets",
+      "base_sha": "978cbc14604a843c5c23a1a1c88dab1e48a41f86",
+      "head_ref": "codex/issue-51-transfer-protocol",
+      "head_sha": "b015288383f00fd27e53083b3a1c8d80d069c432",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 50,
+      "included_in_baseline": true,
+      "issues": [
+        51
+      ]
+    },
+    {
+      "number": 54,
+      "title": "feat(transfer): G3 source pretraining and fixed-budget target adaptation",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/54",
+      "base_ref": "codex/issue-51-transfer-protocol",
+      "base_sha": "b015288383f00fd27e53083b3a1c8d80d069c432",
+      "head_ref": "codex/issue-53-transfer-runner",
+      "head_sha": "85308ee5e72d06c4059363344fdd25c95dae275a",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 52,
+      "included_in_baseline": true,
+      "issues": [
+        53
+      ]
+    },
+    {
+      "number": 55,
+      "title": "Report G3 three-seed replication: unstable OA gains and class tradeoffs",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/55",
+      "base_ref": "codex/issue-55-g3-pilot",
+      "base_sha": "3279fce56035e9cc008cc496b55a11413c438127",
+      "head_ref": "codex/g3-paired-replication",
+      "head_sha": "8609a20a2f4b8b8eb3194eb7cdb22fdb99d544b6",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": null,
+      "included_in_baseline": true,
+      "issues": []
+    },
+    {
+      "number": 57,
+      "title": "Diagnose G3 support exposure and define controlled accuracy experiments",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/57",
+      "base_ref": "codex/g3-paired-replication",
+      "base_sha": "8609a20a2f4b8b8eb3194eb7cdb22fdb99d544b6",
+      "head_ref": "codex/issue-56-g3-diagnostics",
+      "head_sha": "2090a56b7e3b0b9de516b090555a890582c7678b",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 55,
+      "included_in_baseline": true,
+      "issues": [
+        56
+      ]
+    },
+    {
+      "number": 63,
+      "title": "G3-E4: add controlled class-first tile sampling experiment",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/63",
+      "base_ref": "codex/g3-finetune-lr",
+      "base_sha": "8235b4963af07d3dd77ab07c1875eb53f6e7b7b2",
+      "head_ref": "codex/issue-62-class-sampling",
+      "head_sha": "baa0217ffdffbd75627bbd81e2604613d05b5490",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": null,
+      "included_in_baseline": true,
+      "issues": [
+        62
+      ]
+    },
+    {
+      "number": 65,
+      "title": "fix(m5): keep dense graph conversions fresh across mutations and gradients",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/65",
+      "base_ref": "codex/issue-62-class-sampling",
+      "base_sha": "baa0217ffdffbd75627bbd81e2604613d05b5490",
+      "head_ref": "codex/issue-64-dense-graph-cache",
+      "head_sha": "4123103e4ae4ac13cdaf982cf45f7ef2ce16baf2",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 63,
+      "included_in_baseline": true,
+      "issues": [
+        64
+      ]
+    },
+    {
+      "number": 67,
+      "title": "fix(m5): inherit placement and mode for dynamically added tasks",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/67",
+      "base_ref": "codex/issue-64-dense-graph-cache",
+      "base_sha": "4123103e4ae4ac13cdaf982cf45f7ef2ce16baf2",
+      "head_ref": "codex/issue-66-dynamic-task-state",
+      "head_sha": "2d8e15e7d76d38d9f76a94351283eaa606d3e48f",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 65,
+      "included_in_baseline": true,
+      "issues": [
+        66
+      ]
+    },
+    {
+      "number": 69,
+      "title": "fix(g3): save and verify actual stage configuration and seed roles",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/69",
+      "base_ref": "codex/issue-66-dynamic-task-state",
+      "base_sha": "2d8e15e7d76d38d9f76a94351283eaa606d3e48f",
+      "head_ref": "codex/issue-68-g3-run-provenance",
+      "head_sha": "6fa2d06747f79e90f95928b099ba2c3c0b18cbd0",
+      "state": "open",
+      "draft": false,
+      "merged": false,
+      "base_pr": 67,
+      "included_in_baseline": true,
+      "issues": [
+        68
+      ]
+    }
+  ],
+  "bridge_commits": [
+    {
+      "sha": "aba22bc91abf5e13901ba5b0c2622b615eecf49c",
+      "subject": "docs(experiment): preregister fixed-budget G3 pilot",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3P1_跨传感器完整初筛运行记录_20261101.md"
+      ]
+    },
+    {
+      "sha": "3279fce56035e9cc008cc496b55a11413c438127",
+      "subject": "docs(experiment): record active G3 pilot and pending GitHub publication",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3P1_跨传感器完整初筛运行记录_20261101.md"
+      ]
+    },
+    {
+      "sha": "8957578ff49237f1080835da87d34b2c4cb6920e",
+      "subject": "feat: prepare independent target validation labels as separate protocol",
+      "issues": [
+        58
+      ],
+      "evidence": [
+        "research/reports/G3V1_独立目标验证协议可行性_20261102.md"
+      ]
+    },
+    {
+      "sha": "8a14ae47d887ab3787fd051cf6bd27bf05e712d5",
+      "subject": "docs: record missing-class validation feasibility failure",
+      "issues": [
+        58
+      ],
+      "evidence": [
+        "research/reports/G3V1_独立目标验证协议可行性_20261102.md"
+      ]
+    },
+    {
+      "sha": "cdfe0e366ea312e8049f0da25749b3168510678b",
+      "subject": "feat: audit label coverage and fixed train holdout feasibility",
+      "issues": [
+        59
+      ],
+      "evidence": [
+        "research/reports/G3V2_标签完整性与空间覆盖审计_20261102.md"
+      ]
+    },
+    {
+      "sha": "222fd658a948baa529f67b2d59336f1b0ee7f6ba",
+      "subject": "docs: report complete class presence and failed label-blind holdout",
+      "issues": [
+        59
+      ],
+      "evidence": [
+        "research/reports/G3V2_标签完整性与空间覆盖审计_20261102.md"
+      ]
+    },
+    {
+      "sha": "438bc55a38e123658b3a00b26e64a7f7191e0a3e",
+      "subject": "feat: freeze oracle-assisted spatial development split",
+      "issues": [
+        60
+      ],
+      "evidence": [
+        "research/reports/G3V3_空间分层开发协议冻结_20261102.md"
+      ]
+    },
+    {
+      "sha": "5c06c48fda88c5ae7130310314dc94b5c83bd9e0",
+      "subject": "docs: report class-covered development protocol acceptance",
+      "issues": [
+        60
+      ],
+      "evidence": [
+        "research/reports/G3V3_空间分层开发协议冻结_20261102.md"
+      ]
+    },
+    {
+      "sha": "ac889eab9a64023c96844bff99e4f5cc101fffaf",
+      "subject": "feat: isolate development adaptation and validation-selected checkpoints",
+      "issues": [
+        61
+      ],
+      "evidence": [
+        "research/reports/G3V4_开发分区训练接入与短闭环_20261102.md"
+      ]
+    },
+    {
+      "sha": "f4029d11ad29acef593ff9808da5aa6314de3b6a",
+      "subject": "docs: accept isolated development short loop and schedule budget experiment",
+      "issues": [
+        61
+      ],
+      "evidence": [
+        "research/reports/G3V4_开发分区训练接入与短闭环_20261102.md"
+      ]
+    },
+    {
+      "sha": "62aad755f962df130057d5a694124285a390d852",
+      "subject": "experiment: preregister and run paired development budget comparison",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3E1_训练预算对照_20261102.md"
+      ]
+    },
+    {
+      "sha": "ccdae0a20a755d361dcce1f9abcddc7c24696149",
+      "subject": "docs: complete budget experiment analysis and validation improvement evidence",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3E1_训练预算对照_20261102.md"
+      ]
+    },
+    {
+      "sha": "2c63ab7f42c480a1c37aea3238a9806926de76b4",
+      "subject": "experiment: replicate budget comparison on two new paired seeds",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3E2_预算配对种子复验_20261102.md"
+      ]
+    },
+    {
+      "sha": "dcfcf8cb0067e1db54a0e299c7532bfee03c6c66",
+      "subject": "docs: complete paired budget replication with per-run analysis",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3E2_预算配对种子复验_20261102.md"
+      ]
+    },
+    {
+      "sha": "99924b73f0db8a3a39ab8e3c52baac93604f3d16",
+      "subject": "experiment: compare lower backbone LR against verified cached baselines",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3E3_微调骨干学习率对照_20261102.md"
+      ]
+    },
+    {
+      "sha": "28307a2105f49c59630bf2928b181efed2e1e569",
+      "subject": "docs: freeze future formal seed list and distinguish exploratory paired runs",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3E3_微调骨干学习率对照_20261102.md"
+      ]
+    },
+    {
+      "sha": "8235b4963af07d3dd77ab07c1875eb53f6e7b7b2",
+      "subject": "docs: reject lower-LR candidate after paired validation analysis",
+      "issues": [],
+      "evidence": [
+        "research/reports/G3E3_微调骨干学习率对照_20261102.md"
+      ]
+    }
+  ],
+  "issues": [
+    {
+      "number": 1,
+      "title": "[P0 / Baseline] 固定当前工程基线并建立远程容器验收入口",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/1",
+      "linked_prs": [
+        2
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 3,
+      "title": "[C0 / P0] 统一配置校验、运行身份与可恢复的消融清单",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/3",
+      "linked_prs": [
+        4
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 5,
+      "title": "[C1a] 数据快照登记与固定随机像素划分",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/5",
+      "linked_prs": [
+        6
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 7,
+      "title": "[C1b] 空间分区、训练区统计与分区独立构图契约",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/7",
+      "linked_prs": [
+        8
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 9,
+      "title": "[C1c] 预声明多空间块与严格训练适配器",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/9",
+      "linked_prs": [
+        10
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 11,
+      "title": "[M2] VCA 缓存生命周期修复与元数据接口回归",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/11",
+      "linked_prs": [
+        12
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 13,
+      "title": "[M3] 区域图状态契约、无标签网格对照与诊断回归",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/13",
+      "linked_prs": [
+        14
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 15,
+      "title": "[M5] 统一两阶段骨干调度并接入 GraphState 与图消融配置",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/15",
+      "linked_prs": [
+        16
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 17,
+      "title": "[M8] 固定融合、可选 logits 与三头损失分项契约",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/17",
+      "linked_prs": [
+        18
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 19,
+      "title": "[E0a] 冻结预测评估与诊断：已验收，待评审",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/19",
+      "linked_prs": [
+        20
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 21,
+      "title": "[M6] 对齐与选择性交互：工程已验收，待评审",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/21",
+      "linked_prs": [
+        22
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 23,
+      "title": "[实验] PaviaU B0/Add/Gated：单种子初筛与逐类曲线复核完成",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/23",
+      "linked_prs": [
+        24
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 25,
+      "title": "[规划] MiTA候选与遥感宽度冗余评审完成，待评审",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/25",
+      "linked_prs": [
+        26
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 27,
+      "title": "[诊断] 冻结三路逐类错误与门控复核完成，待评审",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/27",
+      "linked_prs": [
+        28
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 29,
+      "title": "[E0b-消息干预] 验证区四条件诊断完成，待评审",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/29",
+      "linked_prs": [
+        30
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 31,
+      "title": "[E0b] 冻结验证区坐标依赖诊断",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/31",
+      "linked_prs": [
+        32
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 33,
+      "title": "[E0b] B0同预算坐标重训对照",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/33",
+      "linked_prs": [
+        34
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 35,
+      "title": "[E4a-0] 跨传感器任务就绪核查与精度/压缩路线",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/35",
+      "linked_prs": [
+        36
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 37,
+      "title": "[MON-P] 将RM式统一训练监测纳入三主线计划",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/37",
+      "linked_prs": [
+        38
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 39,
+      "title": "[fix] 恢复跳过保持成功实验摘要与产物位置",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/39",
+      "linked_prs": [
+        40
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 41,
+      "title": "[docs] Translate project README into English",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/41",
+      "linked_prs": [
+        42
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 43,
+      "title": "[MON-0/1] 只读激活频率与权重采集",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/43",
+      "linked_prs": [
+        44
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 45,
+      "title": "[MASK-1] 显式可逆权重掩码与训练正确性",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/45",
+      "linked_prs": [
+        46
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 47,
+      "title": "[MASK-2] 掩码训练检查点与按参数名恢复优化器",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/47",
+      "linked_prs": [
+        48
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 49,
+      "title": "[M1] 真实波段子集与元数据同步",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/49",
+      "linked_prs": [
+        50
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 51,
+      "title": "[E4a-1] 冻结跨传感器少样本协议与标签访问契约",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/51",
+      "linked_prs": [
+        52
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 53,
+      "title": "[E4a-2] G3源预训练与固定预算目标适配入口",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/53",
+      "linked_prs": [
+        54
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 56,
+      "title": "G3-D1: diagnose support exposure and optimization before accuracy changes",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/56",
+      "linked_prs": [
+        57
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 58,
+      "title": "G3-V1: freeze independent target validation labels without changing old G3",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/58",
+      "linked_prs": [],
+      "bridge_commits": [
+        "8957578ff49237f1080835da87d34b2c4cb6920e",
+        "8a14ae47d887ab3787fd051cf6bd27bf05e712d5"
+      ],
+      "tracking_note": "Bridge-stage evidence below; no invented independent PR"
+    },
+    {
+      "number": 59,
+      "title": "G3-V2: audit label coverage and fixed train-block validation feasibility",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/59",
+      "linked_prs": [],
+      "bridge_commits": [
+        "cdfe0e366ea312e8049f0da25749b3168510678b",
+        "222fd658a948baa529f67b2d59336f1b0ee7f6ba"
+      ],
+      "tracking_note": "Bridge-stage evidence below; no invented independent PR"
+    },
+    {
+      "number": 60,
+      "title": "G3-V3: freeze deterministic class-covered spatial development split",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/60",
+      "linked_prs": [],
+      "bridge_commits": [
+        "438bc55a38e123658b3a00b26e64a7f7191e0a3e",
+        "5c06c48fda88c5ae7130310314dc94b5c83bd9e0"
+      ],
+      "tracking_note": "Bridge-stage evidence below; no invented independent PR"
+    },
+    {
+      "number": 61,
+      "title": "G3-V4: role-isolated target adaptation and validation-selected short loop",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/61",
+      "linked_prs": [],
+      "bridge_commits": [
+        "ac889eab9a64023c96844bff99e4f5cc101fffaf",
+        "f4029d11ad29acef593ff9808da5aa6314de3b6a"
+      ],
+      "tracking_note": "Bridge-stage evidence below; no invented independent PR"
+    },
+    {
+      "number": 62,
+      "title": "G3-E4: paired class-participation sampler ablation at 5000 target updates",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/62",
+      "linked_prs": [
+        63
+      ],
+      "bridge_commits": [],
+      "tracking_note": "Completed evidence in PR63; completion summary reconciled by Issue70"
+    },
+    {
+      "number": 64,
+      "title": "[M5 fix] Invalidate dense adjacency conversion cache safely",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/64",
+      "linked_prs": [
+        65
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 66,
+      "title": "[M5 fix] Inherit placement and mode when registering a task dynamically",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/66",
+      "linked_prs": [
+        67
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    },
+    {
+      "number": 68,
+      "title": "[C0/E4a fix] Bind G3 saved configuration to actual stage execution",
+      "state": "open",
+      "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/68",
+      "linked_prs": [
+        69
+      ],
+      "bridge_commits": [],
+      "tracking_note": "GitHub open state is preserved; delivery evidence is separate"
+    }
+  ],
+  "modules": [
+    {
+      "id": "baseline",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "not_applicable",
+      "integration": "pending_main_review",
+      "issues": [
+        1
+      ],
+      "prs": [
+        2
+      ],
+      "evidence": [
+        "research/reports/baseline_2026-10-29.md"
+      ],
+      "scope": "冻结工程起点；不是后续研究效果"
+    },
+    {
+      "id": "C0",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "not_applicable",
+      "integration": "pending_main_review",
+      "issues": [
+        3,
+        68
+      ],
+      "prs": [
+        4,
+        69
+      ],
+      "evidence": [
+        "research/reports/C0_配置与实验记录模块交付_2026-10-29.md",
+        "research/reports/G3_实际运行配置与记录一致性修复验收_20261102.md"
+      ],
+      "scope": "配置/记录及G3实际设置修复"
+    },
+    {
+      "id": "C1",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "not_applicable",
+      "integration": "pending_main_review",
+      "issues": [
+        5,
+        7,
+        9
+      ],
+      "prs": [
+        6,
+        8,
+        10
+      ],
+      "evidence": [
+        "research/reports/C1a_数据登记与固定划分_20261029.md",
+        "research/reports/C1b_空间访问契约_20261029.md",
+        "research/reports/C1c_严格空间训练闭环_20261029.md"
+      ],
+      "scope": "数据接口及空间访问；正式多折另验收"
+    },
+    {
+      "id": "M2",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        11
+      ],
+      "prs": [
+        12
+      ],
+      "evidence": [
+        "research/reports/M2_VCA接口与缓存回归_20261029.md"
+      ],
+      "scope": "VCA接口/缓存；公平适配器精度对照未完成"
+    },
+    {
+      "id": "M3",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        13
+      ],
+      "prs": [
+        14
+      ],
+      "evidence": [
+        "research/reports/M3_区域图契约与无标签对照_20261029.md"
+      ],
+      "scope": "图契约；固定/学习图研究对照未完成"
+    },
+    {
+      "id": "M5",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        15,
+        64,
+        66
+      ],
+      "prs": [
+        16,
+        65,
+        67
+      ],
+      "evidence": [
+        "research/reports/M5_统一两阶段骨干与图契约接入_20261029.md",
+        "research/reports/M5_稠密图缓存修复验收_20261102.md",
+        "research/reports/M5_动态新增任务头状态继承验收_20261102.md"
+      ],
+      "scope": "骨干及两项修复；独立单分支/图对照未完成"
+    },
+    {
+      "id": "M8",
+      "implementation": "partial",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        17
+      ],
+      "prs": [
+        18
+      ],
+      "evidence": [
+        "research/reports/M8_固定融合与损失契约验收_20261029.md"
+      ],
+      "scope": "固定融合/三头损失；可选门控与共享语义头未完成"
+    },
+    {
+      "id": "E0",
+      "implementation": "partial",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        19,
+        27,
+        29,
+        31,
+        33
+      ],
+      "prs": [
+        20,
+        28,
+        30,
+        32,
+        34,
+        40
+      ],
+      "evidence": [
+        "research/reports/E0a_冻结预测评估与诊断验收_20261029.md",
+        "research/reports/M6_冻结三路逐类错误与门控诊断_20261030.md",
+        "research/reports/E0b_B0坐标重训启动与验收_20261031.md"
+      ],
+      "scope": "已有指标和部分干预；边界/更多干预/成本仍缺；PR34仍Draft"
+    },
+    {
+      "id": "M6",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "pilot_no_stable_gain",
+      "integration": "pending_main_review",
+      "issues": [
+        21,
+        23
+      ],
+      "prs": [
+        22,
+        24
+      ],
+      "evidence": [
+        "research/reports/M6_对齐与选择性交互验收_20261029.md",
+        "research/reports/M6_完整初筛逐类与验证曲线分析_20261030.md"
+      ],
+      "scope": "现有PaviaU初筛未证明OA提高"
+    },
+    {
+      "id": "M7",
+      "implementation": "partial",
+      "engineering": "pending",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [],
+      "prs": [],
+      "evidence": [],
+      "scope": "已有边权代码，缺独立验收/归一化控制/二因素"
+    },
+    {
+      "id": "M4",
+      "implementation": "planned",
+      "engineering": "pending",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [],
+      "prs": [],
+      "evidence": [],
+      "scope": "下一研究机制；有效边界标签数为0，需同步评价协议"
+    },
+    {
+      "id": "M1",
+      "implementation": "partial",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        49
+      ],
+      "prs": [
+        50
+      ],
+      "evidence": [
+        "research/reports/M1_真实波段子集与元数据同步验收_20261031.md"
+      ],
+      "scope": "独立API验收；实际训练仍需接入"
+    },
+    {
+      "id": "E1",
+      "implementation": "planned",
+      "engineering": "pending",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [],
+      "prs": [],
+      "evidence": [],
+      "scope": "观测覆盖描述、调制与独立消融未实现"
+    },
+    {
+      "id": "E4a",
+      "implementation": "partial",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        51
+      ],
+      "prs": [
+        52
+      ],
+      "evidence": [
+        "research/reports/E4a1_跨传感器少样本协议冻结验收_20261031.md"
+      ],
+      "scope": "单向少样本协议；共享语义/更多传感器/家族留出未完成"
+    },
+    {
+      "id": "E4a-2",
+      "implementation": "partial",
+      "engineering": "accepted",
+      "empirical": "development_candidate",
+      "integration": "pending_main_review",
+      "issues": [
+        53,
+        58,
+        59,
+        60,
+        61,
+        62,
+        68
+      ],
+      "prs": [
+        54,
+        55,
+        57,
+        63,
+        69
+      ],
+      "evidence": [
+        "research/reports/E4a2_G3训练入口与预验收_20261031.md",
+        "research/reports/G3P2_三种子配对复验结果_20261102.md",
+        "research/reports/G3V4_开发分区训练接入与短闭环_20261102.md",
+        "research/reports/G3E4_类别参与采样完整结果_20261102.md",
+        "research/reports/G3_实际运行配置与记录一致性修复验收_20261102.md"
+      ],
+      "scope": "单向G3流程；采样收益仅45标签开发验证，两种子候选"
+    },
+    {
+      "id": "MON-01",
+      "implementation": "partial",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        37,
+        43
+      ],
+      "prs": [
+        38,
+        44
+      ],
+      "evidence": [
+        "research/reports/MON01_只读激活与权重采集验收_20261031.md"
+      ],
+      "scope": "有限只读API；MON-2/3/4和开销目标待验收"
+    },
+    {
+      "id": "MASK-1",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        45
+      ],
+      "prs": [
+        46
+      ],
+      "evidence": [
+        "research/reports/MASK1_可逆权重掩码工程验收_20261031.md"
+      ],
+      "scope": "显式掩码工程；不是结构剪枝/实际加速"
+    },
+    {
+      "id": "MASK-2",
+      "implementation": "delivered",
+      "engineering": "accepted",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        47
+      ],
+      "prs": [
+        48
+      ],
+      "evidence": [
+        "research/reports/MASK2_掩码训练保存恢复验收_20261031.md"
+      ],
+      "scope": "掩码恢复；G3模型checkpoint不因此获得精确续训"
+    },
+    {
+      "id": "COMPRESSION",
+      "implementation": "planned",
+      "engineering": "pending",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        35
+      ],
+      "prs": [
+        36
+      ],
+      "evidence": [],
+      "scope": "结构裁剪/PTQ/QAT/等预算恢复及速度对照待完成"
+    },
+    {
+      "id": "OPTIONAL",
+      "implementation": "planned",
+      "engineering": "pending",
+      "empirical": "pending",
+      "integration": "pending_main_review",
+      "issues": [
+        25
+      ],
+      "prs": [
+        26
+      ],
+      "evidence": [
+        "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md"
+      ],
+      "scope": "E2/E3/MiTA/E4b/E4c按证据选做"
+    }
+  ],
+  "research_order": [
+    "M4",
+    "M1-training",
+    "E1",
+    "MON-2/3",
+    "structured_pruning",
+    "PTQ/QAT"
+  ],
+  "shared_paths_policy": {
+    "owner": "one integration owner per active task",
+    "paths": [
+      "model/VCASAHGCN.py",
+      "model/research_config.py",
+      "model/checkpoint_io.py",
+      "train_vca_multidataset.py"
+    ],
+    "rule": "Separate branches/worktrees and unique path owner only when collaboration is explicitly requested; shared interface edits integrated serially"
+  },
+  "delivery_validation": {
+    "tested_commit": "2938698540b4eb51b4098aa781dd5e984b1613e1",
+    "report": "research/reports/交付台账与M4前基线登记验收_20261102.md",
+    "cpu_regression": {"passed": 206, "total": 206},
+    "native_gpu_cases": 11,
+    "cpu_exact_neutrality_control": 1,
+    "delivery_specific_tests": 5,
+    "rejected_cli_inputs": ["wrong_sha", "dirty_checkout", "shallow_history"],
+    "production_implementation_unchanged": true,
+    "scope": "Offline snapshot/clone verification; native GPU stages plus exact CPU numerical control. Main review remains pending."
+  }
+}
