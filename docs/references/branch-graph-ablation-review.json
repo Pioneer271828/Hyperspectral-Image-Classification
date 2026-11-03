@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-11-03",
+  "issue": 109,
+  "papers": [
+    {"url":"https://arxiv.org/html/1609.02907", "version":"v4", "sections_read":["2.1","2.2","3.1"], "use":"Symmetric renormalization with self loops for a fixed ordinary region graph; not the original citation-network benchmark or full GCN architecture."},
+    {"url":"https://arxiv.org/html/1809.09401v3", "version":"v3", "sections_read":["Hypergraph learning statement","Spectral convolution on hypergraph"], "use":"Distinguish hypergraph propagation from ordinary graph and identity controls; preserve the project's accepted SAHGCN propagation rather than substituting upstream graphs."}
+  ],
+  "upstream": [
+    {"repository":"https://github.com/tkipf/gcn", "kind":"official_author_implementation", "commit":"39a4089fe72ad9f055ed6fdb9746abdcfebc4d81", "source_read":["gcn/utils.py:normalize_adj/preprocess_adj"], "license_path":"LICENCE", "license_spdx":"MIT", "license_scope":"Actual root LICENCE read from pinned Git object; copyright Thomas Kipf2016. No claim about arbitrary external datasets or dependencies.", "source_copied":false, "code_executed":false},
+    {"repository":"https://github.com/iMoonLab/HGNN", "kind":"official_author_team_implementation", "commit":"6212e8a43e75105b7fda7b169fc0063070861bb5", "source_read":["utils/hypergraph_utils.py:generate_G_from_H/_generate_G_from_H"], "license_path":"LICENSE", "license_spdx":"MIT", "license_scope":"Actual root LICENSE read from pinned Git object; copyright Yue's Group of THU2018. No license claim on this project's pre-existing imported code.", "source_copied":false, "code_executed":false}
+  ],
+  "decision":"Reuse existing project VCA/denoise/SSConv/HGCN blocks, loss and continuation code. Independently implement a small geometry-only centroid4NN union and published symmetric normalization. No external code, trainer, split, dependency or data incorporated. No upstream reproduction claimed.",
+  "control_limits":"Q is the same frozen train-label-LDA/SLIC assignment in every arm; only newly built ordinary edges are geometry-only. Hypergraph-versus-ordinary changes construction/neighborhood/weights, so it is a propagation-control comparison, not isolation of only high-order structure. Identity retains region pooling/broadcast and learned nonlinear layers. Independent single branches have different parameter counts; primary-only dual control removes auxiliary-supervision confounding but does not equalize capacity.",
+  "access_failures":["GCN raw LICENSE returned404 because its actual filename is LICENCE.","Raw LICENSE.md and HGNN pinned license web fetches returned cache errors. Bounded fallback read actual pinned licenses with Git object commands; HGNN and GCN source were not executed."],
+  "verification":"Meaningful CPU/GPU model/loss/init/removal/graph/serialization/resume tests and6x12-step train/val-only real acceptance. Full3seed6arm accuracy campaign remains separately preregistered and not executed by this engineering gate. Existing default behavior must match the parent."
+}

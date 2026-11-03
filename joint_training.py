@@ -199,11 +199,13 @@ def _completed(directory,identity,settings,schedule):
 
 
 def run_training(settings,items,directory,provenance,source,*,resume=False,
-                 stop_after=None,device=None,finish_guard=None):
+                 stop_after=None,device=None,finish_guard=None,runtime_adapter=None):
     """No test scoring; interruptions save a cursor without extra validation."""
     from model.research_config import ResearchConfig
     from joint_calibrated_selection import enabled,validation_candidate,load_selected
-    calibrated_selection=enabled(settings)
+    calibrated_selection=(enabled(settings) if runtime_adapter is None else runtime_adapter.validate(settings))
+    step_fn=train_step if runtime_adapter is None else runtime_adapter.train_step
+    snapshot=validation_snapshot if runtime_adapter is None else runtime_adapter.validation_snapshot
     if tuple(items)!=NAMES or any(any(k.startswith('test_') for k in i) for i in items.values()):
         raise ValueError('Exactly three ordered train/validation-only prepared tasks required')
     schedule=schedule_for(settings)
@@ -233,7 +235,8 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
         random.seed(settings['model_seed'])
         if device.type=='cuda': torch.cuda.manual_seed_all(settings['model_seed'])
         items={n:{k:v.to(device) if torch.is_tensor(v) else v for k,v in i.items()} for n,i in items.items()}
-        model=config.build_model({n:i['class_num'] for n,i in items.items()}).to(device)
+        counts={n:i['class_num'] for n,i in items.items()}
+        model=(config.build_model(counts) if runtime_adapter is None else runtime_adapter.build_model(config,counts)).to(device)
         heads=list(model.heads.parameters())+list(model.hgnn_heads.parameters())+list(model.cnn_heads.parameters())
         optimizer=torch.optim.Adam([{'params':model.backbone.parameters(),'lr':config.training.lr},
                                     {'params':heads,'lr':config.training.head_lr}],
@@ -278,7 +281,7 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
 
         while state['cursor']<len(schedule):
             i=state['cursor']; epoch=i//settings['steps_per_epoch']
-            step=train_step(model,optimizer,schedule[i],items[schedule[i]],config)
+            step=step_fn(model,optimizer,schedule[i],items[schedule[i]],config)
             step.update(step=i+1,epoch=epoch)
             state['trace'].append(step); state['cursor']=i+1
             end_epoch=state['cursor']%settings['steps_per_epoch']==0
@@ -288,7 +291,7 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
                     model.eval()
                     candidate,receipt=validation_candidate(model,items,
                         directory/f'raw-validation-{state["cursor"]:06d}.pt')
-                metric,prob=validation_snapshot(candidate,items)
+                metric,prob=snapshot(candidate,items)
                 scheduler.step(metric['val_loss'])
                 event={'epoch':epoch,'step':state['cursor'],**metric}
                 state['history'].append(event)
@@ -317,14 +320,17 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
         if calibrated_selection: model.training_config['bn_calibration']=state['best_calibration']
         save_model_checkpoint(model,directory/'primary.pt')
         _atomic_torch_save(state['best_probabilities'],directory/'selected-probabilities.pt')
-        restored=(load_selected(directory/'primary.pt',items,
+        selected_loader=load_selected if runtime_adapter is None else runtime_adapter.load_selected
+        restored=(selected_loader(directory/'primary.pt',items,
                     directory/f'raw-validation-{state["best_step"]:06d}.pt',device=device)
                   if calibrated_selection else load_model_checkpoint(directory/'primary.pt',device=device))
-        check,values=validation_snapshot(restored,items)
+        check,values=snapshot(restored,items)
         max_error=0.
         for n in NAMES:
             for phase in ('train','val'):
-                for head in ('fused','graph','cnn'):
+                if set(state['best_probabilities'][n][phase])!=set(values[n][phase]):
+                    raise ValueError('Selected active-head set changed')
+                for head in state['best_probabilities'][n][phase]:
                     old,new=state['best_probabilities'][n][phase][head],values[n][phase][head]
                     torch.testing.assert_close(new,old,rtol=1e-5,atol=1e-6)
                     if not torch.equal(old.argmax(1),new.argmax(1)): raise ValueError('Selected predictions changed')
