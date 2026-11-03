@@ -61,7 +61,9 @@ def main():
         label_path = str(Path(launch['data_root']) / record['label_path'])
         # Some historical launches bind raw labels through prepared provenance,
         # so also record their actual bytes explicitly for this read-only audit.
-        frozen[label_path] = record['label_sha256']
+        if label_path in frozen and frozen[label_path] != record['label_sha256']:
+            raise RuntimeError('Raw labels changed after initial identity check')
+        frozen.setdefault(label_path, record['label_sha256'])
         split = json.loads(path.read_text())
         masks = split_masks(labels, split)
         ids = list(range(1, record['class_count'] + 1))
