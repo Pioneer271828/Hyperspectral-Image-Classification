@@ -1,6 +1,6 @@
 # M4-J2 paired joint comparison
 
-The [preregistered experiment](../../research/experiments/M4J2_区域残差联合三种子完整配对预登记_20261104.md) freezes nine runs before training. Implementation is inherited from M4-J1; this document does not introduce a new trainer. Status: **pending remote connectivity and capacity preflight**. No new result or test pass is claimed.
+The [preregistered experiment](../../research/experiments/M4J2_区域残差联合三种子完整配对预登记_20261104.md) freezes nine runs before training. Implementation is inherited from M4-J1; this document does not introduce a new trainer. Status: **completed**, with [results and failure records](../../research/reports/M4J2_区域像素残差三种子完整配对结果_20261104.md). Nine runs/13527 updates; residual macroOA96.74±0.23%, versus none95.88±0.31% and capacity96.22±0.32%. Both preregistered paired gates passed, while individual-class regressions remain. Training98d2b75 and additive zero-update verifier0403879 are separate; original probability-roundoff failures are retained. Defaults remain unchanged.
 
 ## Remote-only execution
 
