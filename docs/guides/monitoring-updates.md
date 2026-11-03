@@ -1,6 +1,6 @@
 # MON-2: sampled gradients and actual optimizer updates
 
-Issue #117 implements a separate opt-in observer. It does not install hooks until `sample` is entered and does not change the backbone, trainer, configuration, checkpoint format or optimizer defaults. The frozen M4-J2 campaign does not use this observer. Engineering tests and real-data acceptance remain pending until a report is linked here.
+Issue #117 implements a separate opt-in observer. It does not install hooks until `sample` is entered and does not change the backbone, trainer, configuration, checkpoint format or optimizer defaults. The frozen M4-J2 campaign does not use this observer. [Scoped acceptance](../../research/reports/MON2_梯度与实际更新监测有限范围验收_20261104.md): GPU10/full CPU373 passed; real six-update FP64 sparse-A control passed at1e-10. Native FP32 strict equivalence failed and is preserved as a limitation; monitoring remains off by default and controlled overhead/long-term accuracy acceptance is pending.
 
 ```python
 from monitoring import LayerSpec
