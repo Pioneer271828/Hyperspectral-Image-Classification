@@ -1,11 +1,22 @@
 import unittest
 import numpy as np
 from evaluation.spatial_prediction import spatial_prediction_report, paired_difference
-from scripts.evaluate_frozen_m4_spatial import packet_arrays
+from scripts.evaluate_frozen_m4_spatial import packet_arrays, validate_history
 import torch
 
 
 class SpatialPredictionTests(unittest.TestCase):
+    def test_historical_m4_passed_schema_and_budget_guards(self):
+        record = {'status': 'passed', 'trained_updates': 13527, 'new_updates_in_evaluation': 0,
+                  'test_based_selection': False, 'code': {'commit': '98d2b75cff192f79f14d3ef9dda6687b2cc7bffe'}}
+        support = {'status': 'completed'}
+        validate_history(record, support)
+        for field, value in [('status', 'running'), ('trained_updates', 1503),
+                             ('new_updates_in_evaluation', 1), ('test_based_selection', True),
+                             ('code', {'commit': 'other'})]:
+            with self.assertRaises(ValueError): validate_history({**record, field: value}, support)
+        with self.assertRaises(ValueError): validate_history(record, {'status': 'running'})
+
     def test_original_packet_order_is_validated_before_joint_sort(self):
         labels = np.array([[1, 2, 1]])
         packet = {'pixel_indices': torch.tensor([2, 0, 1]), 'labels': torch.tensor([1, 1, 2]),

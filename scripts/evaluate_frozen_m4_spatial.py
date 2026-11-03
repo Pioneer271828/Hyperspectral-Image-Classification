@@ -23,6 +23,14 @@ def load(path):
     return json.loads(Path(path).read_text())
 
 
+def validate_history(original, support):
+    if (original['status'] != 'passed' or support['status'] != 'completed'
+            or original['trained_updates'] != 13527 or original['new_updates_in_evaluation'] != 0
+            or original['test_based_selection'] is not False
+            or original['code']['commit'] != '98d2b75cff192f79f14d3ef9dda6687b2cc7bffe'):
+        raise ValueError('Historical M4 evaluation identity/status/budget mismatch')
+
+
 def packet_arrays(packet, labels, split_indices):
     indices = packet['pixel_indices'].cpu().numpy()
     expected = np.asarray(split_indices)
@@ -46,8 +54,7 @@ def run(args):
     original = load(args.analysis_dir / 'result.json')
     frozen = load(args.analysis_dir / 'frozen-before-test.json')
     support = load(args.support_json)
-    if original['status'] != 'completed' or support['status'] != 'completed':
-        raise ValueError('Historical evaluation/support incomplete')
+    validate_history(original, support)
     hashes = dict(frozen['input_files'])
     model_count = 0
     for case in frozen['models'].values():
