@@ -8,6 +8,7 @@
   "reference_reuse_guide": "docs/guides/reference-code-reuse.md",
   "data_protocol_guide": "docs/guides/data-protocol-matrix.md",
   "experiment_gates": [
+    {"id":"BN-ALIGN1", "paths":["model/bn_calibration.py","scripts/validate_bn_calibration.py"], "tests":["tests/test_bn_calibration.py"], "guide":"docs/guides/bn-calibration.md", "reference_review":"docs/references/bn-calibration-review.json", "depends_on":["BASE-97C"], "note":"默认关闭，固定权重整图DomainBN校准及保存绑定工程/三种子复用验证通过；验证宏OA88.44±6.64→94.60±2.12%，不改正式test；训练选模与独立确认待验收，当前状态见current_plan"},
     {"id":"BASE-97C", "paths":["research/experiments/BASE97C_三种子完整联合训练预登记_20261103.md","research/reports/BASE97C_三种子完整联合训练结果与双支路诊断_20261103.md"], "guide":"research/reports/BASE97C_三种子完整联合训练结果与双支路诊断_20261103.md", "depends_on":["BASE-97B"], "note":"三种子完整4509更新与冻结评价完成，宏OA88.66±6.10%；DomainBN验证诊断影响显著，原正式分数不改，独立校准与单支路重训待验收；当前状态见current_plan"},
     {"id":"BASE-97B", "paths":["joint_training.py","scripts/train_joint_baseline.py","configs/experiments/base97_training.json"], "tests":["tests/test_joint_training.py"], "guide":"docs/guides/joint-training-base97b.md", "depends_on":["BASE-97A"], "note":"正式随机预算与训练状态恢复入口；12步工程验收与1503步精度实验分开，当前状态见current_plan"},
     {"id":"BASE-97A", "paths":["joint_baseline.py","scripts/validate_joint_baseline.py","configs/experiments/base97_joint.json"], "tests":["tests/test_joint_baseline.py"], "guide":"docs/guides/joint-baseline-base97.md", "depends_on":["C1","M2","M5","M8"], "note":"用户指定PaviaU/Xuzhou/HongHu联合协议工程门槛，当前状态见current_plan；非历史功能台账模块"}
