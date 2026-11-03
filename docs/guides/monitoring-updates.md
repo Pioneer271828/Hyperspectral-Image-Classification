@@ -3,7 +3,8 @@
 Issue #117 implements a separate opt-in observer. It does not install hooks until `sample` is entered and does not change the backbone, trainer, configuration, checkpoint format or optimizer defaults. The frozen M4-J2 campaign does not use this observer. Engineering tests and real-data acceptance remain pending until a report is linked here.
 
 ```python
-from monitoring import ParameterSpec, LayerSpec, UpdateMonitor
+from monitoring import LayerSpec
+from monitoring.updates import ParameterSpec, UpdateMonitor
 
 monitor = UpdateMonitor(
     model, optimizer,
