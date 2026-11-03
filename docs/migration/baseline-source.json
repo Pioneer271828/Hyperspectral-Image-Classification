@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "source_description": "Current F:/E2E_VCA working files, including uncommitted research code",
+  "source_historical_head": "dda3a3eba15949d58481357c28965d95e3bfd053",
+  "github_base_commit": "018fe70fcbd3e902cd5fe0a05296bdd1d38d5bfb",
+  "hash_rule": "SHA-256 of UTF-8 file bytes after CRLF to LF normalization",
+  "files": [
+    {
+      "path": "createGraph/CreatHStructure.py",
+      "source_relative_path": "createGraph/CreatHStructure.py",
+      "sha256_lf": "f405b4cfd4ae33f1a7eb30ffe5237e8989674d6b8f6b064a75cdeb544c468aff"
+    },
+    {
+      "path": "createGraph/create_graph.py",
+      "source_relative_path": "createGraph/create_graph.py",
+      "sha256_lf": "06858f7271ed1299c8045b37e4da7e8d44a38fc13e07df37cf25867e71ca1031"
+    },
+    {
+      "path": "createGraph/rdSLIC.py",
+      "source_relative_path": "createGraph/rdSLIC.py",
+      "sha256_lf": "9b01f0530a2a8d13b472749580531826a41fe99e7cba4f0bab4b11545d0516dd"
+    },
+    {
+      "path": "createGraph/utils2.py",
+      "source_relative_path": "createGraph/utils2.py",
+      "sha256_lf": "774fd3cce95b6a97ec56acdd37d7fd4ffb8e70b4e1631823e213930081449cad"
+    },
+    {
+      "path": "createGraph/visualization.py",
+      "source_relative_path": "createGraph/visualization.py",
+      "sha256_lf": "a76a1c743f6f4536b8f1f319370a02c53c1ee8d2815afc86f06739d82d8be183"
+    },
+    {
+      "path": "export_best_classification_maps.py",
+      "source_relative_path": "export_best_classification_maps.py",
+      "sha256_lf": "8fe456921e8cfe3fec053c6b7335de303adf2d292d8cf8a2cf35822c05210c91"
+    },
+    {
+      "path": "export_interaction_diagnostics.py",
+      "source_relative_path": "export_interaction_diagnostics.py",
+      "sha256_lf": "b247ba0841a7a2f6ff10b41e924f74b2ba4dc11ab7a51a7be5eb5039d2eb0dcb"
+    },
+    {
+      "path": "export_table_palette_classification_maps.py",
+      "source_relative_path": "export_table_palette_classification_maps.py",
+      "sha256_lf": "5c6c424d0019ccf887db0758373b48279f4ae5743a253912e16c27936774ab69"
+    },
+    {
+      "path": "generate_vca_visualizations.py",
+      "source_relative_path": "generate_vca_visualizations.py",
+      "sha256_lf": "adfb12fee22e0c1634cb86ce48a911c2c8837a8dd8dc5abba87de212353c92c3"
+    },
+    {
+      "path": "interaction_ablation_presets.py",
+      "source_relative_path": "interaction_ablation_presets.py",
+      "sha256_lf": "a5f937a538077da6b856ff4cb0001b838c56ed6ef12e5612a0138715333fc7f3"
+    },
+    {
+      "path": "loadData/data_read.py",
+      "source_relative_path": "loadData/data_read.py",
+      "sha256_lf": "f596fc43720d8c17cd6a1b3bfa60a25476c41ee76452d83957a46f49b417258e"
+    },
+    {
+      "path": "loadData/data_reader.py",
+      "source_relative_path": "loadData/data_reader.py",
+      "sha256_lf": "cb5f49cb9127746daf492e0cc4d0e5a5e1002a499f9886aa686a1c01adee6ef5"
+    },
+    {
+      "path": "loadData/split_data.py",
+      "source_relative_path": "loadData/split_data.py",
+      "sha256_lf": "8237b75be2564c502ea415bd7b07ef363822af48e6a3ae5a8914d74ae3831d9b"
+    },
+    {
+      "path": "main.py",
+      "source_relative_path": "main.py",
+      "sha256_lf": "c6c7549902368b0c2e076d6aa5755b98fb8f85217d5f2ae1909ed24ee0e3cb90"
+    },
+    {
+      "path": "make_paper_figures.py",
+      "source_relative_path": "make_paper_figures.py",
+      "sha256_lf": "cfc24ba1a08a675882e466870fc2c71834c6da48dae678309ae938d27cdc1921"
+    },
+    {
+      "path": "model/CNN.py",
+      "source_relative_path": "model/CNN.py",
+      "sha256_lf": "21a90c248df8189b2ef32d4bc4ff8da55a20da13532e76b9e3059a8409c425db"
+    },
+    {
+      "path": "model/F2HGNN.py",
+      "source_relative_path": "model/F2HGNN.py",
+      "sha256_lf": "1a981a0aca5f2db15583599e44def28b437a4098f0f6f0cf998c24f33ee79cde"
+    },
+    {
+      "path": "model/GCN.py",
+      "source_relative_path": "model/GCN.py",
+      "sha256_lf": "9c8c5b083e2bd1c909548d10fa005d55461c30796baa7fbeb97b8c170e54d645"
+    },
+    {
+      "path": "model/SAHGCN.py",
+      "source_relative_path": "model/SAHGCN.py",
+      "sha256_lf": "c12a9d81f1b4f2a12c7c18ce2134076b8dd903db3e98577ceff55aac3fc0f414"
+    },
+    {
+      "path": "model/SVM.py",
+      "source_relative_path": "model/SVM.py",
+      "sha256_lf": "7bbccc02f7e029774aa8be14f766aafc21fe799c5f753a76b35aae84c88f3a22"
+    },
+    {
+      "path": "model/VCASAHGCN.py",
+      "source_relative_path": "model/VCASAHGCN.py",
+      "sha256_lf": "ee34864b0905a776830b32f96ee4422abae7033e64ee02bfc63b60a8701155f2"
+    },
+    {
+      "path": "model/WFCG.py",
+      "source_relative_path": "model/WFCG.py",
+      "sha256_lf": "35304e873cb894f057d7a269b9ed070657458229992d9961ed7ff454045af893"
+    },
+    {
+      "path": "model/checkpoint_io.py",
+      "source_relative_path": "model/checkpoint_io.py",
+      "sha256_lf": "5f799112ef612b03aca3bf686dd2296d22a0088db8a55c1288cbdad22c3d06c8"
+    },
+    {
+      "path": "model/cross_branch_interaction.py",
+      "source_relative_path": "model/cross_branch_interaction.py",
+      "sha256_lf": "79d57456fd29017bbc53d78f3671715b86e91a02200ea8f6e49fe314509ff2f7"
+    },
+    {
+      "path": "model/graph_edge_update.py",
+      "source_relative_path": "model/graph_edge_update.py",
+      "sha256_lf": "b563ade0b5f91ded12c1ce10f58732c21be95bc288fb90f7258d0508dcfc28ec"
+    },
+    {
+      "path": "model/interaction_config.py",
+      "source_relative_path": "model/interaction_config.py",
+      "sha256_lf": "4b51ea2fb4dab1b20daeb4563e060d58750d5dca6fcb5da2f4a87228e4dd9f79"
+    },
+    {
+      "path": "model/learnable_superpixel_graph.py",
+      "source_relative_path": "model/learnable_superpixel_graph.py",
+      "sha256_lf": "bffca1374ab42fb50e480fea61b58d086fa346c284255c4a33a6bff4c9766927"
+    },
+    {
+      "path": "model/region_pixel_alignment.py",
+      "source_relative_path": "model/region_pixel_alignment.py",
+      "sha256_lf": "26ca7f5d8bce79814ffc0f601f3d406827b5e4169ec3345568b6ab9bea1d02ca"
+    },
+    {
+      "path": "model/utils.py",
+      "source_relative_path": "model/utils.py",
+      "sha256_lf": "c95cb7473f9e0b6405afde1f25341bceae94ca0a7a52be3dc1ba69601b8b213f"
+    },
+    {
+      "path": "model/variable_channel_adapter.py",
+      "source_relative_path": "model/variable_channel_adapter.py",
+      "sha256_lf": "cb2269ad2b9263399d6aeea9a2af4df5cba02746091ba2453a90004a5c9b4ea0"
+    },
+    {
+      "path": "run_paper_ablation.py",
+      "source_relative_path": "run_paper_ablation.py",
+      "sha256_lf": "4264c430e9d74a4f7e876de04830f2ce948e55d3d1bf649781be63fbd982a55a"
+    },
+    {
+      "path": "scripts/honghu_replacement/collect_honghu_results.py",
+      "source_relative_path": "scripts/honghu_replacement/collect_honghu_results.py",
+      "sha256_lf": "119c9142a881106ad92deb74cb2079140a2d144b844fa39a5e622f0cf6a526b8"
+    },
+    {
+      "path": "scripts/honghu_replacement/honghu_common.py",
+      "source_relative_path": "scripts/honghu_replacement/honghu_common.py",
+      "sha256_lf": "bad95ab7a120b7553654915687ba120b40a3933ad168b5ebf9e0110677b1c360"
+    },
+    {
+      "path": "scripts/honghu_replacement/inspect_honghu_dataset.py",
+      "source_relative_path": "scripts/honghu_replacement/inspect_honghu_dataset.py",
+      "sha256_lf": "6500c75a633bc660f94d98198fb9db0ec44511347019f22778014ff2f06c434e"
+    },
+    {
+      "path": "scripts/honghu_replacement/plot_ablation_honghu.py",
+      "source_relative_path": "scripts/honghu_replacement/plot_ablation_honghu.py",
+      "sha256_lf": "835ae94628564b2c9e4e7e8ca3cac38ab847bc05b96b933dc2c9604688e0a079"
+    },
+    {
+      "path": "scripts/honghu_replacement/plot_attention_heatmap_honghu.py",
+      "source_relative_path": "scripts/honghu_replacement/plot_attention_heatmap_honghu.py",
+      "sha256_lf": "d8548ae2314a0527f220b33907b6df5dce6d3e2ff5904f2073d2c33e51175cff"
+    },
+    {
+      "path": "scripts/honghu_replacement/plot_classification_maps_honghu.py",
+      "source_relative_path": "scripts/honghu_replacement/plot_classification_maps_honghu.py",
+      "sha256_lf": "20be72ad219d3b7768dbd1a01ed0484541bfe3d78750a0625b099ff64c09a16e"
+    },
+    {
+      "path": "scripts/honghu_replacement/plot_dataset_overview_honghu.py",
+      "source_relative_path": "scripts/honghu_replacement/plot_dataset_overview_honghu.py",
+      "sha256_lf": "c1b37273304404bcf7fce1ff348a7cebbbdd83c092aa6e085604341c700707db"
+    },
+    {
+      "path": "scripts/honghu_replacement/plot_main_performance_honghu.py",
+      "source_relative_path": "scripts/honghu_replacement/plot_main_performance_honghu.py",
+      "sha256_lf": "e2f9f72e9ac375230f6e0a5cee1589c80f3efafb76c879d56fcafd001a52c572"
+    },
+    {
+      "path": "scripts/honghu_replacement/plot_seed_stability_honghu.py",
+      "source_relative_path": "scripts/honghu_replacement/plot_seed_stability_honghu.py",
+      "sha256_lf": "2c646eac40d674d91f12ac274a434796ecf6ec66b8a0aec0e6174e568569ed52"
+    },
+    {
+      "path": "scripts/honghu_replacement/plot_tsne_honghu.py",
+      "source_relative_path": "scripts/honghu_replacement/plot_tsne_honghu.py",
+      "sha256_lf": "ad74401168902e04fbd487bbdd4dec6048cdef9e439116d6784079a9ab78489f"
+    },
+    {
+      "path": "scripts/honghu_replacement/scan_longkou_residuals.py",
+      "source_relative_path": "scripts/honghu_replacement/scan_longkou_residuals.py",
+      "sha256_lf": "99c3c8f92be454a3c7fc8cf39d313252c742da19d0047d0324b46d500ecdb541"
+    },
+    {
+      "path": "scripts/honghu_replacement/write_honghu_reports.py",
+      "source_relative_path": "scripts/honghu_replacement/write_honghu_reports.py",
+      "sha256_lf": "b142c72449cb849e6f7d2d8a3640fea51dad7f9845ebb8071ed2b57b9ae4c7da"
+    },
+    {
+      "path": "scripts/make_dataset_cube_figures.py",
+      "source_relative_path": "scripts/make_dataset_cube_figures.py",
+      "sha256_lf": "6dd9d381c3b09de0f388714671b6692cd574ec9d469de66c39c8118638376ed8"
+    },
+    {
+      "path": "tests/test_interaction_modules.py",
+      "source_relative_path": "tests/test_interaction_modules.py",
+      "sha256_lf": "40971507a8b6c6c92719308944eb1f8ccfc2f8048492ea6d05a9eeb625ddcd04"
+    },
+    {
+      "path": "train_vca_multidataset.py",
+      "source_relative_path": "train_vca_multidataset.py",
+      "sha256_lf": "cb999a50711d00cf4549e94d4d4f1ad2b49185f22c2b44dadadaaec92d3c2c74"
+    }
+  ],
+  "modified_from_source": [
+    {
+      "path": "smoke_test.py",
+      "source_relative_path": "vca_dual_branch_runnable/smoke_test.py",
+      "change": "Add explicit device selection and keep original CPU default; Git tracks the modified version"
+    }
+  ]
+}

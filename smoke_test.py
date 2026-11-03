@@ -1,26 +1,29 @@
 """Synthetic end-to-end check for VCA and the CNN/HGCN dual-branch backbone."""
 
+import argparse
+
 import torch
 
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 
 
-def identity_graph(height, width):
+def identity_graph(height, width, device="cpu"):
     """Return a simple valid pixel-to-superpixel assignment and adjacency."""
     pixel_count = height * width
-    assignment = torch.eye(pixel_count, dtype=torch.float32).to_sparse().coalesce()
-    adjacency = torch.eye(pixel_count, dtype=torch.float32)
+    assignment = torch.eye(pixel_count, dtype=torch.float32, device=device).to_sparse().coalesce()
+    adjacency = torch.eye(pixel_count, dtype=torch.float32, device=device)
     return assignment, adjacency
 
 
 def run_case(model, dataset_name, bands, classes):
+    device = next(model.parameters()).device
     height, width = 4, 5
     pixel_count = height * width
-    wavelengths = torch.linspace(450.0, 900.0, bands)
-    spectral = torch.randn(height, width, bands)
-    coordinates = torch.rand(height, width, 2)
+    wavelengths = torch.linspace(450.0, 900.0, bands, device=device)
+    spectral = torch.randn(height, width, bands, device=device)
+    coordinates = torch.rand(height, width, 2, device=device)
     model_input = torch.cat((spectral, coordinates), dim=-1)
-    assignment, adjacency = identity_graph(height, width)
+    assignment, adjacency = identity_graph(height, width, device)
 
     with torch.no_grad():
         latent = model.backbone.adapter(spectral, wavelengths=wavelengths)
@@ -43,18 +46,18 @@ def run_case(model, dataset_name, bands, classes):
     assert fused.shape == hgnn.shape == cnn.shape == (pixel_count, 64)
     assert output.shape == output_hgnn.shape == output_cnn.shape == (pixel_count, classes)
     assert torch.isfinite(output).all()
-    assert torch.allclose(output.sum(dim=-1), torch.ones(pixel_count), atol=1e-5)
+    assert torch.allclose(output.sum(dim=-1), torch.ones(pixel_count, device=device), atol=1e-5)
     print(
         f"{dataset_name}: input_bands={bands}, latent_channels={latent.shape[-1]}, "
         f"classes={output.shape[-1]}"
     )
 
 
-def run_learned_graph_case():
+def run_learned_graph_case(device="cpu"):
     height, width, bands, classes = 6, 7, 15, 5
-    wavelengths = torch.linspace(450.0, 950.0, bands)
-    spectral = torch.randn(height, width, bands)
-    coordinates = torch.rand(height, width, 2)
+    wavelengths = torch.linspace(450.0, 950.0, bands, device=device)
+    spectral = torch.randn(height, width, bands, device=device)
+    coordinates = torch.rand(height, width, 2, device=device)
     model_input = torch.cat((spectral, coordinates), dim=-1)
 
     model = MultiDatasetVCASAHGCN(
@@ -66,9 +69,9 @@ def run_learned_graph_case():
         locality_window=None,
         graph_mode="learned",
         learned_assignment_dim=12,
-    ).train()
+    ).to(device).train()
     assignment, graph, direct_info = model.backbone.learnable_graph(
-        torch.randn(height, width, 64),
+        torch.randn(height, width, 64, device=device),
         superpixel_scale=9,
     )
     assignment_row_sum = torch.sparse.sum(assignment, dim=1).to_dense()
@@ -115,6 +118,12 @@ def run_learned_graph_case():
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    args = parser.parse_args()
+    if args.device == "cuda" and not torch.cuda.is_available():
+        parser.error("CUDA requested but unavailable; no silent CPU fallback")
+    torch.set_num_threads(1)
     torch.manual_seed(7)
     model = MultiDatasetVCASAHGCN(
         {"demo_a": 4, "demo_b": 3},
@@ -123,12 +132,12 @@ def main():
         extra_channels=2,
         norm_type="domain_bn",
         locality_window=None,
-    ).eval()
+    ).to(args.device).eval()
 
     run_case(model, "demo_a", bands=12, classes=4)
     run_case(model, "demo_b", bands=20, classes=3)
-    run_learned_graph_case()
-    print("SMOKE_TEST_OK: static and learned graph modes passed forward/backward checks.")
+    run_learned_graph_case(args.device)
+    print(f"SMOKE_TEST_OK: device={args.device}; static and learned graph checks passed.")
 
 
 if __name__ == "__main__":

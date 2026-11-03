@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "module": "baseline",
+  "branch": "codex/issue-1-baseline",
+  "commit": "7ba86d59e1a51ade4297dd62a05eea095416a481",
+  "initial_dirty": false,
+  "hostname": "rmvision",
+  "code_directory": "/workspace/Hyperspectral-Image-Classification",
+  "python": "3.12.3 (main, Jan 17 2025, 18:03:48) [GCC 13.3.0]",
+  "executable": "/home/rmvision/venvs/hsi-baseline/bin/python",
+  "started_at_utc": "2026-10-29T07:34:15.997619+00:00",
+  "cuda_requested": true,
+  "status": "passed",
+  "checks": [
+    {
+      "name": "regression",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_interaction_modules.py",
+        "-v"
+      ],
+      "status": "passed",
+      "log": "regression.log",
+      "exit_code": 0,
+      "duration_seconds": 7.857
+    },
+    {
+      "name": "smoke_cpu",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cpu"
+      ],
+      "status": "passed",
+      "log": "smoke_cpu.log",
+      "exit_code": 0,
+      "duration_seconds": 2.577
+    },
+    {
+      "name": "smoke_cuda",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cuda"
+      ],
+      "status": "passed",
+      "log": "smoke_cuda.log",
+      "exit_code": 0,
+      "duration_seconds": 4.812
+    }
+  ],
+  "source_files_verified": 46,
+  "packages": {
+    "torch": "2.7.0a0+ecf3bae40a.nv25.2",
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "scikit-learn": "1.5.2",
+    "scikit-image": "0.24.0",
+    "spectral": "0.24",
+    "h5py": "3.12.1",
+    "Pillow": "11.1.0"
+  },
+  "cuda_runtime": "12.8",
+  "cuda_available": true,
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "final_dirty": false,
+  "finished_at_utc": "2026-10-29T07:34:31.942762+00:00"
+}

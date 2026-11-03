@@ -1,0 +1,4 @@
+demo_a: input_bands=12, latent_channels=8, classes=4
+demo_b: input_bands=20, latent_channels=8, classes=3
+learned_graph: pixels=42, tokens=6, assignment_nnz=192, graph_nnz=28
+SMOKE_TEST_OK: device=cpu; static and learned graph checks passed.
