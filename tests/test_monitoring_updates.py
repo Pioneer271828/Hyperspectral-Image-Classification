@@ -167,7 +167,9 @@ class UpdateTests(unittest.TestCase):
         from test_joint_training import settings
         from model.research_config import ResearchConfig
         from joint_training import train_step
-        cfg=ResearchConfig.from_dict(settings()['config'])
+        config=settings()['config']
+        config['model']['adapter_checkpoint_chunks']=False
+        cfg=ResearchConfig.from_dict(config)
         data={n:{k:v.to(DEVICE) if torch.is_tensor(v) else v for k,v in i.items()} for n,i in tiny_items().items()}
         torch.manual_seed(45)
         first=cfg.build_model({n:i['class_num'] for n,i in data.items()}).to(DEVICE)
