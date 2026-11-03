@@ -4,10 +4,11 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import torch
 
 from joint_calibrated_selection import calibrated_settings, load_selected
-from joint_training import run_training, _tree_fingerprint
+from joint_training import run_training, _tree_fingerprint, train_step
 from model.checkpoint_io import load_model_checkpoint
 from model.research_config import ResearchConfig
 from scripts.train_joint_m4 import m4_settings
@@ -31,9 +32,19 @@ class M4JointTests(unittest.TestCase):
         torch.manual_seed(opts['model_seed'])
         initial = ResearchConfig.from_dict(opts['config']).build_model({n: i['class_num'] for n, i in data.items()})
         initial_weight = initial.backbone.region_residual.projection.weight.detach().clone()
+        gradients = []
+        def observe(model, optimizer, name, item, config):
+            result = train_step(model, optimizer, name, item, config)
+            grad = model.backbone.region_residual.projection.weight.grad
+            self.assertIsNotNone(grad)
+            self.assertTrue(torch.isfinite(grad).all())
+            gradients.append(float(grad.abs().sum()))
+            return result
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / 'run'
-            first = run_training(opts, data, path, PROVENANCE, SOURCE, device=DEVICE, stop_after=5)
+            with patch('joint_training.train_step', side_effect=observe):
+                first = run_training(opts, data, path, PROVENANCE, SOURCE, device=DEVICE, stop_after=5)
+            self.assertTrue(any(x > 0 for x in gradients))
             self.assertEqual(first['cursor'], 5)
             with self.assertRaisesRegex(ValueError, 'identity mismatch'):
                 run_training(m4_settings(settings(), 'none'), data, path, PROVENANCE, SOURCE, device=DEVICE, resume=True)
