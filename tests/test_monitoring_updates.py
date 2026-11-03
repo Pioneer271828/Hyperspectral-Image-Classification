@@ -157,6 +157,10 @@ class UpdateTests(unittest.TestCase):
             with mon.sample(context(),contract='fp32_single_backward'):
                 model(torch.ones(1,2,device=DEVICE));model(torch.ones(1,2,device=DEVICE))
         self.check_clean(model,opt)
+        with self.assertRaisesRegex(RuntimeError,'Repeated'):
+            with mon.sample(context(),contract='fp32_single_backward'):
+                out=model(torch.ones(1,2,device=DEVICE)).sum();out.backward(retain_graph=True);out.backward()
+        self.check_clean(model,opt)
 
     def test_actual_three_task_model_state_optimizer_and_rng_noninterference(self):
         from test_joint_baseline import tiny_items
@@ -186,10 +190,6 @@ class UpdateTests(unittest.TestCase):
         torch.testing.assert_close(results[0],results[1],rtol=1e-5,atol=2e-6)
         self.assertEqual(len(records),3)
         self.assertTrue(all(r['parameters'][0]['changed_elements']>0 for r in records))
-        with self.assertRaisesRegex(RuntimeError,'Repeated'):
-            with mon.sample(context(),contract='fp32_single_backward'):
-                out=model(torch.ones(1,2,device=DEVICE)).sum();out.backward(retain_graph=True);out.backward()
-        self.check_clean(model,opt)
 
 
 if __name__=='__main__':unittest.main()
