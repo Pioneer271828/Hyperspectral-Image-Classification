@@ -130,7 +130,9 @@ def isolated_probe(reference, factory, forward, inputs, plan, *, interventions=(
                     if max(channels)>=value.shape[axis]:raise ValueError('Intervention channel out of range')
                     value=output.clone();value.index_fill_(axis,torch.tensor(channels,device=value.device),0)
                     used.add(key)
-                captured[key]=value.detach()
+                # Freeze this call before downstream in-place operations can
+                # modify either the original output or the intervention result.
+                captured[key]=value.detach().clone()
                 return value if key in targets else None
             return observe
         for path in by_path:handles.append(modules[path].register_forward_hook(hook(path)))
