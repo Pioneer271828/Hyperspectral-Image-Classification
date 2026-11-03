@@ -1,0 +1,68 @@
+"""M4 joint settings, real gradient and safe continuation contracts."""
+import copy
+import os
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+import torch
+
+from joint_calibrated_selection import calibrated_settings, load_selected
+from joint_training import run_training, _tree_fingerprint, train_step
+from model.checkpoint_io import load_model_checkpoint
+from model.research_config import ResearchConfig
+from scripts.train_joint_m4 import m4_settings, graph_binding, M4JointRuntime
+from test_calibrated_selection import items
+from test_joint_training import SOURCE, PROVENANCE, checkpoints, hashes, settings
+
+DEVICE = os.environ.get('M4J1_DEVICE', 'cpu')
+torch.set_num_threads(1)
+
+class M4JointTests(unittest.TestCase):
+    def test_default_settings_are_exact_and_modes_are_bound(self):
+        original = settings(); saved = copy.deepcopy(original)
+        self.assertEqual(m4_settings(original, 'none'), calibrated_settings(original))
+        self.assertEqual(original, saved)
+        for mode in ('capacity_control', 'x_residual', 'residual_only', 'x_region'):
+            self.assertEqual(m4_settings(original, mode)['config']['model']['region_residual_mode'], mode)
+        with self.assertRaises(ValueError): m4_settings(original, 'bad')
+
+    def test_active_module_updates_and_completed_resume_is_immutable(self):
+        data = items(); opts = m4_settings(settings(), 'x_residual')
+        torch.manual_seed(opts['model_seed'])
+        initial = ResearchConfig.from_dict(opts['config']).build_model({n: i['class_num'] for n, i in data.items()})
+        initial_weight = initial.backbone.region_residual.projection.weight.detach().clone()
+        provenance = {**PROVENANCE, 'm4_graph_binding': graph_binding(data)}
+        runtime = M4JointRuntime()
+        gradients = []
+        def observe(model, optimizer, name, item, config):
+            result = train_step(model, optimizer, name, item, config)
+            grad = model.backbone.region_residual.projection.weight.grad
+            self.assertIsNotNone(grad)
+            self.assertTrue(torch.isfinite(grad).all())
+            gradients.append(float(grad.abs().sum()))
+            return result
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'run'
+            runtime.train_step = observe
+            first = run_training(opts, data, path, provenance, SOURCE, device=DEVICE, stop_after=5, runtime_adapter=runtime)
+            self.assertTrue(any(x > 0 for x in gradients))
+            self.assertEqual(first['cursor'], 5)
+            with self.assertRaisesRegex(ValueError, 'identity mismatch'):
+                run_training(m4_settings(settings(), 'none'), data, path, provenance, SOURCE, device=DEVICE, resume=True, runtime_adapter=runtime)
+            result = run_training(opts, data, path, provenance, SOURCE, device=DEVICE, resume=True, runtime_adapter=runtime)
+            self.assertEqual(result['updates_this_call'], 7)
+            last = load_model_checkpoint(path / 'last.pt', device=DEVICE)
+            self.assertFalse(torch.equal(last.backbone.region_residual.projection.weight.detach().cpu(), initial_weight))
+            selected = result['result']['selected_step']
+            primary = runtime.load_selected(path / 'primary.pt', data, path / f'raw-validation-{selected:06d}.pt', device=DEVICE)
+            altered = copy.deepcopy(data)
+            altered['paviaU']['A'] = altered['paviaU']['A'] * 2
+            with self.assertRaisesRegex(ValueError, 'graph binding mismatch'):
+                runtime.load_selected(path / 'primary.pt', altered, path / f'raw-validation-{selected:06d}.pt', device=DEVICE)
+            self.assertEqual(primary.backbone.region_residual_mode, 'x_residual')
+            before = hashes(path)
+            self.assertEqual(run_training(opts, data, path, provenance, SOURCE, device=DEVICE, resume=True, runtime_adapter=runtime)['updates_this_call'], 0)
+            self.assertEqual(before, hashes(path))
+
+if __name__ == '__main__': unittest.main()
