@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "completion_policy": {"as_of":"2026-11-04","all_candidates_require_testing":true,"negative_results_can_complete_experiments":true,"untested_or_blocked_is_incomplete":true,"guide":"research/全量研究模块必测清单_20261104.md","current_issue":129},
+  "completion_policy": {"as_of":"2026-11-04","all_candidates_require_testing":true,"negative_results_can_complete_experiments":true,"untested_or_blocked_is_incomplete":true,"guide":"research/全量研究模块必测清单_20261104.md","current_issue":131},
   "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。delivery_order 是修订后的模块研究顺序，不代表完成状态；已前移验收的接口/协议不重复搭建，整改和当前任务以 current_plan 为准。",
   "current_plan": "research/当前搭建状态与审查整改清单_20261102.md",
   "delivery_status": "docs/architecture/delivery-status.json",
@@ -9,6 +9,7 @@
   "reference_reuse_guide": "docs/guides/reference-code-reuse.md",
   "data_protocol_guide": "docs/guides/data-protocol-matrix.md",
   "experiment_gates": [
+    {"id":"E0-B2","issue":131,"status":"frozen_spatial_diagnostics_completed","tested_commit":"14e03f0d348617f0f8616908ecac58ea94e41521","guide":"research/reports/E0B2_M4冻结空间逐类与双支路诊断_20261104.md","results":"docs/architecture/e0-b2-results.json","note":"28 related tests;1134 metrics/378 branches/648 spatial contrasts/240 class contrasts independently checked;1045 protected files unchanged. No training or inference. Xuzhou narrow boundary OA+1.86pp;HongHu-0.60pp,class15 recall-1.59pp. Posthoc partial coverage only; independent split/boundary protocol pending."},
     {"id":"E0-B1","issue":129,"status":"engineering_and_support_audit_completed","tested_commit":"c9a9230489d9867762a48ac0ecc974ba24a30931","guide":"research/reports/E0B1_空间边界支持审计与全量必测范围验收_20261104.md","results":"docs/architecture/e0-b1-results.json","note":"30 related tests,108 independent histograms,13 inputs unchanged. No prediction scores or training. PaviaU boundary unavailable; partial class coverage elsewhere. E0-B2 and independent boundary protocol pending."},
     {"id":"M1-J2","paths":["joint_observation_study.py","scripts/train_joint_observation_full.py","docs/architecture/m1-j2-results.json"],"tests":["tests/test_joint_observation_study.py"],"guide":"research/reports/M1J2_真实波段联合三种子完整配对结果_20261104.md","depends_on":["M1-J1"],"note":"PR128;9942c0f,6 cases/9018 fresh updates. Full OA95.89→95.61 and missing-band95.53→95.38; full0/3 robust1/3 positive, HongHu AA guard failed, small-class guard passed.375 tests/GPU5/24 condition checks/216 metrics/2880 recalls/72 complementarity passed;672 artifacts/13 inputs unchanged. Default full retained; pause after this module."},
     {"id":"M1-J1","paths":["joint_observation.py","scripts/train_joint_observation.py"],"tests":["tests/test_joint_observation.py"],"guide":"docs/guides/joint-observation-m1j1.md","depends_on":["M1","BN-ALIGN3"],"note":"PR126; tested27f14f1 CPU5/GPU5/full372, real24 updates,36 head metrics/480 recalls independently checked,37 completed files/13 inputs unchanged. Engineering only, full-spectrum graph context retained. Issue127 full study completed with negative joint gate; now paused."},
