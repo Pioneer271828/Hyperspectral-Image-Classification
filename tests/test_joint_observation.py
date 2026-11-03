@@ -41,9 +41,9 @@ def run(opts, data, path, **kwargs):
 class JointObservationTests(unittest.TestCase):
     def test_freezing_is_repeatable_rng_independent_and_labels_do_not_select_bands(self):
         data = items()
-        before = _tree_fingerprint((torch.get_rng_state(), np.random.get_state()[1], random.getstate()))
+        before = _tree_fingerprint((torch.get_rng_state(), np.random.get_state()[1].tolist(), random.getstate()))
         opts = frozen(data)
-        self.assertEqual(before, _tree_fingerprint((torch.get_rng_state(), np.random.get_state()[1], random.getstate())))
+        self.assertEqual(before, _tree_fingerprint((torch.get_rng_state(), np.random.get_state()[1].tolist(), random.getstate())))
         self.assertEqual(opts, frozen(data))
         self.assertNotEqual(opts['joint_observation']['records'], frozen(data, seed=8129)['joint_observation']['records'])
         other = copy.deepcopy(data)
