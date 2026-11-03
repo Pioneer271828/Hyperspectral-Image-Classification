@@ -1,0 +1,13 @@
+# BN-ALIGN1: opt-in scene-population calibration
+
+[Issue #103](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/103) follows the [BASE-97C frozen diagnosis](../../research/reports/BASE97C_三种子完整联合训练结果与双支路诊断_20261103.md). The new helper does not change the original model, trainer, checkpoint loader or defaults.
+
+`model.bn_calibration.calibrate_denoise` defaults to `mode='none'`, returning the untouched source object. Explicit `scene_population_denoise_bn_v1` with context `acc1p_full_scene_transductive` returns a separate eval clone. Its only changed state is selected domains' two front-end denoise running means/variances. Parameters, affine weights, eps, counters, other domains/layers and source model remain unchanged. The old trained checkpoint remains authoritative; calibrated artifacts are separate evaluation models and cannot substitute for exact optimizer continuation.
+
+The calibrator accepts only `net_input/wavelengths/fwhm` observations, never label-bearing items. Each whole scene (including unlabeled pixels) is the explicitly allowed population. Means and variance with correction0 are computed in layer order: the second layer sees the first layer's calibrated normalization. Ordinary eval inference subsequently uses fixed stored buffers; no live training mode, hooks or implicit recalibration are needed. This full-scene policy cannot be silently transferred to strict target-sensor holdout or arbitrary deployment scenes.
+
+Source checkpoint SHA256, exact observation/metadata identities, context, changed buffers, moment convention and calibrated state digest are persisted in `training_config.bn_calibration` through the existing checkpoint format. After `load_model_checkpoint`, call `verify_calibration_binding` with the same scene/context before use. Unknown scenes, contexts, changed state or missing metadata are rejected. The old general-purpose loader remains unchanged and does not enforce this new policy by itself.
+
+Reference/code/license inspection is recorded in [the reuse review](../references/bn-calibration-review.json). This is a small independent adaptation, not a claim of reproducing an external benchmark.
+
+The bounded gate compares all three existing BASE-97C primary models without reselection or gradient updates: original buffers, calibrated saved/reloaded buffers, live denoise batch-stat reference and permuted-domain statistic negative control. Only train/val readouts are evaluated; previous test results are preserved. The reused validation data supports engineering and mechanism checks, not independent confirmation of final accuracy. See the module acceptance report/current plan for actual outcomes.
