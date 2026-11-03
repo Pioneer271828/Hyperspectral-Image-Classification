@@ -14,6 +14,7 @@ Follow the [research master checklist](research/研究内容整合与详细搭�
 - [Earlier G3 exploratory pilot](research/reports/G3P1_跨传感器完整初筛结果与逐类分析_20261101.md): the single-seed gain did not translate into a stable OA gain in the three new repetitions above.
 - [Baseline provenance and fingerprints](docs/migration/source-inventory.md), [baseline validation report](research/reports/baseline_2026-10-29.md)
 - [Remote validation and synchronization guide](docs/guides/remote-validation.md)
+- [Data protocols for the three research axes](docs/guides/data-protocol-matrix.md): preserve the original per-class1% training/0.5% validation joint accuracy benchmark; distinguish few-shot transfer, UDA and DG; inherit the dense baseline split for pruning/quantization and explicitly declare calibration context. Literature examples and proposed protocols do not change existing defaults.
 - [C0 configuration, run records, and ablation checklist](docs/guides/c0-experiments.md): start with a dry run; verify matching run identity before skipping completed work or retrying failed attempts
 - [C0 delivery report and acceptance scope](research/reports/C0_配置与实验记录模块交付_2026-10-29.md)
 - [C1b spatial access contract and limitations](docs/guides/spatial-protocol.md), [validation report](research/reports/C1b_空间访问契约_20261029.md)
