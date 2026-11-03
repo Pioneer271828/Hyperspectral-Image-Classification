@@ -6,7 +6,7 @@ This repository was organized from an existing research workspace. It retains th
 
 ## Modular Development
 
-M1-J1 joint real-band integration passed scoped engineering acceptance: CPU5/GPU5/full372 and two real12-update checks. See the [acceptance report](research/reports/M1J1_真实波段子集联合训练接入验收_20261104.md). This adds no accuracy claim. Work is paused after this module as requested; M1-J2 Issue127 is planned and has not launched.
+M1-J1 joint real-band integration passed scoped engineering acceptance: CPU5/GPU5/full372 and two real12-update checks. See the [acceptance report](research/reports/M1J1_真实波段子集联合训练接入验收_20261104.md). This adds no accuracy claim. The latest instruction authorizes M1-J2 full training and analysis, followed by a pause; see its preregistration.
 
 M4-J2 completed: [paired three-seed results](research/reports/M4J2_区域像素残差三种子完整配对结果_20261104.md). Region–pixel residual macro OA96.74±0.23%, versus original95.88±0.31% and capacity96.22±0.32%; both predefined comparison gates passed. HongHu is the main gain, with individual-class regressions retained. This is a fixed joint benchmark, not unseen-sensor confirmation; defaults remain unchanged.
 
