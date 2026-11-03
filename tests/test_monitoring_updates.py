@@ -153,6 +153,11 @@ class UpdateTests(unittest.TestCase):
 
     def test_activation_repeated_backward_and_call_bound(self):
         model,opt,rows,mon=self.fixture(activations=[LayerSpec('0','NC',0,'linear-output','pixel')],max_calls=1)
+        model[0].checkpoint_chunks=True
+        with self.assertRaisesRegex(ValueError,'checkpoint recomputation'):
+            with mon.sample(context(),contract='fp32_single_backward'):pass
+        self.check_clean(model,opt)
+        model[0].checkpoint_chunks=False
         with self.assertRaisesRegex(RuntimeError,'call budget'):
             with mon.sample(context(),contract='fp32_single_backward'):
                 model(torch.ones(1,2,device=DEVICE));model(torch.ones(1,2,device=DEVICE))
@@ -174,6 +179,7 @@ class UpdateTests(unittest.TestCase):
         from joint_training import train_step
         config=settings()['config']
         config['model']['adapter_checkpoint_chunks']=checkpoint
+        config['model']['adapter_chunk_pixels']=16
         cfg=ResearchConfig.from_dict(config)
         data={n:{k:v.to(DEVICE) if torch.is_tensor(v) else v for k,v in i.items()} for n,i in tiny_items().items()}
         torch.manual_seed(45)
