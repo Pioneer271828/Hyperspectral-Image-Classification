@@ -1,4 +1,4 @@
-import copy,json,tempfile,unittest
+import copy,json,tempfile,unittest,subprocess,sys
 from pathlib import Path
 from joint_adapter_study import load_study,case_settings,select_case
 from joint_adapter_modes import AdapterModeRuntime
@@ -7,6 +7,12 @@ from joint_baseline import load_config
 
 
 class AdapterStudyTests(unittest.TestCase):
+    def test_full_entry_help_uses_adapter_modes(self):
+        result=subprocess.run([sys.executable,'scripts/train_joint_adapter_full.py','--help'],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn('wavelength,index,uniform',result.stdout)
+        self.assertNotIn('--supervision',result.stdout)
+
     def fixture(self):
         study=load_study();plan=load_plan('configs/experiments/base97_training.json');base=load_config('configs/experiments/base97_joint.json')
         cases=[{'mode':m,'seed':s,'out':f'/{m}/{s}','settings':case_settings(study,plan,base,m,s)}

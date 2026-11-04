@@ -16,7 +16,6 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for key in ('expected-commit', 'launch-plan', 'launch-sha256'): p.add_argument('--'+key, required=True)
     p.add_argument('--mode', choices=MODES, required=True)
-    p.add_argument('--supervision', choices=SUPERVISION, required=True)
     p.add_argument('--seed', type=int, choices=[64, 512, 2048], required=True)
     p.add_argument('--resume', action='store_true'); p.add_argument('--finalize-only', action='store_true')
     a = p.parse_args(); source = code_snapshot()
