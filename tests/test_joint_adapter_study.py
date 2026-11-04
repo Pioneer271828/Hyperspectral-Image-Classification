@@ -12,6 +12,9 @@ class AdapterStudyTests(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn('wavelength,index,uniform',result.stdout)
         self.assertNotIn('--supervision',result.stdout)
+        result=subprocess.run([sys.executable,'research/reproduction/m2j2/supervise.py','--help'],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn('--gpus',result.stdout)
 
     def fixture(self):
         study=load_study();plan=load_plan('configs/experiments/base97_training.json');base=load_config('configs/experiments/base97_joint.json')
