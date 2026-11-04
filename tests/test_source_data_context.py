@@ -60,7 +60,7 @@ class SourceContextTests(unittest.TestCase):
             for held in NAMES:
                 context=self.load(f,held)
                 self.assertEqual(len(context.items),2);self.assertNotIn(held,context.class_counts)
-                for n,item in context.items():self.assertEqual(_item_fingerprint(item),f[2]['datasets'][n]['prepared_fields'])
+                for n,item in context.items.items():self.assertEqual(_item_fingerprint(item),f[2]['datasets'][n]['prepared_fields'])
             a=self.load(f,'xuzhou',('paviaU',));b=self.load(f,'whu-honghu',('paviaU',))
             self.assertEqual(a.record['source_identity'],b.record['source_identity'])
 
