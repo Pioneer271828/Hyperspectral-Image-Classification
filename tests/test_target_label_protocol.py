@@ -6,7 +6,7 @@ from loadData.target_label_protocol import make_target_family,phase_view,final_q
 
 class TargetLabelProtocolTests(unittest.TestCase):
     def fixture(self):
-        labels=np.repeat(np.arange(1,4),24).reshape(8,9);labels[0,:]=0
+        labels=np.repeat(np.arange(1,4),30).reshape(10,9);labels[0,:]=0
         return labels,make_target_family(labels,'paviaU',64)
 
     def test_nested_fixed_query_and_only_released_phase_labels(self):
@@ -44,8 +44,7 @@ class TargetLabelProtocolTests(unittest.TestCase):
             else:bad[field].append(bad[field][0])
             with self.assertRaises(ValueError):validate_family(bad,f['family_hash'])
             bad['family_hash']=digest({k:v for k,v in bad.items() if k!='family_hash'})
-            if field!='support_order':
-                with self.assertRaises(ValueError):validate_family(bad,bad['family_hash'])
+            with self.assertRaises(ValueError):validate_family(bad,bad['family_hash'])
         for k in (True,0,2,20):
             with self.assertRaises(ValueError):phase_view(f,k,'adapt',expected_hash=f['family_hash'])
 
