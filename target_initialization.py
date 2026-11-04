@@ -61,7 +61,8 @@ def initialize_target(target,method,*,model_seed,head_seed,source_path=None,
     if method=='target_scratch_full' and any(x is not None for x in (source_path,source_weight_sha256,source_sidecar_sha256)):
         raise ValueError('Scratch must not receive a source checkpoint')
     base=load_config('configs/experiments/base97_joint.json')
-    config=replace(base,name='g4_target_init_'+target,data=replace(base.data,datasets=[target]))
+    config=replace(base,name='g4_target_init_'+target,device=str(torch.device(device)),
+        data=replace(base.data,datasets=[target]),training=replace(base.training,seed=model_seed))
     with torch.random.fork_rng(devices=[]):
         torch.random.default_generator.manual_seed(model_seed);model=config.build_model({target:DATASETS[target][2]})
         torch.random.default_generator.manual_seed(head_seed)
@@ -93,6 +94,7 @@ def initialize_target(target,method,*,model_seed,head_seed,source_path=None,
         'source_domain_state_copied':False,'head_only_requires_target_bn_calibration':frozen,
         'source_graph_context':'source_train_label_lda_slic' if receipt else None,
         'target_graph_required':'label_free_target_scene','target_initial_config':config.to_dict(),
-        'initial_state_sha256':state_id(model),'optimizer_updates':0,'model_test_scoring':False}
+        'initial_state_sha256':state_id(model),'initial_device':str(next(model.parameters()).device),
+        'target_training_budget_registered':False,'optimizer_updates':0,'model_test_scoring':False}
     model.training_config={'target_initialization':copy.deepcopy(record)}
     return model,record

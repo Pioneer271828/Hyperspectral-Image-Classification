@@ -84,6 +84,11 @@ class TargetInitializationTests(unittest.TestCase):
                 with self.assertRaises(ValueError):self.create(METHODS[1],(source[0],source[1],file_hash(sidecar)))
         result=subprocess.run([sys.executable,'scripts/inspect_target_initialization.py','--help'],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr);self.assertIn('--source-sidecar-sha256',result.stdout)
+        target,record=initialize_target('xuzhou',METHODS[0],model_seed=512,head_seed=1512,device=DEVICE)
+        self.assertEqual(record['target_initial_config']['training']['seed'],512)
+        self.assertEqual(record['initial_device'],str(next(target.parameters()).device))
+        self.assertEqual(record['target_initial_config']['device'],DEVICE)
+        self.assertFalse(record['target_training_budget_registered'])
 
 
 if __name__=='__main__':unittest.main()
