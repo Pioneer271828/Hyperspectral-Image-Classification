@@ -1,4 +1,4 @@
-import copy,os,tempfile,unittest
+import copy,json,os,tempfile,unittest,subprocess,sys
 from pathlib import Path
 import torch
 from joint_baseline import NAMES,load_config
@@ -73,6 +73,17 @@ class TargetInitializationTests(unittest.TestCase):
             if cuda is not None:self.assertTrue(all(torch.equal(a,b) for a,b in zip(cuda,torch.cuda.get_rng_state_all())))
             path=Path(tmp)/'target.pt';save_model_checkpoint(target,path);loaded=load_model_checkpoint(path,device=DEVICE)
             self.assertEqual(state_id(target),state_id(loaded));self.assertEqual(loaded.training_config['target_initialization'],record)
+
+    def test_source_provenance_and_architecture_mismatch_and_inspection_entry(self):
+        for change in ('provenance','architecture'):
+            with tempfile.TemporaryDirectory() as tmp:
+                source=self.source(tmp);sidecar=Path(str(source[0])+'.json');meta=json.loads(sidecar.read_text())
+                if change=='provenance':meta['training_config']['provenance']['target_payload_accessed']=True
+                else:meta['backbone_kwargs']['adapter_attention_mode']='index'
+                sidecar.write_text(json.dumps(meta))
+                with self.assertRaises(ValueError):self.create(METHODS[1],(source[0],source[1],file_hash(sidecar)))
+        result=subprocess.run([sys.executable,'scripts/inspect_target_initialization.py','--help'],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr);self.assertIn('--source-sidecar-sha256',result.stdout)
 
 
 if __name__=='__main__':unittest.main()
