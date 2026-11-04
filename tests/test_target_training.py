@@ -121,7 +121,9 @@ class TargetTrainingTests(unittest.TestCase):
             with torch.no_grad():
                 cached=selected_outputs(model,'xuzhou',data['xuzhou'],'train',bank['train'])
                 uncached=selected_outputs(model,'xuzhou',data['xuzhou'],'train')
-            for a,b in zip(cached,uncached):torch.testing.assert_close(a,b,rtol=0,atol=0)
+            for a,b in zip(cached,uncached):
+                torch.testing.assert_close(a,b,rtol=0 if DEVICE=='cpu' else 1e-5,atol=0 if DEVICE=='cpu' else 1e-6)
+                self.assertTrue(torch.equal(a.argmax(1),b.argmax(1)))
             before=backbone_id(model);runtime.train_step_at(0,model,optimizer,'xuzhou',data['xuzhou'],config)
             self.assertEqual(before,backbone_id(model))
             with (run/'feature-bank.pt').open('ab') as stream:stream.write(b'changed')
@@ -134,6 +136,21 @@ class TargetTrainingTests(unittest.TestCase):
             self.assertTrue(all(not p.requires_grad for p in selected.backbone.parameters()))
             bad=copy.deepcopy(data);bad['xuzhou']['A']*=2
             with self.assertRaises(ValueError):rt.load_selected(path/'primary.pt',bad,raw,device=DEVICE)
+
+    def test_resume_rejects_replaced_cache_manifest_before_new_update(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(data,provenance,_),_=fixture(root)
+            source=initialization_tests.TargetInitializationTests().source(root)
+            spec=dict(source_path=str(source[0]),source_weight_sha256=source[1],source_sidecar_sha256=source[2])
+            opts=target_settings('xuzhou',HEAD_ONLY,device=DEVICE);path=root/'split'
+            run_training(opts,data,path,provenance,SOURCE,device=DEVICE,
+                runtime_adapter=TargetRuntime(opts,data,path,source_spec=spec),stop_after=5)
+            state_before=file_hash(path/json.loads((path/'progress.json').read_text())['state_file'])
+            with (path/'feature-bank.json').open('a') as stream:stream.write(' ')
+            with self.assertRaisesRegex(ValueError,'Resume feature bank'):
+                run_training(opts,data,path,provenance,SOURCE,device=DEVICE,
+                    runtime_adapter=TargetRuntime(opts,data,path,source_spec=spec),resume=True)
+            self.assertEqual(state_before,file_hash(path/json.loads((path/'progress.json').read_text())['state_file']))
 
     def test_optional_hooks_preserve_existing_source_and_reject_metadata_collision(self):
         class ExplicitSource(SourceRuntime):

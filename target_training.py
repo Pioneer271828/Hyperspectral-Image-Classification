@@ -1,5 +1,5 @@
 """G4 support-only short training; no query scoring or implicit full budget."""
-import copy,json,math,tempfile
+import copy,json,math,tempfile,time
 from dataclasses import replace
 from pathlib import Path
 import torch
@@ -136,8 +136,12 @@ class TargetRuntime:
             model_seed=self.settings['model_seed'],head_seed=self.settings['head_seed'],device=config.device,**self.source_spec)
         model.eval()
         if self.settings['method']==HEAD_ONLY:
+            if next(model.parameters()).is_cuda:torch.cuda.synchronize()
+            start=time.perf_counter()
             model,self.initial_calibration=calibrate_target(model,observation(model,self.items[target]),mode=POLICY,
                 context=CONTEXT,graph_policy=GRAPH_POLICY,source_state_sha256=state_id(model))
+            if next(model.parameters()).is_cuda:torch.cuda.synchronize()
+            self.initial_calibration_seconds=time.perf_counter()-start
             self.initialization=copy.deepcopy(model.training_config['target_initialization'])
         return model
 
@@ -178,12 +182,21 @@ class TargetRuntime:
                 self.bank=torch.load(bank_path,map_location='cpu',weights_only=True)
             else:
                 if cursor!=0:raise ValueError('Persisted feature bank missing')
+                if next(model.parameters()).is_cuda:torch.cuda.synchronize()
+                start=time.perf_counter()
                 with torch.no_grad():all_features=features(model,self.settings['target'],item)
                 self.bank={p:tuple(v[item[p+'_indices'].to(v.device)].detach().cpu() for v in all_features) for p in ('train','val')}
+                if next(model.parameters()).is_cuda:torch.cuda.synchronize()
+                seconds=time.perf_counter()-start
                 save_tensor_mapping(self.bank,bank_path)
                 self.bank_manifest={**expected,'bank_sha256':file_hash(bank_path),
                     'initial_calibration':copy.deepcopy(self.initial_calibration),'policy':'g4_frozen_selected_rows_v1'}
                 write_json(manifest_path,self.bank_manifest)
+                # Timing is an artifact, not part of deterministic feature identity
+                # or optimizer continuation. It includes device synchronization.
+                write_json(self.directory/'feature-bank-cost.json',{'feature_forward_and_row_copy_seconds':seconds,
+                    'initial_bn_calibration_seconds':self.initial_calibration_seconds,
+                    'excludes_loading_serialization_and_binding':True,'deployment_speedup_claim':False})
         if (any(self.bank_manifest.get(k)!=v for k,v in expected.items())
                 or file_hash(bank_path)!=self.bank_manifest['bank_sha256']
                 or json.loads(manifest_path.read_text())!=self.bank_manifest):
