@@ -6,9 +6,11 @@ This repository was organized from an existing research workspace. It retains th
 
 ## Modular Development
 
+E0-B2 frozen spatial diagnostics completed:28 related tests and1134 head/378 branch/648 spatial-pair/240 class-pair independent checks passed. M4 retains overall gains, but HongHu narrow-boundary OA falls0.60pp and class15 recall falls in all3 seeds. See the [scope and report](research/reports/E0B2_M4冻结空间逐类与双支路诊断_20261104.md); no new training or inference.
+
 **Completion rule updated 2026-11-04:** every listed research direction must be tested, including formerly optional candidates. Negative results can complete experiments; untested or blocked work remains incomplete. See the [mandatory coverage checklist](research/全量研究模块必测清单_20261104.md). E0-B1 spatial support auditing passed30 related tests and108 independent histogram checks; this does not establish boundary accuracy gains.
 
-M1-J1 joint real-band integration passed scoped engineering acceptance: CPU5/GPU5/full372 and two real12-update checks. See the [acceptance report](research/reports/M1J1_真实波段子集联合训练接入验收_20261104.md). This adds no accuracy claim. [M1-J2 full results](research/reports/M1J2_真实波段联合三种子完整配对结果_20261104.md) are complete: full macroOA95.89→95.61%, missing-band95.53→95.38%; the registered benefit gate failed. Keep full observation and the separately validated M4 candidate. Work is paused after training and independent analysis as requested.
+M1-J1 joint real-band integration passed scoped engineering acceptance: CPU5/GPU5/full372 and two real12-update checks. See the [acceptance report](research/reports/M1J1_真实波段子集联合训练接入验收_20261104.md). This adds no accuracy claim. [M1-J2 full results](research/reports/M1J2_真实波段联合三种子完整配对结果_20261104.md) are complete: full macroOA95.89→95.61%, missing-band95.53→95.38%; the registered benefit gate failed. Keep full observation and the separately validated M4 candidate. That experiment is complete; current work follows the mandatory coverage checklist.
 
 M4-J2 completed: [paired three-seed results](research/reports/M4J2_区域像素残差三种子完整配对结果_20261104.md). Region–pixel residual macro OA96.74±0.23%, versus original95.88±0.31% and capacity96.22±0.32%; both predefined comparison gates passed. HongHu is the main gain, with individual-class regressions retained. This is a fixed joint benchmark, not unseen-sensor confirmation; defaults remain unchanged.
 
