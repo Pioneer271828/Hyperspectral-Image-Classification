@@ -76,7 +76,7 @@ def load_source_context(directory,data_root,*,manifest_sha256,held_out,consumer,
             raise ValueError('Source item fingerprint/access/context mismatch')
         items[name]=item;entries[name]=entry
     if any(file_hash(p)!=h for p,h in protected.items()):raise ValueError('Source files changed during import')
-    config=replace(baseline,name='source_context_'+'_'.join(selected),data=replace(baseline.data,datasets=selected))
+    config=replace(baseline,name='source_context_'+'_'.join(selected),data=replace(baseline.data,datasets=list(selected)))
     config.validate()
     source_id=digest({'policy':'selective_acc1p_source_v1','sources':selected,
                       'producer_source_hash':manifest['code']['source_hash'],'datasets':entries})

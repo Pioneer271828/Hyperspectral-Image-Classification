@@ -16,7 +16,7 @@ from test_calibrated_selection import items
 class SourceContextTests(unittest.TestCase):
     def fixture(self,temp):
         root=Path(temp);prepared=root/'prepared';data=root/'data';prepared.mkdir();data.mkdir()
-        cfg=ResearchConfig.from_dict(settings()['config']);cfg=replace(cfg,data=replace(cfg.data,datasets=NAMES))
+        cfg=ResearchConfig.from_dict(settings()['config']);cfg=replace(cfg,data=replace(cfg.data,datasets=list(NAMES)))
         producer={'commit':PREPARATION_COMMIT,'files':{'fixture.py':'known'}};producer['source_hash']=digest(producer['files'])
         consumer={'files':{**producer['files'],'consumer.py':'extra'}};records={}
         for index,(name,item) in enumerate(items().items()):
