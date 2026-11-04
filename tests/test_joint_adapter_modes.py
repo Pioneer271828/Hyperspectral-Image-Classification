@@ -1,7 +1,7 @@
 import copy,os,tempfile,unittest
 from pathlib import Path
 import torch
-from joint_adapter_modes import MODES,adapter_settings,AdapterModeRuntime
+from joint_adapter_modes import MODES,adapter_settings,AdapterModeRuntime,value_checkpoint_adapter
 from joint_training import run_training,train_step,_tree_fingerprint
 from scripts.train_joint_m4 import m4_settings,graph_binding
 from model.research_config import ResearchConfig
@@ -33,6 +33,25 @@ class AdapterJointTests(unittest.TestCase):
         with self.assertRaises(ValueError):adapter_settings(settings(),'invalid')
         cfg=adapter_settings(settings(),'wavelength');cfg.pop('adapter_comparison')
         self.assertEqual(cfg,m4_settings(settings(),'none'))
+
+    def test_uniform_recomputation_with_nongradient_inputs_matches_updates(self):
+        from model.variable_channel_adapter import VariableChannelAdapter
+        from unittest.mock import patch
+        from torch.utils.checkpoint import checkpoint as actual_checkpoint
+        old=VariableChannelAdapter(latent_channels=4,embed_dim=8,attention_mode='uniform',chunk_pixels=2,checkpoint_chunks=True).to(DEVICE)
+        # Conversion is a CPU build-time operation, before the trainer moves the model.
+        old=old.cpu();rng=torch.get_rng_state().clone();new=value_checkpoint_adapter(old)
+        self.assertTrue(torch.equal(rng,torch.get_rng_state()));old=old.to(DEVICE);new=new.to(DEVICE)
+        x=torch.randn(3,3,5,device=DEVICE);self.assertFalse(x.requires_grad)
+        a=torch.optim.Adam(old.parameters(),lr=.001);b=torch.optim.Adam(new.parameters(),lr=.001)
+        with patch('joint_adapter_modes.checkpoint',wraps=actual_checkpoint) as calls:
+            y=new(x);y.square().sum().backward();self.assertEqual(calls.call_count,5)
+        z=old(x);z.square().sum().backward();torch.testing.assert_close(y,z,rtol=0,atol=0)
+        for (_,p),(_,q) in zip(old.named_parameters(),new.named_parameters()):
+            if p.grad is None:self.assertIsNone(q.grad)
+            else:torch.testing.assert_close(p.grad,q.grad,rtol=0,atol=0)
+        a.step();b.step()
+        for k,v in old.state_dict().items():torch.testing.assert_close(v,new.state_dict()[k],rtol=0,atol=0)
 
     def test_all_modes_same_initial_state_and_wavelength_legacy_step(self):
         data=self.data();models=[build(mode,data) for mode in MODES]
