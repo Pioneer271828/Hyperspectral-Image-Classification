@@ -6,6 +6,8 @@ This repository was organized from an existing research workspace. It retains th
 
 ## Modular Development
 
+M4-S1 factorial integration and M2-J1 adapter-mode integration have passed engineering acceptance. See the [M4-S1 report](research/reports/M4S1_区域残差与辅助监督四组接入验收_20261104.md) and [M2-J1 report](research/reports/M2J1_三种VCA联合接入与均匀模式显存验收_20261104.md). M4-S2 runs twelve preregistered full cases on two GPU queues. Its numerical reload failures and zero-update verification are retained; full accuracy conclusions await the complete campaign review. Current execution follows the shared checklist and the user's continuous-progression instruction.
+
 E0-B2 frozen spatial diagnostics completed:28 related tests and1134 head/378 branch/648 spatial-pair/240 class-pair independent checks passed. M4 retains overall gains, but HongHu narrow-boundary OA falls0.60pp and class15 recall falls in all3 seeds. See the [scope and report](research/reports/E0B2_M4冻结空间逐类与双支路诊断_20261104.md); no new training or inference.
 
 **Completion rule updated 2026-11-04:** every listed research direction must be tested, including formerly optional candidates. Negative results can complete experiments; untested or blocked work remains incomplete. See the [mandatory coverage checklist](research/全量研究模块必测清单_20261104.md). E0-B1 spatial support auditing passed30 related tests and108 independent histogram checks; this does not establish boundary accuracy gains.
