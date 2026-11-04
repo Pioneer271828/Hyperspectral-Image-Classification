@@ -1,9 +1,19 @@
 import json,unittest
 import torch
-from numerical_audit import compare,verify_exact_double_cast
+from numerical_audit import compare,verify_exact_double_cast,double_reference_items
 
 
 class NumericalAuditTests(unittest.TestCase):
+    def test_reference_preserves_the_actual_legacy_graph_weights(self):
+        from model.VCASAHGCN import SharedHGCN
+        A=torch.tensor([[.1,.2],[.3,0.]])
+        h=SharedHGCN(2,2,2)
+        for graph in (A,A.to_sparse()):
+            result=double_reference_items({'task':{'A':graph,'x':A,'label':torch.tensor([1,2])}})['task']
+            self.assertTrue(result['A'].is_sparse)
+            torch.testing.assert_close(result['A'].to_dense(),h._sparse_graph(graph).to_dense().double(),rtol=0,atol=0)
+            self.assertEqual(result['label'].dtype,torch.int64)
+
     def test_exposes_bound_failure_without_relabeling_it_passed(self):
         a=torch.tensor([[.8,.2],[.500001,.499999]])
         b=a.clone();b[0]+=torch.tensor([3e-5,-3e-5]);b[1]=b[1].flip(0)

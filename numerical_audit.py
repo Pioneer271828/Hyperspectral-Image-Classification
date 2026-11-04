@@ -30,3 +30,16 @@ def verify_exact_double_cast(original, converted):
                 raise ValueError('Nonexact double state cast: '+name)
         elif not torch.equal(old,value): raise ValueError('Integer state changed: '+name)
     return True
+
+
+def double_reference_items(items):
+    result={}
+    for name,item in items.items():
+        view={k:v.double() if torch.is_tensor(v) and v.is_floating_point() else v for k,v in item.items()}
+        # Legacy dense graph conversion explicitly rounds to FP32 before COO.
+        # Reproduce that exact graph first, then promote its values without loss.
+        A=item['A']
+        graph=A.coalesce() if A.is_sparse else A.float().to_sparse().coalesce()
+        view['A']=graph.double()
+        result[name]=view
+    return result

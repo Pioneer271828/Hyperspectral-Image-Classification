@@ -3,7 +3,7 @@ import argparse,json,os,sys,time
 from pathlib import Path
 AUDIT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(AUDIT))
-from numerical_audit import compare,verify_exact_double_cast
+from numerical_audit import compare,verify_exact_double_cast,double_reference_items
 PRODUCER=Path('/home/lbx/hsi-pioneer271828/checkouts/m4s2-issue135');BASE=PRODUCER.parents[1]
 sys.path.insert(0,str(PRODUCER));os.chdir(PRODUCER)
 import torch
@@ -27,7 +27,7 @@ def main():
  context={'torch':torch.__version__,'deterministic':True,'cudnn_deterministic':True,
           'matmul_tf32':torch.backends.cuda.matmul.allow_tf32,'cudnn_tf32':torch.backends.cudnn.allow_tf32,
           'cublas_workspace':os.environ.get('CUBLAS_WORKSPACE_CONFIG'),'device':torch.cuda.get_device_name(0)}
- out=BASE/'runs/num1-issue141-audit01';out.mkdir(exist_ok=True)
+ out=BASE/'runs/num1-issue141-audit02';out.mkdir(exist_ok=True)
  receipt=out/f'slot-{a.slot}.json';assert not receipt.exists()
  protected={str(p):file_hash(p) for c in launch['cases'] for p in Path(c['out']).iterdir() if p.is_file()}
  assert all(file_hash(p)==h for p,h in launch['inputs'].items())
@@ -42,7 +42,7 @@ def main():
   _,first=rt.validation_snapshot(model,moved);_,second=rt.validation_snapshot(model,moved)
   assert all(torch.equal(state[n],v.cpu()) for n,v in model.state_dict().items())
   model.double();verify_exact_double_cast(state,model.state_dict())
-  double_items={n:{k:v.double() if torch.is_tensor(v) and v.is_floating_point() else v for k,v in item.items()} for n,item in moved.items()}
+  double_items=double_reference_items(moved)
   _,reference=rt.validation_snapshot(model,double_items)
   verify_exact_double_cast(state,model.state_dict())
   for name in items:
