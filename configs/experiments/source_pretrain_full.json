@@ -1,0 +1,20 @@
+{
+  "protocol": "g4_source_only_pretrain_full_v1",
+  "held_targets": ["paviaU", "xuzhou", "whu-honghu"],
+  "training_seeds": [64, 512, 2048],
+  "epochs": 500,
+  "source_draws_per_epoch": 2,
+  "updates_per_case": 1002,
+  "new_optimizer_updates": 9018,
+  "selection": "calibrated_source_macro_fused_validation_oa_first_max",
+  "target_payload_access": false,
+  "test_scoring": false,
+  "reuse_joint_checkpoint": false,
+  "residual": "none",
+  "observation": "full",
+  "supervision": "legacy_three_heads",
+  "attention": "wavelength",
+  "graph_context": "selected_source_train_label_lda_slic",
+  "source_context": "full_source_scene_transductive",
+  "finalization": "original_strict_stop_on_failure"
+}
