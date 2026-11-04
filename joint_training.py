@@ -148,12 +148,12 @@ def validation_snapshot(model,items):
             'legacy_val_oa':oas,'metrics':metrics},probabilities
 
 
-def train_step(model,optimizer,name,item,config):
+def train_step(model,optimizer,name,item,config,*,forward_fn=None):
     from train_vca_multidataset import supervised_loss
     model.train(); optimizer.zero_grad(set_to_none=True)
     graph_before={n:p.detach().clone() for n,p in model.named_parameters()
                   if n.startswith('backbone.HGNN_Branch.')}
-    outputs=forward(model,name,item)
+    outputs=(forward if forward_fn is None else forward_fn)(model,name,item)
     terms=supervised_loss(outputs,item,'train',class_balance=config.loss.balanced,
                           cnn_loss_weight=config.loss.cnn_loss_weight,
                           graph_branch_loss_weight=config.loss.graph_branch_loss_weight,
@@ -208,6 +208,8 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
     snapshot=validation_snapshot if runtime_adapter is None else runtime_adapter.validation_snapshot
     if tuple(items)!=NAMES or any(any(k.startswith('test_') for k in i) for i in items.values()):
         raise ValueError('Exactly three ordered train/validation-only prepared tasks required')
+    if runtime_adapter is not None and hasattr(runtime_adapter, 'validate_inputs'):
+        runtime_adapter.validate_inputs(items)
     schedule=schedule_for(settings)
     if stop_after is not None and (type(stop_after)is not int or not 0<stop_after<len(schedule)):
         raise ValueError('Interruption cursor must be inside the declared budget')
@@ -281,7 +283,10 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
 
         while state['cursor']<len(schedule):
             i=state['cursor']; epoch=i//settings['steps_per_epoch']
-            step=step_fn(model,optimizer,schedule[i],items[schedule[i]],config)
+            if runtime_adapter is not None and hasattr(runtime_adapter, 'train_step_at'):
+                step=runtime_adapter.train_step_at(i,model,optimizer,schedule[i],items[schedule[i]],config)
+            else:
+                step=step_fn(model,optimizer,schedule[i],items[schedule[i]],config)
             step.update(step=i+1,epoch=epoch)
             state['trace'].append(step); state['cursor']=i+1
             end_epoch=state['cursor']%settings['steps_per_epoch']==0

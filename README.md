@@ -6,6 +6,8 @@ This repository was organized from an existing research workspace. It retains th
 
 ## Modular Development
 
+M1-J1 joint real-band integration passed scoped engineering acceptance: CPU5/GPU5/full372 and two real12-update checks. See the [acceptance report](research/reports/M1J1_真实波段子集联合训练接入验收_20261104.md). This adds no accuracy claim. Work is paused after this module as requested; M1-J2 Issue127 is planned and has not launched.
+
 M4-J2 completed: [paired three-seed results](research/reports/M4J2_区域像素残差三种子完整配对结果_20261104.md). Region–pixel residual macro OA96.74±0.23%, versus original95.88±0.31% and capacity96.22±0.32%; both predefined comparison gates passed. HongHu is the main gain, with individual-class regressions retained. This is a fixed joint benchmark, not unseen-sensor confirmation; defaults remain unchanged.
 
 **Use the [current baseline and delivery guide](docs/guides/current-baseline.md) for cloning, reproducibility and the next task.** The tested delivery snapshot is `2938698540b4eb51b4098aa781dd5e984b1613e1`, on `codex/issue-70-delivery-baseline`; its production implementation matches functional reference `6fa2d06747f79e90f95928b099ba2c3c0b18cbd0`. At the 2026-11-02 delivery snapshot, default `main` lacked the later delivered work. [Delivery status](docs/architecture/delivery-status.json) records exact PR dependencies, bridge commits, engineering/effect scope and pending integration. [Draft integration PR #71](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/71) is available for separate review.
