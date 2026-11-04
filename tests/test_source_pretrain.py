@@ -22,8 +22,10 @@ class SourcePretrainTests(unittest.TestCase):
             self.assertNotIn(c['held_out'],opts['source_tasks']);self.assertEqual(select_case(launch,SOURCE,c['held_out'],c['seed']),c)
             short=source_settings(c['held_out'],seed=c['seed']);SourceRuntime().validate(short)
             self.assertEqual(short['optimizer_steps'],8)
-        result=subprocess.run([sys.executable,'scripts/train_source_full.py','--help'],capture_output=True,text=True)
-        self.assertEqual(result.returncode,0,result.stderr);self.assertIn('--stop-after',result.stdout)
+        for entry,option in (('scripts/train_source_full.py','--stop-after'),
+                             ('research/reproduction/g4p1/supervise.py','--run-existing')):
+            result=subprocess.run([sys.executable,entry,'--help'],capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr);self.assertIn(option,result.stdout)
 
     def test_launch_and_config_tamper_rejected(self):
         launch=self.fixture();bads=[]
