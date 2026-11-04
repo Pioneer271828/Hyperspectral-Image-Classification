@@ -4,7 +4,6 @@ from dataclasses import replace
 from pathlib import Path
 import torch
 from joint_baseline import NAMES,load_config
-from joint_training import _atomic_torch_save
 from loadData.dataset_registry import DATASETS,file_hash
 from model.task_losses import probability_loss_components
 from model.checkpoint_io import load_model_checkpoint
@@ -16,6 +15,18 @@ from target_bn_calibration import (calibrate_target,verify_target_binding,backbo
 
 PROTOCOL='g4_support_training_engineering_v1'
 HEAD_ONLY=METHODS[2]
+
+
+def save_tensor_mapping(value,path):
+    """Atomic file-object ZIP root: identical tensors do not encode temp names."""
+    path=Path(path)
+    with tempfile.NamedTemporaryFile(dir=path.parent,delete=False) as stream:
+        temporary=Path(stream.name)
+        try:torch.save(value,stream)
+        except Exception:
+            stream.close();temporary.unlink(missing_ok=True);raise
+    try:temporary.replace(path)
+    finally:temporary.unlink(missing_ok=True)
 
 
 def target_settings(target,method,*,seed=64,support_seed=64,per_class=10,device='cpu'):
@@ -169,7 +180,7 @@ class TargetRuntime:
                 if cursor!=0:raise ValueError('Persisted feature bank missing')
                 with torch.no_grad():all_features=features(model,self.settings['target'],item)
                 self.bank={p:tuple(v[item[p+'_indices'].to(v.device)].detach().cpu() for v in all_features) for p in ('train','val')}
-                _atomic_torch_save(self.bank,bank_path)
+                save_tensor_mapping(self.bank,bank_path)
                 self.bank_manifest={**expected,'bank_sha256':file_hash(bank_path),
                     'initial_calibration':copy.deepcopy(self.initial_calibration),'policy':'g4_frozen_selected_rows_v1'}
                 write_json(manifest_path,self.bank_manifest)
@@ -225,13 +236,7 @@ class TargetRuntime:
     def validation_candidate(self,model,items,raw_source_path):
         path=Path(raw_source_path)
         raw={n:t.detach().cpu().clone() for n,t in model.state_dict().items()}
-        with tempfile.NamedTemporaryFile(dir=path.parent,delete=False) as stream:
-            temporary=Path(stream.name)
-            try:torch.save(raw,stream)
-            except Exception:
-                stream.close();temporary.unlink(missing_ok=True);raise
-        try:temporary.replace(path)
-        finally:temporary.unlink(missing_ok=True)
+        save_tensor_mapping(raw,path)
         name=self.settings['target'];obs=observation(model,items[name]);raw_id=state_id(model)
         if self.settings['method']==HEAD_ONLY:
             # Heads never feed BN. Rebind the unchanged, verified frozen calibrated
@@ -252,6 +257,10 @@ class TargetRuntime:
 
     def load_selected(self,path,items,raw_source_path,*,device='cpu'):
         model=load_model_checkpoint(path,device=device);meta=model.training_config
+        if not hasattr(self,'initialization'):
+            from model.research_config import ResearchConfig
+            self.build_model(ResearchConfig.from_dict(self.settings['config']),
+                {self.settings['target']:DATASETS[self.settings['target']][2]})
         self.validate(meta['joint_runtime'])
         if ({k:v for k,v in meta['joint_runtime'].items() if k not in ('executed_optimizer_steps','selected_step')}!=self.settings
                 or meta['research_config']!=self.settings['config']

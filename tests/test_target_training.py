@@ -13,7 +13,7 @@ from target_bn_calibration import OBS_KEYS,GRAPH_POLICY,backbone_id
 from target_initialization import initialize_target,METHODS
 from target_data_context import load_target_context
 from target_training import (TargetRuntime,target_settings,selected_outputs,loss_terms,features,HEAD_ONLY)
-from test_target_initialization import TargetInitializationTests
+import test_target_initialization as initialization_tests
 from test_joint_training import SOURCE,PROVENANCE,checkpoints,hashes
 from test_source_training import SourceRuntime,source_settings
 from test_calibrated_selection import items as source_items
@@ -68,7 +68,7 @@ class TargetTrainingTests(unittest.TestCase):
     def test_all_methods_scope_exact_cpu_resume_selection_and_readonly_completion(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(data,provenance,guard),_=fixture(root)
-            source=TargetInitializationTests().source(root)
+            source=initialization_tests.TargetInitializationTests().source(root)
             spec=dict(source_path=str(source[0]),source_weight_sha256=source[1],source_sidecar_sha256=source[2])
             for method in METHODS:
                 opts=target_settings('xuzhou',method,device=DEVICE);kwargs={} if method==METHODS[0] else spec
@@ -102,7 +102,7 @@ class TargetTrainingTests(unittest.TestCase):
 
     def test_frozen_cache_equivalence_tamper_and_selected_binding(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp);(data,provenance,_),_=fixture(root);source=TargetInitializationTests().source(root)
+            root=Path(tmp);(data,provenance,_),_=fixture(root);source=initialization_tests.TargetInitializationTests().source(root)
             spec=dict(source_path=str(source[0]),source_weight_sha256=source[1],source_sidecar_sha256=source[2])
             opts=target_settings('xuzhou',HEAD_ONLY,device=DEVICE);run=root/'run';run.mkdir()
             runtime=TargetRuntime(opts,data,run,source_spec=spec);config=ResearchConfig.from_dict(opts['config'])

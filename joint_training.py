@@ -261,7 +261,8 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
         candidate_fn=(runtime_adapter.validation_candidate
                       if runtime_adapter is not None and hasattr(runtime_adapter,'validation_candidate') else validation_candidate)
         calibration_key=getattr(runtime_adapter,'calibration_metadata_key','bn_calibration')
-        if calibration_key in ('research_config','joint_runtime','provenance','training_code','checkpoint_optimizer_step'):
+        if (not isinstance(calibration_key,str) or not calibration_key
+                or calibration_key in ('research_config','joint_runtime','provenance','training_code','checkpoint_optimizer_step')):
             raise ValueError('Calibration metadata key collides with canonical metadata')
         state={'cursor':0,'trace':[],'history':[],'best_score':None if score_fn else -1.,'best_step':None,
                'best_model':None,'best_probabilities':None,'identity':identity,'start_code':source}
@@ -335,7 +336,8 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
         runtime={**settings,'executed_optimizer_steps':len(schedule),'selected_step':state['best_step']}
         extras=(runtime_adapter.checkpoint_metadata(model)
                 if runtime_adapter is not None and hasattr(runtime_adapter,'checkpoint_metadata') else {})
-        reserved={'research_config','joint_runtime','provenance','training_code','checkpoint_optimizer_step',calibration_key}
+        reserved={'research_config','joint_runtime','provenance','training_code','checkpoint_optimizer_step',
+                  'bn_calibration','target_bn_calibration',calibration_key}
         if not isinstance(extras,dict) or reserved.intersection(extras):
             raise ValueError('Runtime checkpoint metadata collides with canonical metadata')
         model.training_config={'research_config':config.to_dict(),'joint_runtime':runtime,
