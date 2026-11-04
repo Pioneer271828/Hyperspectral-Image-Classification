@@ -102,7 +102,7 @@ def finalize(directory, settings, items, provenance, training_source, verificati
         if _tree_fingerprint(saved)!=_tree_fingerprint(state['best_probabilities']):
             raise ValueError('Saved selection probabilities changed')
         moved={n:{k:v.to(device) if torch.is_tensor(v) else v for k,v in i.items()} for n,i in items.items()}
-        check,values=validation_snapshot(primary,moved)
+        check,values=runtime.validation_snapshot(primary,moved)
         comparisons=[]
         for name in items:
             for phase in ('train','val'):
