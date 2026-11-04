@@ -1,3 +1,5 @@
+M2-J2 completed: wavelength/index/uniform macro OA95.87/96.61/90.10%; the registered wavelength benefit gates failed. See the [paired report](research/reports/M2J2_VCA三模式三种子完整对照与复盘_20261105.md). Source-only transfer engineering is next; defaults stay unchanged.
+
 # Hyperspectral Image Classification
 
 Research code for hyperspectral image classification: the SAHGCN baseline, a Variable Channel Adapter (VCA), a CNN/HGCN dual-branch backbone, end-to-end learnable superpixel graphs, region–pixel alignment, selective interaction, and graph edge-weight updates.
