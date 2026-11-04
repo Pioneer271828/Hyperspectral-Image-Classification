@@ -1,0 +1,4961 @@
+{
+  "status": "passed",
+  "qa_sha256": "69fd46f853c9d79352fa8502da7b95add0a9a55fb32f9c3ee00ab2e7b05d66d6",
+  "policy": "exact_state_trainval_decisions_two_precision_sensitivity_v1",
+  "original_probability_policy": "not_stably_passed",
+  "probability_calibration_validated": false,
+  "metrics_recomputed": 144,
+  "recalls_recomputed": 1920,
+  "tables": {
+    "fp32": {
+      "none-legacy_three_heads": {
+        "macro_oa": {
+          "values": [
+            95.71214114981687,
+            96.23982941514438,
+            95.68139775039785
+          ],
+          "mean": 95.87778943845304,
+          "std": 0.31391240449202384
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                99.05756676557863,
+                99.13353115727003,
+                98.1839762611276
+              ],
+              "mean": 98.79169139465876,
+              "std": 0.5276655283826602
+            },
+            "aa": {
+              "values": [
+                98.64537003848652,
+                98.71791067885172,
+                97.31790888387137
+              ],
+              "mean": 98.22706320040321,
+              "std": 0.7881857107163893
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.13228768960892,
+                98.33866474048087,
+                98.1249170806492
+              ],
+              "mean": 98.19862317024632,
+              "std": 0.12133553689841174
+            },
+            "aa": {
+              "values": [
+                98.56380269591143,
+                98.33920946822242,
+                98.72209347291157
+              ],
+              "mean": 98.54170187901514,
+              "std": 0.19239640028418425
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                89.94656899426306,
+                91.24729234768225,
+                90.73529990941672
+              ],
+              "mean": 90.643053750454,
+              "std": 0.6552498194696771
+            },
+            "aa": {
+              "values": [
+                90.3652764699081,
+                91.74628450774155,
+                90.8424080641089
+              ],
+              "mean": 90.98465634725285,
+              "std": 0.7014069650945894
+            }
+          }
+        }
+      },
+      "none-primary_only": {
+        "macro_oa": {
+          "values": [
+            96.47049901343068,
+            96.60461713009182,
+            96.18504042386672
+          ],
+          "mean": 96.42005218912975,
+          "std": 0.2142890913304116
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                99.42551928783384,
+                98.92225519287834,
+                98.75608308605341
+              ],
+              "mean": 99.03461918892187,
+              "std": 0.3485763299030831
+            },
+            "aa": {
+              "values": [
+                99.29806520533097,
+                98.3586835396291,
+                98.13760474809634
+              ],
+              "mean": 98.5981178310188,
+              "std": 0.616168567131813
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.45512036204431,
+                98.7602635729764,
+                98.43595677874906
+              ],
+              "mean": 98.55044690458993,
+              "std": 0.181959024180662
+            },
+            "aa": {
+              "values": [
+                98.73168202183619,
+                99.16483973005703,
+                98.68408759806057
+              ],
+              "mean": 98.86020311665125,
+              "std": 0.26489414294040586
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                91.53085739041393,
+                92.13133262442072,
+                91.36308140679769
+              ],
+              "mean": 91.67509047387745,
+              "std": 0.40392433712127757
+            },
+            "aa": {
+              "values": [
+                90.78979121341835,
+                92.51445958055675,
+                91.44325551719224
+              ],
+              "mean": 91.58250210372245,
+              "std": 0.870725245440367
+            }
+          }
+        }
+      },
+      "x_residual-legacy_three_heads": {
+        "macro_oa": {
+          "values": [
+            96.70045007111149,
+            96.91969603422197,
+            96.53360292659494
+          ],
+          "mean": 96.71791634397613,
+          "std": 0.1936382579840864
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                98.94836795252225,
+                99.17388724035608,
+                98.5353115727003
+              ],
+              "mean": 98.88585558852621,
+              "std": 0.32384497459399963
+            },
+            "aa": {
+              "values": [
+                98.42936055334661,
+                98.73235660519616,
+                97.73099875922688
+              ],
+              "mean": 98.29757197258989,
+              "std": 0.5135226932030016
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.42563792620547,
+                98.40205197753438,
+                98.26201040729985
+              ],
+              "mean": 98.36323343701322,
+              "std": 0.08845140220452008
+            },
+            "aa": {
+              "values": [
+                98.73531616649562,
+                98.55348634958536,
+                99.03122820043525
+              ],
+              "mean": 98.77334357217207,
+              "std": 0.2411304246672994
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                92.72734433460676,
+                93.18314888477545,
+                92.8034867997847
+              ],
+              "mean": 92.90466000638897,
+              "std": 0.244164821973937
+            },
+            "aa": {
+              "values": [
+                92.23225453092336,
+                92.72229339768603,
+                92.2266129906735
+              ],
+              "mean": 92.39372030642762,
+              "std": 0.2845666248322593
+            }
+          }
+        }
+      },
+      "x_residual-primary_only": {
+        "macro_oa": {
+          "values": [
+            97.05875458420643,
+            97.39369540569344,
+            96.89310171707658
+          ],
+          "mean": 97.11518390232548,
+          "std": 0.2550229621588895
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                99.26172106824926,
+                98.86765578635016,
+                98.61364985163205
+              ],
+              "mean": 98.91434223541047,
+              "std": 0.32654830247043887
+            },
+            "aa": {
+              "values": [
+                98.9697512956703,
+                98.22380786892833,
+                97.91412530209469
+              ],
+              "mean": 98.36922815556444,
+              "std": 0.5426295738366309
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.4580686056282,
+                98.64970443858073,
+                98.69687633592288
+              ],
+              "mean": 98.60154979337727,
+              "std": 0.12647701531554065
+            },
+            "aa": {
+              "values": [
+                98.56404388605475,
+                98.94657682698723,
+                98.80020960446359
+              ],
+              "mean": 98.77027677250186,
+              "std": 0.19301513812794524
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                93.45647407874182,
+                94.66372599214945,
+                93.3687789636748
+              ],
+              "mean": 93.82965967818869,
+              "std": 0.7236522440818677
+            },
+            "aa": {
+              "values": [
+                92.21916990538664,
+                94.44061744266286,
+                92.5831651710408
+              ],
+              "mean": 93.0809841730301,
+              "std": 1.1914592352547602
+            }
+          }
+        }
+      }
+    },
+    "fp64": {
+      "none-legacy_three_heads": {
+        "macro_oa": {
+          "values": [
+            95.71214114981687,
+            96.24049582922486,
+            95.68192648591987
+          ],
+          "mean": 95.87818782165387,
+          "std": 0.3141314227216794
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                99.05756676557863,
+                99.13353115727003,
+                98.18635014836795
+              ],
+              "mean": 98.79248269040552,
+              "std": 0.5262985284883189
+            },
+            "aa": {
+              "values": [
+                98.64537003848652,
+                98.71791067885172,
+                97.32097317264993
+              ],
+              "mean": 98.22808462999605,
+              "std": 0.7864184211745112
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.13228768960892,
+                98.3401388622728,
+                98.1249170806492
+              ],
+              "mean": 98.19911454417696,
+              "std": 0.1221862315889304
+            },
+            "aa": {
+              "values": [
+                98.56380269591143,
+                98.34137368931925,
+                98.72209347291157
+              ],
+              "mean": 98.54242328604742,
+              "std": 0.19125819663283555
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                89.94656899426306,
+                91.24781746813176,
+                90.73451222874247
+              ],
+              "mean": 90.6429662303791,
+              "std": 0.655436800956937
+            },
+            "aa": {
+              "values": [
+                90.3652764699081,
+                91.74680709029818,
+                90.84149535449588
+              ],
+              "mean": 90.98452630490071,
+              "std": 0.7017835160141153
+            }
+          }
+        }
+      },
+      "none-primary_only": {
+        "macro_oa": {
+          "values": [
+            96.47148176129198,
+            96.60452961001691,
+            96.18504042386672
+          ],
+          "mean": 96.42035059839186,
+          "std": 0.21436788749454716
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                99.42551928783384,
+                98.92225519287834,
+                98.75608308605341
+              ],
+              "mean": 99.03461918892187,
+              "std": 0.3485763299030831
+            },
+            "aa": {
+              "values": [
+                99.29806520533097,
+                98.3586835396291,
+                98.13760474809634
+              ],
+              "mean": 98.5981178310188,
+              "std": 0.616168567131813
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.4580686056282,
+                98.7602635729764,
+                98.43595677874906
+              ],
+              "mean": 98.55142965245123,
+              "std": 0.1811930958768052
+            },
+            "aa": {
+              "values": [
+                98.7342735933604,
+                99.16483973005703,
+                98.68408759806057
+              ],
+              "mean": 98.861066973826,
+              "std": 0.26426894275000345
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                91.53085739041393,
+                92.13107006419598,
+                91.36308140679769
+              ],
+              "mean": 91.67500295380252,
+              "std": 0.4037760543377619
+            },
+            "aa": {
+              "values": [
+                90.78979121341835,
+                92.51435601114036,
+                91.44325551719224
+              ],
+              "mean": 91.58246758058367,
+              "std": 0.8706698193521816
+            }
+          }
+        }
+      },
+      "x_residual-legacy_three_heads": {
+        "macro_oa": {
+          "values": [
+            96.70094144504215,
+            96.91969603422197,
+            96.53330300477882
+          ],
+          "mean": 96.71798016134765,
+          "std": 0.19375921059544296
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                98.94836795252225,
+                99.17388724035608,
+                98.53293768545994
+              ],
+              "mean": 98.88506429277942,
+              "std": 0.3251301246932004
+            },
+            "aa": {
+              "values": [
+                98.42936055334661,
+                98.73235660519616,
+                97.72731592491759
+              ],
+              "mean": 98.29634436115346,
+              "std": 0.5155547233736467
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.4271120479974,
+                98.40205197753438,
+                98.2634845290918
+              ],
+              "mean": 98.36421618487452,
+              "std": 0.08813144524203818
+            },
+            "aa": {
+              "values": [
+                98.7361717887897,
+                98.55348634958536,
+                99.03165555086262
+              ],
+              "mean": 98.77377122974589,
+              "std": 0.24129180411422732
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                92.72734433460676,
+                93.18314888477545,
+                92.8034867997847
+              ],
+              "mean": 92.90466000638897,
+              "std": 0.244164821973937
+            },
+            "aa": {
+              "values": [
+                92.23225453092336,
+                92.72229339768603,
+                92.2266129906735
+              ],
+              "mean": 92.39372030642762,
+              "std": 0.2845666248322593
+            }
+          }
+        }
+      },
+      "x_residual-primary_only": {
+        "macro_oa": {
+          "values": [
+            97.0595458799532,
+            97.3932915518377,
+            96.89211896921528
+          ],
+          "mean": 97.11498546700206,
+          "std": 0.2551443713904348
+        },
+        "datasets": {
+          "paviaU": {
+            "oa": {
+              "values": [
+                99.26409495548961,
+                98.86765578635016,
+                98.61364985163205
+              ],
+              "mean": 98.91513353115727,
+              "std": 0.32781139466474685
+            },
+            "aa": {
+              "values": [
+                98.97823953945267,
+                98.22380786892833,
+                97.91412530209469
+              ],
+              "mean": 98.37205757015857,
+              "std": 0.5473282908576267
+            }
+          },
+          "xuzhou": {
+            "oa": {
+              "values": [
+                98.4580686056282,
+                98.64823031678878,
+                98.693928092339
+              ],
+              "mean": 98.60007567158533,
+              "std": 0.12508627726042937
+            },
+            "aa": {
+              "values": [
+                98.56404388605475,
+                98.94614947655988,
+                98.7993549036089
+              ],
+              "mean": 98.76984942207451,
+              "std": 0.19275398998270168
+            }
+          },
+          "whu-honghu": {
+            "oa": {
+              "values": [
+                93.45647407874182,
+                94.6639885523742,
+                93.3687789636748
+              ],
+              "mean": 93.8297471982636,
+              "std": 0.7238035548288413
+            },
+            "aa": {
+              "values": [
+                92.21916990538664,
+                94.44098977675078,
+                92.5831651710408
+              ],
+              "mean": 93.08110828439276,
+              "std": 1.1916716801611564
+            }
+          }
+        }
+      }
+    }
+  },
+  "branch_tables": {
+    "fp32": {
+      "none": {
+        "fused": {
+          "values": [
+            95.71214114981687,
+            96.23982941514438,
+            95.68139775039785
+          ],
+          "mean": 95.87778943845304,
+          "std": 0.31391240449202384
+        },
+        "cnn": {
+          "values": [
+            95.26753756744074,
+            95.84665982445121,
+            95.32602220450104
+          ],
+          "mean": 95.48007319879765,
+          "std": 0.3188172341233417
+        },
+        "graph": {
+          "values": [
+            94.53390754053515,
+            94.91503975384013,
+            94.20149987349009
+          ],
+          "mean": 94.55014905595512,
+          "std": 0.35704709819551894
+        }
+      },
+      "x_residual": {
+        "fused": {
+          "values": [
+            96.70045007111149,
+            96.91969603422197,
+            96.53360292659494
+          ],
+          "mean": 96.71791634397613,
+          "std": 0.1936382579840864
+        },
+        "cnn": {
+          "values": [
+            96.53585251006346,
+            96.7948347784017,
+            96.52779060231505
+          ],
+          "mean": 96.61949263026007,
+          "std": 0.15190424706151368
+        },
+        "graph": {
+          "values": [
+            94.57845778305435,
+            94.75427567475046,
+            94.32338580293914
+          ],
+          "mean": 94.55203975358131,
+          "std": 0.21665630528171045
+        }
+      }
+    },
+    "fp64": {
+      "none": {
+        "fused": {
+          "values": [
+            95.71214114981687,
+            96.24049582922486,
+            95.68192648591987
+          ],
+          "mean": 95.87818782165387,
+          "std": 0.3141314227216794
+        },
+        "cnn": {
+          "values": [
+            95.26843279522711,
+            95.84665982445121,
+            95.32679708828314
+          ],
+          "mean": 95.4806299026538,
+          "std": 0.3183316280457117
+        },
+        "graph": {
+          "values": [
+            94.53390754053515,
+            94.91503975384013,
+            94.20149987349009
+          ],
+          "mean": 94.55014905595512,
+          "std": 0.35704709819551894
+        }
+      },
+      "x_residual": {
+        "fused": {
+          "values": [
+            96.70094144504215,
+            96.91969603422197,
+            96.53330300477882
+          ],
+          "mean": 96.71798016134765,
+          "std": 0.19375921059544296
+        },
+        "cnn": {
+          "values": [
+            96.53585251006346,
+            96.79465973825187,
+            96.5284734283602
+          ],
+          "mean": 96.61966189222517,
+          "std": 0.1515974844685145
+        },
+        "graph": {
+          "values": [
+            94.57845778305435,
+            94.75427567475046,
+            94.32338580293914
+          ],
+          "mean": 94.55203975358131,
+          "std": 0.21665630528171045
+        }
+      }
+    }
+  },
+  "paired": {
+    "fp32": {
+      "residual_legacy": {
+        "values": [
+          0.9883089212946117,
+          0.6798666190775848,
+          0.8522051761970961
+        ],
+        "mean": 0.8401269055230975,
+        "std": 0.15457547320351542
+      },
+      "residual_primary": {
+        "values": [
+          0.5882555707757309,
+          0.7890782756016179,
+          0.7080612932098496
+        ],
+        "mean": 0.6951317131957327,
+        "std": 0.10103375783817221
+      },
+      "supervision_none": {
+        "values": [
+          0.7583578636138122,
+          0.36478771494743434,
+          0.5036426734688737
+        ],
+        "mean": 0.5422627506767067,
+        "std": 0.19960710972551285
+      },
+      "supervision_residual": {
+        "values": [
+          0.3583045130949314,
+          0.4739993714714674,
+          0.35949879048162714
+        ],
+        "mean": 0.39726755834934196,
+        "std": 0.0664543823489142
+      },
+      "interaction": {
+        "values": [
+          -0.4000533505188808,
+          0.10921165652403308,
+          -0.14414388298724656
+        ],
+        "mean": -0.14499519232736477,
+        "std": 0.25463357083326466
+      }
+    },
+    "fp64": {
+      "residual_legacy": {
+        "values": [
+          0.9888002952252672,
+          0.6792002049971102,
+          0.8513765188589373
+        ],
+        "mean": 0.8397923396937715,
+        "std": 0.15512478484277983
+      },
+      "residual_primary": {
+        "values": [
+          0.5880641186612134,
+          0.7887619418208036,
+          0.7070785453485495
+        ],
+        "mean": 0.6946348686101889,
+        "std": 0.10092590288586051
+      },
+      "supervision_none": {
+        "values": [
+          0.7593406114751122,
+          0.3640337807920502,
+          0.5031139379468419
+        ],
+        "mean": 0.5421627767380014,
+        "std": 0.2005255132255625
+      },
+      "supervision_residual": {
+        "values": [
+          0.3586044349110584,
+          0.4735955176157436,
+          0.35881596443645414
+        ],
+        "mean": 0.3970053056544187,
+        "std": 0.06632915356308666
+      },
+      "interaction": {
+        "values": [
+          -0.4007361765640538,
+          0.10956173682369341,
+          -0.14429797351038776
+        ],
+        "mean": -0.1451574710835827,
+        "std": 0.25515004243391953
+      }
+    }
+  },
+  "gates": {
+    "fp32": [
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "paired": {
+          "values": [
+            0.5882555707757309,
+            0.7890782756016179,
+            0.7080612932098496
+          ],
+          "mean": 0.6951317131957327,
+          "std": 0.10103375783817221
+        },
+        "positive_seeds": 3,
+        "aa": [
+          {
+            "dataset": "paviaU",
+            "delta_pp": -0.2288896754543616,
+            "passed": true
+          },
+          {
+            "dataset": "xuzhou",
+            "delta_pp": -0.0899263441494084,
+            "passed": true
+          },
+          {
+            "dataset": "whu-honghu",
+            "delta_pp": 1.498482069307646,
+            "passed": true
+          }
+        ],
+        "honghu_delta_pp": 2.1545692043112408,
+        "checks": {
+          "macro_oa": true,
+          "positive_seeds": true,
+          "dataset_aa": true,
+          "honghu_oa": true,
+          "small_class": true
+        },
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "paired": {
+          "values": [
+            0.3583045130949314,
+            0.4739993714714674,
+            0.35949879048162714
+          ],
+          "mean": 0.39726755834934196,
+          "std": 0.0664543823489142
+        },
+        "positive_seeds": 3,
+        "aa": [
+          {
+            "dataset": "paviaU",
+            "delta_pp": 0.07165618297455545,
+            "passed": true
+          },
+          {
+            "dataset": "xuzhou",
+            "delta_pp": -0.0030667996702223497,
+            "passed": true
+          },
+          {
+            "dataset": "whu-honghu",
+            "delta_pp": 0.6872638666024684,
+            "passed": true
+          }
+        ],
+        "honghu_delta_pp": 0.92499967179972,
+        "checks": {
+          "macro_oa": true,
+          "positive_seeds": true,
+          "dataset_aa": true,
+          "honghu_oa": true,
+          "small_class": true
+        },
+        "passed": true
+      }
+    ],
+    "fp64": [
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "paired": {
+          "values": [
+            0.5880641186612134,
+            0.7887619418208036,
+            0.7070785453485495
+          ],
+          "mean": 0.6946348686101889,
+          "std": 0.10092590288586051
+        },
+        "positive_seeds": 3,
+        "aa": [
+          {
+            "dataset": "paviaU",
+            "delta_pp": -0.22606026086023912,
+            "passed": true
+          },
+          {
+            "dataset": "xuzhou",
+            "delta_pp": -0.09121755175149163,
+            "passed": true
+          },
+          {
+            "dataset": "whu-honghu",
+            "delta_pp": 1.4986407038090843,
+            "passed": true
+          }
+        ],
+        "honghu_delta_pp": 2.154744244461075,
+        "checks": {
+          "macro_oa": true,
+          "positive_seeds": true,
+          "dataset_aa": true,
+          "honghu_oa": true,
+          "small_class": true
+        },
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "paired": {
+          "values": [
+            0.3586044349110584,
+            0.4735955176157436,
+            0.35881596443645414
+          ],
+          "mean": 0.3970053056544187,
+          "std": 0.06632915356308666
+        },
+        "positive_seeds": 3,
+        "aa": [
+          {
+            "dataset": "paviaU",
+            "delta_pp": 0.075713209005109,
+            "passed": true
+          },
+          {
+            "dataset": "xuzhou",
+            "delta_pp": -0.003921807671388352,
+            "passed": true
+          },
+          {
+            "dataset": "whu-honghu",
+            "delta_pp": 0.6873879779651111,
+            "passed": true
+          }
+        ],
+        "honghu_delta_pp": 0.925087191874637,
+        "checks": {
+          "macro_oa": true,
+          "positive_seeds": true,
+          "dataset_aa": true,
+          "honghu_oa": true,
+          "small_class": true
+        },
+        "passed": true
+      }
+    ]
+  },
+  "class_changes": {
+    "fp32": [
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 1,
+        "train_count": 67,
+        "delta_pp": 0.04083716181726056,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 2,
+        "train_count": 187,
+        "delta_pp": -0.025406504065039748,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 3,
+        "train_count": 21,
+        "delta_pp": -1.0159651669085648,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 4,
+        "train_count": 31,
+        "delta_pp": -0.40879460833056863,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 5,
+        "train_count": 14,
+        "delta_pp": 0.0,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 6,
+        "train_count": 51,
+        "delta_pp": 0.0,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 7,
+        "train_count": 14,
+        "delta_pp": -0.35650623885917776,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 8,
+        "train_count": 37,
+        "delta_pp": -0.29417172274315284,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 9,
+        "train_count": 10,
+        "delta_pp": -3.700743415417188e-15,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 1,
+        "train_count": 264,
+        "delta_pp": 0.2564102564102555,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 2,
+        "train_count": 41,
+        "delta_pp": 0.10088272383354709,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 3,
+        "train_count": 28,
+        "delta_pp": 3.700743415417188e-15,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 4,
+        "train_count": 53,
+        "delta_pp": -0.5388910531099873,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 5,
+        "train_count": 132,
+        "delta_pp": 0.16427948046614516,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 6,
+        "train_count": 25,
+        "delta_pp": -0.055601890464274106,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 7,
+        "train_count": 70,
+        "delta_pp": -0.10167029774872753,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 8,
+        "train_count": 48,
+        "delta_pp": -0.12752391073326635,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 9,
+        "train_count": 31,
+        "delta_pp": -0.5072224059984569,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 1,
+        "train_count": 141,
+        "delta_pp": 0.23862896811048806,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 2,
+        "train_count": 36,
+        "delta_pp": 1.2049354154617276,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 3,
+        "train_count": 219,
+        "delta_pp": -0.02636639990073834,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 4,
+        "train_count": 1633,
+        "delta_pp": 2.405985430202795,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 5,
+        "train_count": 63,
+        "delta_pp": 0.14154281670205604,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 6,
+        "train_count": 446,
+        "delta_pp": 0.956981407218375,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 7,
+        "train_count": 242,
+        "delta_pp": 7.197416456051675,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 8,
+        "train_count": 41,
+        "delta_pp": -0.6346025384101524,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 9,
+        "train_count": 109,
+        "delta_pp": 0.40356640075082106,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 10,
+        "train_count": 124,
+        "delta_pp": 1.7147225862822209,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 11,
+        "train_count": 111,
+        "delta_pp": 2.3168633235004954,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 12,
+        "train_count": 90,
+        "delta_pp": 2.437918131307404,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 13,
+        "train_count": 226,
+        "delta_pp": 2.745699506796588,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 14,
+        "train_count": 74,
+        "delta_pp": 1.7713365539452501,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 15,
+        "train_count": 11,
+        "delta_pp": -0.37225042301184397,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 16,
+        "train_count": 73,
+        "delta_pp": 6.007643549589858,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 17,
+        "train_count": 31,
+        "delta_pp": -0.8212397345033207,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 18,
+        "train_count": 33,
+        "delta_pp": 1.2735501526155137,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 19,
+        "train_count": 88,
+        "delta_pp": 2.894327894327897,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 20,
+        "train_count": 35,
+        "delta_pp": -0.48548402757548903,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 21,
+        "train_count": 14,
+        "delta_pp": 1.4027033919918406,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 22,
+        "train_count": 41,
+        "delta_pp": 0.1927266633148979,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 1,
+        "train_count": 67,
+        "delta_pp": 0.07146503318019581,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 2,
+        "train_count": 187,
+        "delta_pp": 0.050813008130083194,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 3,
+        "train_count": 21,
+        "delta_pp": 0.4999193678438929,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 4,
+        "train_count": 31,
+        "delta_pp": -1.8340514860236394,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 5,
+        "train_count": 14,
+        "delta_pp": 0.0,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 6,
+        "train_count": 51,
+        "delta_pp": 0.0,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 7,
+        "train_count": 14,
+        "delta_pp": 0.5092946269416883,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 8,
+        "train_count": 37,
+        "delta_pp": 0.8825151682294511,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 9,
+        "train_count": 10,
+        "delta_pp": 0.4649499284692382,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 1,
+        "train_count": 264,
+        "delta_pp": 0.6897435897435928,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 2,
+        "train_count": 41,
+        "delta_pp": 0.10088272383354709,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 3,
+        "train_count": 28,
+        "delta_pp": 0.13377112975799427,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 4,
+        "train_count": 53,
+        "delta_pp": -0.19477989871445517,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 5,
+        "train_count": 132,
+        "delta_pp": 0.00770060064685385,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 6,
+        "train_count": 25,
+        "delta_pp": -0.472616068946341,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 7,
+        "train_count": 70,
+        "delta_pp": 0.1888162672476379,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 8,
+        "train_count": 48,
+        "delta_pp": -0.20545518951470276,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 9,
+        "train_count": 31,
+        "delta_pp": -0.2756643510861171,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 1,
+        "train_count": 141,
+        "delta_pp": -0.16631715959216642,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 2,
+        "train_count": 36,
+        "delta_pp": 0.8289955658376721,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 3,
+        "train_count": 219,
+        "delta_pp": 0.6901792915193254,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 4,
+        "train_count": 1633,
+        "delta_pp": 0.9616480658231544,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 5,
+        "train_count": 63,
+        "delta_pp": -1.8509445261037594,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 6,
+        "train_count": 446,
+        "delta_pp": 1.9997873374650605,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 7,
+        "train_count": 242,
+        "delta_pp": 0.08284189834317038,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 8,
+        "train_count": 41,
+        "delta_pp": 0.05845023380093665,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 9,
+        "train_count": 109,
+        "delta_pp": 1.1137181292038147,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 10,
+        "train_count": 124,
+        "delta_pp": 1.578200087374404,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 11,
+        "train_count": 111,
+        "delta_pp": 1.622418879056046,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 12,
+        "train_count": 90,
+        "delta_pp": 1.1528140000755935,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 13,
+        "train_count": 226,
+        "delta_pp": -0.3864429207265744,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 14,
+        "train_count": 74,
+        "delta_pp": 0.0966183574879246,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 15,
+        "train_count": 11,
+        "delta_pp": 1.7597292724196263,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 16,
+        "train_count": 73,
+        "delta_pp": 2.745152870991796,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 17,
+        "train_count": 31,
+        "delta_pp": -0.6974912813589862,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 18,
+        "train_count": 33,
+        "delta_pp": 0.021050415745708463,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 19,
+        "train_count": 88,
+        "delta_pp": 3.8267288267288313,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 20,
+        "train_count": 35,
+        "delta_pp": -0.8641615690843762,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 21,
+        "train_count": 14,
+        "delta_pp": -0.43356286661566285,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 22,
+        "train_count": 41,
+        "delta_pp": 0.9803921568627453,
+        "protected": false,
+        "passed": true
+      }
+    ],
+    "fp64": [
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 1,
+        "train_count": 67,
+        "delta_pp": 0.04083716181726056,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 2,
+        "train_count": 187,
+        "delta_pp": -0.025406504065039748,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 3,
+        "train_count": 21,
+        "delta_pp": -1.0159651669085648,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 4,
+        "train_count": 31,
+        "delta_pp": -0.40879460833056863,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 5,
+        "train_count": 14,
+        "delta_pp": 0.0,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 6,
+        "train_count": 51,
+        "delta_pp": 0.0,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 7,
+        "train_count": 14,
+        "delta_pp": -0.33104150751209394,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 8,
+        "train_count": 37,
+        "delta_pp": -0.29417172274315284,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "paviaU",
+        "class": 9,
+        "train_count": 10,
+        "delta_pp": -3.700743415417188e-15,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 1,
+        "train_count": 264,
+        "delta_pp": 0.25128205128204983,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 2,
+        "train_count": 41,
+        "delta_pp": 0.10088272383354709,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 3,
+        "train_count": 28,
+        "delta_pp": 3.700743415417188e-15,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 4,
+        "train_count": 53,
+        "delta_pp": -0.5453837164004716,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 5,
+        "train_count": 132,
+        "delta_pp": 0.16427948046614516,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 6,
+        "train_count": 25,
+        "delta_pp": -0.055601890464274106,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 7,
+        "train_count": 70,
+        "delta_pp": -0.10167029774872753,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 8,
+        "train_count": 48,
+        "delta_pp": -0.12752391073326635,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "xuzhou",
+        "class": 9,
+        "train_count": 31,
+        "delta_pp": -0.5072224059984569,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 1,
+        "train_count": 141,
+        "delta_pp": 0.23862896811048806,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 2,
+        "train_count": 36,
+        "delta_pp": 1.2049354154617276,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 3,
+        "train_count": 219,
+        "delta_pp": -0.02636639990073834,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 4,
+        "train_count": 1633,
+        "delta_pp": 2.405985430202795,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 5,
+        "train_count": 63,
+        "delta_pp": 0.14154281670205604,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 6,
+        "train_count": 446,
+        "delta_pp": 0.957740916271721,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 7,
+        "train_count": 242,
+        "delta_pp": 7.197416456051675,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 8,
+        "train_count": 41,
+        "delta_pp": -0.6346025384101524,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 9,
+        "train_count": 109,
+        "delta_pp": 0.40356640075082106,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 10,
+        "train_count": 124,
+        "delta_pp": 1.7174530362603784,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 11,
+        "train_count": 111,
+        "delta_pp": 2.3168633235004954,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 12,
+        "train_count": 90,
+        "delta_pp": 2.437918131307404,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 13,
+        "train_count": 226,
+        "delta_pp": 2.745699506796588,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 14,
+        "train_count": 74,
+        "delta_pp": 1.7713365539452501,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 15,
+        "train_count": 11,
+        "delta_pp": -0.37225042301184397,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 16,
+        "train_count": 73,
+        "delta_pp": 6.007643549589858,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 17,
+        "train_count": 31,
+        "delta_pp": -0.8212397345033207,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 18,
+        "train_count": 33,
+        "delta_pp": 1.2735501526155137,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 19,
+        "train_count": 88,
+        "delta_pp": 2.894327894327897,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 20,
+        "train_count": 35,
+        "delta_pp": -0.48548402757548903,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 21,
+        "train_count": 14,
+        "delta_pp": 1.4027033919918406,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "none",
+          "primary_only"
+        ],
+        "dataset": "whu-honghu",
+        "class": 22,
+        "train_count": 41,
+        "delta_pp": 0.1927266633148979,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 1,
+        "train_count": 67,
+        "delta_pp": 0.07146503318019581,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 2,
+        "train_count": 187,
+        "delta_pp": 0.050813008130083194,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 3,
+        "train_count": 21,
+        "delta_pp": 0.4999193678438929,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 4,
+        "train_count": 31,
+        "delta_pp": -1.8230029830957857,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 5,
+        "train_count": 14,
+        "delta_pp": 0.0,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 6,
+        "train_count": 51,
+        "delta_pp": 0.0,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 7,
+        "train_count": 14,
+        "delta_pp": 0.5347593582887722,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 8,
+        "train_count": 37,
+        "delta_pp": 0.8825151682294511,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "paviaU",
+        "class": 9,
+        "train_count": 10,
+        "delta_pp": 0.4649499284692382,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 1,
+        "train_count": 264,
+        "delta_pp": 0.6846153846153873,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 2,
+        "train_count": 41,
+        "delta_pp": 0.10088272383354709,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 3,
+        "train_count": 28,
+        "delta_pp": 0.13377112975799427,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 4,
+        "train_count": 53,
+        "delta_pp": -0.19477989871445517,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 5,
+        "train_count": 132,
+        "delta_pp": 0.005133733764569234,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 6,
+        "train_count": 25,
+        "delta_pp": -0.472616068946341,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 7,
+        "train_count": 70,
+        "delta_pp": 0.1888162672476379,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 8,
+        "train_count": 48,
+        "delta_pp": -0.20545518951470276,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "xuzhou",
+        "class": 9,
+        "train_count": 31,
+        "delta_pp": -0.2756643510861171,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 1,
+        "train_count": 141,
+        "delta_pp": -0.16631715959216642,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 2,
+        "train_count": 36,
+        "delta_pp": 0.8289955658376721,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 3,
+        "train_count": 219,
+        "delta_pp": 0.6901792915193254,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 4,
+        "train_count": 1633,
+        "delta_pp": 0.9616480658231544,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 5,
+        "train_count": 63,
+        "delta_pp": -1.8509445261037594,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 6,
+        "train_count": 446,
+        "delta_pp": 1.9997873374650605,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 7,
+        "train_count": 242,
+        "delta_pp": 0.08284189834317038,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 8,
+        "train_count": 41,
+        "delta_pp": 0.05845023380093665,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 9,
+        "train_count": 109,
+        "delta_pp": 1.1137181292038147,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 10,
+        "train_count": 124,
+        "delta_pp": 1.5809305373525613,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 11,
+        "train_count": 111,
+        "delta_pp": 1.622418879056046,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 12,
+        "train_count": 90,
+        "delta_pp": 1.1528140000755935,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 13,
+        "train_count": 226,
+        "delta_pp": -0.3864429207265744,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 14,
+        "train_count": 74,
+        "delta_pp": 0.0966183574879246,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 15,
+        "train_count": 11,
+        "delta_pp": 1.7597292724196263,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 16,
+        "train_count": 73,
+        "delta_pp": 2.745152870991796,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 17,
+        "train_count": 31,
+        "delta_pp": -0.6974912813589862,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 18,
+        "train_count": 33,
+        "delta_pp": 0.021050415745708463,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 19,
+        "train_count": 88,
+        "delta_pp": 3.8267288267288313,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 20,
+        "train_count": 35,
+        "delta_pp": -0.8641615690843762,
+        "protected": false,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 21,
+        "train_count": 14,
+        "delta_pp": -0.43356286661566285,
+        "protected": true,
+        "passed": true
+      },
+      {
+        "control": [
+          "x_residual",
+          "legacy_three_heads"
+        ],
+        "dataset": "whu-honghu",
+        "class": 22,
+        "train_count": 41,
+        "delta_pp": 0.9803921568627453,
+        "protected": false,
+        "passed": true
+      }
+    ]
+  },
+  "precision_sensitivity": [
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "graph",
+      "changes": 2,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "cnn",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "graph",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "cnn",
+      "changes": 2,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0029482435838890098
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "graph",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "cnn",
+      "changes": 1,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.00026256022476189855
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "graph",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "cnn",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 1,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0014741217919334026
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "graph",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "cnn",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 2,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0005251204495015926
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "graph",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "cnn",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 1,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "oa_delta_pp": 0.0023738872403589184
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "graph",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "cnn",
+      "changes": 2,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      "oa_delta_pp": 0.004747774480706735
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "graph",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "cnn",
+      "changes": 2,
+      "n": 67837,
+      "by_class_changes": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.0029482435838890098
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 3,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.000787680674252389
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "graph",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "cnn",
+      "changes": 2,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0005251204495015926
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 2,
+      "n": 67837,
+      "by_class_changes": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0029482435838890098
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 1,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.0002625602247507963
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "none",
+      "supervision": "primary_only",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "graph",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "cnn",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 1,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0014741217919334026
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "graph",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "cnn",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "graph",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "cnn",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "graph",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "cnn",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "graph",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "cnn",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "graph",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "cnn",
+      "changes": 2,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.0005251204495015926
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 1,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.0023738872403589184
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "graph",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "cnn",
+      "changes": 1,
+      "n": 42125,
+      "by_class_changes": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.002373887240347816
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 1,
+      "n": 67837,
+      "by_class_changes": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0014741217919445049
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "graph",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "cnn",
+      "changes": 3,
+      "n": 67837,
+      "by_class_changes": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.004422365375822412
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "graph",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "legacy_three_heads",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "cnn",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 64,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 1,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0023738872403589184
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 64,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 0,
+      "n": 67837,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 64,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 512,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 512,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 1,
+      "n": 67837,
+      "by_class_changes": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.0014741217919445049
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 512,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 1,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0002625602247507963
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 2048,
+      "dataset": "paviaU",
+      "head": "fused",
+      "changes": 0,
+      "n": 42125,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 2048,
+      "dataset": "xuzhou",
+      "head": "fused",
+      "changes": 2,
+      "n": 67837,
+      "by_class_changes": [
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": -0.0029482435838890098
+    },
+    {
+      "mode": "x_residual",
+      "supervision": "primary_only",
+      "seed": 2048,
+      "dataset": "whu-honghu",
+      "head": "fused",
+      "changes": 0,
+      "n": 380865,
+      "by_class_changes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "oa_delta_pp": 0.0
+    }
+  ],
+  "precision_gate_agreement": true,
+  "stable_joint_candidate_benefit": true,
+  "training_artifacts_unchanged": 1350,
+  "inputs_unchanged": 13,
+  "optimizer_updates": 0,
+  "training_reviews": {
+    "none-legacy_three_heads-64": {
+      "name": "none-legacy_three_heads-64",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 7.461161152521769,
+      "loss_last30": 0.4790554935733477,
+      "last50_epoch_validation_gain": 0.009004414081573486,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn_head": 1503,
+        "fused_head": 1503,
+        "graph": 1503,
+        "graph_head": 1503
+      },
+      "residual_updated_steps": 0,
+      "finalization_policy": "original_strict"
+    },
+    "none-primary_only-64": {
+      "name": "none-primary_only-64",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 2.504563482602437,
+      "loss_last30": 0.12306539152438442,
+      "last50_epoch_validation_gain": 0.00724116961161303,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn": 1503,
+        "fused_head": 1503,
+        "graph": 1503
+      },
+      "residual_updated_steps": 0,
+      "finalization_policy": "original_strict"
+    },
+    "x_residual-legacy_three_heads-64": {
+      "name": "x_residual-legacy_three_heads-64",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 7.458753204345703,
+      "loss_last30": 0.4175269876917203,
+      "last50_epoch_validation_gain": 0.008490800857543945,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn_head": 1503,
+        "fused_head": 1503,
+        "graph": 1503,
+        "graph_head": 1503
+      },
+      "residual_updated_steps": 1503,
+      "finalization_policy": "exact_state_same_classes_probability_atol_1e-5_v1"
+    },
+    "x_residual-primary_only-64": {
+      "name": "x_residual-primary_only-64",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 2.503111751874288,
+      "loss_last30": 0.09709336267163356,
+      "last50_epoch_validation_gain": 0.019308467706044552,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn": 1503,
+        "fused_head": 1503,
+        "graph": 1503
+      },
+      "residual_updated_steps": 1503,
+      "finalization_policy": "exact_state_same_classes_probability_atol_1e-5_v1"
+    },
+    "none-legacy_three_heads-512": {
+      "name": "none-legacy_three_heads-512",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 7.560404698053996,
+      "loss_last30": 0.2846447085340818,
+      "last50_epoch_validation_gain": 0.005820930004119873,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn_head": 1503,
+        "fused_head": 1503,
+        "graph": 1503,
+        "graph_head": 1503
+      },
+      "residual_updated_steps": 0,
+      "finalization_policy": "original_strict"
+    },
+    "none-primary_only-512": {
+      "name": "none-primary_only-512",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 2.4886573632558187,
+      "loss_last30": 0.057608898356556894,
+      "last50_epoch_validation_gain": 0.006949961185455322,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn": 1503,
+        "fused_head": 1503,
+        "graph": 1503
+      },
+      "residual_updated_steps": 0,
+      "finalization_policy": "original_strict"
+    },
+    "x_residual-legacy_three_heads-512": {
+      "name": "x_residual-legacy_three_heads-512",
+      "updates": 1503,
+      "selected_step": 1473,
+      "loss_first30": 7.558232037226359,
+      "loss_last30": 0.250617936005195,
+      "last50_epoch_validation_gain": 0.005820930004119873,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn_head": 1503,
+        "fused_head": 1503,
+        "graph": 1503,
+        "graph_head": 1503
+      },
+      "residual_updated_steps": 1503,
+      "finalization_policy": "exact_state_same_classes_probability_atol_1e-5_v1"
+    },
+    "x_residual-primary_only-512": {
+      "name": "x_residual-primary_only-512",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 2.4874308745066327,
+      "loss_last30": 0.03951575656731923,
+      "last50_epoch_validation_gain": 0.003937681516011482,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn": 1503,
+        "fused_head": 1503,
+        "graph": 1503
+      },
+      "residual_updated_steps": 1503,
+      "finalization_policy": "exact_state_same_classes_probability_atol_1e-5_v1"
+    },
+    "none-legacy_three_heads-2048": {
+      "name": "none-legacy_three_heads-2048",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 7.734804073969523,
+      "loss_last30": 0.4924520514905453,
+      "last50_epoch_validation_gain": 0.006676952044169071,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn_head": 1503,
+        "fused_head": 1503,
+        "graph": 1503,
+        "graph_head": 1503
+      },
+      "residual_updated_steps": 0,
+      "finalization_policy": "original_strict"
+    },
+    "none-primary_only-2048": {
+      "name": "none-primary_only-2048",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 2.553936966260274,
+      "loss_last30": 0.12066304900993903,
+      "last50_epoch_validation_gain": 0.003424068291982052,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn": 1503,
+        "fused_head": 1503,
+        "graph": 1503
+      },
+      "residual_updated_steps": 0,
+      "finalization_policy": "original_strict"
+    },
+    "x_residual-legacy_three_heads-2048": {
+      "name": "x_residual-legacy_three_heads-2048",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 7.731427192687988,
+      "loss_last30": 0.42994648441672323,
+      "last50_epoch_validation_gain": 0.002910455067952511,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn_head": 1503,
+        "fused_head": 1503,
+        "graph": 1503,
+        "graph_head": 1503
+      },
+      "residual_updated_steps": 1503,
+      "finalization_policy": "exact_state_same_classes_probability_atol_1e-5_v1"
+    },
+    "x_residual-primary_only-2048": {
+      "name": "x_residual-primary_only-2048",
+      "updates": 1503,
+      "selected_step": 1503,
+      "loss_first30": 2.551660140355428,
+      "loss_last30": 0.09732500606526931,
+      "last50_epoch_validation_gain": 0.00698244571685791,
+      "test_scoring": false,
+      "positive_gradient_steps": {
+        "adapter": 1503,
+        "cnn": 1503,
+        "fused_head": 1503,
+        "graph": 1503
+      },
+      "residual_updated_steps": 1503,
+      "finalization_policy": "exact_state_same_classes_probability_atol_1e-5_v1"
+    }
+  },
+  "evaluation_seconds": 157.32648343406618
+}
