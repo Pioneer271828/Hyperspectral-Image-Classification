@@ -1,4 +1,4 @@
-import copy,os,tempfile,types,unittest
+import copy,os,tempfile,types,unittest,subprocess,sys
 from pathlib import Path
 import torch
 import torch.nn.functional as F
@@ -30,6 +30,8 @@ class TargetBNTests(unittest.TestCase):
         result,receipt=self.calibrate(model,obs);self.assertEqual(state_id(model),before)
         self.assertEqual(len(receipt['layers']),5);self.assertEqual(len(receipt['calibrated_buffers']),10)
         self.assertEqual({r['population_units'] for r in receipt['layers']},{'pixels','regions'})
+        for row in receipt['layers']:
+            self.assertEqual(row['samples_per_channel'],obs['A'].shape[0] if row['population_units']=='regions' else obs['net_input'].shape[0]*obs['net_input'].shape[1])
         for n,v in result.state_dict().items():
             if n not in receipt['calibrated_buffers']:torch.testing.assert_close(v,model.state_dict()[n],rtol=0,atol=0)
         self.assertTrue(torch.equal(cpu,torch.get_rng_state()))
@@ -70,6 +72,8 @@ class TargetBNTests(unittest.TestCase):
         with self.assertRaises(ValueError):calibrate_target(model,obs,mode=POLICY,context=CONTEXT,graph_policy=GRAPH_POLICY,source_state_sha256='a'*64)
         model.train()
         with self.assertRaises(ValueError):self.calibrate(model,obs)
+        result=subprocess.run([sys.executable,'scripts/inspect_target_bn.py','--help'],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr);self.assertIn('--observation-record-sha256',result.stdout)
 
     def test_missing_and_reused_bn_fail_without_mutating_original(self):
         from model.VCASAHGCN import DomainSpecificBatchNorm2d
