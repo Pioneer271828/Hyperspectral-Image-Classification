@@ -38,7 +38,8 @@ class TargetBNTests(unittest.TestCase):
 
     def test_independent_functional_population_oracle_fp64_sparse_graph(self):
         # CPUFP64 is the numerical oracle; native GPU tests exercise other paths.
-        model,obs=self.fixture(double=True);reference=copy.deepcopy(model)
+        model,obs=self.fixture(double=True);model=model.cpu()
+        obs={k:v.cpu() if torch.is_tensor(v) else v for k,v in obs.items()};reference=copy.deepcopy(model)
         for module in reference.modules():
             if isinstance(module,(torch.nn.BatchNorm1d,torch.nn.BatchNorm2d)):
                 def independent(self,x):return F.batch_norm(x,None,None,self.weight,self.bias,True,0.,self.eps)
@@ -69,6 +70,17 @@ class TargetBNTests(unittest.TestCase):
         with self.assertRaises(ValueError):calibrate_target(model,obs,mode=POLICY,context=CONTEXT,graph_policy=GRAPH_POLICY,source_state_sha256='a'*64)
         model.train()
         with self.assertRaises(ValueError):self.calibrate(model,obs)
+
+    def test_missing_and_reused_bn_fail_without_mutating_original(self):
+        from model.VCASAHGCN import DomainSpecificBatchNorm2d
+        model,obs=self.fixture();model.unused=DomainSpecificBatchNorm2d(4,['xuzhou']).to(DEVICE);model.eval();before=state_id(model)
+        with self.assertRaisesRegex(ValueError,'Missing BN'):self.calibrate(model,obs)
+        self.assertEqual(state_id(model),before)
+        model,obs=self.fixture();bn=model.backbone.CNN_denoise[0].norm.norm.norms['xuzhou']
+        def reused(self,x):return self(x)
+        bn.forward=types.MethodType(reused,bn);before=state_id(model)
+        with self.assertRaisesRegex(ValueError,'Reused target BN'):self.calibrate(model,obs)
+        self.assertEqual(state_id(model),before)
 
 
 if __name__=='__main__':unittest.main()
