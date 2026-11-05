@@ -10,6 +10,7 @@
   "real_training_started_by_this_task": false,
   "required_ancestors": {
     "accepted_g4i": "a0787ca6e3613909a9c7e61636b7b7ed1c0a618b",
+    "accepted_g4i_result_docs": "a01aa94be2a6fc162a3d5ac3efa7d1fb55caf779",
     "monitoring_protection": "461c5b806556db15153a6a992963fbe217244123",
     "snapshot_repair": "4b348b8dcdc3a46e969cf9d3e119252a3048c347",
     "numerical_audit": "4358891d74cff51404f51836f887d376d3045b87",
@@ -24,7 +25,7 @@
     {"id": "M6/M7/M8扩展", "state": "部分完成", "evidence": "交互工程、现有边权代码、固定融合和监督对照", "remaining": "交互完整机制、边权独立验收、门控融合和共享语义条件", "report": "research/全量研究模块必测清单_20261104.md"},
     {"id": "M2", "state": "首轮完整对照完成，净收益假设失败", "evidence": "波长/序号/均匀宏OA95.87/96.61/90.10%", "remaining": "真实迁移及波长质量诊断", "report": "research/reports/M2J2_VCA三模式三种子完整对照与复盘_20261105.md"},
     {"id": "M1/E1", "state": "工程及首轮实验完成，当前配方无净收益", "evidence": "真实子集联合实验与覆盖度开发筛选保留负结果", "remaining": "独立重复、联合校准接入及真实迁移", "report": "research/reports/M1J2_真实波段联合三种子完整配对结果_20261104.md"},
-    {"id": "E4-G4", "state": "主链路工程完成，完整目标效果待核验", "evidence": "9个纯源模型9018更新；27目标模型完整入口和冻结评价工程已验收", "remaining": "以独立实验回执确认27模型完成与query结果；本次不重启、不计分", "report": "research/reports/E4G4I_A_全模型冻结评价与独立复算工程验收_20261105.md"},
+    {"id": "E4-G4", "state": "首轮完整目标对照完成，迁移OA净收益失败", "evidence": "主线程报告27模型40500更新完成；从头/微调/新头宏OA89.04/88.84/78.31%，微调AA+1.69pp", "remaining": "独立支持集/K敏感性、M4迁移机制及传感器证据；本次只整合报告，不重启或计分", "report": "research/reports/E4G4HI_三方向完整目标适配与冻结评价结果_20261105.md"},
     {"id": "MON/MASK", "state": "有限工具已整合", "evidence": "MON-2/3C与激活快照修复同版本；三个历史候选均拒绝", "remaining": "持续窗口、重要度候选、MON-4和开销；原生FP32严格等价限制保留", "report": "research/reports/MON3C_固定通道验证保护结果_20261104.md"},
     {"id": "压缩与动态推理", "state": "未完成完整研究闭环", "evidence": "已有可逆掩码；其余为研究计划", "remaining": "结构裁剪、PTQ/QAT、低秩/三值、早退出/回退/路由及实测成本", "report": "research/全量研究模块必测清单_20261104.md"},
     {"id": "其余必测机制", "state": "未完成", "evidence": "候选范围和验收边界已登记", "remaining": "MiTA、多尺度、硬连接、课程、TTA及开放集，逐项独立实现和实验", "report": "research/全量研究模块必测清单_20261104.md"}
