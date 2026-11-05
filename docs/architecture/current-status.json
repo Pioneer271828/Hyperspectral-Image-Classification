@@ -108,13 +108,20 @@
     },
     {
       "id": "M4-G4A/B",
-      "state": "完整源v2验收通过；完整目标接入验收中",
+      "state": "完整源v2验收通过",
       "evidence": "18模型18036更新通过原严格收尾；216指标/2880召回、54次精确重载及2123受保护文件输入核验通过；v1失败保留",
-      "remaining": "Issue174完整源到目标接入与12例真实短目标验收，再登记36例完整目标及none协议兼容对照",
+      "remaining": "完整迁移精度、独立支持集/空间与机制确认",
       "report": "research/reports/M4G4Bv2_固定顺序验证与完整源预训练_20261105.md"
+    },
+    {
+      "id": "M4完整源目标接入",
+      "state": "显式目标v2工程与真实短接入验收通过",
+      "evidence": "CPU2/GPU2/全量517；12例144更新、72指标960召回、36次精确重载；2120源与输入文件不变；原生v1独立复测失败保留",
+      "remaining": "none历史基线身份/协议兼容审计，再登记36例完整目标与冻结评价",
+      "report": "research/reports/M4FullTransfer_完整源目标接入与原生复测失败_20261105.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "source_v2_accepted_target_engineering",
+  "execution_state": "full_source_target_v2_engineering_accepted_none_compatibility_audit",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
