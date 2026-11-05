@@ -34,3 +34,35 @@ Issue #174 / Draft PR #175，对应模块计划第19节第三项和研究主计�
 
 下一步在接入工程通过后，先审计G4历史none基线与目标v2的标签、图、初始化、预算、校准、选模及数值兼容性。该兼容性未建立前，不把旧18例none结果与新目标v2直接合称公平完整配对；根据审计决定复用范围或登记必要的新对照。完整目标36例54000更新另行冻结，query只在全批次通过后按冻结协议评价。
 
+## v2真实接入最终验收与复盘
+
+12/12例、144更新全部通过，耗时701.311秒（约11分41秒）。每例2步中断+10步恢复包含在原12步预算内，完成恢复0更新，所有已完成目标文件前后不变。独立复算72项训练/验证头指标和960项逐类召回；每例3次独立重载与选中保存概率逐元素一致，共36次。全部12例每步M4梯度为正且有实际参数变化，全部选中第12步。
+
+冻结源码/实际测试SHA `1d5c66492ce7d4ad33036f43beec22c267ab33a9`，LXC `checkouts/m4-full-target-ordered-v2`、GPU1、Python3.10.20/Torch2.7.1+cu128。2120个受保护源训练、源审计与目标输入文件不变；目标侧query计分0。回执 `runs/m4fulltarget-issue174-ordered02/receipt.json` SHA256 `abc7c5a5c464f4cf976f07b50f5a48ece23f44901b5d29cfc0da88c100fea809`。小型提交汇总 `docs/architecture/m4-full-target-short-results.json`，原始权重/日志在checkout外。
+
+实际工程回归命令（rmvision现有解释器、线程数1）：
+
+```bash
+python scripts/check_repository.py --expected-commit 1d5c66492ce7d4ad33036f43beec22c267ab33a9
+python -m unittest discover -s tests -p test_m4_full_target_runtime.py -v
+M4G4_DEVICE=cuda python -m unittest discover -s tests -p test_m4_full_target_runtime.py -v
+python -m unittest discover -s tests -v
+```
+
+真实命令使用同SHA、独立外部目录，关键参数为：
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python research/reproduction/m4g4b/full_source_target_precheck.py \
+ --expected-commit 1d5c66492ce7d4ad33036f43beec22c267ab33a9 \
+ --source-root /home/lbx/hsi-pioneer271828/runs/m4g4bv2-issue172-full01 \
+ --source-audit /home/lbx/hsi-pioneer271828/runs/m4g4bv2-issue172-independent01/receipt.json \
+ --source-audit-sha256 8e0617ec639f75f042d6037702269e96512335d41d4ed2c3ccb2c24921ef7d6f \
+ --observation-root /home/lbx/hsi-pioneer271828/runs/g4d-issue151-observations02 \
+ --family-root /home/lbx/hsi-pioneer271828/runs/g4c-issue149-labels01 \
+ --out-dir /home/lbx/hsi-pioneer271828/runs/m4fulltarget-issue174-ordered02 --ordered-validation-v2
+```
+
+四种模式组合均在三种目标完成路径验收。PaviaU训练OA约30.0–36.7%、验证26.7–35.6%；Xuzhou训练10.0–21.1%、验证8.9–20.0%；HongHu训练6.4–11.8%、验证2.7–11.8%，各例损失下降。12步的支持集拟合与新头适配明显不足，全部选最后一步。该模块确认完整源参数正确接入、目标头/域更新、保存与恢复及数值合同；完整迁移精度、容量优势与逐类保护仍须同条件完整预算实验。
+
+原生v1失败现场及零更新诊断继续保留。验收结论为显式目标v2接入工程通过；原生v1重复性限制仍存在。下一模块先登记none基线身份/数值/选模兼容性审计，不能因当前短测通过直接宣布旧none对照可公平复用。
+

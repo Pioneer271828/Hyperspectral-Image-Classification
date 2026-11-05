@@ -1,0 +1,729 @@
+{
+  "status": "passed",
+  "updates": 144,
+  "cases": [
+    {
+      "name": "paviaU-capacity_control-target_scratch_full",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 95743
+    },
+    {
+      "name": "paviaU-capacity_control-source_pretrained_full_finetune",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99840
+    },
+    {
+      "name": "paviaU-x_residual-target_scratch_full",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99071
+    },
+    {
+      "name": "paviaU-x_residual-source_pretrained_full_finetune",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99072
+    },
+    {
+      "name": "xuzhou-capacity_control-target_scratch_full",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 95743
+    },
+    {
+      "name": "xuzhou-capacity_control-source_pretrained_full_finetune",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99840
+    },
+    {
+      "name": "xuzhou-x_residual-target_scratch_full",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99072
+    },
+    {
+      "name": "xuzhou-x_residual-source_pretrained_full_finetune",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 54
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99072
+    },
+    {
+      "name": "whu-honghu-capacity_control-target_scratch_full",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 132
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 95741
+    },
+    {
+      "name": "whu-honghu-capacity_control-source_pretrained_full_finetune",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 132
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99840
+    },
+    {
+      "name": "whu-honghu-x_residual-target_scratch_full",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 132
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99071
+    },
+    {
+      "name": "whu-honghu-x_residual-source_pretrained_full_finetune",
+      "updates": 12,
+      "selected_step": 12,
+      "independent": {
+        "head_metrics": 6,
+        "class_recalls": 132
+      },
+      "strict_reload_repeats": 3,
+      "distinct_repeat_fingerprints": 1,
+      "positive_m4_gradient_steps": 12,
+      "actual_m4_changes": 99072
+    }
+  ],
+  "protected_files": 2120,
+  "query_labels_accessed": false,
+  "test_scoring": false,
+  "elapsed_seconds": 701.3113907822408,
+  "producer_commit": "1d5c66492ce7d4ad33036f43beec22c267ab33a9",
+  "training_review": [
+    {
+      "name": "paviaU-capacity_control-target_scratch_full",
+      "train_loss_first": 6.803048133850098,
+      "train_loss_last": 6.352805137634277,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.3,
+        "aa": 0.3,
+        "recall": [
+          0.2,
+          0.0,
+          0.5,
+          0.0,
+          0.7,
+          0.0,
+          0.0,
+          0.3,
+          1.0
+        ],
+        "nll": 2.1445112228393555
+      },
+      "val_fused": {
+        "oa": 0.26666666666666666,
+        "aa": 0.2666666666666667,
+        "recall": [
+          0.0,
+          0.0,
+          0.6,
+          0.0,
+          0.6,
+          0.0,
+          0.0,
+          0.2,
+          1.0
+        ],
+        "nll": 2.1395504474639893
+      }
+    },
+    {
+      "name": "paviaU-capacity_control-source_pretrained_full_finetune",
+      "train_loss_first": 6.919981956481934,
+      "train_loss_last": 5.9766411781311035,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.34444444444444444,
+        "aa": 0.3444444444444444,
+        "recall": [
+          0.2,
+          0.4,
+          0.6,
+          0.3,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.6
+        ],
+        "nll": 1.9815704822540283
+      },
+      "val_fused": {
+        "oa": 0.35555555555555557,
+        "aa": 0.35555555555555557,
+        "recall": [
+          0.2,
+          0.4,
+          0.8,
+          0.0,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "nll": 1.99432373046875
+      }
+    },
+    {
+      "name": "paviaU-x_residual-target_scratch_full",
+      "train_loss_first": 6.803048133850098,
+      "train_loss_last": 6.350579261779785,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.3,
+        "aa": 0.3,
+        "recall": [
+          0.2,
+          0.0,
+          0.5,
+          0.0,
+          0.7,
+          0.0,
+          0.0,
+          0.3,
+          1.0
+        ],
+        "nll": 2.1436171531677246
+      },
+      "val_fused": {
+        "oa": 0.26666666666666666,
+        "aa": 0.2666666666666667,
+        "recall": [
+          0.0,
+          0.0,
+          0.6,
+          0.0,
+          0.6,
+          0.0,
+          0.0,
+          0.2,
+          1.0
+        ],
+        "nll": 2.1393818855285645
+      }
+    },
+    {
+      "name": "paviaU-x_residual-source_pretrained_full_finetune",
+      "train_loss_first": 7.000730991363525,
+      "train_loss_last": 6.022480010986328,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.36666666666666664,
+        "aa": 0.36666666666666664,
+        "recall": [
+          0.2,
+          0.4,
+          0.6,
+          0.2,
+          1.0,
+          0.0,
+          0.2,
+          0.0,
+          0.7
+        ],
+        "nll": 1.9711748361587524
+      },
+      "val_fused": {
+        "oa": 0.26666666666666666,
+        "aa": 0.26666666666666666,
+        "recall": [
+          0.2,
+          0.4,
+          0.6,
+          0.0,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          0.4
+        ],
+        "nll": 1.9910848140716553
+      }
+    },
+    {
+      "name": "xuzhou-capacity_control-target_scratch_full",
+      "train_loss_first": 6.589293479919434,
+      "train_loss_last": 6.162026405334473,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.1,
+        "aa": 0.09999999999999999,
+        "recall": [
+          0.0,
+          0.0,
+          0.1,
+          0.4,
+          0.0,
+          0.0,
+          0.0,
+          0.3,
+          0.1
+        ],
+        "nll": 2.167958974838257
+      },
+      "val_fused": {
+        "oa": 0.08888888888888889,
+        "aa": 0.08888888888888889,
+        "recall": [
+          0.0,
+          0.0,
+          0.2,
+          0.4,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0
+        ],
+        "nll": 2.1807191371917725
+      }
+    },
+    {
+      "name": "xuzhou-capacity_control-source_pretrained_full_finetune",
+      "train_loss_first": 6.715734004974365,
+      "train_loss_last": 5.83971643447876,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.18888888888888888,
+        "aa": 0.18888888888888888,
+        "recall": [
+          0.1,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.3,
+          0.2,
+          0.1
+        ],
+        "nll": 2.0759952068328857
+      },
+      "val_fused": {
+        "oa": 0.13333333333333333,
+        "aa": 0.13333333333333333,
+        "recall": [
+          0.2,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "nll": 2.1134719848632812
+      }
+    },
+    {
+      "name": "xuzhou-x_residual-target_scratch_full",
+      "train_loss_first": 6.589293479919434,
+      "train_loss_last": 6.159493446350098,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.1,
+        "aa": 0.09999999999999999,
+        "recall": [
+          0.0,
+          0.0,
+          0.1,
+          0.4,
+          0.0,
+          0.0,
+          0.0,
+          0.3,
+          0.1
+        ],
+        "nll": 2.1669468879699707
+      },
+      "val_fused": {
+        "oa": 0.08888888888888889,
+        "aa": 0.08888888888888889,
+        "recall": [
+          0.0,
+          0.0,
+          0.2,
+          0.4,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0
+        ],
+        "nll": 2.1802961826324463
+      }
+    },
+    {
+      "name": "xuzhou-x_residual-source_pretrained_full_finetune",
+      "train_loss_first": 6.762866973876953,
+      "train_loss_last": 5.868346214294434,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.2111111111111111,
+        "aa": 0.21111111111111114,
+        "recall": [
+          0.1,
+          1.0,
+          0.0,
+          0.3,
+          0.0,
+          0.0,
+          0.3,
+          0.0,
+          0.2
+        ],
+        "nll": 2.0806829929351807
+      },
+      "val_fused": {
+        "oa": 0.2,
+        "aa": 0.2,
+        "recall": [
+          0.4,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0,
+          0.2
+        ],
+        "nll": 2.1230640411376953
+      }
+    },
+    {
+      "name": "whu-honghu-capacity_control-target_scratch_full",
+      "train_loss_first": 9.370262145996094,
+      "train_loss_last": 9.064270973205566,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.11818181818181818,
+        "aa": 0.11818181818181821,
+        "recall": [
+          0.0,
+          0.7,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0,
+          0.4,
+          0.4,
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.8,
+          0.0
+        ],
+        "nll": 3.056302547454834
+      },
+      "val_fused": {
+        "oa": 0.11818181818181818,
+        "aa": 0.11818181818181818,
+        "recall": [
+          0.0,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.6,
+          0.0,
+          0.2,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0
+        ],
+        "nll": 3.070549249649048
+      }
+    },
+    {
+      "name": "whu-honghu-capacity_control-source_pretrained_full_finetune",
+      "train_loss_first": 9.665836334228516,
+      "train_loss_last": 8.962179183959961,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.08636363636363636,
+        "aa": 0.08636363636363636,
+        "recall": [
+          0.0,
+          0.9,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.6,
+          0.0,
+          0.0
+        ],
+        "nll": 3.022608995437622
+      },
+      "val_fused": {
+        "oa": 0.045454545454545456,
+        "aa": 0.045454545454545456,
+        "recall": [
+          0.0,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "nll": 3.0748634338378906
+      }
+    },
+    {
+      "name": "whu-honghu-x_residual-target_scratch_full",
+      "train_loss_first": 9.370262145996094,
+      "train_loss_last": 9.062989234924316,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.11818181818181818,
+        "aa": 0.11818181818181821,
+        "recall": [
+          0.0,
+          0.7,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0,
+          0.4,
+          0.4,
+          0.1,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.8,
+          0.0
+        ],
+        "nll": 3.055828094482422
+      },
+      "val_fused": {
+        "oa": 0.11818181818181818,
+        "aa": 0.11818181818181818,
+        "recall": [
+          0.0,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.6,
+          0.0,
+          0.2,
+          0.8,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.2,
+          0.0
+        ],
+        "nll": 3.0706663131713867
+      }
+    },
+    {
+      "name": "whu-honghu-x_residual-source_pretrained_full_finetune",
+      "train_loss_first": 9.694609642028809,
+      "train_loss_last": 8.944720268249512,
+      "selected_step": 12,
+      "train_fused": {
+        "oa": 0.06363636363636363,
+        "aa": 0.06363636363636363,
+        "recall": [
+          0.0,
+          0.9,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.5,
+          0.0,
+          0.0
+        ],
+        "nll": 3.0062153339385986
+      },
+      "val_fused": {
+        "oa": 0.02727272727272727,
+        "aa": 0.02727272727272727,
+        "recall": [
+          0.0,
+          0.6,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "nll": 3.0854618549346924
+      }
+    }
+  ]
+}
