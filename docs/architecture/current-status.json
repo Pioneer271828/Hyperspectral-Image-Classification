@@ -108,13 +108,13 @@
     },
     {
       "id": "M4-G4A/B",
-      "state": "接入工程通过；已恢复，v2完整源验收进行中",
-      "evidence": "v1失败保留；v2工程514/GPU2及真实短源48步通过；新18例批次已有2例2004步通过严格收尾，完整验收待完成",
-      "remaining": "固定顺序FP32验证已消除冻结模型重载波动；先完成v2回归/真实短测及18例新源批次，再做完整目标适配",
+      "state": "完整源v2验收通过；完整目标接入验收中",
+      "evidence": "18模型18036更新通过原严格收尾；216指标/2880召回、54次精确重载及2123受保护文件输入核验通过；v1失败保留",
+      "remaining": "Issue174完整源到目标接入与12例真实短目标验收，再登记36例完整目标及none协议兼容对照",
       "report": "research/reports/M4G4Bv2_固定顺序验证与完整源预训练_20261105.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "research_resumed_v2_source_acceptance",
+  "execution_state": "source_v2_accepted_target_engineering",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
