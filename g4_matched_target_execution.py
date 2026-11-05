@@ -103,7 +103,7 @@ def freeze_campaign(registration_path, registration_sha256, code):
         owners.update(Path(case["inputs"][name]).resolve().parent for name in ("observation", "family"))
         owners.update(Path(case["source_spec"][name]).resolve().parent
             for name in ("source_launch", "source_independent_audit") if name in case["source_spec"])
-    if any(root == owner or root in owner.parents or owner in root.parents for owner in owners):
+    if root.parent != old.parent or any(root == owner or root in owner.parents or owner in root.parents for owner in owners):
         raise ValueError("Fresh independent full experiment output required")
     launch = copy.deepcopy(original)
     launch.update(code=code, out_dir=str(root), phase="full_campaign", execution_enabled=True,

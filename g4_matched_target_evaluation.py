@@ -15,6 +15,19 @@ from source_data_context import bounded
 QUERY_POLICY = "g4_matched_ordered_all54_frozen_query_v2"
 
 
+def new_output(out, launch, extra_owners=()):
+    out, root = external_directory(out), Path(launch["out_dir"]).resolve()
+    owners = {root, *[Path(v["root"]).resolve() for v in launch["short_acceptances"].values()],
+              *[Path(p).resolve() for p in extra_owners]}
+    for case in launch["cases"]:
+        owners.update(Path(case["inputs"][n]).resolve().parent for n in ("observation", "family"))
+        owners.update(Path(case["source_spec"][n]).resolve().parent
+            for n in ("source_launch", "source_independent_audit") if n in case["source_spec"])
+    if out.parent != root.parent or any(out == owner or owner in out.parents or out in owner.parents for owner in owners):
+        raise ValueError("New sibling output outside all frozen source/input/query trees required")
+    return out
+
+
 def require_frozen_boundary(freeze, *, full_integrity=True):
     models, checks = freeze.get("models", []), freeze.get("independent_checks", [])
     expected = set(grid())
@@ -54,6 +67,7 @@ def freeze_for_query(root, launch_sha256, acceptance_sha256, audit_path, audit_s
         raise ValueError("New independent freeze output required")
     code = code_snapshot()
     launch, accepted, pins = full_acceptance(root, launch_sha256, acceptance_sha256, code)
+    new_output(out, launch, (audit_path.parent,))
     if file_hash(audit_path) != audit_sha256:
         raise ValueError("Pinned completed independent full54 audit required")
     audit = read(audit_path)

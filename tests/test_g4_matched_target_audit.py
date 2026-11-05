@@ -8,12 +8,15 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import numpy as np
 import torch
+from scipy.io import savemat
 from g4_matched_target_audit import ACCEPTANCE_POLICY, audit_case, full_acceptance, inspect_case
-from g4_matched_target_evaluation import QUERY_POLICY, paired_summary, read_query_labels, require_frozen_boundary
+from g4_matched_target_evaluation import QUERY_POLICY, new_output, paired_summary, read_query_labels, require_frozen_boundary
 from g4_matched_target_study import EXPECTED, METHODS, case_name, grid, initialize, runtime, settings
 from joint_training import run_training
 from loadData.dataset_registry import DATASETS, file_hash
+from model.research_config import digest
 from research.reproduction.m4g4b.matched_target_campaign import run_queue
 from research_runtime import code_snapshot, write_json
 from scripts.train_joint_m4 import graph_binding
@@ -62,6 +65,42 @@ def boundary_fixture(root):
 
 
 class MatchedAuditTests(unittest.TestCase):
+    def test_final_synthetic_label_release_requires_frozen_family_and_actual_gt_hash(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            _, case, _ = actual_case(root)
+            frozen = boundary_fixture(root)
+            case["out"] = str(root / "cases" / case["name"])
+            row = next(m for m in frozen["models"] if m["name"] == case["name"])
+            row.update(case_sha256=digest(case), family_hash=case["target_context"]["family_hash"])
+            data = root / "data"
+            data.mkdir()
+            labels = (np.arange(18 * 18).reshape(18, 18) % 9 + 1).astype(np.int32)
+            path = data / "fixture_gt.mat"
+            savemat(path, {DATASETS["xuzhou"][1] + "_gt": labels})
+            manifest = root / "prepared.json"
+            write_json(manifest, {"protocol": "acc1p_joint_prepared_v1", "datasets": {"xuzhou": {"raw": {
+                "class_count": 9, "label_path": path.name, "label_sha256": file_hash(path)}}}})
+            with patch("g4_matched_target_evaluation.PREPARATION_HASH", file_hash(manifest)):
+                release, pins = read_query_labels(frozen, case, data, manifest, file_hash(manifest))
+                self.assertEqual(len(release["indices"]), 18 * 18 - 9 * 15)
+                self.assertEqual(release["checkpoint_sha256"], row["primary_sha256"])
+                self.assertEqual(pins[str(path)], file_hash(path))
+                path.write_bytes(path.read_bytes() + b"changed")
+                with patch("scipy.io.loadmat", side_effect=AssertionError("Changed GT must be rejected before load")) as load:
+                    with self.assertRaises(ValueError): read_query_labels(frozen, case, data, manifest, file_hash(manifest))
+                    load.assert_not_called()
+
+    def test_query_output_must_be_new_sibling_outside_input_trees(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            launch = {"out_dir": str(root / "training"), "short_acceptances": {"none": {"root": str(root / "short")}},
+                "cases": [{"inputs": {"observation": str(root / "data" / "observation.pt"),
+                    "family": str(root / "labels" / "family.json")}, "source_spec": {}}]}
+            self.assertEqual(new_output(root / "query", launch), root / "query")
+            for path in (root / "training" / "new", root / "data" / "new", root / "short", root):
+                with self.assertRaises(ValueError): new_output(path, launch)
+
     def test_all54_training_acceptance_rejects_per_case_coverage_hidden_by_totals(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

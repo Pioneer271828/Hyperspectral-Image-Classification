@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
 from evaluation.g4_target import predict_query, query_metrics
 from g4_matched_target_audit import check_files, read
-from g4_matched_target_evaluation import freeze_for_query, paired_summary, read_query_labels, require_frozen_boundary
+from g4_matched_target_evaluation import freeze_for_query, new_output, paired_summary, read_query_labels, require_frozen_boundary
 from g4_matched_target_execution import case_data, read_registration, unchanged_producer
 from g4_matched_target_study import runtime
 from loadData.dataset_registry import file_hash
@@ -50,6 +50,7 @@ def main():
         raise ValueError("Preregistered query analysis plan changed")
     out = external_directory(args.out)
     freeze_root = Path(args.freeze).resolve().parent
+    new_output(out, launch, (freeze_root, Path(args.prepared_manifest).resolve().parent))
     if any(out == old or old in out.parents or out in old.parents for old in (root, freeze_root)):
         raise ValueError("New independent query output required")
     out.mkdir(exist_ok=False)
