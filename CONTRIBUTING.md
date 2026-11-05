@@ -1,5 +1,9 @@
 # 按模块贡献
 
+当前交付状态统一维护于 `docs/architecture/current-status.json`，并在远程生成当前清单；不要在README和两份计划重复维护任务状态。开发整合分支为 `codex/issue-167-development-integration`，冻结实验标签及运行中checkout保持固定。新增模块先进入经测试的开发整合候选，main由独立PR评审；修复须包含所有仍在使用的后继分支或明确登记待整合范围。
+
+提交前在训练容器运行 `python scripts/check_repository.py --expected-commit <完整SHA>` 及相关回归。自动流程见 `.github/workflows/remote-validation.yml`，只在专用 `hsi-training-container` self-hosted运行器执行，不安装依赖或调用真实数据训练。运行器尚待注册，手动SSH验收仍须完成并报告；配置文件存在不等于CI已运行。
+
 一个 Issue 对应一个可验收目标。工程任务说明范围、依赖、接口、允许修改路径和测试；实验任务另外说明假设、对照、数据/划分、种子、优化步数、选模规则与资源预算。实验得到负结果也可以完成，代码合并不能代替实验验收。
 
 新正式实验遵循[种子与重复规范](docs/guides/seed-policy.md)，开发匹配控制可沿用历史种子；不得按结果挑种子或把训练重复当成支持集/空间划分重复。

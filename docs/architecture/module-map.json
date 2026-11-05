@@ -1,5 +1,8 @@
 {
   "schema_version": 1,
+  "integration_status": "docs/architecture/current-status.json",
+  "integration_acceptance": "scripts/check_repository.py",
+  "integration_note": "Issue167 integrates accepted G4I and its completed-result documentation, MON-2/3C, snapshot repair and NUM-1. Current status is generated from current-status.json; dated notes below retain historical evidence only. Main merge and runner registration are pending.",
   "completion_policy": {"as_of":"2026-11-05","all_candidates_require_testing":true,"negative_results_can_complete_experiments":true,"untested_or_blocked_is_incomplete":true,"guide":"research/全量研究模块必测清单_20261104.md","current_issue":165,"continuous_progression_authorized":true},
   "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。delivery_order 是修订后的模块研究顺序，不代表完成状态；已前移验收的接口/协议不重复搭建，整改和当前任务以 current_plan 为准。",
   "current_plan": "research/当前搭建状态与审查整改清单_20261102.md",
