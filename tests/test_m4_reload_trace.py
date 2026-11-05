@@ -35,7 +35,7 @@ class ReloadTraceTests(unittest.TestCase):
                 self.assertTrue(all(p["unequal"] == 0 for p in row["probabilities"].values()))
         self.assertFalse(any(layer._forward_hooks for layer in model.modules()))
         interventions = csr_intervention(model, data, saved)
-        self.assertEqual(len(interventions), 48)
+        self.assertEqual(len(interventions), 4 * len(data) * 3)
         for row in interventions:
             self.assertEqual(len(row["vs_first"]), 6)
             self.assertTrue(all(p["over_tolerance"] == 0 for p in row["vs_saved"].values()))
