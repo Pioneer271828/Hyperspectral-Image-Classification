@@ -25,6 +25,10 @@ class MatchedWorkerCLITests(unittest.TestCase):
             root = Path(temp)
             items, actual, _ = actual_case(root, device="cuda")
             code, registration, rp = registration_fixture(root, out=root / "campaign")
+            visible = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
+            self.assertTrue(visible.isdigit(), "One physical GPU must be explicitly selected for this fixture")
+            registration["gpu"] = int(visible)
+            write_json(rp, registration)
             out = Path(registration["out_dir"])
             launch = launch_fixture(out)
             launch.update(code=code, phase="full_campaign", execution_enabled=True, optimizer_updates=81000,
@@ -44,7 +48,7 @@ class MatchedWorkerCLITests(unittest.TestCase):
                 "--expected-commit", code["commit"], "--registration", str(rp), "--registration-sha256", file_hash(rp),
                 "--launch-plan", str(lp), "--launch-sha256", file_hash(lp), "--target", "xuzhou", "--seed", "64",
                 "--method", METHODS[0], "--mode", "none"]
-            env = dict(os.environ, CUDA_VISIBLE_DEVICES="0", PYTHONDONTWRITEBYTECODE="1")
+            env = dict(os.environ, CUDA_VISIBLE_DEVICES=visible, PYTHONDONTWRITEBYTECODE="1")
             folder = Path(selected["out"])
             for extra, expected in ((["--stop-after", "2"], ("interrupted", 2)),
                                     (["--resume"], ("completed", 1498)), (["--resume"], ("verified_completed", 0))):

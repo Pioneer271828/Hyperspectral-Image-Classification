@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 import torch
-from g4_matched_target_audit import audit_case, inspect_case
+from g4_matched_target_audit import ACCEPTANCE_POLICY, audit_case, full_acceptance, inspect_case
 from g4_matched_target_evaluation import QUERY_POLICY, paired_summary, read_query_labels, require_frozen_boundary
 from g4_matched_target_study import EXPECTED, METHODS, case_name, grid, initialize, runtime, settings
 from joint_training import run_training
@@ -19,6 +19,7 @@ from research_runtime import code_snapshot, write_json
 from scripts.train_joint_m4 import graph_binding
 from test_joint_training import hashes
 from test_target_training import fixture
+from test_g4_matched_target_study import launch_fixture
 
 
 def actual_case(root, *, device="cpu"):
@@ -61,6 +62,38 @@ def boundary_fixture(root):
 
 
 class MatchedAuditTests(unittest.TestCase):
+    def test_all54_training_acceptance_rejects_per_case_coverage_hidden_by_totals(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            launch = launch_fixture(root)
+            code = code_snapshot()
+            launch.update(code=code, phase="full_campaign", execution_enabled=True, optimizer_updates=81000,
+                          registration_sha256="b" * 64)
+            write_json(root / "launch.json", launch)
+            write_json(root / "status.json", {"status": "completed"})
+            write_json(root / "protected-files.json", {str(root / "launch.json"): file_hash(root / "launch.json")})
+            frozen = boundary_fixture(root)
+            rows = [{**r, "completed_resume_updates": 0} for r in frozen["independent_checks"]]
+            accepted = {"policy": ACCEPTANCE_POLICY, "status": "passed", "code": code,
+                "launch_sha256": file_hash(root / "launch.json"), "registration_sha256": "b" * 64,
+                "optimizer_updates": 81000, "models": rows, "query_labels_accessed": False, "test_scoring": False,
+                "protected_manifest_sha256": file_hash(root / "protected-files.json")}
+            ap = root / "training-acceptance.json"
+            write_json(ap, accepted)
+            # The complete-state oracle is exercised by the actual1500 test;
+            # this fixture isolates global completeness and per-role count gates.
+            with patch("g4_matched_target_audit.inspect_case", return_value=(None, None, None, None, None, {})):
+                self.assertEqual(len(full_acceptance(root, file_hash(root / "launch.json"), file_hash(ap), code)[1]["models"]), 54)
+                bad = copy.deepcopy(accepted)
+                first = next(r for r in bad["models"] if r["class_recalls"] == 54)
+                second = next(r for r in bad["models"] if r["class_recalls"] == 132)
+                first["class_recalls"], second["class_recalls"] = 132, 54
+                write_json(ap, bad)
+                with self.assertRaises(ValueError): full_acceptance(root, file_hash(root / "launch.json"), file_hash(ap), code)
+                write_json(ap, accepted)
+                Path(next(p for p in frozen["boundary_files"] if p.endswith("primary.pt"))).write_bytes(b"changed")
+                with self.assertRaises(ValueError): full_acceptance(root, file_hash(root / "launch.json"), file_hash(ap), code)
+
     def test_full1500_case_independent_metrics_exact_reloads_provenance_and_artifact_barriers(self):
         device = os.environ.get("MATCHED_TARGET_DEVICE", "cpu")
         with tempfile.TemporaryDirectory() as temp:
