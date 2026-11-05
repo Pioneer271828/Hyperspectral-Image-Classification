@@ -51,10 +51,10 @@ def options(plan, profile, seed, baseline):
             'scheduler':plan['scheduler'],'config':config.to_dict()}
 
 
-def schedule_for(settings):
+def schedule_for(settings, *, task_names=NAMES):
     rng = np.random.default_rng(settings['schedule_seed'])
     return [str(name) for _ in range(settings['epochs']+1)
-            for name in rng.choice(NAMES,size=settings['steps_per_epoch'],replace=True)]
+            for name in rng.choice(task_names,size=settings['steps_per_epoch'],replace=True)]
 
 
 def validation_epochs(settings):
@@ -206,11 +206,16 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
     calibrated_selection=(enabled(settings) if runtime_adapter is None else runtime_adapter.validate(settings))
     step_fn=train_step if runtime_adapter is None else runtime_adapter.train_step
     snapshot=validation_snapshot if runtime_adapter is None else runtime_adapter.validation_snapshot
-    if tuple(items)!=NAMES or any(any(k.startswith('test_') for k in i) for i in items.values()):
-        raise ValueError('Exactly three ordered train/validation-only prepared tasks required')
+    tasks=NAMES
+    if runtime_adapter is not None and hasattr(runtime_adapter,'task_names'):
+        tasks=tuple(runtime_adapter.task_names(settings))
+        if not tasks or tasks!=tuple(n for n in NAMES if n in tasks):
+            raise ValueError('Runtime tasks must be nonempty canonical known distinct tasks')
+    if tuple(items)!=tasks or any(any(k.startswith('test_') for k in i) for i in items.values()):
+        raise ValueError('Expected ordered train/validation-only prepared tasks')
     if runtime_adapter is not None and hasattr(runtime_adapter, 'validate_inputs'):
         runtime_adapter.validate_inputs(items)
-    schedule=schedule_for(settings)
+    schedule=schedule_for(settings,task_names=tasks)
     if stop_after is not None and (type(stop_after)is not int or not 0<stop_after<len(schedule)):
         raise ValueError('Interruption cursor must be inside the declared budget')
     execution_device=str(torch.device(device or settings['config']['device']))
@@ -331,7 +336,7 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
                   if calibrated_selection else load_model_checkpoint(directory/'primary.pt',device=device))
         check,values=snapshot(restored,items)
         max_error=0.
-        for n in NAMES:
+        for n in tasks:
             for phase in ('train','val'):
                 if set(state['best_probabilities'][n][phase])!=set(values[n][phase]):
                     raise ValueError('Selected active-head set changed')
