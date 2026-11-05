@@ -122,13 +122,13 @@
     },
     {
       "id": "M4 none协议兼容审计",
-      "state": "全轨迹发现严格分类计数不兼容，继续完整覆盖",
-      "evidence": "Issue176/PR177；选中27角色通过；全轨迹13角色663事件中xuzhou-s64源62/162步训练分头混淆非对角计数变化，OA/AA/召回/验证/选中步/LR不变，按原判据失败；工具CPU4/GPU4/full525通过",
-      "remaining": "完成全27角色1377事件和文件不变收尾及独立复核后交付负结果，再搭建同协议新none对照并预登记完整目标",
+      "state": "完整审计及独立复核完成，历史none复用判据失败",
+      "evidence": "27角色1377事件/11016指标146880召回/4365文件输入不变；26角色通过，xuzhou-s64源2个非对角计数变化；所有选中步/LR保持；独立纯Python记录复核通过，4427文件不变；最终CPU2/full527通过",
+      "remaining": "按原负结果建立同协议none9源/18目标新对照，随后36活动完整目标；本项不含新训练或query精度结论",
       "report": "research/reports/M4NoneV2_历史对照兼容审计阶段记录_20261105.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "none_trajectory_negative_found_full_coverage_in_progress",
+  "execution_state": "none_compatibility_audit_completed_historical_reuse_rejected",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
