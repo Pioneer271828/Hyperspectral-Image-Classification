@@ -4,7 +4,7 @@ Research code for a VCA spectral adapter and CNN/HGCN dual-branch backbone.
 The three research axes are region–pixel complementarity, cross-sensor adaptation,
 and pruning/quantization, all with accuracy as the primary objective.
 
-Primary Windows workspace: **`F:/E2E_VCA`**, branch **`codex/f-drive-primary`**. Read the [project handoff](research/项目开发交接_20261105.md) before continuing. Research training remains paused; the M4 full-source study failed its strict native reload gate and is incomplete. Local original files are preserved outside Git as described in the [migration record](docs/guides/f-drive-primary.md).
+Primary Windows workspace: **`F:/E2E_VCA`**, branch **`codex/f-drive-primary`**. Read the [project handoff](research/项目开发交接_20261105.md) and [current status JSON](docs/architecture/current-status.json) before continuing. Historical pauses and native reload failures remain documented for their named versions; use the current status and latest user instructions for the active queue. Local original files are preserved outside Git as described in the [migration record](docs/guides/f-drive-primary.md).
 
 ## Current entry points
 

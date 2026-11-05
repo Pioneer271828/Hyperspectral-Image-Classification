@@ -21,6 +21,8 @@
 
 专项命令分别为`python -m unittest test_g4_none_source_launch test_g4_none_ordered_source -v`、`python -m unittest test_none_source_campaign -v`、`python -m unittest test_none_source_full_audit test_none_source_campaign -v`、`python -m unittest test_none_source_report -v`；全量为`python -m unittest discover -s tests -v`。GPU专项使用`G4_NONE_DEVICE=cuda`与单卡CUDA_VISIBLE_DEVICES；OMP/OPENBLAS/MKL线程均1，PYTHONDONTWRITEBYTECODE=1。执行前核对Linux容器、完整SHA及干净工作树；未注册CI，不声称自动CI运行。最终交付检查另记录在版本提交与PR。
 
+最终实际回归SHA为`4a98aa14ff11683f6878b8f07a7ea5b5b06b0c6f`，rmvision独立分支`codex/g4-none-source-accepted02`、checkout `/home/rmvision/g4-none-source-accepted02`：**全量537/537=176.367s、GPU0专项5/5=10.218s、checker335 Python/78 JSON通过**。该版本已包含e3实际绘图布局。合流开发入口文档后的`2bf1cebeb1f1523855f16b2cac3ee519263de8ed`与其整棵Git tree相同（`f626dbebd5a13cd39ad8d7aaac70f987aeb93578`），后续交付只增报告记录。代码在独立`codex/g4-none-ordered-source`供PR179评审，日常入口同步状态和证据，不冒称main已合并。
+
 ## 完整批次与独立回执
 
 原始批次`/home/lbx/hsi-pioneer271828/runs/g4-none-source-issue178-full01`。9/9模型均完成1002、原严格收尾和完成0恢复通过，合计9018。controller耗时**7111.150608秒，1小时58分31秒**，包含逐例资源等待、加载/恢复与复核，不是受控纯训练速度；首步前准备与曲线导出未单独计时，不补造耗时。
