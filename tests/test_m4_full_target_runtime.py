@@ -6,6 +6,7 @@ import unittest
 
 from joint_training import run_training, _tree_fingerprint
 from m4_full_target_runtime import settings, FullSourceTargetRuntime
+from model.research_config import ResearchConfig
 from target_initialization import METHODS
 from test_joint_training import SOURCE, checkpoints, hashes
 from test_m4_full_transfer import fixture as full_source_fixture
@@ -22,6 +23,10 @@ class FullSourceRuntimeTests(unittest.TestCase):
             for method in METHODS[:2]:
                 options = settings("xuzhou", method, "x_residual", device=device)
                 kwargs = {} if method == METHODS[0] else {"source_spec": spec}
+                invalid = FullSourceTargetRuntime(options, data, root / "unused",
+                    initial_state_sha256="0" * 64, **kwargs)
+                with self.assertRaises(ValueError):
+                    invalid.build_model(ResearchConfig.from_dict(options["config"]), {"xuzhou": 9})
                 full, resumed = root / (method + "-full"), root / (method + "-resume")
                 result = run_training(options, data, full, provenance, SOURCE, device=device,
                     runtime_adapter=FullSourceTargetRuntime(options, data, full, **kwargs))

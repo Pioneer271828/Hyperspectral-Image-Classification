@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--mode", choices=MODES, required=True)
     parser.add_argument("--source-spec")
     parser.add_argument("--source-spec-sha256")
+    parser.add_argument("--initial-state-sha256", required=True)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--stop-after", type=int)
     args = parser.parse_args()
@@ -54,7 +55,8 @@ def main():
     finish()
     result = run_training(options, data, args.out_dir, provenance, code, device="cuda",
         resume=args.resume, stop_after=args.stop_after, finish_guard=finish,
-        runtime_adapter=FullSourceTargetRuntime(options, data, args.out_dir, source_spec=spec))
+        runtime_adapter=FullSourceTargetRuntime(options, data, args.out_dir, source_spec=spec,
+                                               initial_state_sha256=args.initial_state_sha256))
     print("FULL_SOURCE_TARGET_SHORT", args.target, args.mode, args.method,
           result["operation"], result["updates_this_call"], flush=True)
 

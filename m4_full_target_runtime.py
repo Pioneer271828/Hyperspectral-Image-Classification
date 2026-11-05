@@ -3,6 +3,7 @@ from loadData.dataset_registry import DATASETS
 from m4_full_transfer import initialize_full_target
 from m4_transfer import M4TargetRuntime, target_options
 from target_initialization import METHODS
+from target_initialization import state_id
 
 METHODS_ACTIVE = METHODS[:2]
 
@@ -20,6 +21,10 @@ def settings(target, method, mode, seed=64, *, full=False, device="cpu"):
 
 
 class FullSourceTargetRuntime(M4TargetRuntime):
+    def __init__(self, *args, initial_state_sha256=None, **kwargs):
+        self.expected_initial_state = initial_state_sha256
+        super().__init__(*args, **kwargs)
+
     def validate(self, options):
         mode = options["config"]["model"]["region_residual_mode"]
         expected = settings(options.get("target"), options.get("method"), mode,
@@ -36,6 +41,8 @@ class FullSourceTargetRuntime(M4TargetRuntime):
         model, self.initialization = initialize_full_target(target, self.settings["method"],
             config.model.region_residual_mode, model_seed=self.settings["model_seed"],
             head_seed=self.settings["head_seed"], source_spec=self.source_spec, device=config.device)
+        if self.expected_initial_state is not None and state_id(model) != self.expected_initial_state:
+            raise ValueError("Frozen target initialization differs")
         model.eval()
         return model
 
