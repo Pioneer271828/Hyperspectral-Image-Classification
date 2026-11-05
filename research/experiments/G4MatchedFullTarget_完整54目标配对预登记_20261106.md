@@ -1,6 +1,6 @@
 # G4完整54目标配对实验预登记
 
-对应研究主清单P4 §10.3、模块计划§19，实际实验Issue184。工程Issue182已经验收：生产/测试331d718567b1a9726934f445665999df972392b1；工程receipt在LXC `runs/g4-matched-target-issue182-engineering01/receipt.json`，SHA256 `80a18ffb42d9b7de0c4b1acc20c48e4e37ce04ef398e0c16137c16e5fb7766715`。本登记在首个真实更新和任何新query读取前冻结，完整文件hash写入外部registration、launch和checkpoint保护合同。唯一文档写入分支`codex/g4-matched-target-full-study`；实际运行使用独立干净331 checkout，不改已验生产源码。
+对应研究主清单P4 §10.3、模块计划§19，实际实验Issue184。工程Issue182已经验收：生产/测试331d718567b1a9726934f445665999df972392b1；工程receipt在LXC `runs/g4-matched-target-issue182-engineering01/receipt.json`，SHA256 `80a18ffb42d9b7de0c4b1acc20c48e4e37ce04ef398e0c16137c16e5fb766715`。本登记在首个真实更新和任何新query读取前冻结，完整文件hash写入外部registration、launch和checkpoint保护合同。唯一文档写入分支`codex/g4-matched-target-full-study`；实际运行使用独立干净331 checkout，不改已验生产源码。
 
 ## 假设、配对和唯一预算
 
@@ -33,3 +33,6 @@ LXC `/home/lbx/hsi-pioneer271828`、Python `envs/hsi/bin/python`，生产checkou
 输出全新`runs/g4-matched-target-issue184-full01`及同级日志；registration和本计划副本在独立`runs/g4-matched-target-issue184-registration01`，不在源码内。独立audit/review/frozen/query均使用新的同级目录。记录启动/退出墙钟，控制器elapsed不含首步前freeze，二者分开。资源等待不算失败；身份/hash/预算/标签/数值/状态不一致或子进程失败时停止并保留原产物，先独立诊断/登记版本，不放宽、不选择性重跑。机器故障后不自动改预算或恢复策略。
 
 本项是历史代号G4的有标签少样本、全图无标签输入参与的传导式适配，不称零样本、纯源无标签TTA或未见传感器泛化。支持种子512/2048、K1/5、独立空间/传感器/波长质量、head-only/light-module及其他两主计划全部必测机制仍未完成，按依赖继续。main保持待评审，不合并。
+
+登记身份校验记录：首个registration01在任何训练/登记文件写入前，断言拦截本文件所抄工程receipt哈希多写一位的错误；旧analysis-plan副本保留。现从已提交工程JSON摘要逐字取得真实hash，登记改用独立registration02，原receipt、数值门槛与生产代码均未改，不重跑预检或模型择优。
+
