@@ -55,7 +55,7 @@ def prepare(code,out,prepared,data_root,*,ordered=False):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('expected-commit','prepared-dir','data-root','out-dir'):p.add_argument('--'+k,required=True)
-    p.add_argument('--gpus',type=int,nargs=2);p.add_argument('--prepare-only',action='store_true')
+    p.add_argument('--gpus',type=int,nargs='+');p.add_argument('--prepare-only',action='store_true')
     p.add_argument('--ordered-validation-v2',action='store_true')
     p.add_argument('--run-existing',action='store_true');a=p.parse_args();code=code_snapshot()
     if a.ordered_validation_v2:
@@ -66,7 +66,10 @@ def main():
     if sys.platform!='linux' or not __debug__ or code['dirty'] or code['commit']!=a.expected_commit:
         raise RuntimeError('Clean expected remote code and assertions required')
     if a.prepare_only and a.run_existing:raise ValueError('Prepare/existing exclusive')
-    if not a.prepare_only and (a.gpus is None or len(set(a.gpus))!=2 or min(a.gpus)<0):raise ValueError('Two distinct GPUs required')
+    allowed_counts=(1,2) if a.ordered_validation_v2 else (2,)
+    if not a.prepare_only and (not a.gpus or len(a.gpus) not in allowed_counts
+                              or len(set(a.gpus))!=len(a.gpus) or min(a.gpus)<0):
+        raise ValueError('Distinct GPUs required: v1 two, v2 one or two')
     out=external_directory(a.out_dir)
     if a.run_existing:
         launch=json.loads((out/'launch.json').read_text())
@@ -82,7 +85,7 @@ def main():
             '--launch-plan',str(out/'launch.json'),'--launch-sha256',launch_hash,'--held-out',c['held_out'],
             '--seed',str(c['seed']),'--mode',c['mode']]
         if a.ordered_validation_v2:command.append('--ordered-validation-v2')
-        jobs.append({'name':c['name'],'out':c['out'],'command':command,'gpu':a.gpus[index%2],'status':'queued'})
+        jobs.append({'name':c['name'],'out':c['out'],'command':command,'gpu':a.gpus[index%len(a.gpus)],'status':'queued'})
     def publish(final=None):
         with lock:write_json(out/'status.json',{'status':final or ('failed' if stop.is_set() else 'running'),
             'code':code,'jobs':jobs,'elapsed_seconds':time.monotonic()-started,'launch_sha256':launch_hash,'test_scoring':False})
@@ -148,7 +151,7 @@ def main():
     with (out/'.supervisor.lock').open('x') as f:f.write(str(os.getpid()))
     try:
         publish()
-        with ThreadPoolExecutor(max_workers=2) as pool:list(pool.map(worker,a.gpus))
+        with ThreadPoolExecutor(max_workers=len(a.gpus)) as pool:list(pool.map(worker,a.gpus))
         require_frozen_code(code)
         if not all(j['status']=='completed' for j in jobs):publish('failed');raise SystemExit(1)
         accepted={'status':'passed','code':code,'launch_sha256':launch_hash,'optimizer_updates':18036,
