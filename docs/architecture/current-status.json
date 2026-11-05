@@ -136,13 +136,14 @@
     },
     {
       "id": "G4 none完整源目标接入",
-      "state": "工程验收通过，6例真实短接入运行中",
-      "evidence": "Issue180/PR181 Draft；生产9a42b21468442714f780badc2accf1b15e07db7e，CPU5/GPU5/full542通过，LXC GPU5及真实三方向源绑定通过；6x12=72更新已预登记启动，尚无完整receipt；首版校准metadata错误保留",
-      "remaining": "6/6短接入、独立36指标480召回/18精确重载/全部保护收尾及复盘后才验收；随后另登记none18x1500/活动36x1500与全冻结query",
-      "report": "research/reports/G4NoneFullTarget_完整源目标接入工程与短测_20261106.md"
+      "state": "工程与6例真实短接入完整验收通过",
+      "evidence": "Issue180/PR181；生产9a42b21468442714f780badc2accf1b15e07db7e，CPU5/GPU5/full542及LXC GPU5通过；6x12=72更新、36指标480召回/18精确重载/6完成0恢复/7772文件输入不变，818.526s；完成后CPU零更新记录复核通过，query0；全部选12及小类未拟合、首版合成校准错误保留",
+      "remaining": "另登记none18x1500/活动36x1500完整目标入口、冻结配对及全冻结query；本项不判完整目标训练/收益，独立支持集/K/空间等仍必测",
+      "report": "research/reports/G4NoneFullTarget_完整源目标接入工程与短测_20261106.md",
+      "chat_report": "本聊天2026-11-06 G4 none完整源目标接入模块完成报告；持久内容见report及g4-none-full-target-short-results.json"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "ordered_none_full_target_short_running",
+  "execution_state": "ordered_none_full_target_short_accepted_full_campaign_next",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
