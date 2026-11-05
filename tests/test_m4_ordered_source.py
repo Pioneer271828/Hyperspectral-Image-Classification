@@ -14,14 +14,14 @@ from m4_transfer import graph_binding
 from joint_training import run_training, _tree_fingerprint
 from test_calibrated_selection import items
 from test_joint_training import SOURCE, checkpoints, hashes
-from test_m4_source_study import M4SourceStudyTests
+import test_m4_source_study
 
 DEVICE = os.environ.get("M4G4B_DEVICE", "cpu")
 
 
 class OrderedSourceTests(unittest.TestCase):
     def test_v1_and_v2_launch_settings_are_disjoint(self):
-        launch = M4SourceStudyTests().fixture()
+        launch = test_m4_source_study.M4SourceStudyTests().fixture()
         with self.assertRaises(ValueError):
             ordered.select_case(launch, SOURCE, "paviaU", 64, "x_residual")
         launch["study"] = copy.deepcopy(ordered.EXPECTED)
@@ -36,17 +36,15 @@ class OrderedSourceTests(unittest.TestCase):
 
     def test_training_resume_metadata_reload_and_unchanged_completed_recovery(self):
         for mode in ordered.MODES:
-            tiny = ordered.full_settings("paviaU", 64, mode)
-            tiny.update(epochs=3, val_interval=1, optimizer_steps=8)
-            tiny["config"]["training"].update(epochs=3, val_interval=1)
+            tiny = ordered.short_settings("paviaU", 64, mode)
             data = {n: i for n, i in items().items() if n in tiny["source_tasks"]}
             provenance = {"held_out": "paviaU", "sources": tiny["source_tasks"],
                           "target_payload_accessed": False, "m4_mode": mode,
                           "m4_graph_binding": graph_binding(data)}
             with self.assertRaises(ValueError):
                 ordered.M4SourceOrderedRuntime().validate(tiny)
-            with patch("m4_ordered_source.full_settings", return_value=tiny), tempfile.TemporaryDirectory() as temp:
-                runtime = ordered.M4SourceOrderedRuntime()
+            with tempfile.TemporaryDirectory() as temp:
+                runtime = ordered.M4SourceOrderedShortRuntime()
                 complete, resumed = Path(temp) / "complete", Path(temp) / "resumed"
                 run_training(tiny, data, complete, provenance, SOURCE, device=DEVICE, runtime_adapter=runtime)
                 run_training(tiny, data, resumed, provenance, SOURCE, device=DEVICE,
