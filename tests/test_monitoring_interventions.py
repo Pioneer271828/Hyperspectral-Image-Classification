@@ -18,6 +18,22 @@ class Twin(torch.nn.Module):
     def forward(self,x):return self.head(self.features(x))
 
 
+class InplaceTwin(Twin):
+    def forward(self,x):
+        value=self.features(x.clone())
+        value.relu_().add_(1)
+        return self.head(value)
+
+
+class ReusedOutputTwin(Twin):
+    def forward(self,x):
+        value=self.features(x.clone())
+        value.add_(2)
+        value=self.features(value)
+        value.mul_(3)
+        return self.head(value)
+
+
 def fixture(model=None,path='features',call=0):
     model=(Twin() if model is None else model).to(DEVICE)
     x=torch.tensor([[2.,-1.],[1.,1.]],device=DEVICE)
@@ -112,6 +128,51 @@ class IsolationTests(unittest.TestCase):
         x=torch.sparse_coo_tensor(torch.tensor([[0],[99999]],device=DEVICE),torch.tensor([1.],device=DEVICE),(100000,100000)).coalesce()
         copied=_copy_tree({'q':x},[100])['q'];self.assertEqual(copied._nnz(),1)
         self.assertNotEqual(copied.values().data_ptr(),x.values().data_ptr())
+
+    def test_snapshot_precedes_downstream_inplace_with_and_without_intervention(self):
+        model,x,p=fixture(InplaceTwin());before=_snapshot(model)
+        original=x['x'].clone()
+        for channels in ((),(0,),(1,),(0,1)):
+            with self.subTest(channels=channels):
+                expected=original.clone()
+                if channels:expected[:,list(channels)]=0
+                targets=(ChannelIntervention('features',channels),) if channels else ()
+                result=self.run_case(model,x,p,targets,max_activation_bytes=16)
+                expected_stats=p.observe(x,{'features':expected},context=p.manifest['context'])
+                self.assertEqual(result['statistics'],expected_stats)
+                # Explicit reference forward: snapshotting must not change the
+                # downstream computation, even when it revives zeroed channels.
+                expected_output=expected.clamp_min(0).add(1).sum(dim=1,keepdim=True).cpu()
+                torch.testing.assert_close(result['outputs'],expected_output,rtol=0,atol=0)
+        self.assertEqual(before,_snapshot(model))
+        torch.testing.assert_close(x['x'],original,rtol=0,atol=0)
+
+    def test_each_reused_module_call_keeps_its_own_snapshot(self):
+        model,x,p=fixture(ReusedOutputTwin())
+        spec=LayerSpec('features','NC',.1,'post-module','pixel')
+        calls={'first':(spec,0),'second':(spec,1)}
+        buckets={k:{'all':torch.ones(2,dtype=torch.bool,device=DEVICE)} for k in calls}
+        p=FrozenProbe(p.manifest['context'],x,calls,buckets,
+                      threshold_source='fixed',allowed_datasets=['source'])
+        result=self.run_case(model,x,p,max_activation_bytes=32)
+        expected=p.observe(x,{'first':x['x'],'second':x['x']+2},context=p.manifest['context'])
+        self.assertEqual(result['statistics'],expected)
+        torch.testing.assert_close(result['outputs'],((x['x']+2)*3).sum(1,keepdim=True).cpu(),rtol=0,atol=0)
+        with self.assertRaisesRegex(ValueError,'Retained activation budget exceeded'):
+            self.run_case(model,x,p,max_activation_bytes=31)
+
+    def test_snapshot_budget_failure_removes_hooks_and_preserves_caller(self):
+        for targets in ((),(ChannelIntervention('features',(0,)),)):
+            with self.subTest(targets=targets):
+                model,x,p=fixture(InplaceTwin());before=_snapshot(model);fresh=[]
+                def factory():
+                    m=copy.deepcopy(model);fresh.append(m);return m
+                with self.assertRaisesRegex(ValueError,'Retained activation budget exceeded'):
+                    self.run_case(model,x,p,targets,factory=factory,max_activation_bytes=15)
+                self.assertTrue(all(not m._forward_hooks for m in fresh[0].modules()))
+                self.assertEqual(before,_snapshot(model))
+                # A subsequent call at the exact required budget must work.
+                self.run_case(model,x,p,targets,max_activation_bytes=16)
 
 
 if __name__=='__main__':unittest.main()
