@@ -59,7 +59,7 @@ class NoneSourceLaunchTests(unittest.TestCase):
         counts = {n: i["class_num"] for n, i in data.items()}
         init = initial_binding(settings, counts)
         case = {"name": "xuzhou-s64", "seed": 64, "held_out": "xuzhou", "settings": settings,
-                "graph_binding": {}, **init}
+                "graph_binding": {}, "source_context": PROVENANCE, **init}
         launch = {"code": SOURCE, "profile": "short", "study_file_sha256": file_hash(STUDY_PATH),
                   "execution_device": DEVICE}
         binding = launch_binding(launch, {**case, "source_context": PROVENANCE}, "f" * 64)
