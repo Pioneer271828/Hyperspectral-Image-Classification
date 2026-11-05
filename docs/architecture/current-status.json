@@ -108,12 +108,13 @@
     },
     {
       "id": "M4-G4A/B",
-      "state": "接入工程通过，完整源实验未完成，研究暂停",
+      "state": "接入工程通过；已恢复，v2完整源验收进行中",
       "evidence": "M4-G4A全量470及真实288步通过；G4B全量474通过，源2004/18036步后严格重载失败，1完成1失败16未开始",
-      "remaining": "先定位冻结残差模型重复性问题，再决定剩余源训练/目标适配；不静默放宽门槛",
-      "report": "research/reports/M4G4B_完整源预训练入口验收与原生重载失败_20261105.md"
+      "remaining": "固定顺序FP32验证已消除冻结模型重载波动；先完成v2回归/真实短测及18例新源批次，再做完整目标适配",
+      "report": "research/reports/M4G4Bv2_固定顺序验证与完整源预训练_20261105.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "research_paused_by_user"
+  "execution_state": "research_resumed_v2_source_acceptance",
+  "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
