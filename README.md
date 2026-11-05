@@ -1,4 +1,4 @@
-M2-J2 completed: wavelength/index/uniform macro OA95.87/96.61/90.10%; the registered wavelength benefit gates failed. See the [paired report](research/reports/M2J2_VCA三模式三种子完整对照与复盘_20261105.md). Source-only transfer engineering is next; defaults stay unchanged.
+Current work: [G4 full target adaptation](research/reports/E4G4H1_完整目标入口与二十七组冻结验收_20261105.md) is running on frozen commit85801647e4824ea4adadebbde3394a38f75cb62c:27 paired target models,1500 updates each,3methods×3seeds×3held targets. Engineering CPU5/GPU5/full454 and real initialization/interruption checks passed. Query labels stay closed until all models freeze; accuracy results are pending. [G4G short-loop acceptance](research/reports/E4G4G_目标支持训练选模与冻结特征恢复验收_20261105.md) passed CPU6/GPU6/full449 and nine real cases. M2-J2 completed with wavelength/index/uniform macroOA95.87/96.61/90.10%; the [registered wavelength benefit gates failed](research/reports/M2J2_VCA三模式三种子完整对照与复盘_20261105.md). Defaults stay unchanged; the current checklist supersedes historical next-step statements below.
 
 # Hyperspectral Image Classification
 
