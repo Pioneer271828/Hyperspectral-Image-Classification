@@ -9,6 +9,8 @@ import torch
 from joint_training import _tree_fingerprint, run_training
 from model.research_config import ResearchConfig
 from none_full_target_runtime import NoneFullSourceTargetRuntime, settings
+from research.reproduction.m4g4b.none_full_target_precheck import audit_case
+from scripts.train_joint_m4 import graph_binding
 from target_initialization import METHODS
 from test_joint_training import SOURCE, checkpoints, hashes
 from test_none_full_transfer import fixture as source_fixture
@@ -33,7 +35,7 @@ class NoneFullTargetRuntimeTests(unittest.TestCase):
             _, spec = source_fixture(root / "source")
             target = root / "target"
             target.mkdir()
-            (data, provenance, _), _ = target_fixture(target)
+            (data, provenance, _), paths = target_fixture(target)
             moved = {n: {k: v.to(device) if torch.is_tensor(v) else v for k, v in item.items()} for n, item in data.items()}
             for method in METHODS[:2]:
                 opts = settings("xuzhou", method, device=device)
@@ -62,6 +64,18 @@ class NoneFullTargetRuntimeTests(unittest.TestCase):
                 with self.assertRaises(ValueError): NoneFullSourceTargetRuntime(bad, data, root / "bad", **kwargs)
                 invalid = NoneFullSourceTargetRuntime(opts, data, root / "invalid", initial_state_sha256="0" * 64, **kwargs)
                 with self.assertRaises(ValueError): invalid.build_model(ResearchConfig.from_dict(opts["config"]), {"xuzhou": 9})
+                from loadData.dataset_registry import file_hash
+                initial = runtime.build_model(ResearchConfig.from_dict(opts["config"]), {"xuzhou": 9})
+                case = {"name": method, "target": "xuzhou", "method": method, "out": str(full), "settings": opts,
+                    "source_spec": kwargs.get("source_spec", {}), "target_context": provenance,
+                    "graph_binding": graph_binding(data), "initial_state_sha256": runtime.initialization["initial_state_sha256"],
+                    "initialization": {**runtime.initialization, "initial_device": "cpu",
+                        "target_initial_config": {**runtime.initialization["target_initial_config"], "device": "cpu"}},
+                    "inputs": {"observation": str(paths[0]), "record": str(paths[1]), "record_sha256": file_hash(paths[1]),
+                        "family": str(paths[2]), "family_sha256": file_hash(paths[2])}}
+                audited = audit_case(case, SOURCE, device=device)
+                self.assertEqual((audited["head_metrics"], audited["class_recalls"], audited["exact_reload_repeats"]), (6, 54, 3))
+                self.assertTrue(all(v > 0 for v in audited["changed_parameter_elements"].values()))
 
 
 if __name__ == "__main__":
