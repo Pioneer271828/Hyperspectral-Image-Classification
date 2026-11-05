@@ -1,178 +1,70 @@
-Current handoff: [project development handoff](research/项目开发交接_20261105.md). Work is paused at the user request. M4-G4B entry tests passed CPU4/GPU4/full474, but the full source study failed its original native probability reload gate after 2004/18036 updates;16 cases were not started. See the [retained failure and diagnosis](research/reports/M4G4B_完整源预训练入口验收与原生重载失败_20261105.md). No full M4 transfer benefit or completed source campaign is claimed.
-
-Current work: [G4 full target adaptation](research/reports/E4G4HI_三方向完整目标适配与冻结评价结果_20261105.md) completed 27 target models and 40500 updates. Three-seed macro OA is 89.04±0.31% from scratch, 88.84±0.46% full fine-tuning, and 78.31±2.89% head-only. Fine-tuning improves macro AA by 1.69pp but fails the registered OA benefit gates. Frozen query evaluation and independent 81-head/1080-recall verification passed; completed resume preserves all 58 evaluation files. This K10/V5 transductive transfer protocol differs from the joint ~97% benchmark. Next: matched M4 source-to-target integration and full mechanism controls; support-set repetitions remain pending. All listed research directions still require testing, and defaults remain unchanged.
-
 # Hyperspectral Image Classification
 
-Research code for hyperspectral image classification: the SAHGCN baseline, a Variable Channel Adapter (VCA), a CNN/HGCN dual-branch backbone, end-to-end learnable superpixel graphs, region–pixel alignment, selective interaction, and graph edge-weight updates.
+Research code for a VCA spectral adapter and CNN/HGCN dual-branch backbone.
+The three research axes are region–pixel complementarity, cross-sensor adaptation,
+and pruning/quantization, all with accuracy as the primary objective.
 
-This repository was organized from an existing research workspace. It retains the core models, training, ablation, diagnostic export, and paper visualization code. Datasets, checkpoints, experimental results, and presentation materials must be supplied separately.
+Primary Windows workspace: **`F:/E2E_VCA`**, branch **`codex/f-drive-primary`**. Read the [project handoff](research/项目开发交接_20261105.md) before continuing. Research training remains paused; the M4 full-source study failed its strict native reload gate and is incomplete. Local original files are preserved outside Git as described in the [migration record](docs/guides/f-drive-primary.md).
 
-## Modular Development
+## Current entry points
 
-M4-S2 completed twelve full runs: residual plus primary-only supervision reaches macro OA97.12±0.26%, versus95.88±0.31% for the paired original baseline. Both registered candidate comparisons improve in3/3 seeds and pass class/dataset guards. The original probability reload gate did not stably pass; an explicit pre-test decision evaluation amendment and FP32/FP64 sensitivity agree on all benefit gates. See the [full report and limitations](research/reports/M4S2_残差与辅助监督三种子完整配对及精度敏感性_20261104.md). This is a fixed transductive joint benchmark, not unseen-sensor confirmation; defaults remain unchanged. [M2-J1 engineering](research/reports/M2J1_三种VCA联合接入与均匀模式显存验收_20261104.md) passed; [M2-J2](research/experiments/M2J2_VCA三模式完整配对预登记_20261104.md) is the next isolated full comparison under the user's continuous-progression instruction.
+- [Current status](research/当前搭建状态与审查整改清单_20261102.md): the single human-readable status table, generated from [current-status.json](docs/architecture/current-status.json).
+- [Delivery and branch guide](docs/guides/current-baseline.md): exact branch roles, integration boundaries and remote validation.
+- [Module map](docs/architecture/module-map.json): code and test navigation; historical notes are evidence for their named versions.
+- [Research master plan](research/研究内容整合与详细搭建测试计划_2026-10-28.md), [implementation plan](research/模块化搭建与测试消融实施计划_2026-10-28.md), and [mandatory scope](research/全量研究模块必测清单_20261104.md): design and experiment requirements.
+- [Contributing](CONTRIBUTING.md) and [execution rules](AGENTS.md).
 
-E0-B2 frozen spatial diagnostics completed:28 related tests and1134 head/378 branch/648 spatial-pair/240 class-pair independent checks passed. M4 retains overall gains, but HongHu narrow-boundary OA falls0.60pp and class15 recall falls in all3 seeds. See the [scope and report](research/reports/E0B2_M4冻结空间逐类与双支路诊断_20261104.md); no new training or inference.
-
-**Completion rule updated 2026-11-04:** every listed research direction must be tested, including formerly optional candidates. Negative results can complete experiments; untested or blocked work remains incomplete. See the [mandatory coverage checklist](research/全量研究模块必测清单_20261104.md). E0-B1 spatial support auditing passed30 related tests and108 independent histogram checks; this does not establish boundary accuracy gains.
-
-M1-J1 joint real-band integration passed scoped engineering acceptance: CPU5/GPU5/full372 and two real12-update checks. See the [acceptance report](research/reports/M1J1_真实波段子集联合训练接入验收_20261104.md). This adds no accuracy claim. [M1-J2 full results](research/reports/M1J2_真实波段联合三种子完整配对结果_20261104.md) are complete: full macroOA95.89→95.61%, missing-band95.53→95.38%; the registered benefit gate failed. Keep full observation and the separately validated M4 candidate. That experiment is complete; current work follows the mandatory coverage checklist.
-
-M4-J2 completed: [paired three-seed results](research/reports/M4J2_区域像素残差三种子完整配对结果_20261104.md). Region–pixel residual macro OA96.74±0.23%, versus original95.88±0.31% and capacity96.22±0.32%; both predefined comparison gates passed. HongHu is the main gain, with individual-class regressions retained. This is a fixed joint benchmark, not unseen-sensor confirmation; defaults remain unchanged.
-
-**Use the [current baseline and delivery guide](docs/guides/current-baseline.md) for cloning, reproducibility and the next task.** The tested delivery snapshot is `2938698540b4eb51b4098aa781dd5e984b1613e1`, on `codex/issue-70-delivery-baseline`; its production implementation matches functional reference `6fa2d06747f79e90f95928b099ba2c3c0b18cbd0`. At the 2026-11-02 delivery snapshot, default `main` lacked the later delivered work. [Delivery status](docs/architecture/delivery-status.json) records exact PR dependencies, bridge commits, engineering/effect scope and pending integration. [Draft integration PR #71](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/71) is available for separate review.
-
-Follow the [research master checklist](research/研究内容整合与详细搭建测试计划_2026-10-28.md) and the [module implementation plan](research/模块化搭建与测试消融实施计划_2026-10-28.md). Each module is versioned and validated remotely. Under the user instruction dated 2026-11-04, delivery is followed by the next planned module without a review pause; validation gates and explicit experiment budgets still apply. Engineering validation has been completed for the baseline, C0, C1, M2, M3, M5, M8, E0a, M6, and M4-A/M4-B1. M7 candidate-edge reweighting remains in the engineering roadmap; formal accuracy experiments are assessed separately. The current research priorities and monitoring plan are linked below.
-
-- [G3 paired three-seed replication](research/reports/G3P2_三种子配对复验结果_20261102.md): scratch OA 63.03±1.76% versus full fine-tuning 62.89±4.74%; stable OA gains were not established. Class-average recall improved. Additional pretraining cost and a filesystem timestamp audit limitation are documented.
-- [Earlier G3 exploratory pilot](research/reports/G3P1_跨传感器完整初筛结果与逐类分析_20261101.md): the single-seed gain did not translate into a stable OA gain in the three new repetitions above.
-- [Baseline provenance and fingerprints](docs/migration/source-inventory.md), [baseline validation report](research/reports/baseline_2026-10-29.md)
-- [Remote validation and synchronization guide](docs/guides/remote-validation.md)
-- [Data protocols for the three research axes](docs/guides/data-protocol-matrix.md): preserve the original per-class1% training/0.5% validation joint accuracy benchmark; distinguish few-shot transfer, UDA and DG; inherit the dense baseline split for pruning/quantization and explicitly declare calibration context. Literature examples and proposed protocols do not change existing defaults.
-- [BASE-97A joint benchmark engineering gate](docs/guides/joint-baseline-base97.md): opt-in frozen three-dataset1%/0.5% preparation, raw/split/graph/config identities, bounded round-robin updates and validation-selected classifier restoration. The short loop does not reproduce historical97% accuracy; full training is a separately registered task.
-- [BASE-97B formal random training and continuation](docs/guides/joint-training-base97b.md): explicit12-update engineering/1503-update full profiles, original validation scheduling and selection, authenticated reuse of frozen graphs, full training-state continuation and immutable completed resume. [Engineering acceptance](research/reports/BASE97B_正式联合训练调度与断点恢复工程验收_20261103.md) covers328 regressions and real5+7+0 updates; the complete accuracy campaign is assessed below.
-- [BASE-97C complete joint baseline and branch diagnosis](research/reports/BASE97C_三种子完整联合训练结果与双支路诊断_20261103.md): three seeds x1503 updates completed in8.5min at `8daa65b116ba585b33a84e3af93f3741716b710a`. PaviaU/Xuzhou/HongHu fused test OA96.52±3.05/85.06±12.43/84.40±8.04%, dataset macro88.66±6.10%; not a stable recovery of historical accuracy. Both branches update and affect predictions; fusion is0.56pp above the CNN auxiliary head on average, while HongHu's graph head is stronger than fusion. Validation-only fixed-weight probes localize a large train/eval discrepancy to front-end DomainBN statistics; official test scores remain unchanged. Frozen verification preserved183 training files and13 inputs; independent single-branch retraining remains pending. Next validate normalization-statistic consistency before more budget or new mechanisms.
-- [BN-ALIGN1 scene-statistic calibration](docs/guides/bn-calibration.md), [acceptance and paired validation](research/reports/BNALIGN1_DomainBN统计校准与保存恢复验收_20261103.md): opt-in label-free denoise DomainBN calibration produces a separate eval model with unchanged parameters and scene/source/context/state binding. CPU9/GPU9/full337 and frozen three-seed acceptance passed; reused validation macroOA88.44±6.64→94.60±2.12%, with no new test scoring or optimizer updates. Strict FP64 controls distinguish native FP32 reduction differences; saved/reloaded state and supervised predictions agree. Historical183 training files/13 inputs unchanged. Original training defaults remain off; the BN-ALIGN2 follow-up below handles training-time selection. Independent accuracy confirmation is pending.
-- [BN-ALIGN2 consistent calibrated selection](docs/guides/calibrated-selection.md), [acceptance and full historical replay](research/reports/BNALIGN2_验证选模统计一致性与历史轨迹复评验收_20261103.md): explicit versioned training flag aligns validation NLL/scheduler, OA selection and saved inference while preserving raw optimizer continuation. CPU7/GPU7/full344, three-seed legacy-default equivalence, all153 frozen validation states and5508 independently recomputed metric cases passed. Reused validation macroOA88.44±6.64→94.60±2.12→96.04±0.52%; all calibrated selections are step1503. No new real-data updates or test readouts; original183 files/13 inputs unchanged. Fixed-trajectory LR replay matches all153 original events. Frozen benchmark evaluation and reuse audit follow in BN-ALIGN3 below; independent generalization evidence remains separate.
-- [BN-ALIGN3 frozen calibrated benchmark](docs/guides/calibrated-evaluation.md), [reuse gates, test results and per-class analysis](research/reports/BNALIGN3_校准联合基线冻结测试评价与轨迹复用验收_20261103.md): CPU/GPU paired synthetic training across all3 seeds and all153 scheduler events permit audited historical-weight reuse. Frozen test macroOA raw88.66±6.10%, original-checkpoint calibration94.48±2.03%, calibrated reselection95.86±0.35%; paired gains in3/3 seeds, preregistered AA guard passed. PaviaU/Xuzhou/HongHu OA98.81±0.55/98.18±0.13/90.58±0.78%; HongHu remains the bottleneck and its Graph auxiliary head exceeds fusion. New8/full352 tests,243 independently recomputed metric cases/81 complementarity cases passed;216 historical artifacts/13 inputs unchanged, zero new real-data updates. Previously inspected test split, full-scene transductive context, no unseen-sensor or untouched-test claim. Next independent single-branch/graph comparisons; current checklist is authoritative.
-- [BG-ABL1 independent branch/graph training](docs/guides/branch-graph-ablation.md), [engineering acceptance](research/reports/BGABL1_独立支路与图传播对照工程验收_20261103.md): six variants separate primary-only dual/CNN/Graph comparisons from auxiliary supervision and fixed hypergraph/ordinary/identity propagation. Unused branches/heads are removed; retained initialization matches. New checkpoint signatures and bound loaders protect routing and Q/A. CPU9/GPU9/full361,48 parent/current default-state fingerprints and six real12-update loops passed;72 train/val metric cases independently recomputed,183 historical files/13 inputs unchanged. No new test scoring or full accuracy claim. Independent branches differ in capacity; identity retains regional processing, and the ordinary control changes graph construction. The full paired campaign is recorded in BG-ABL2 below.
-- [BG-ABL2 complete branch/propagation comparison](docs/guides/branch-graph-full-comparison.md), [full report](research/reports/BGABL2_六组独立支路图传播三种子完整配对结果_20261103.md): all18 from-scratch runs/27054 updates completed at `7f4688076bf19b814f210676d64d1d08a2e3610c` in61.56min. Primary-only dual macro test OA96.47±0.16%, legacy three-head95.89±0.33%, CNN96.13±0.27%, Graph94.81±0.22%, ordinary95.95±0.37%, identity95.87±0.28%. Dual-minus-CNN+0.338pp passes the registered AA guard; dual-minus-Graph fails HongHu AA protection despite higher macroOA. Original auxiliary supervision loses0.582pp; hypergraph-minus-ordinary is−0.062pp, hypergraph-minus-identity+0.021pp passes the zero-threshold rule with a very small effect. Independent324 metric/81 complementarity/5 contrast checks, all2016 training files/13 inputs unchanged.221 source/config files match accepted engineering; no production change or new361-test claim. Previously inspected fixed split, capacity/construction limits and all negative gates disclosed. Next M4-J1 opt-in joint integration engineering; no default switch or automatic long training.
-- [M4-J2 preregistered joint comparison](research/experiments/M4J2_区域残差联合三种子完整配对预登记_20261104.md): baseline/capacity/residual × three seeds ×1503 updates. Completed; paired results and numerical-finalization limitations are linked above.
-- [M4-J1 calibrated joint integration](docs/guides/m4-joint-training.md): opt-in existing M4 modes with mode/resume and Q/A binding. CPU/GPU focused2 each, full363, off equivalence and exact continuation passed; two real12-update checks confirm participation and immutable completed resume. Engineering only; next preregister the paired baseline/capacity/residual campaign.
-- [C0 configuration, run records, and ablation checklist](docs/guides/c0-experiments.md): start with a dry run; verify matching run identity before skipping completed work or retrying failed attempts
-- [C0 delivery report and acceptance scope](research/reports/C0_配置与实验记录模块交付_2026-10-29.md)
-- [C1b spatial access contract and limitations](docs/guides/spatial-protocol.md), [validation report](research/reports/C1b_空间访问契约_20261029.md)
-- [C1c strict multi-block training](docs/guides/spatial-training.md), [two-step end-to-end validation report](research/reports/C1c_严格空间训练闭环_20261029.md)
-- [M2 VCA metadata, bad-band handling, and cache contract](docs/guides/vca.md), [GPU validation report](research/reports/M2_VCA接口与缓存回归_20261029.md)
-- [M3 regional graph state, label-free controls, and manual injection](docs/guides/graph-state.md), [GPU validation report](research/reports/M3_区域图契约与无标签对照_20261029.md)
-- [M1-B real-band training integration](docs/guides/observation-training-m1.md), [acceptance and per-run review](research/reports/M1B_真实波段子集训练接入验收_20261102.md): opt-in frozen per-update spectral subsets, independent fixed development perturbations, explicit metadata units and checkpoint-policy verification. Full CPU251/251, focused CPU/GPU9 each, existing M1 GPU6/6 and real full/subset four-update checks passed. Actual Xuzhou input changed from436 bands to327/218/109/328; these four-update checks established engineering behavior. The full-budget development comparison follows below; actual cross-sensor gains remain unverified. Existing defaults and M4-disabled baseline are retained.
-- [M1-C paired full/legacy-zero/real-subset screen](docs/guides/m1-paired-screen.md), [results and per-run analysis](research/reports/M1C_完整波段与真实子集配对精度筛选_20261102.md): nine paired target-scratch runs/45000 updates at `experiment-m1c-dev-v1`. Full development OA was74.07%, legacy support-pixel zeroing74.81%, real subsets72.59%; five-condition robustness OA was73.04/73.48/71.11%. The registered joint-gain rule failed; retain full training and keep strong subset augmentation opt-in. CPU258/258, new CPU/GPU7 each, prior M1 GPU9, M4 controller GPU8 and real preflight/immutable resume passed. This is a45-label development screen, not final-test or actual unseen-sensor evidence. Independent E1 engineering is assessed below.
-- [E1-A standalone coverage](docs/guides/observation-coverage-e1.md) and [E1-B production integration](docs/guides/coverage-integration-e1b.md), [E1-B report](research/reports/E1B_覆盖度骨干训练与恢复接入验收_20261102.md), [upstream review](docs/references/e1-reference-review.json): the opt-in194-parameter modulator now reaches backbone, configuration, training and classifier checkpoint restoration. CPU/GPU integration16 each, fullCPU288/288, E1-A GPU14, M1 native GPU functional6, M4 GPU12 and VCA lifecycle passed. Three numerical training comparisons use additional strict FP64 controls; prior native M1 NLL flakiness is documented. Paired three-update real preflight confirmed actual436/218/328-band metadata, parameter updates and selected-model restoration. Defaults remain off; engineering acceptance establishes no accuracy gain. E1-C progress is assessed below.
-- [E1-C matched controls and frozen screen](docs/guides/coverage-screen-e1c.md), [E1-C1 acceptance](research/reports/E1C1_公平覆盖对照与精度批次预登记验收_20261102.md): none/anchor-only/binary/continuous/shuffled share observations, budgets and selection; four enabled arms have194 parameters. Control CPU/GPU8 each, campaign CPU/GPU5 each, fullCPU301/301, prior E1-B/E1-A GPU16/14 and a real five-arm x5-update preflight passed. Verified resume preserved40 case files, and fixed-model diagnostics confirmed the intended conditioning behavior. The E1-C2 fifteen-case/75000-update batch is complete: full OA71.85±15.13% for none versus71.85±15.77% for continuous; held-out-range OA56.30±2.22% versus54.81±3.23%. The registered joint-gain rule failed; keep E1 off. [Results and per-run review](research/reports/E1C2_五组覆盖调制三种子完整配对结果_20261102.md) records all cases, artifact/pair/arithmetic verification and zero-update resume with120 unchanged files. This reused45-label development screen establishes no final-test or real unseen-sensor gain.
-- [DIAG-2 accuracy and variance diagnosis](research/reports/DIAG2_原高精度基线与当前低精度波动诊断_20261103.md): original joint PaviaU/Xuzhou/LongKou VCA records reach98.37/96.93/98.23% mean OA under different supervision, graph, normalization and evaluation settings. Nine current selected models fit all90 training labels at100% fused OA while development OA remains57.78–88.89%. Optimizer coverage and bounded GPU gradients passed; no new training/test evaluation. Recover a matched joint baseline before further hyperparameter/budget searches. Historical high accuracy is recorded evidence, not a new reproduction or an unseen-sensor result.
-- [M4 region representation and pixel residual](docs/guides/region-residual-m4.md), [M4-A standalone report](research/reports/M4A_区域表示与像素残差独立模块验收_20261102.md), [M4-B1 integration report](research/reports/M4B1_骨干配置与训练接入验收_20261102.md): five modes now reach both backbone paths and shared training/checkpoint configuration. Integration checks passed on CPU/GPU (12 each), full CPU regression 234/234, and a two-update real development check confirmed hint participation. Accuracy evidence is assessed separately in M4-B2.
-- [M4-B2 paired development screen](docs/guides/m4-paired-screen.md), [registration and results](research/reports/M4B2_四组配对开发筛选预登记与结果_20261102.md): all 12 target-scratch runs / 60000 updates completed at frozen tag `experiment-m4b2-dev-v1`. Baseline development OA was 75.56±3.85%, input+residual 71.85±3.39%; the registered candidate rule failed, so retain the baseline with M4 disabled. Regression 242/242 and real preflight/resume passed. The 45-label development screen establishes no final-test, boundary or cross-sensor transfer gains.
-- [M5 two-stage backbone, graph contract, and ablation configurations](docs/guides/backbone-stages.md), [GPU validation report](research/reports/M5_统一两阶段骨干与图契约接入_20261029.md)
-- [M8 fixed fusion, optional logits, and loss components](docs/guides/fusion-losses.md), [GPU validation report](research/reports/M8_固定融合与损失契约验收_20261029.md)
-- [E0a frozen predictions, boundary evaluation, and branch error diagnostics](docs/guides/evaluation-e0a.md), [validation report](research/reports/E0a_冻结预测评估与诊断验收_20261029.md)
-- [Per-class diagnostics for the three heads after full-budget screening](docs/guides/screening-branch-diagnostics.md), [CNN/Graph/fusion errors and gating report](research/reports/M6_冻结三路逐类错误与门控诊断_20261030.md)
-- [E0b validation-only message interventions](docs/guides/message-interventions.md), [frozen bidirectional, unidirectional, and disabled-message report](research/reports/E0b_验证区冻结消息干预_20261030.md)
-- [M6 alignment and selective interaction contract](docs/guides/interaction-m6.md), [GPU validation report](research/reports/M6_对齐与选择性交互验收_20261029.md)
-- [Machine-readable module index](docs/architecture/module-map.json), [contribution workflow](CONTRIBUTING.md), [agent instructions](AGENTS.md)
-- [Dynamic-network survey and candidate roadmap](research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md), [reference/code inventory](docs/references/research-code-inventory.json), [implementation-before-reuse checks](docs/guides/reference-code-reuse.md): low-rank/ternary compression, protected curriculum, early exits, fallback cascades and routing are planned candidates. Review original papers and author code/license/revision before implementation. Following the completed M1-C/E1 screens above, the next gate is recovery of the original three-dataset joint-training benchmark; MON-2 monitoring supports diagnosis before fixed probes and compression; none of these dynamic/compression candidates is enabled or empirically validated here.
-- [Long-term repository architecture RFC](research/长期工程仓库结构与Issue协作方案_RFC草案_2026-10-28.md): migrate toward the proposed layout one module at a time
-
-**Current execution policy: run all code, dependency installation, and tests inside the training container through `ssh rmvision`. Windows is used only for editing, documentation, and Git.** Run the Python, installation, and training commands below remotely. The current container uses its existing framework installation; follow the remote guide for the actual environment and validation commands. Synthetic checks and empirical research conclusions are recorded separately.
-
-## Installation and Quick Checks
-
-For a fresh environment, Python 3.10 or 3.11 is recommended by the original dependency setup, which retains the research environment's `numpy==1.24.3` pin. Install a PyTorch build appropriate for your CUDA environment if GPU training is required. For the existing remote training container, follow the environment notes in the remote guide instead of reinstalling its framework.
+## Obtain the development integration
 
 ```bash
-git clone --branch codex/issue-70-delivery-baseline https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git
-cd Hyperspectral-Image-Classification
-git switch --detach 2938698540b4eb51b4098aa781dd5e984b1613e1
-python -m venv .venv
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-# Linux/macOS: source .venv/bin/activate
-python -m pip install -r requirements.txt
-python smoke_test.py
-python -m unittest discover -s tests -p "test_interaction_modules.py" -v
+git clone --branch codex/issue-167-development-integration https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git hsi-development
+cd hsi-development
+git status --short --branch
+git rev-parse HEAD
 ```
 
-The two checks use synthetic data. They cover different band counts, forward and backward passes with static and learnable graphs, interaction, checkpoint handling, and the training-to-diagnostic-export workflow. No real dataset download is required. Run installation and training commands from the repository root.
+Use full history: several regression fixtures read immutable historical commits.
+For a reported result, pin its tested SHA or immutable experiment tag instead of
+using the latest branch tip. This integration is a review candidate; main has not
+received these changes. The main-based VCA repair is separately reviewable on
+`codex/issue-167-main-cache-repair`.
 
-The commands above pin the tested delivery snapshot, including the ledger and verifier. Follow the current baseline guide for its verification receipt. Use a full-history checkout; historical source fixtures are part of the regression suite. Keep the existing remote environment when one is already configured.
+## Validate remotely
 
-## Code Entry Points
+All Python, dependency installation, checks and training run in the authorized
+Linux training container via `ssh rmvision`. Windows is used for editing, reading
+files and Git. Reuse the documented environment; see the [remote guide](docs/guides/remote-validation.md).
 
-| Path | Purpose |
-| --- | --- |
-| `model/variable_channel_adapter.py` | Map variable band counts into a shared latent spectral space |
-| `model/VCASAHGCN.py` | Shared VCA and CNN/HGCN backbone with dataset-specific classification heads |
-| `model/learnable_superpixel_graph.py` | Differentiable sparse pixel-to-region assignment and dynamic graphs |
-| `model/region_pixel_alignment.py` | Bidirectional mapping between pixel and regional features |
-| `model/cross_branch_interaction.py` | Direct or gated, unidirectional or bidirectional interaction |
-| `model/graph_edge_update.py` | Learnable edge-weight updates over candidate edges |
-| `model/checkpoint_io.py` | Save and restore weights and model configurations |
-| `model/SAHGCN.py`, `model/GCN.py`, `model/F2HGNN.py` | Original models and reference implementations |
-| `createGraph/`, `loadData/` | Graph construction, data loading, label masks, and dataset splits |
-| `train_vca_multidataset.py` | Main multi-dataset training entry point |
-| `main.py` | Original single-dataset entry point, with optional `--use-vca` |
-| `run_paper_ablation.py` | Schedule VCA and interaction ablation experiments |
-| `export_interaction_diagnostics.py` | Export interaction gates, graph edge weights, and predictions |
-| `export_*classification_maps.py` | Export classification maps |
-| `generate_vca_visualizations.py` | Visualize VCA attention |
-| `make_paper_figures.py`, `scripts/` | Paper figures, data cubes, and HongHu result processing |
-
-## Dataset Preparation
-
-Arrange data as described in [dataset/README.md](dataset/README.md). Common training names include `paviaU`, `xuzhou`, `whu-honghu`, and `WHUL`. `WHUL` refers to LongKou. The legacy name `WHU` applies historical cropping and label transformations to HongHu; use `whu-honghu` for experiments on the full HongHu dataset.
-
-## Training and Ablations
-
-Display all command-line options:
+In a clean remote checkout, using its existing Python environment:
 
 ```bash
-python train_vca_multidataset.py --help
+export PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+python scripts/check_repository.py --expected-commit "$(git rev-parse HEAD)"
+python -m unittest discover -s tests -v
+MON3B_DEVICE=cuda python -m unittest discover -s tests -p test_monitoring_interventions.py -v
+REPAIR_DEVICE=cuda python -m unittest discover -s tests -p test_vca_release_compatibility.py -v
 ```
 
-Single-dataset training with an end-to-end learnable graph:
+[Automatic acceptance](.github/workflows/remote-validation.yml) targets a dedicated
+self-hosted Linux training-container runner. Runner registration is pending;
+workflow presence is not a successful CI run. It installs no dependencies, starts
+no real-data training and uses no dataset or SSH secrets. Focused GPU acceptance
+is an explicit manual dispatch option.
 
-```bash
-python train_vca_multidataset.py --datasets paviaU --graph-mode learned --device cpu --epochs 500
-```
+## Research evidence and boundaries
 
-Multi-dataset training with a shared model:
+Results and remaining work live in the current status table. A module can be
+implemented and tested while its accuracy hypothesis fails. Joint seen-scene
+accuracy, few-shot transductive adaptation and strict unseen-sensor generalization
+are separate claims. Dataset identities, label budgets, graph context, source
+checkpoints, seeds, selection rules and numerical amendments belong to each
+frozen experiment record.
 
-```bash
-python train_vca_multidataset.py --datasets paviaU,xuzhou,whu-honghu --graph-mode learned --device cpu --epochs 500
-```
+This delivery integrates accepted G4I, MON-2/3C, the activation-snapshot repair and
+NUM-1 provenance. It preserves the accepted G4I model/training/data configuration
+files. Frozen running checkouts and experiment tags are not updated by this work.
+The newer M4-G4A development branch is outside this acceptance scope.
 
-Interaction and graph edge-weight updates are disabled by default. `--graph-mode static` retains the LDA-SLIC path. Generate the full set of experiment commands for inspection first:
-
-```bash
-python run_paper_ablation.py --suite interaction --experiments all --datasets paviaU,xuzhou,WHUL --seeds 0,2026,3407 --device cpu --dry-run --out-dir experiments/interaction_plan
-```
-
-Full interaction configuration and diagnostic export:
-
-```bash
-python train_vca_multidataset.py --datasets paviaU --graph-mode learned --interaction-mode gated --graph-update-mode joint --device cpu --epochs 500 --save-path weights/interaction_full.pt --metrics-json experiments/interaction_full_metrics.json
-python export_interaction_diagnostics.py --checkpoint weights/interaction_full.pt --datasets paviaU --device cpu --out-dir results/interaction_full_diagnostics
-```
-
-When CUDA is available, replace `--device cpu` with `--device cuda`. Keep both the checkpoint `.pt` file and its companion `.pt.json` configuration file. See [INTERACTION_ABLATIONS.md](INTERACTION_ABLATIONS.md) for module definitions, the ten interaction presets, and validation scope.
-
-## Scope and Provenance
-
-- `make_paper_figures.py` and the HongHu-specific scripts require existing experiment tables, checkpoints, or images. See their source for arguments and inputs; those artifacts are not included. Some legacy baselines and dataset paths retain historical absolute paths that need adjustment before use with other datasets.
-- Some sensor wavelength metadata is approximate; see `loadData/data_read.py`. Functional validation does not establish improved classification accuracy or cross-sensor generalization.
-- The original local Git remote was `https://gitee.com/lbxhhh/hyper-spectr.git`. The original README is preserved in [docs/SAHGCN.original.md](docs/SAHGCN.original.md), including its paper description for provenance. This repository does not claim to be that paper's official repository.
-- No license file was found in the source directory at import time, so no licensing terms have been added on behalf of the original authors.
-
-## Additional Experiments and Current Research Priorities
-
-- [E0b validation-only coordinate sensitivity diagnostics](docs/guides/coordinate-interventions.md) (Issue #31)
-- [E0b coordinate sensitivity validation report](research/reports/E0b_验证区冻结坐标敏感性_20261031.md)
-- [B0 coordinate retraining with a matched budget](docs/guides/coordinate-retraining.md) (Issue #33)
-- [B0 coordinate retraining launch and validation record](research/reports/E0b_B0坐标重训启动与验收_20261031.md) (see the report for full training results)
-
-The current [three research axes and pruning/quantization plan](research/三主线研究重心与剪枝量化及论文用途_20261031.md) all prioritize improving accuracy:
-
-1. Region–pixel complementarity.
-2. Cross-sensor spectral adaptation.
-3. Pruning and quantization, followed by speed optimization under a predefined accuracy constraint.
-
-The [unified training monitoring implementation and integration plan](research/统一训练监测搭建与训练接入计划_20261031.md) has an initial opt-in MON-0/1 API (Issue #43); gradient/update monitoring and probe integration remain **planned** (Issue #37).
-
-Linked research documents retain their original filenames; many are currently written in Chinese.
-
-- [MON-0/1 read-only activation and weight measurements](docs/guides/monitoring-readonly.md): opt-in API; later monitoring integration stages remain planned.
-
-- [MASK-1 explicit reversible weight masks](docs/guides/reversible-weight-masks.md): opt-in synthetic training validation; no automatic pruning or speed claim.
-- [MASK-2 masked-training checkpoints](docs/guides/masked-training-checkpoints.md): explicit weight/mask/optimizer/RNG recovery for isolated experiments; default training is unchanged.
-- [M1 real spectral subsets and synchronized metadata](docs/guides/observation-sampling-m1.md): independent data API; cross-sensor protocols and accuracy experiments remain separate.
-- [E4a-1 frozen cross-sensor few-shot protocol](docs/guides/transfer-protocol-e4a.md): PaviaU to Xuzhou, explicit target-label budget and spatial access boundaries; no zero-shot claim.
-- [E4a-2 G3 training entry point](docs/guides/g3-training.md): source-only pretraining, fresh target heads and fixed-budget adaptation; full pilot results are assessed separately.
-- [G3-P1 full-budget pilot preregistration and run record](research/reports/G3P1_跨传感器完整初筛运行记录_20261101.md): completion and accuracy are reported separately.
+Datasets, weights and raw run artifacts are stored outside checkouts and are not
+shipped in Git. No compression or speed improvement follows merely from masks,
+synthetic tests or theoretical operation counts.

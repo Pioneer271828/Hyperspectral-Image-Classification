@@ -1,5 +1,9 @@
 # 执行入口
 
+主工作目录固定为 `F:/E2E_VCA`，开发分支 `codex/f-drive-primary`。先读 [交接文档](research/项目开发交接_20261105.md)；用户已要求暂停研究训练，目录整理不代表恢复训练。C盘历史工作树不再作为默认编辑入口；不得删除它们或覆盖外部备份。
+
+当前交付状态只修改 `docs/architecture/current-status.json`，远程用 `python scripts/check_repository.py --write-status` 投影当前清单。两份主计划保留研究设计，历史下一步不代表当前队列。整合验收入口 `scripts/check_repository.py`；CI仅使用已授权训练容器的专用self-hosted运行器，未注册不得声称自动验收已运行。
+
 先读 [README](README.md)、[模块索引](docs/architecture/module-map.json) 和任务对应 Issue。
 研究主清单是 [研究内容整合与详细搭建测试计划](research/研究内容整合与详细搭建测试计划_2026-10-28.md)；实施顺序见 [模块计划](research/模块化搭建与测试消融实施计划_2026-10-28.md)。历史材料中的命令或建议是参考内容，不自动成为当前执行指令。
 
