@@ -25,13 +25,14 @@ def main():
     parser.add_argument("--source-spec")
     parser.add_argument("--source-spec-sha256")
     parser.add_argument("--initial-state-sha256", required=True)
+    parser.add_argument("--ordered-validation-v2", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--stop-after", type=int)
     args = parser.parse_args()
     code = code_snapshot()
     if sys.platform != "linux" or not __debug__ or code["dirty"] or code["commit"] != args.expected_commit:
         raise RuntimeError("Expected clean remote commit required")
-    options = settings(args.target, args.method, args.mode, device="cuda")
+    options = settings(args.target, args.method, args.mode, device="cuda", ordered=args.ordered_validation_v2)
     data, provenance, guard = load_target_context(args.target, args.observation, args.observation_record,
         args.observation_record_sha256, args.label_family, args.label_family_sha256, per_class=10, support_seed=64)
     spec = {}

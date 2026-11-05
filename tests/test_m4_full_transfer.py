@@ -13,7 +13,7 @@ from model.research_config import ResearchConfig
 from target_initialization import METHODS, domain_keys, state_id
 
 
-def fixture(root):
+def fixture(root, mode="x_residual"):
     # These files test initialization contracts; they are never experiment results.
     cases = []
     for target in EXPECTED["held_targets"]:
@@ -31,7 +31,7 @@ def fixture(root):
     producer = {"commit": SOURCE_PRODUCER, "dirty": False, "fixture": True}
     launch = {"code": producer, "study": EXPECTED, "test_scoring": False, "expected_updates": 18036,
               "out_dir": str(root), "cases": cases}
-    case = next(c for c in cases if (c["held_out"], c["seed"], c["mode"]) == ("xuzhou", 64, "x_residual"))
+    case = next(c for c in cases if (c["held_out"], c["seed"], c["mode"]) == ("xuzhou", 64, mode))
     folder = Path(case["out"])
     folder.mkdir(parents=True)
     source = ResearchConfig.from_dict(case["settings"]["config"]).build_model(

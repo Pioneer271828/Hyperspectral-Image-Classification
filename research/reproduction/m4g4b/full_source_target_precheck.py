@@ -37,6 +37,7 @@ def main():
     for name in ("expected-commit", "source-root", "source-audit", "source-audit-sha256",
                  "observation-root", "family-root", "out-dir"):
         parser.add_argument("--" + name, required=True)
+    parser.add_argument("--ordered-validation-v2", action="store_true")
     args = parser.parse_args()
     code = code_snapshot()
     if sys.platform != "linux" or not __debug__ or code["dirty"] or code["commit"] != args.expected_commit:
@@ -79,10 +80,13 @@ def main():
                     "--initial-state-sha256", receipt["initial_state_sha256"]]
                 if used:
                     command += ["--source-spec", str(spec_path), "--source-spec-sha256", file_hash(spec_path)]
+                if args.ordered_validation_v2:
+                    command.append("--ordered-validation-v2")
                 cases.append({"name": name, "target": target, "mode": mode, "method": method,
                               "command": command, "source_spec": used, "inputs": inputs,
                               "initial_state_sha256": receipt["initial_state_sha256"],
-                              "settings": settings(target, method, mode, device="cuda")})
+                              "settings": settings(target, method, mode, device="cuda",
+                                                   ordered=args.ordered_validation_v2)})
                 del model
     write_json(out / "launch.json", {"code": code, "cases": cases, "updates": 144,
         "source_audit_sha256": args.source_audit_sha256, "query_labels_accessed": False})
@@ -126,6 +130,8 @@ def main():
             if state_id(model) != before_model:
                 raise ValueError("Frozen target changed")
             del model
+        if args.ordered_validation_v2 and (len(set(comparisons)) != 1 or comparisons[0] != _tree_fingerprint(saved)):
+            raise ValueError("Ordered target reload is not exact")
         guard()
         if before != {p.name: file_hash(p) for p in folder.iterdir() if p.is_file()}:
             raise ValueError("Frozen completed target files changed")
