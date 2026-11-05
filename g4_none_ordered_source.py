@@ -12,7 +12,7 @@ EXPECTED = {**copy.deepcopy(NATIVE_STUDY), "protocol": "g4_none_source_pretrain_
             "validation_arithmetic": copy.deepcopy(POLICY)}
 
 
-def load_study(path="configs/experiments/none_source_ordered_full.json"):
+def load_study(path="research/experiments/g4_none_ordered_source_full_v2.json"):
     value = json.loads(Path(path).read_text())
     if value != EXPECTED:
         raise ValueError("Modified none source control study")
