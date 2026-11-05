@@ -126,9 +126,16 @@
       "evidence": "27角色1377事件/11016指标146880召回/4365文件输入不变；26角色通过，xuzhou-s64源2个非对角计数变化；所有选中步/LR保持；独立纯Python记录复核通过，4427文件不变；最终CPU2/full527通过",
       "remaining": "按原负结果建立同协议none9源/18目标新对照，随后36活动完整目标；本项不含新训练或query精度结论",
       "report": "research/reports/M4NoneV2_历史对照兼容审计阶段记录_20261105.md"
+    },
+    {
+      "id": "G4 none同协议源对照",
+      "state": "核心候选合成CPU/GPU及交付检查通过，真实源协议搭建中",
+      "evidence": "Issue178/PR179 Draft；核心e8a294d在rmvision CPU3/GPU3及checker通过；九角色共有初始参数与M4活动源一致；43候选配置路径冻结检查失败已保留，实验清单移至research后修复；真实短测/完整源训练未做",
+      "remaining": "补short/full CLI与上下文/图/初始身份冻结、真实3x8预检和全量回归，再冻结9x1002源批次、逐例复盘及独立验收",
+      "report": "research/experiments/G4NoneSourceV2_同协议源对照搭建范围_20261105.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "none_compatibility_audit_completed_historical_reuse_rejected",
+  "execution_state": "ordered_none_source_control_engineering_in_progress",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
