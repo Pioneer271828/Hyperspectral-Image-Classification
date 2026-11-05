@@ -83,7 +83,7 @@ def plot_case(row, trace, path):
     axes[0, 1].plot(steps, [r["source_validation_macro_oa"] for r in curves], label="validation")
     axes[0, 1].axvline(row["selected_step"], color="black", linestyle=":", label="first-max selected")
     axes[0, 1].set(title="Two-source macro fused OA", xlabel="Optimizer update", ylabel="OA", ylim=(0, 1))
-    axes[0, 1].legend()
+    axes[0, 1].legend(loc="lower right")
     axes[1, 0].plot(steps, [r["validation_nll"] for r in curves])
     axes[1, 0].set(title="Source validation fused NLL", xlabel="Optimizer update", ylabel="NLL")
     for group in range(len(trace[0]["learning_rates"])):
@@ -95,9 +95,10 @@ def plot_case(row, trace, path):
         for i, head in enumerate(HEADS):
             ax.bar(np.arange(count) + (i - 1) * .25,
                    [np.nan if v is None else v for v in phases["val"][head]["recall"]], width=.25, label=head)
-        ax.set(title=name + " selected source validation recall", xlabel="Local class ID (unsupported = NA)", ylabel="Recall", ylim=(0, 1))
+        ax.set(title=name + " selected source validation recall", xlabel="Local class ID (unsupported = NA)", ylabel="Recall", ylim=(0, 1.12))
+        ax.set_yticks(np.linspace(0, 1, 6))
         ax.set_xticks(np.arange(count), [str(i + 1) for i in range(count)], fontsize=8)
-        ax.legend()
+        ax.legend(loc="upper center", ncol=3, fontsize=9)
     figure.suptitle(row["name"] + " | source-only; no target/query score")
     figure.savefig(path, dpi=150)
     plt.close(figure)
