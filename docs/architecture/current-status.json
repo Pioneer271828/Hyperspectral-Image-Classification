@@ -119,9 +119,16 @@
       "evidence": "CPU2/GPU2/全量517；12例144更新、72指标960召回、36次精确重载；2120源与输入文件不变；原生v1独立复测失败保留",
       "remaining": "none历史基线身份/协议兼容审计，再登记36例完整目标与冻结评价",
       "report": "research/reports/M4FullTransfer_完整源目标接入与原生复测失败_20261105.md"
+    },
+    {
+      "id": "M4 none协议兼容审计",
+      "state": "验证器工程通过，真实选中状态只读审计进行中",
+      "evidence": "Issue176/PR177；审计源码139087a；CPU4/GPU4及LXC GPU4/checker通过；selected01身份检查失败保留，selected02新目录零更新审计27角色",
+      "remaining": "完整源9与目标18角色选中状态关口；仅全通过后再验选模/LR轨迹，否则登记同协议新none对照",
+      "report": "research/experiments/M4NoneV2_历史对照兼容审计预登记_20261105.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "full_source_target_v2_engineering_accepted_none_compatibility_audit",
+  "execution_state": "none_ordered_protocol_selected_audit_in_progress",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
