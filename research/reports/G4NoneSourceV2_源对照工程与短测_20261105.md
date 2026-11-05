@@ -41,3 +41,11 @@ receipt SHA256：`752301e32fd1585b5a4695adf00c7666be29b10b24fa797db7b9f5ade74e06
 独立全批次审计工具版本`6c8a93eb2be0271c37782d254bcc2a8ada55fc20`已部署至rmvision `/home/rmvision/g4-none-source-audit01`和LXC `checkouts/g4-none-source-audit01`，均为独立同名分支、干净checkout。CPU3分别0.032/0.072s，rmvision全量535=172.543s、双方checker333 Python/77 JSON及CLI帮助通过。命令为`python -m unittest test_none_source_full_audit test_none_source_campaign -v`与全量discover。训练producer52所有源码在独立consumer中保持，运行中52不变。
 
 审计入口`research/reproduction/m4g4b/none_source_full_audit.py`固定expected-commit、producer、完整run及launch/acceptance/protected-files三份实际SHA，只接受9例9018和108指标/1440召回的完整接受凭据；从独立checkout重读source context/图、选模/曝光/状态/文件对，复算全部指标与三次精确重载，零更新/query。输出须为runs下全新同级目录。**工具工程通过不代表实际全批次审计通过**；当前训练仍在运行，须结束后读取新receipt。
+
+## 完整批次复盘导出工具
+
+按两份计划与`docs/guides/post-training-review.md`补齐`research/reproduction/m4g4b/none_source_report.py`。入口要求完整9例acceptance和独立audit receipt的实际SHA，逐项确认结果/产物未变，才能输出9张六面板PNG、9份验证曲线CSV及summary.json。包含每更新loss与尾随30均值、两源train/val fused OA、选中步、验证NLL、实际LR、两个源各自fused/graph/cnn逐类召回，以及三种子均值/样本标准差。保留原first-max选模；不读取目标/query、不更新模型。无支持类别在图/汇总中记NA，同时保留原协议OA/AA，不能把缺失写成0召回。
+
+功能版`196242a70fb82a9095436827b03b462481906b8d`在rmvision独立`g4-none-source-report01`通过CPU2=1.373s、全量537=174.176s；LXC独立同名checkout及checker也通过。图例位置修订`e3ef407afb8d7f25841186dff7ced1b199fd535f`只改绘图布局，rmvision `g4-none-source-report02` CPU2=1.348s、LXC同名checkout CPU2=1.672s、双方checker335 Python/77 JSON与CLI帮助通过；合成预览经过人工版面检查，图例不遮挡逐类柱。专项命令为`python -m unittest test_none_source_report -v`。537全量对应功能版196，未冒称是e3再次完整回归。
+
+该工具的合成预览不是真实训练结果。真实导出尚未执行：等待9例及独立审计通过，再以报告producer、完整run的launch/acceptance、独立receipt各自SHA运行`none_source_report.py`，输出runs下全新同级目录。训练52、独立审计6c8均保持冻结，新增工具不替代完整模块验收或迁移精度结论。
