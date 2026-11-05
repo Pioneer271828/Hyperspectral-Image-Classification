@@ -7,7 +7,10 @@ import unittest
 
 import torch
 from joint_training import run_training
-from research.reproduction.m4g4b.none_selected_compatibility import audit_selected, compare, selected_conclusion
+from research.reproduction.m4g4b.none_selected_compatibility import (
+    audit_selected, compare, selected_conclusion, nontraining_body, verify_source_implementation,
+    SOURCE_PRODUCER, SOURCE_JOINT, TARGET_JOINT)
+from model.research_config import digest
 from source_training import SourceRuntime, source_settings
 from target_training import TargetRuntime, target_settings
 from target_initialization import METHODS, state_id
@@ -19,6 +22,20 @@ DEVICE = os.environ.get("M4G4_DEVICE", "cpu")
 
 
 class NoneCompatibilityTests(unittest.TestCase):
+    def test_historical_hook_change_cannot_hide_changed_validation_or_other_files(self):
+        old = "import math\ndef snapshot(): return 1\ndef run_training(): return 2\n"
+        new = old.replace("return 2", "return 3")
+        self.assertEqual(nontraining_body(old), nontraining_body(new))
+        self.assertNotEqual(nontraining_body(old), nontraining_body(new.replace("return 1", "return 4")))
+        producer = {"commit": SOURCE_PRODUCER, "dirty": False, "files": {"joint_training.py": SOURCE_JOINT}}
+        producer["source_hash"] = digest(producer["files"])
+        current = {"files": {"joint_training.py": TARGET_JOINT}}
+        proof = verify_source_implementation(producer, current)
+        self.assertTrue(proof["joint_module_except_run_training_ast_identical"])
+        current["files"]["joint_training.py"] = "0" * 64
+        with self.assertRaises(ValueError):
+            verify_source_implementation(producer, current)
+
     def test_elementwise_tolerance_and_decisions_are_separate_gates(self):
         old = torch.tensor([[.1, .9]])
         new = old + torch.tensor([[3e-6, -3e-6]])

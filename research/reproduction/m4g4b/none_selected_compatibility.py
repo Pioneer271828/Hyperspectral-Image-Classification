@@ -5,10 +5,13 @@ selection and scheduler trajectories must be audited separately. A negative gate
 rejects reuse without changing or retraining any historical model.
 """
 import argparse
+import ast
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
+import subprocess
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -20,12 +23,46 @@ from joint_training import _tree_fingerprint, load_plan, schedule_for
 from loadData.dataset_registry import file_hash
 from m4_ordered_source import OrderedValidation
 from model.checkpoint_io import load_model_checkpoint
+from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, write_json
 from source_data_context import load_source_context
 from source_pretrain import SourcePretrainRuntime, select_case
 from target_initialization import METHODS, state_id
 
 SOURCE_PRODUCER = "9c66e20f85d26e88ecb9e6790d8c1e2c62ae8ed1"
+SOURCE_JOINT = "7166ab50e740f2374c284aafcd50b55c295865f0ef3466f1a7203b5c85575eecf"
+TARGET_JOINT = "bd251819f990c344fbd0e307db7c315c844863b50b16ff31022937adc6e4bd4e9"
+
+
+def nontraining_body(text):
+    module = ast.parse(text)
+    module.body = [node for node in module.body
+                   if not isinstance(node, ast.FunctionDef) or node.name != "run_training"]
+    return ast.dump(module, include_attributes=False)
+
+
+def verify_source_implementation(producer, current):
+    """Explicit historical target-adapter change; audit helpers stay identical."""
+    if (producer["dirty"] or producer["commit"] != SOURCE_PRODUCER
+            or producer["source_hash"] != digest(producer["files"])):
+        raise ValueError("Source producer identity differs")
+    changes = {k: [v, current["files"].get(k)] for k, v in producer["files"].items()
+               if current["files"].get(k) != v}
+    if changes != {"joint_training.py": [SOURCE_JOINT, TARGET_JOINT]}:
+        raise ValueError("Unregistered source implementation difference")
+    original = subprocess.check_output(["git", "show", SOURCE_PRODUCER + ":joint_training.py"])
+    present = Path(__file__).resolve().parents[3] / "joint_training.py"
+    if (hashlib.sha256(original.replace(b"\r\n", b"\n")).hexdigest() != SOURCE_JOINT
+            or hashlib.sha256(present.read_bytes().replace(b"\r\n", b"\n")).hexdigest() != TARGET_JOINT
+            or nontraining_body(original.decode()) != nontraining_body(present.read_text())):
+        raise ValueError("Source audit imports/helpers differ from historical implementation")
+    if any(hasattr(SourcePretrainRuntime(), name) for name in ("optimizer", "selection_score",
+           "validation_candidate", "calibration_metadata_key", "checkpoint_metadata")):
+        raise ValueError("Legacy source would use a new target adapter hook")
+    return {"registered_file_changes": changes, "all_other_producer_files_identical": True,
+            "joint_module_except_run_training_ast_identical": True,
+            "historical_change": "69a24ba/f6ac647 target runtime hooks; legacy source uses original defaults",
+            "run_training_called_by_this_audit": False}
 
 
 def compare(reference, current):
@@ -146,13 +183,12 @@ def main():
         raise ValueError("Source batch identity differs")
     launch = json.loads((source_root / "launch.json").read_text())
     producer = launch["code"]
-    if (producer["dirty"] or producer["commit"] != SOURCE_PRODUCER
-            or any(current["files"].get(k) != v for k, v in producer["files"].items())):
-        raise ValueError("Source producer implementation differs")
+    implementation = verify_source_implementation(producer, current)
     pins = {str(p): file_hash(p) for root in (source_root, target_root)
             for p in root.rglob("*") if p.is_file()}
     out.mkdir(exist_ok=False)
     write_json(out / "registration.json", {"audit_code": current,
+        "source_implementation_proof": implementation,
         "source_launch_sha256": args.source_launch_sha256,
         "target_launch_sha256": args.target_launch_sha256,
         "target_acceptance_sha256": args.target_acceptance_sha256,
