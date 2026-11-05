@@ -1,6 +1,4 @@
 """Explicit native-validation target runtime for full ordered-source initialization."""
-import copy
-
 from loadData.dataset_registry import DATASETS
 from m4_full_transfer import initialize_full_target
 from m4_transfer import M4TargetRuntime, target_options
