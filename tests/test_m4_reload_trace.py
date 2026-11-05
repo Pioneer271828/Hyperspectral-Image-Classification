@@ -7,7 +7,7 @@ import torch
 from joint_baseline import forward, readout
 from m4_source_study import full_settings
 from model.research_config import ResearchConfig
-from research.reproduction.m4g4b.trace_reload import differences, study_case
+from research.reproduction.m4g4b.trace_reload import csr_intervention, differences, study_case
 from test_calibrated_selection import items
 
 
@@ -34,6 +34,11 @@ class ReloadTraceTests(unittest.TestCase):
             if device == "cpu":
                 self.assertTrue(all(p["unequal"] == 0 for p in row["probabilities"].values()))
         self.assertFalse(any(layer._forward_hooks for layer in model.modules()))
+        interventions = csr_intervention(model, data, saved)
+        self.assertEqual(len(interventions), 48)
+        for row in interventions:
+            self.assertEqual(len(row["vs_first"]), 6)
+            self.assertTrue(all(p["over_tolerance"] == 0 for p in row["vs_saved"].values()))
 
     def test_original_gate_and_nonfinite_rejection(self):
         original = torch.tensor([0.1, 0.9])

@@ -67,6 +67,63 @@ def trace_forward(model, task, item):
     return output, stages, sparse_replays
 
 
+def compare_readout(saved, current):
+    result = {}
+    for split, heads in current.items():
+        for head, candidate in heads.items():
+            old = saved[split][head].cpu()
+            new = candidate.cpu()
+            result[split + "/" + head] = {
+                **differences(old, new),
+                "decision_changes": int((old.argmax(1) != new.argmax(1)).sum()),
+            }
+    return result
+
+
+def csr_intervention(model, items, saved):
+    """Four fixed FP32 evaluation paths, three repeats each, same frozen weights."""
+    from joint_baseline import forward, readout
+    from target_initialization import state_id
+
+    model.eval()
+    initial = state_id(model)
+    native_mm = torch.sparse.mm
+    rows = []
+    for scope in ("native", "pool", "graph", "pool_and_graph"):
+        # Keep broadcasts native in all four paths. Their same-input replay was stable.
+        for task, item in items.items():
+            first = None
+            for repeat in range(3):
+                calls = []
+                def multiply(matrix, features):
+                    caller = sys._getframe(1).f_code.co_name
+                    if (caller == "pool_regions" and scope in ("pool", "pool_and_graph")
+                            or caller == "_graph_conv" and scope in ("graph", "pool_and_graph")):
+                        calls.append(caller)
+                        matrix = matrix.coalesce().to_sparse_csr()
+                    return native_mm(matrix, features)
+
+                with torch.no_grad(), ExitStack() as stack:
+                    if scope != "native":
+                        stack.enter_context(patch.object(torch.sparse, "mm", multiply))
+                    outputs = forward(model, task, item)
+                    current = {s: readout(outputs, item, s)[1] for s in ("train", "val")}
+                expected = {"native": [], "pool": ["pool_regions"],
+                            "graph": ["_graph_conv"] * 2,
+                            "pool_and_graph": ["pool_regions", "_graph_conv", "_graph_conv"]}
+                if calls != expected[scope]:
+                    raise ValueError("Unexpected sparse operator coverage")
+                if first is None:
+                    first = current
+                rows.append({"scope": scope, "task": task, "repeat": repeat,
+                             "vs_saved": compare_readout(saved[task], current),
+                             "vs_first": compare_readout(first, current)})
+                del outputs
+    if state_id(model) != initial:
+        raise ValueError("Frozen model changed during intervention")
+    return rows
+
+
 def study_case(model, items, saved):
     from joint_baseline import forward, readout
     from target_initialization import state_id
@@ -90,16 +147,8 @@ def study_case(model, items, saved):
                             raise ValueError("Forward trace structure changed")
                         row["different_stages_from_first_trace"] = [
                             key for (key, old), (_, new) in zip(first, stages) if old != new]
-                    row["probabilities"] = {}
-                    for split in ("train", "val"):
-                        _, heads = readout(outputs, item, split)
-                        for head, candidate in heads.items():
-                            old = saved[task][split][head].cpu()
-                            new = candidate.cpu()
-                            row["probabilities"][split + "/" + head] = {
-                                **differences(old, new),
-                                "decision_changes": int((old.argmax(1) != new.argmax(1)).sum()),
-                            }
+                    current = {s: readout(outputs, item, s)[1] for s in ("train", "val")}
+                    row["probabilities"] = compare_readout(saved[task], current)
                     rows.append(row)
                     del outputs
     if state_id(model) != initial:
@@ -111,6 +160,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--csr-intervention", action="store_true",
+                        help="Run the four frozen evaluation paths instead of layer tracing")
     args = parser.parse_args()
     # Import only the production checkout's model, loader and validation code.
     sys.path.insert(0, str(Path.cwd()))
@@ -157,7 +208,8 @@ def main():
                 or _tree_fingerprint(saved) != _tree_fingerprint(state["best_probabilities"])):
             raise ValueError("Frozen state or selected probabilities differ")
         del state
-        results[case["mode"]] = study_case(model, items, saved)
+        experiment = csr_intervention if args.csr_intervention else study_case
+        results[case["mode"]] = experiment(model, items, saved)
         del model
     if protected() != before or code_snapshot() != code or any(
             file_hash(p) != h for p, h in context.record["protected_files"].items()):
@@ -166,7 +218,8 @@ def main():
         "torch": str(torch.__version__), "cuda": torch.version.cuda, "device": torch.cuda.get_device_name(),
         "visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"), "protected_files": len(before),
         "protected_inputs": len(context.record["protected_files"]), "updates": 0,
-        "target_access": False, "original_failure_retained": True, "cases": results})
+        "experiment": experiment.__name__, "target_access": False,
+        "original_failure_retained": True, "cases": results})
 
 
 if __name__ == "__main__":
