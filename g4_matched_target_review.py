@@ -194,7 +194,8 @@ def export_review(root, launch_sha256, acceptance_sha256, audit_path, audit_sha2
     validate_audit(launch, accepted, audit, code, launch_sha256, acceptance_sha256)
     if any(not math.isfinite(v) or v < 0 for v in (accepted["elapsed_seconds"], audit["elapsed_seconds"])):
         raise ValueError("Finite nonnegative controller/audit costs required")
-    pins.update(files(root))
+    # Extra files must never replace hashes authenticated by full_acceptance.
+    pins = {**files(root), **pins}
     pins[str(audit_path)] = audit_sha256
     check_files(pins)
     # Derive every row before publishing any full-batch report files.

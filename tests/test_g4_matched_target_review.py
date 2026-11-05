@@ -182,6 +182,10 @@ class MatchedReviewTests(unittest.TestCase):
                     export_review(root, "l", "a", audit_path, file_hash(audit_path), out, code)
             self.assertFalse(out.exists())
             with self.assertRaises(ValueError): export_review(root, "l", "a", audit_path, "changed", out, code)
+            existing = next(root.rglob("history.json"))
+            with patch("g4_matched_target_review.full_acceptance", return_value=(launch, accepted, {str(existing): "stale"})):
+                with self.assertRaises(ValueError): export_review(root, "l", "a", audit_path, file_hash(audit_path), out, code)
+            self.assertFalse(out.exists())
             with patch("g4_matched_target_review.full_acceptance", return_value=(launch, accepted, {})):
                 for bad in (root, root / "nested", audit_path.parent, base / "labels" / "output"):
                     with self.assertRaises(ValueError): export_review(root, "l", "a", audit_path, file_hash(audit_path), bad, code)
