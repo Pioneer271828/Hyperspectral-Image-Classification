@@ -36,7 +36,7 @@ def launch_fixture(root):
             "fresh_state_sha256": proof["fresh_state_sha256"], "training_contract_sha256": assert_matched_profiles(t, s, m),
             "source_spec": {} if m == METHODS[0] else {"fixture": True}, "inputs": {"paired": t},
             "target_context": {"query_labels_accessed": False}, "graph_binding": {t: {"Q": "a" * 64, "A": "b" * 64}}})
-    return {"study": load_study(), "study_file_sha256": file_hash(STUDY_PATH), "code": SOURCE,
+    return {"study": load_study(), "study_file_sha256": file_hash(STUDY_PATH), "code": {**SOURCE, "dirty": False},
         "out_dir": str(root), "phase": "engineering_zero_update", "execution_enabled": False, "optimizer_updates": 0,
         "planned_full_optimizer_updates": 81000, "cases": cases, "common_initials": proofs,
         "query_labels_accessed": False, "test_scoring": False}
@@ -70,9 +70,10 @@ class MatchedTargetStudyTests(unittest.TestCase):
     def test_zero_update_preflight_cannot_be_executed_and_all54_pair_barriers(self):
         with tempfile.TemporaryDirectory() as temp:
             launch = launch_fixture(Path(temp))
+            code = launch["code"]
             key = ("xuzhou", 64, METHODS[0], "none")
-            self.assertEqual(select_case(launch, SOURCE, *key, phase="engineering_zero_update")["target"], "xuzhou")
-            with self.assertRaises(ValueError): select_case(launch, SOURCE, *key, phase="full_campaign")
+            self.assertEqual(select_case(launch, code, *key, phase="engineering_zero_update")["target"], "xuzhou")
+            with self.assertRaises(ValueError): select_case(launch, code, *key, phase="full_campaign")
             for mutate in (lambda x: x["cases"].pop(), lambda x: x["cases"].__setitem__(-1, x["cases"][0]),
                 lambda x: x.__setitem__("execution_enabled", True), lambda x: x.__setitem__("optimizer_updates", 81000),
                 lambda x: x.__setitem__("query_labels_accessed", True),
@@ -82,7 +83,7 @@ class MatchedTargetStudyTests(unittest.TestCase):
                 lambda x: x["cases"][3]["initialization"]["source"].__setitem__("seed", 512)):
                 bad = copy.deepcopy(launch)
                 mutate(bad)
-                with self.assertRaises(ValueError): select_case(bad, SOURCE, *key, phase="engineering_zero_update")
+                with self.assertRaises(ValueError): select_case(bad, code, *key, phase="engineering_zero_update")
 
     def test_accepted_short_requires_complete_artifacts_and_unchanged_producer(self):
         with tempfile.TemporaryDirectory() as temp:
