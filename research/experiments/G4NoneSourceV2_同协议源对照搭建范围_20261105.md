@@ -4,6 +4,8 @@
 
 当前仅建立独立`g4_none_ordered_source.py`核心候选及配置/单测，尚未完成真实短测、全量回归和完整源训练。独立分支`codex/g4-none-ordered-source`，唯一写入工作树`F:/E2E_VCA_worktrees/g4-none-ordered-source`。不修改已冻结模型、原source_pretrain/source_training/joint_training或旧默认入口；不将完整权重伪装为短协议。
 
+首个核心候选`43de76e212944fe897870aa011d63b3e8f923f75`在rmvision合成CPU3/GPU3（3.624/7.781秒）通过，但交付检查拒绝其新增JSON位于整个冻结的`configs/experiments`路径。该候选不记交付通过，远程旧checkout保留。修订将独立控制协议清单移到`research/experiments/g4_none_ordered_source_full_v2.json`，不改变内容、模型/损失/数值合同或冻结规则，随后用新SHA和新checkout重验。实时状态只维护当前JSON，本文件保留范围与失败快照。
+
 ## 合同
 
 复用已验SourcePretrainRuntime及OrderedValidation，只改显式验证数值协议/配置和checkpoint身份。None骨干结构、损失、源采样、原准备/源训练标签图、前端DomainBN校准、初始化与调度不变。与已验M4容量/残差源v2使用同一validation-only POLICY（原rtol1e-5/atol1e-6、决策变化0）；训练更新仍走原路径，none无M4残差参数。源校准只涉及前端、没有稀疏图运算。

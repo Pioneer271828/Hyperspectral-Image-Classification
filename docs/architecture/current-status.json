@@ -129,8 +129,8 @@
     },
     {
       "id": "G4 none同协议源对照",
-      "state": "核心候选合成CPU/GPU通过，真实源协议搭建中",
-      "evidence": "Issue178；codex/g4-none-ordered-source核心43de76e；rmvision CPU3/GPU3通过，九角色共有初始参数与M4两活动模式一致；未做真实短测或完整源训练",
+      "state": "核心候选合成CPU/GPU及交付检查通过，真实源协议搭建中",
+      "evidence": "Issue178/PR179 Draft；核心e8a294d在rmvision CPU3/GPU3及checker通过；九角色共有初始参数与M4活动源一致；43候选配置路径冻结检查失败已保留，实验清单移至research后修复；真实短测/完整源训练未做",
       "remaining": "补short/full CLI与上下文/图/初始身份冻结、真实3x8预检和全量回归，再冻结9x1002源批次、逐例复盘及独立验收",
       "report": "research/experiments/G4NoneSourceV2_同协议源对照搭建范围_20261105.md"
     }
