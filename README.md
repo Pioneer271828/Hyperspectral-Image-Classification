@@ -17,7 +17,7 @@ Primary Windows workspace: **`F:/E2E_VCA`**, branch **`codex/f-drive-primary`**.
 ## Obtain the development integration
 
 ```bash
-git clone --branch codex/issue-167-development-integration https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git hsi-development
+git clone --branch codex/f-drive-primary https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git hsi-development
 cd hsi-development
 git status --short --branch
 git rev-parse HEAD
