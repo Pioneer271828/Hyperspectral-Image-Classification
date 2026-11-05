@@ -19,7 +19,7 @@ from target_data_context import load_target_context
 REGISTRATION_POLICY = "g4_matched_full_training_registration_v2"
 REGISTRATION_FIELDS = {"policy", "experiment_issue", "study_file_sha256", "planned_optimizer_updates",
     "producer_commit", "gpu", "estimated_seconds", "engineering_acceptance", "preflight", "out_dir",
-    "query_labels_during_training", "test_scoring_during_training"}
+    "query_labels_during_training", "test_scoring_during_training", "analysis_plan"}
 
 
 def unchanged_producer(producer, consumer):
@@ -51,6 +51,9 @@ def read_registration(path, sha256, code):
             or accepted["query_labels_accessed"] is not False or accepted["full_training_completed"] is not False):
         raise ValueError("Complete worker/campaign/audit engineering acceptance required; preflight alone forbidden")
     unchanged_producer(accepted["code"], code)
+    plan = value["analysis_plan"]
+    if set(plan) != {"path", "sha256"} or file_hash(plan["path"]) != plan["sha256"]:
+        raise ValueError("Pinned preregistered hypothesis/metrics/protection plan required")
     external_directory(value["out_dir"])
     return value
 
@@ -126,7 +129,8 @@ def freeze_campaign(registration_path, registration_sha256, code):
     root.mkdir(exist_ok=False)
     (root / "logs").mkdir()
     pins.update({str(Path(registration_path).resolve()): registration_sha256,
-        registration["engineering_acceptance"]["path"]: registration["engineering_acceptance"]["sha256"]})
+        registration["engineering_acceptance"]["path"]: registration["engineering_acceptance"]["sha256"],
+        registration["analysis_plan"]["path"]: registration["analysis_plan"]["sha256"]})
     write_json(root / "launch.json", launch)
     pins[str(root / "launch.json")] = file_hash(root / "launch.json")
     write_json(root / "protected-files.json", pins)
@@ -169,6 +173,8 @@ def worker_main():
         "registration_sha256": args.registration_sha256, "initial_state_sha256": case["initial_state_sha256"]})
     pins = provenance["protected_files"]
     pins.update({args.launch_plan: args.launch_sha256, args.registration: args.registration_sha256})
+    for field in ("engineering_acceptance", "analysis_plan"):
+        pins[registration[field]["path"]] = registration[field]["sha256"]
     spec = case["source_spec"]
     for field, path in spec.items():
         if not field.endswith("sha256"):

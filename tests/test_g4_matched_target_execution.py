@@ -17,6 +17,8 @@ def registration_fixture(root, *, preflight=None, out=None):
     code = code_snapshot()
     preflight = preflight or {"root": str(root / "old"), "receipt_sha256": "a" * 64, "protected_sha256": "b" * 64}
     acceptance = root / "synthetic-engineering.json"
+    plan = root / "synthetic-analysis-plan.md"
+    plan.write_text("Synthetic fixed metrics/protection plan fixture, never a real experiment registration.")
     write_json(acceptance, {"status": "engineering_passed", "issue": 182, "code": code,
         "cpu_passed": True, "gpu_passed": True, "full_regression_passed": True,
         "worker_campaign_audit_contracts_passed": True, "query_labels_accessed": False,
@@ -25,6 +27,7 @@ def registration_fixture(root, *, preflight=None, out=None):
         "study_file_sha256": file_hash(STUDY_PATH), "planned_optimizer_updates": 81000, "gpu": 0,
         "estimated_seconds": 1000, "preflight": preflight, "out_dir": str(out or root / "new"),
         "engineering_acceptance": {"path": str(acceptance), "sha256": file_hash(acceptance)},
+        "analysis_plan": {"path": str(plan), "sha256": file_hash(plan)},
         "query_labels_during_training": False, "test_scoring_during_training": False}
     path = root / "synthetic-registration.json"
     write_json(path, value)
