@@ -152,10 +152,18 @@
     },
     {
       "id": "G4完整54目标配对实验",
-      "state": "完整目标批次运行中，22/54例已控制器验收（33000/81000更新）",
-      "evidence": "Issue184/PR185 Draft；固定生产331d718567b1a9726934f445665999df972392b1，GPU1，54x1500=81000；首步前全54身份/9共同fresh冻结，7930保护项；本次核对22例（PaviaU18+Xuzhou4）完成1500并通过51事件、132头指标/1188召回、66精确重载和完成0恢复，第23例Xuzhou-s64容量全微调继续中；无失败、完整training-acceptance尚无、query未读；已运行约3h4m，原估12–24h加资源等待",
+      "state": "完整目标批次运行中，25/54例已控制器验收（37500/81000更新）",
+      "evidence": "Issue184/PR185 Draft；固定生产331d718567b1a9726934f445665999df972392b1，GPU1，54x1500=81000；首步前全54身份/9共同fresh冻结，7930保护项；本次核对25例（PaviaU18+Xuzhou7）完成1500并通过51事件、150头指标/1350召回、75精确重载和完成0恢复，第26例Xuzhou-s512容量scratch继续中；新增3例逐一只读复盘通过，无失败、完整training-acceptance尚无、query未读；生产源码干净，原估12–24h加资源等待",
       "remaining": "54/81000完整接受、独立324指标4320召回162精确重载与源/目标输入不变、拟合逐类成本复盘；全部冻结后才同协议query和预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
       "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md"
+    },
+    {
+      "id": "G4完整54训练复盘导出工程",
+      "state": "独立复盘导出模块工程验收通过，真实全54复盘待训练及独立审计",
+      "evidence": "Issue186/PR187；实际ad60ce0a863aad1991ee6c84d547c3efd995290f，rmvision CPU7/7 50.309s、GPU16/16 231.098s、完整565项564通过+1GPU专用跳过276.393s，跳过项已GPU通过；checker360Python83JSON/help/PNG视觉QA通过；全54合成JSON导出、首次最小NLL、逐类NA、不可覆盖认证哈希及访问/输出负例通过，原331生产文件未改",
+      "remaining": "Issue184全54接受和独立审计通过后运行本导出器完成真实曲线/逐类/成本复盘，再统一冻结query；工程通过不代表真实精度收益",
+      "report": "research/reports/G4MatchedTargetReview_完整54训练复盘导出工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue186复盘导出工程模块完成报告；持久报告及g4-matched-target-review-engineering-results.json为证据，不重复交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
