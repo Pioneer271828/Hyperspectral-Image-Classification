@@ -1,0 +1,18 @@
+{
+  "protocol": "m2_joint_adapter_modes_full_v1",
+  "modes": ["wavelength", "index", "uniform"],
+  "training_seeds": [64, 512, 2048],
+  "updates_per_case": 1503,
+  "new_optimizer_updates": 13527,
+  "reuse_historical_training": false,
+  "supervision": "legacy_three_heads",
+  "residual": "none",
+  "observation": "full",
+  "selection": "unchanged_calibrated_full_observation_validation",
+  "metadata_quality": "provided_approximate_not_assumed_measured_no_fwhm",
+  "capacity": "identical_registered_parameters_uniform_attention_inactive",
+  "finalization": "exact_state_same_classes_probability_atol_1e-5_v1",
+  "candidate": "wavelength",
+  "comparators": ["index", "uniform"],
+  "gate": {"macro_oa_mean_delta_gt": 0, "positive_seed_count_gte": 2, "each_dataset_aa_floor": -0.005, "honghu_oa_floor": -0.005, "small_class_max_train_labels": 25, "each_small_class_recall_floor": -0.02}
+}

@@ -1,3 +1,5 @@
+M2-J2 completed: wavelength/index/uniform macro OA95.87/96.61/90.10%; the registered wavelength benefit gates failed. See the [paired report](research/reports/M2J2_VCA三模式三种子完整对照与复盘_20261105.md). Source-only transfer engineering is next; defaults stay unchanged.
+
 # Hyperspectral Image Classification
 
 Research code for hyperspectral image classification: the SAHGCN baseline, a Variable Channel Adapter (VCA), a CNN/HGCN dual-branch backbone, end-to-end learnable superpixel graphs, region–pixel alignment, selective interaction, and graph edge-weight updates.
@@ -6,7 +8,7 @@ This repository was organized from an existing research workspace. It retains th
 
 ## Modular Development
 
-M4-S1 factorial integration and M2-J1 adapter-mode integration have passed engineering acceptance. See the [M4-S1 report](research/reports/M4S1_区域残差与辅助监督四组接入验收_20261104.md) and [M2-J1 report](research/reports/M2J1_三种VCA联合接入与均匀模式显存验收_20261104.md). M4-S2 runs twelve preregistered full cases on two GPU queues. Its numerical reload failures and zero-update verification are retained; full accuracy conclusions await the complete campaign review. Current execution follows the shared checklist and the user's continuous-progression instruction.
+M4-S2 completed twelve full runs: residual plus primary-only supervision reaches macro OA97.12±0.26%, versus95.88±0.31% for the paired original baseline. Both registered candidate comparisons improve in3/3 seeds and pass class/dataset guards. The original probability reload gate did not stably pass; an explicit pre-test decision evaluation amendment and FP32/FP64 sensitivity agree on all benefit gates. See the [full report and limitations](research/reports/M4S2_残差与辅助监督三种子完整配对及精度敏感性_20261104.md). This is a fixed transductive joint benchmark, not unseen-sensor confirmation; defaults remain unchanged. [M2-J1 engineering](research/reports/M2J1_三种VCA联合接入与均匀模式显存验收_20261104.md) passed; [M2-J2](research/experiments/M2J2_VCA三模式完整配对预登记_20261104.md) is the next isolated full comparison under the user's continuous-progression instruction.
 
 E0-B2 frozen spatial diagnostics completed:28 related tests and1134 head/378 branch/648 spatial-pair/240 class-pair independent checks passed. M4 retains overall gains, but HongHu narrow-boundary OA falls0.60pp and class15 recall falls in all3 seeds. See the [scope and report](research/reports/E0B2_M4冻结空间逐类与双支路诊断_20261104.md); no new training or inference.
 
