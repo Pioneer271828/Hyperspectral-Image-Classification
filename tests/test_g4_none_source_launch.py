@@ -78,11 +78,11 @@ class NoneSourceLaunchTests(unittest.TestCase):
             result = run_training(settings, data, case["out"], provenance, SOURCE, device=DEVICE,
                                   resume=True, runtime_adapter=runtime)
             self.assertEqual(result["updates_this_call"], 6)
-            before = hashes(case["out"])
+            before = hashes(Path(case["out"]))
             row = audit_case(launch, case, context, "f" * 64, device=DEVICE)
             self.assertEqual(row["metrics"], 12)
             self.assertEqual(row["positive_graph_gradient_steps"], 8)
-            self.assertEqual(hashes(case["out"]), before)
+            self.assertEqual(hashes(Path(case["out"])), before)
             saved = torch.load(Path(case["out"]) / "primary.pt", map_location="cpu", weights_only=True)
             self.assertTrue(saved)
 
