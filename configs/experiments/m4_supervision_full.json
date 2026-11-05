@@ -1,0 +1,15 @@
+{
+  "protocol": "m4_supervision_factorial_full_v1",
+  "modes": ["none", "x_residual"],
+  "supervision": ["legacy_three_heads", "primary_only"],
+  "training_seeds": [64, 512, 2048],
+  "updates_per_case": 1503,
+  "new_optimizer_updates": 18036,
+  "reuse_historical_training": false,
+  "selection": "unchanged_calibrated_full_observation_validation",
+  "graph": "fixed_original_hypergraph",
+  "finalization": "exact_state_same_classes_probability_atol_1e-5_v1",
+  "candidate": ["x_residual", "primary_only"],
+  "comparators": [["none", "primary_only"], ["x_residual", "legacy_three_heads"]],
+  "gate": {"macro_oa_mean_delta_gt": 0, "positive_seed_count_gte": 2, "each_dataset_aa_floor": -0.005, "honghu_oa_floor": -0.005, "small_class_max_train_labels": 25, "each_small_class_recall_floor": -0.02}
+}

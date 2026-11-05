@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "base97_joint_honghu_main_v1",
+  "device": "cuda",
+  "model": {
+    "latent_channels": 128,
+    "adapter_embed_dim": 64,
+    "adapter_attention_mode": "wavelength",
+    "adapter_chunk_pixels": 16384,
+    "adapter_checkpoint_chunks": true,
+    "graph_mode": "static",
+    "norm_type": "domain_bn",
+    "region_residual_mode": "none",
+    "coverage_mode": "none"
+  },
+  "training": {
+    "seed": 64,
+    "epochs": 500,
+    "steps_per_epoch": 3,
+    "val_interval": 10,
+    "lr": 0.00005,
+    "head_lr": 0.0005,
+    "weight_decay": 0.001,
+    "primary_checkpoint": "macro_oa",
+    "eval_checkpoint": "primary"
+  },
+  "data": {
+    "datasets": ["paviaU", "xuzhou", "whu-honghu"],
+    "samples_type": "ratio",
+    "train_ratio": 0.01,
+    "val_ratio": 0.005,
+    "superpixel_scale": 100,
+    "pavia_superpixel_scale": 50,
+    "skip_missing": false
+  }
+}

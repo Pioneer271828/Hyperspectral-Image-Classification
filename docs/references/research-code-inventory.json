@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-11-02",
+  "issue": 81,
+  "implementation_guide": "docs/guides/reference-code-reuse.md",
+  "plan": "research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md",
+  "research_status": "candidates_only_not_accuracy_evidence",
+  "base_commit": "52ebf58b821775137932ee0048446dc3888922c5",
+  "paper": {
+    "doi": "10.1016/j.imavis.2026.105980",
+    "pages": 28,
+    "sha256": "a6f4a70efa5efedc8c8771e2a411a3ceb81514546776c835fb2c539ea6375de6",
+    "version": "uploaded_2026_IVC_journal_not_arxiv_v2",
+    "reviewed_sections": [
+      "1",
+      "2.1",
+      "2.2",
+      "3",
+      "4.1",
+      "4.2",
+      "4.3"
+    ],
+    "visually_verified_pages": [
+      3,
+      22
+    ]
+  },
+  "verification_scope": "GitHub metadata/default head, README/source tree and applicable license text, original primary paper links. No upstream code executed/copied; implementation task rechecks exact files/license. Availability snapshot, not a reproducibility claim.",
+  "entries": [
+    {
+      "id": "DTU-PAS/awesome-dynn-for-cv",
+      "url": "https://github.com/DTU-PAS/awesome-dynn-for-cv",
+      "kind": "author_bibliography",
+      "topic": "survey",
+      "paper": "https://doi.org/10.1016/j.imavis.2026.105980",
+      "verified_commit": "5e7a99a2e3bc0a79e85f5d1b974fcc1581e6c551",
+      "default_branch": "main",
+      "readme_path": "README.md",
+      "license_spdx": null,
+      "license_path": null,
+      "license_scope": "not_verified",
+      "root_license_api": null,
+      "status": "bibliography_only_no_model",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "Links to original references; no implementation; root contains README and gitignore.",
+      "evidence": [
+        "https://github.com/DTU-PAS/awesome-dynn-for-cv/tree/5e7a99a2e3bc0a79e85f5d1b974fcc1581e6c551"
+      ]
+    },
+    {
+      "id": "tensorly/torch",
+      "url": "https://github.com/tensorly/torch",
+      "kind": "maintainer_tool_library",
+      "topic": "low_rank",
+      "paper": "https://tensorly.org/torch/stable/",
+      "verified_commit": "25c915d554476d62dfc80c91de8e50fcd3d13542",
+      "default_branch": "main",
+      "readme_path": "README.rst",
+      "license_spdx": "BSD-3-Clause",
+      "license_path": "LICENSE",
+      "license_scope": "repository_file_subject_to_per_file_review",
+      "root_license_api": "BSD-3-Clause",
+      "status": "licensed_candidate_not_run",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "Not SLR paper implementation; factorized convolution/linear operators behind a local adapter.",
+      "evidence": [
+        "https://github.com/tensorly/torch/tree/25c915d554476d62dfc80c91de8e50fcd3d13542",
+        "https://github.com/tensorly/torch/blob/25c915d554476d62dfc80c91de8e50fcd3d13542/LICENSE"
+      ]
+    },
+    {
+      "id": "sridarah/slr",
+      "url": "https://github.com/sridarah/slr",
+      "kind": "author_code",
+      "topic": "low_rank",
+      "paper": "https://doi.org/10.1016/j.neucom.2020.02.035",
+      "verified_commit": "2c18ec9b356b83425933d2d0843c186621fc08fc",
+      "default_branch": "master",
+      "readme_path": "README.md",
+      "license_spdx": null,
+      "license_path": null,
+      "license_scope": "not_verified",
+      "root_license_api": null,
+      "status": "reference_only_license_unconfirmed",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "README identifies paper; recursive repository tree has no license/copying/notice path; do not copy source pending permission review.",
+      "evidence": [
+        "https://github.com/sridarah/slr/tree/2c18ec9b356b83425933d2d0843c186621fc08fc"
+      ]
+    },
+    {
+      "id": "czhu95/ternarynet",
+      "url": "https://github.com/czhu95/ternarynet",
+      "kind": "author_code",
+      "topic": "ternary",
+      "paper": "https://arxiv.org/abs/1612.01064",
+      "verified_commit": "1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+      "default_branch": "master",
+      "readme_path": "README.md",
+      "license_spdx": "Apache-2.0",
+      "license_path": "LICENSE",
+      "license_scope": "repository_file_subject_to_per_file_review",
+      "root_license_api": "Apache-2.0",
+      "status": "licensed_candidate_not_run",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "TensorFlow/tensorpack; adapt minimal threshold/scaling logic with attribution, do not replace project trainer/environment.",
+      "evidence": [
+        "https://github.com/czhu95/ternarynet/tree/1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+        "https://github.com/czhu95/ternarynet/blob/1a67251f7f5a1cdf854f87f90f841655c7c9f11c/LICENSE"
+      ]
+    },
+    {
+      "id": "gmum/Zero-Time-Waste",
+      "url": "https://github.com/gmum/Zero-Time-Waste",
+      "kind": "author_code",
+      "topic": "early_exit",
+      "paper": "https://proceedings.neurips.cc/paper_files/paper/2021/hash/149ef6419512be56a93169cd5e6fa8fd-Abstract.html",
+      "verified_commit": "8341f3a6215a88171427472534ef53a9385f8cd8",
+      "default_branch": "main",
+      "readme_path": "README.md",
+      "license_spdx": "MIT",
+      "license_path": "ztw_cv/LICENSE",
+      "license_scope": "specified_subtrees_only",
+      "root_license_api": null,
+      "status": "licensed_subtree_candidate_not_run",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "Root license metadata null; MIT verified at ztw_cv/LICENSE and ztw_cv_original/LICENSE. Scope review to chosen subtree/files; do not copy implicit resume/Slurm/W&B flow.",
+      "evidence": [
+        "https://github.com/gmum/Zero-Time-Waste/tree/8341f3a6215a88171427472534ef53a9385f8cd8",
+        "https://github.com/gmum/Zero-Time-Waste/blob/8341f3a6215a88171427472534ef53a9385f8cd8/ztw_cv/LICENSE"
+      ]
+    },
+    {
+      "id": "ucbdrive/skipnet",
+      "url": "https://github.com/ucbdrive/skipnet",
+      "kind": "author_code",
+      "topic": "dynamic_routing",
+      "paper": "https://arxiv.org/abs/1711.09485",
+      "verified_commit": "4825e53aaf72a505c3328cd89ad27533946d8a96",
+      "default_branch": "master",
+      "readme_path": "README.md",
+      "license_spdx": null,
+      "license_path": null,
+      "license_scope": "not_verified",
+      "root_license_api": null,
+      "status": "reference_only_license_unconfirmed",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "README identifies paper; recursive tree has no license/copying/notice path. Mechanism reference; do not copy source until scope resolved.",
+      "evidence": [
+        "https://github.com/ucbdrive/skipnet/tree/4825e53aaf72a505c3328cd89ad27533946d8a96"
+      ]
+    },
+    {
+      "id": "Tushar-N/blockdrop",
+      "url": "https://github.com/Tushar-N/blockdrop",
+      "kind": "author_code",
+      "topic": "dynamic_routing",
+      "paper": "https://arxiv.org/abs/1711.08393",
+      "verified_commit": "ec52b36d38dc21335df539ac24e51462c6012b5c",
+      "default_branch": "master",
+      "readme_path": "Readme.md",
+      "license_spdx": null,
+      "license_path": null,
+      "license_scope": "not_verified",
+      "root_license_api": null,
+      "status": "reference_only_license_unconfirmed",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "Readme.md identifies paper; recursive tree has no license/copying/notice path. Routing curriculum differs from sample curriculum.",
+      "evidence": [
+        "https://github.com/Tushar-N/blockdrop/tree/ec52b36d38dc21335df539ac24e51462c6012b5c"
+      ]
+    },
+    {
+      "id": "yigitcankaya/Shallow-Deep-Networks",
+      "url": "https://github.com/yigitcankaya/Shallow-Deep-Networks",
+      "kind": "author_code",
+      "topic": "early_exit",
+      "paper": "https://proceedings.mlr.press/v97/kaya19a.html",
+      "verified_commit": "a55644624c9dc064d1372f6a486055edd94c9def",
+      "default_branch": "master",
+      "readme_path": "README.md",
+      "license_spdx": "MIT",
+      "license_path": "LICENSE",
+      "license_scope": "repository_file_subject_to_per_file_review",
+      "root_license_api": "MIT",
+      "status": "licensed_candidate_not_run",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "MIT root file read; retain actual notices and verify copied files individually. Early exits/overthinking diagnostics, not unchanged image-classification training protocol.",
+      "evidence": [
+        "https://github.com/yigitcankaya/Shallow-Deep-Networks/tree/a55644624c9dc064d1372f6a486055edd94c9def",
+        "https://github.com/yigitcankaya/Shallow-Deep-Networks/blob/a55644624c9dc064d1372f6a486055edd94c9def/LICENSE"
+      ]
+    },
+    {
+      "id": "MultiExitCurriculumLearning",
+      "url": "https://gitlab.au.dk/maleci/MultiExitCurriculumLearning",
+      "kind": "author_link_confirmed_code_access_unverified",
+      "topic": "curriculum",
+      "paper": "https://arxiv.org/abs/2104.10461",
+      "verified_commit": null,
+      "license_spdx": null,
+      "license_path": null,
+      "status": "page_visible_raw_api_unreadable_recheck_before_reuse",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "Paper explicitly supplies link; repository page visible. Raw/API inaccessible in this review; no verified source, license or reproduction."
+    },
+    {
+      "id": "QuEE",
+      "url": "https://arxiv.org/abs/2406.14404",
+      "kind": "paper_only_official_code_unconfirmed",
+      "topic": "quantization_early_exit",
+      "paper": "https://arxiv.org/abs/2406.14404",
+      "verified_commit": null,
+      "license_spdx": null,
+      "license_path": null,
+      "status": "bounded_search_no_official_repository_confirmed",
+      "code_run": false,
+      "integrated": false,
+      "reuse_boundary": "Read original paper/HTML and bounded title/author/code queries. No verified official repository; this is not a claim no code exists anywhere."
+    }
+  ]
+}

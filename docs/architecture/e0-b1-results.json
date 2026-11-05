@@ -1,0 +1,1026 @@
+{
+  "status": "passed",
+  "support_sha256": "66b3bc3a95eb1c16618d7600172dad41d002bf1861bfd18f9afeee9fde4e3a56",
+  "verifier_sha256": "afa19c2dc1b0336ed70e3a71fa3a999434e3c02fe501f6fb75e730e4d42ac5c9",
+  "audited_commit": "c9a9230489d9867762a48ac0ecc974ba24a30931",
+  "histogram_comparisons": 108,
+  "inputs_unchanged": 13,
+  "new_training_updates": 0,
+  "datasets": {
+    "paviaU": {
+      "train": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 432
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 432
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 432
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 432
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 432
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 432
+          }
+        }
+      },
+      "val": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 219
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 219
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 219
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 219
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 219
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 219
+          }
+        }
+      },
+      "test": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 42125
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 42125
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 42125
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 42125
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 42125
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 42125
+          }
+        }
+      }
+    },
+    "xuzhou": {
+      "train": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 692
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 692
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 692
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 1,
+            "class_count": 1,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 692
+          },
+          "2": {
+            "boundary_count": 4,
+            "class_count": 2,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 692
+          },
+          "3": {
+            "boundary_count": 9,
+            "class_count": 3,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              9
+            ],
+            "score_count": 692
+          }
+        }
+      },
+      "val": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 348
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 348
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 348
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 2,
+            "class_count": 2,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 348
+          },
+          "2": {
+            "boundary_count": 3,
+            "class_count": 2,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 348
+          },
+          "3": {
+            "boundary_count": 4,
+            "class_count": 2,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9
+            ],
+            "score_count": 348
+          }
+        }
+      },
+      "test": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 287,
+            "class_count": 3,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              9
+            ],
+            "score_count": 67837
+          },
+          "2": {
+            "boundary_count": 589,
+            "class_count": 3,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              9
+            ],
+            "score_count": 67837
+          },
+          "3": {
+            "boundary_count": 903,
+            "class_count": 3,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              9
+            ],
+            "score_count": 67837
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 290,
+            "class_count": 3,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              9
+            ],
+            "score_count": 67837
+          },
+          "2": {
+            "boundary_count": 595,
+            "class_count": 3,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              9
+            ],
+            "score_count": 67837
+          },
+          "3": {
+            "boundary_count": 912,
+            "class_count": 3,
+            "missing_classes": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              9
+            ],
+            "score_count": 67837
+          }
+        }
+      }
+    },
+    "whu-honghu": {
+      "train": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 3881
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 3881
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 3881
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 2,
+            "class_count": 2,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              8,
+              9,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 3881
+          },
+          "2": {
+            "boundary_count": 7,
+            "class_count": 7,
+            "missing_classes": [
+              4,
+              5,
+              6,
+              8,
+              9,
+              12,
+              13,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 3881
+          },
+          "3": {
+            "boundary_count": 16,
+            "class_count": 8,
+            "missing_classes": [
+              4,
+              5,
+              6,
+              8,
+              9,
+              12,
+              13,
+              15,
+              16,
+              17,
+              18,
+              19,
+              21,
+              22
+            ],
+            "score_count": 3881
+          }
+        }
+      },
+      "val": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 1947
+          },
+          "2": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 1947
+          },
+          "3": {
+            "boundary_count": 0,
+            "class_count": 0,
+            "missing_classes": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 1947
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 3,
+            "class_count": 2,
+            "missing_classes": [
+              1,
+              2,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 1947
+          },
+          "2": {
+            "boundary_count": 6,
+            "class_count": 3,
+            "missing_classes": [
+              1,
+              2,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              12,
+              13,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 1947
+          },
+          "3": {
+            "boundary_count": 12,
+            "class_count": 7,
+            "missing_classes": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              12,
+              13,
+              15,
+              16,
+              17,
+              19,
+              20,
+              21,
+              22
+            ],
+            "score_count": 1947
+          }
+        }
+      },
+      "test": {
+        "within_split_only": {
+          "1": {
+            "boundary_count": 554,
+            "class_count": 14,
+            "missing_classes": [
+              4,
+              5,
+              8,
+              9,
+              16,
+              17,
+              21,
+              22
+            ],
+            "score_count": 380865
+          },
+          "2": {
+            "boundary_count": 1205,
+            "class_count": 14,
+            "missing_classes": [
+              4,
+              5,
+              8,
+              9,
+              16,
+              17,
+              21,
+              22
+            ],
+            "score_count": 380865
+          },
+          "3": {
+            "boundary_count": 1997,
+            "class_count": 14,
+            "missing_classes": [
+              4,
+              5,
+              8,
+              9,
+              16,
+              17,
+              21,
+              22
+            ],
+            "score_count": 380865
+          }
+        },
+        "whole_annotation_posthoc_only": {
+          "1": {
+            "boundary_count": 559,
+            "class_count": 14,
+            "missing_classes": [
+              4,
+              5,
+              8,
+              9,
+              16,
+              17,
+              21,
+              22
+            ],
+            "score_count": 380865
+          },
+          "2": {
+            "boundary_count": 1218,
+            "class_count": 14,
+            "missing_classes": [
+              4,
+              5,
+              8,
+              9,
+              16,
+              17,
+              21,
+              22
+            ],
+            "score_count": 380865
+          },
+          "3": {
+            "boundary_count": 2028,
+            "class_count": 14,
+            "missing_classes": [
+              4,
+              5,
+              8,
+              9,
+              16,
+              17,
+              21,
+              22
+            ],
+            "score_count": 380865
+          }
+        }
+      }
+    }
+  }
+}

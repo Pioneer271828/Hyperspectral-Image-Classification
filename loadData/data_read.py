@@ -96,6 +96,18 @@ def readWavelengths(data_set_name, bands):
     return np.linspace(0.0, 1.0, bands, dtype=np.float32), None
 
 
+def read_band_metadata(data_set_name, bands):
+    """Conservative E1 metadata; retain the unchanged legacy wavelength API."""
+    from loadData.observation_sampling import BandMetadata
+    wave, fwhm = readWavelengths(data_set_name,bands)
+    physical = data_set_name.lower() in {'paviau','indian','xuzhou','whu','whuh',
+        'whu-honghu','whu_honghu','whul','whu-longkou','whu_longkou','whuhc','whu-hanchuan','whu_hanchuan'}
+    unit = 'nm' if physical else 'normalized'
+    return BandMetadata('loader:'+data_set_name.lower(),tuple(range(bands)),tuple(wave),unit,
+        'approximate' if physical else 'index_only',(True,)*bands,
+        None if fwhm is None else tuple(fwhm),None if fwhm is None else unit)
+
+
 def readData(data_set_name):
     data_key = data_set_name.lower()
 

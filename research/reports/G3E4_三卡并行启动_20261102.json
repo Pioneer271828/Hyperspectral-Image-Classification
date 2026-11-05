@@ -1,0 +1,307 @@
+{
+  "status": "running",
+  "pid": 11856,
+  "started_at": "2026-11-02T11:19:57.621039+00:00",
+  "gpu_assignment": {
+    "original_seed2046": 1,
+    "seed2056_scratch": 2,
+    "seed2056_source_and_finetune": 3
+  },
+  "checks": [
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "name": "diff-check",
+      "returncode": 0,
+      "wall_seconds": 0.00542703690007329
+    },
+    {
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_sampling_parallel_source.py",
+        "-v"
+      ],
+      "name": "test_sampling_parallel_source",
+      "returncode": 0,
+      "wall_seconds": 4.9814946530386806
+    },
+    {
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_development_training.py",
+        "-v"
+      ],
+      "name": "test_development_training",
+      "returncode": 0,
+      "wall_seconds": 9.173447765177116
+    },
+    {
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_sampling_rebuild_review.py",
+        "-v"
+      ],
+      "name": "test_sampling_rebuild_review",
+      "returncode": 0,
+      "wall_seconds": 5.028698408044875
+    },
+    {
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "scripts/run_sampling_rebuild.py",
+        "--help"
+      ],
+      "name": "cli-help",
+      "returncode": 0,
+      "wall_seconds": 5.251471527852118
+    }
+  ],
+  "jobs": {
+    "source-s2056": {
+      "pid": 11931,
+      "status": "running",
+      "gpu": "GPU-2cbff259-d7db-32cf-b267-8f296e34b1d5",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-u",
+        "scripts/run_sampling_rebuild.py",
+        "--expected-commit",
+        "a9e7dcc4011c9925df0bc29d8eb755a403737828",
+        "--seeds",
+        "2056",
+        "--protocol-root",
+        "/home/lbx/hsi-pioneer271828/runs/transfer-protocol-lxc-20261102-01",
+        "--development-root",
+        "/home/lbx/hsi-pioneer271828/runs/g3-development-lxc-20261102-01",
+        "--data-root",
+        "/home/lbx/hsi-pioneer271828/datasets/current",
+        "--out-dir",
+        "/home/lbx/hsi-pioneer271828/runs/g3-sampling-parallel-20261102-01/source-s2056",
+        "--source-only"
+      ]
+    },
+    "scratch-s2056": {
+      "pid": 11932,
+      "status": "running",
+      "gpu": "GPU-1f773199-1bcc-5eb0-9ee2-95505148d321",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-u",
+        "scripts/run_sampling_rebuild.py",
+        "--expected-commit",
+        "a9e7dcc4011c9925df0bc29d8eb755a403737828",
+        "--seeds",
+        "2056",
+        "--protocol-root",
+        "/home/lbx/hsi-pioneer271828/runs/transfer-protocol-lxc-20261102-01",
+        "--development-root",
+        "/home/lbx/hsi-pioneer271828/runs/g3-development-lxc-20261102-01",
+        "--data-root",
+        "/home/lbx/hsi-pioneer271828/datasets/current",
+        "--out-dir",
+        "/home/lbx/hsi-pioneer271828/runs/g3-sampling-parallel-20261102-01/scratch-s2056",
+        "--skip-source",
+        "--methods",
+        "target_scratch_full"
+      ]
+    }
+  },
+  "planned_handoff": null,
+  "tested_commit": "a9e7dcc4011c9925df0bc29d8eb755a403737828",
+  "branch": "codex/issue-62-class-sampling",
+  "original_commit": "b18660d10eea972e5eb94fd84fe8976dd7698014",
+  "core_hash_check": "all original Python/config files identical except scheduling entry",
+  "test_counts": [
+    [
+      "test_sampling_parallel_source",
+      "2 tests in 0.001s"
+    ],
+    [
+      "test_development_training",
+      "2 tests in 3.608s"
+    ],
+    [
+      "test_sampling_rebuild_review",
+      "1 test in 0.089s"
+    ]
+  ],
+  "driver_sha256": "0b57d575b430bc70069086a3c24f66a2c42558762fde44590df5358101b40af7",
+  "captured_at": "2026-11-02T11:24:14.037648+00:00",
+  "progress": {
+    "scratch-s2056": {
+      "method": "target_scratch_full",
+      "budget": 5000,
+      "step": 1600,
+      "validation": {
+        "nll": 1.1503287182913886,
+        "oa": 0.5555555555555556,
+        "count": 45,
+        "confusion": [
+          [
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            3,
+            0,
+            0
+          ],
+          [
+            3,
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            5,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            5,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ]
+        ],
+        "support": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "recall": [
+          0.2,
+          0.0,
+          1.0,
+          0.0,
+          1.0,
+          0.8,
+          1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    "source-s2056": {
+      "phase": "source_train",
+      "step": 1710,
+      "budget": 10000,
+      "tile_id": 156,
+      "loss": {
+        "fused_supervised": 0.4254240095615387,
+        "graph_supervised": 1.1115885972976685,
+        "cnn_supervised": 0.40381377935409546,
+        "weighted_fused_supervised": 0.4254240095615387,
+        "weighted_graph_supervised": 1.1115885972976685,
+        "weighted_cnn_supervised": 0.40381377935409546,
+        "graph_compactness": 0.7923036813735962,
+        "weighted_graph_compactness": 0.007923036813735962,
+        "graph_entropy": 1.167433261871338,
+        "weighted_graph_entropy": 0.0011674333363771439,
+        "graph_balance": 0.15516817569732666,
+        "weighted_graph_balance": 0.001551681780256331,
+        "total": 1.9514684677124023
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "name": "m8_paviau_aux_off",
+  "dataset": "paviaU",
+  "device": "cuda",
+  "model": {
+    "graph_mode": "learned",
+    "latent_channels": 64,
+    "adapter_embed_dim": 32,
+    "norm_type": "group_norm",
+    "alph": 0.8
+  },
+  "loss": {
+    "cnn_loss_weight": 0,
+    "graph_branch_loss_weight": 0
+  },
+  "training": {
+    "epochs": 0,
+    "steps_per_epoch": 2,
+    "val_interval": 1,
+    "seed": 2026,
+    "primary_checkpoint": "val_loss"
+  },
+  "tile_size": 32,
+  "gap": 2,
+  "split_seed": 2026
+}

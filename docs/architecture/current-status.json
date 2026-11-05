@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-05",
+  "issue": 167,
+  "development_branch": "codex/f-drive-primary",
+  "main_repair_branch": "codex/issue-167-main-cache-repair",
+  "main_snapshot": "4d2c7dbe4a081d671b1367bc4fb3eabf5e929ccc",
+  "main_merge": "pending_review",
+  "ci_runner": "registration_required",
+  "real_training_started_by_this_task": false,
+  "required_ancestors": {
+    "accepted_g4i": "a0787ca6e3613909a9c7e61636b7b7ed1c0a618b",
+    "accepted_g4i_result_docs": "a01aa94be2a6fc162a3d5ac3efa7d1fb55caf779",
+    "monitoring_protection": "461c5b806556db15153a6a992963fbe217244123",
+    "snapshot_repair": "4b348b8dcdc3a46e969cf9d3e119252a3048c347",
+    "numerical_audit": "4358891d74cff51404f51836f887d376d3045b87",
+    "main_cache_repair": "b985634b22ba77422bb8c91143bbc0a0337707ff",
+    "m4_source_handoff": "0de46ee00946166a84c9ad50fd027bba2c56d679",
+    "tool_integration": "1c40f249e2277a4356d63c8e8db35d6aa9282791"
+  },
+  "frozen_runtime_reference": "0de46ee00946166a84c9ad50fd027bba2c56d679",
+  "frozen_runtime_paths": [
+    "model",
+    "joint_training.py",
+    "target_training.py",
+    "target_study.py",
+    "target_initialization.py",
+    "target_bn_calibration.py",
+    "source_training.py",
+    "source_pretrain.py",
+    "loadData",
+    "configs/experiments"
+  ],
+  "required_files": [
+    "monitoring/updates.py",
+    "monitoring/probes.py",
+    "monitoring/interventions.py",
+    "numerical_audit.py",
+    "tests/test_monitoring_updates.py",
+    "tests/test_monitoring_probes.py",
+    "tests/test_monitoring_interventions.py",
+    "evaluation/g4_target.py",
+    "evaluation/g4_target_verification.py"
+  ],
+  "modules": [
+    {
+      "id": "M4",
+      "state": "首轮效果完成",
+      "evidence": "联合残差+仅主头宏OA97.12±0.26%；NUM-2修订评价，原概率门槛未稳定通过",
+      "remaining": "独立空间与迁移确认",
+      "report": "research/reports/M4S2_残差与辅助监督三种子完整配对及精度敏感性_20261104.md"
+    },
+    {
+      "id": "M3/M5",
+      "state": "工程及部分完整对照完成",
+      "evidence": "独立支路与固定传播对照完成；超图优势尚未明确",
+      "remaining": "学习Q/A分离及独立划分",
+      "report": "research/reports/BGABL2_六组独立支路图传播三种子完整配对结果_20261103.md"
+    },
+    {
+      "id": "M6/M7/M8扩展",
+      "state": "部分完成",
+      "evidence": "交互工程、现有边权代码、固定融合和监督对照",
+      "remaining": "交互完整机制、边权独立验收、门控融合和共享语义条件",
+      "report": "research/全量研究模块必测清单_20261104.md"
+    },
+    {
+      "id": "M2",
+      "state": "首轮完整对照完成，净收益假设失败",
+      "evidence": "波长/序号/均匀宏OA95.87/96.61/90.10%",
+      "remaining": "真实迁移及波长质量诊断",
+      "report": "research/reports/M2J2_VCA三模式三种子完整对照与复盘_20261105.md"
+    },
+    {
+      "id": "M1/E1",
+      "state": "工程及首轮实验完成，当前配方无净收益",
+      "evidence": "真实子集联合实验与覆盖度开发筛选保留负结果",
+      "remaining": "独立重复、联合校准接入及真实迁移",
+      "report": "research/reports/M1J2_真实波段联合三种子完整配对结果_20261104.md"
+    },
+    {
+      "id": "E4-G4",
+      "state": "首轮完整目标对照完成，迁移OA净收益失败",
+      "evidence": "主线程报告27模型40500更新完成；从头/微调/新头宏OA89.04/88.84/78.31%，微调AA+1.69pp",
+      "remaining": "独立支持集/K敏感性、M4迁移机制及传感器证据；本次只整合报告，不重启或计分",
+      "report": "research/reports/E4G4HI_三方向完整目标适配与冻结评价结果_20261105.md"
+    },
+    {
+      "id": "MON/MASK",
+      "state": "有限工具已整合",
+      "evidence": "MON-2/3C与激活快照修复同版本；三个历史候选均拒绝",
+      "remaining": "持续窗口、重要度候选、MON-4和开销；原生FP32严格等价限制保留",
+      "report": "research/reports/MON3C_固定通道验证保护结果_20261104.md"
+    },
+    {
+      "id": "压缩与动态推理",
+      "state": "未完成完整研究闭环",
+      "evidence": "已有可逆掩码；其余为研究计划",
+      "remaining": "结构裁剪、PTQ/QAT、低秩/三值、早退出/回退/路由及实测成本",
+      "report": "research/全量研究模块必测清单_20261104.md"
+    },
+    {
+      "id": "其余必测机制",
+      "state": "未完成",
+      "evidence": "候选范围和验收边界已登记",
+      "remaining": "MiTA、多尺度、硬连接、课程、TTA及开放集，逐项独立实现和实验",
+      "report": "research/全量研究模块必测清单_20261104.md"
+    },
+    {
+      "id": "M4-G4A/B",
+      "state": "完整源v2验收通过",
+      "evidence": "18模型18036更新通过原严格收尾；216指标/2880召回、54次精确重载及2123受保护文件输入核验通过；v1失败保留",
+      "remaining": "完整迁移精度、独立支持集/空间与机制确认",
+      "report": "research/reports/M4G4Bv2_固定顺序验证与完整源预训练_20261105.md"
+    },
+    {
+      "id": "M4完整源目标接入",
+      "state": "显式目标v2工程与真实短接入验收通过",
+      "evidence": "CPU2/GPU2/全量517；12例144更新、72指标960召回、36次精确重载；2120源与输入文件不变；原生v1独立复测失败保留",
+      "remaining": "none历史基线身份/协议兼容审计，再登记36例完整目标与冻结评价",
+      "report": "research/reports/M4FullTransfer_完整源目标接入与原生复测失败_20261105.md"
+    },
+    {
+      "id": "M4 none协议兼容审计",
+      "state": "完整审计及独立复核完成，历史none复用判据失败",
+      "evidence": "27角色1377事件/11016指标146880召回/4365文件输入不变；26角色通过，xuzhou-s64源2个非对角计数变化；所有选中步/LR保持；独立纯Python记录复核通过，4427文件不变；最终CPU2/full527通过",
+      "remaining": "按原负结果建立同协议none9源/18目标新对照，随后36活动完整目标；本项不含新训练或query精度结论",
+      "report": "research/reports/M4NoneV2_历史对照兼容审计阶段记录_20261105.md"
+    }
+  ],
+  "primary_workspace": "F:/E2E_VCA",
+  "execution_state": "none_compatibility_audit_completed_historical_reuse_rejected",
+  "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
+}

@@ -11,6 +11,9 @@ from loadData import data_read, data_reader, split_data
 from model import VCASAHGCN, utils
 from model.interaction_config import add_interaction_arguments, interaction_kwargs, InteractionConfig
 from model.checkpoint_io import save_model_checkpoint
+from model.research_config import ResearchConfig
+from model.coverage_config import coverage_forward_kwargs
+from model.task_losses import probability_loss_components, detached_loss_values
 
 try:
     from tqdm.auto import tqdm
@@ -169,6 +172,8 @@ def prepare_dataset(data_set_name, args, device, seed):
         "net_input": to_tensor(net_input, device),
         "wavelengths": to_tensor(wavelengths.reshape(-1), device),
         "fwhm": None if fwhm is None else to_tensor(fwhm.reshape(-1), device),
+        **({'coverage_metadata':data_read.read_band_metadata(data_set_name,bands)}
+           if getattr(args,'coverage_mode','none')!='none' else {}),
         "train_samples_gt": to_tensor(train_samples_gt, device),
         "test_samples_gt": to_tensor(test_samples_gt, device),
         "val_samples_gt": to_tensor(val_samples_gt, device),
@@ -292,24 +297,13 @@ def make_train_input(
 
 
 def supervised_loss(outputs, item, split, class_balance=False, graph_loss_weights=None,
-                    cnn_loss_weight=1.0, graph_branch_loss_weight=1.0):
-    y, y_hgnn, y_cnn = outputs[:3]
+                    cnn_loss_weight=1.0, graph_branch_loss_weight=1.0, return_components=False):
     onehot = item["{}_gt_onehot".format(split)]
     mask = item["{}_label_mask".format(split)]
-    loss = (
-        utils.compute_loss(y, onehot, mask, class_balance=class_balance)
-        + graph_branch_loss_weight * utils.compute_loss(y_hgnn, onehot, mask, class_balance=class_balance)
-        + cnn_loss_weight * utils.compute_loss(y_cnn, onehot, mask, class_balance=class_balance)
-    )
-    if len(outputs) > 3 and graph_loss_weights is not None:
-        graph_info = outputs[3]
-        loss = (
-            loss
-            + graph_loss_weights["compactness"] * graph_info.get("compactness_loss", 0.0)
-            + graph_loss_weights["entropy"] * graph_info.get("assignment_entropy_loss", 0.0)
-            + graph_loss_weights["balance"] * graph_info.get("assignment_balance_loss", 0.0)
-        )
-    return loss
+    components = probability_loss_components(outputs, onehot, mask, class_balance=class_balance,
+        graph_loss_weights=graph_loss_weights, cnn_loss_weight=cnn_loss_weight,
+        graph_branch_loss_weight=graph_branch_loss_weight)
+    return components if return_components else components['total']
 
 
 def apply_stable_preset(args):
@@ -355,6 +349,7 @@ def evaluate_split(model, datasets, split):
                 wavelengths=item["wavelengths"],
                 fwhm=item["fwhm"],
                 superpixel_scale=item["superpixel_scale"],
+                **coverage_forward_kwargs(model,item.get('coverage_metadata')),
             )
             y = outputs[0]
             loss = utils.compute_loss(y, item["{}_gt_onehot".format(split)], item["{}_label_mask".format(split)])
@@ -370,8 +365,9 @@ def evaluate_split(model, datasets, split):
     return torch.stack(losses).mean(), oas, pred_hists
 
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(description="Multi-dataset VCA-SAHGCN training")
+    parser.add_argument("--alph", type=float, default=0.8, help="Fixed CNN fusion coefficient in [0,1]")
     add_interaction_arguments(parser)
     parser.add_argument("--cnn-loss-weight", type=float, default=1.0)
     parser.add_argument("--graph-branch-loss-weight", type=float, default=1.0)
@@ -392,6 +388,19 @@ def main():
     parser.add_argument("--graph-mode", type=str, default="static", choices=["static", "learned"],
                         help="Use precomputed LDA-SLIC graphs or learn sparse assignments and graphs end to end.")
     parser.add_argument("--learned-assignment-dim", type=int, default=32)
+    parser.add_argument("--graph-assignment-mode", default="learned", choices=["learned", "fixed_grid"])
+    parser.add_argument("--graph-adjacency-mode", default="learned", choices=["learned", "fixed_local"])
+    parser.add_argument("--region-residual-mode", default="none",
+                        choices=["none", "capacity_control", "x_residual", "residual_only", "x_region"],
+                        help="M4 CNN input; graph pooling continues to use original shared features.")
+    parser.add_argument('--coverage-mode',default='none',choices=['none','affine'])
+    parser.add_argument('--coverage-condition',default='continuous',choices=['continuous','anchor_only','binary','shuffled'])
+    parser.add_argument('--coverage-hidden',type=int,default=16)
+    parser.add_argument('--coverage-strength',type=float,default=.1)
+    parser.add_argument('--coverage-sigma',type=float,default=.08)
+    parser.add_argument('--coverage-window',type=float,default=.16)
+    parser.add_argument('--coverage-init-seed',type=int,default=0)
+    parser.add_argument('--coverage-descriptor-version',type=int,default=1,choices=[1])
     parser.add_argument("--learned-assignment-radius", type=int, default=1)
     parser.add_argument("--learned-graph-radius", type=int, default=1)
     parser.add_argument("--learned-assignment-temperature", type=float, default=1.0)
@@ -443,44 +452,25 @@ def main():
     parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--metrics-json", type=str, default=None)
     parser.add_argument("--experiment-name", type=str, default=None)
-    args = parser.parse_args()
+    return parser
+
+
+def main(argv=None):
+    return train(build_parser().parse_args(argv))
+
+
+def train(args, run_record=None):
+    if args.no_wavelength_attention:
+        args.adapter_attention_mode = "index"
+    apply_stable_preset(args)
+    resolved = ResearchConfig.from_legacy(args)
     interaction_options = interaction_kwargs(args)
     interaction_config = InteractionConfig(**interaction_options)
-    if not np.isfinite([args.cnn_loss_weight, args.graph_branch_loss_weight]).all() or min(args.cnn_loss_weight, args.graph_branch_loss_weight) < 0:
-        raise ValueError("Auxiliary branch loss weights must be finite and nonnegative")
     # The seed previously controlled splits only; also seed weights and training randomness.
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
-
-    if args.no_wavelength_attention:
-        args.adapter_attention_mode = "index"
-    apply_stable_preset(args)
-    if not 0 <= args.train_drop_band_ratio < 1:
-        raise ValueError("--train-drop-band-ratio must be in [0, 1)")
-    if not 0 <= args.train_band_mixup_ratio <= 1:
-        raise ValueError("--train-band-mixup-ratio must be in [0, 1]")
-    if not 0 <= args.train_band_mixup_prob <= 1:
-        raise ValueError("--train-band-mixup-prob must be in [0, 1]")
-    if args.train_band_mixup_ratio > 0 and args.train_band_mixup_alpha <= 0:
-        raise ValueError("--train-band-mixup-alpha must be positive when band mixup is enabled")
-    if args.train_band_mixup_neighbors < 1:
-        raise ValueError("--train-band-mixup-neighbors must be positive")
-    if args.val_interval <= 0:
-        raise ValueError("--val-interval must be positive")
-    if args.adapter_chunk_pixels < 0:
-        raise ValueError("--adapter-chunk-pixels must be non-negative")
-    if args.learned_assignment_dim <= 0:
-        raise ValueError("--learned-assignment-dim must be positive")
-    if args.learned_assignment_radius < 0 or args.learned_graph_radius < 0:
-        raise ValueError("learned graph radii must be non-negative")
-    if args.learned_assignment_temperature <= 0:
-        raise ValueError("--learned-assignment-temperature must be positive")
-    if args.learned_assignment_spatial_sigma <= 0 or args.learned_graph_spatial_sigma <= 0:
-        raise ValueError("learned graph spatial sigmas must be positive")
-    if min(args.graph_compactness_weight, args.graph_entropy_weight, args.graph_balance_weight) < 0:
-        raise ValueError("graph regularization weights must be non-negative")
 
     device = torch.device(args.device)
     dataset_names = [name.strip() for name in args.datasets.split(",") if name.strip()]
@@ -498,29 +488,28 @@ def main():
     if len(datasets) == 0:
         raise RuntimeError("no dataset was prepared")
 
+    if run_record is not None:
+        if resolved.model.coverage_mode != 'none':
+            from research_runtime import prepared_fingerprints
+            fingerprints=prepared_fingerprints(datasets)
+            for name,item in datasets.items():
+                fingerprints[name]['coverage_metadata_hash']=getattr(item.get('coverage_metadata'),'fingerprint',None)
+            run_record.record_protocol_data(fingerprints)
+        else:run_record.record_data(datasets)
+
     class_counts = {name: item["class_num"] for name, item in datasets.items()}
-    model = VCASAHGCN.MultiDatasetVCASAHGCN(
-        class_counts,
-        latent_channels=args.latent_channels,
-        adapter_embed_dim=args.adapter_embed_dim,
-        wavelength_min=args.wavelength_min,
-        wavelength_max=args.wavelength_max,
-        locality_sigma=args.locality_sigma,
-        locality_window=args.locality_window,
-        adapter_attention_mode=args.adapter_attention_mode,
-        adapter_chunk_pixels=args.adapter_chunk_pixels,
-        adapter_checkpoint_chunks=not args.no_adapter_checkpoint,
-        norm_type=args.norm_type,
-        graph_mode=args.graph_mode,
-        learned_assignment_dim=args.learned_assignment_dim,
-        learned_assignment_radius=args.learned_assignment_radius,
-        learned_graph_radius=args.learned_graph_radius,
-        learned_assignment_temperature=args.learned_assignment_temperature,
-        learned_assignment_spatial_sigma=args.learned_assignment_spatial_sigma,
-        learned_graph_spatial_sigma=args.learned_graph_spatial_sigma,
-        **interaction_options,
-    ).to(device)
+    model = resolved.build_model(class_counts).to(device)
     model.training_config = vars(args).copy()
+    model.training_config["research_config"] = resolved.to_dict()
+    if resolved.model.coverage_mode != 'none':
+        from dataclasses import asdict
+        model.training_config['coverage_input_metadata']={name:(asdict(item['coverage_metadata'])
+            if item.get('coverage_metadata') is not None else None) for name,item in datasets.items()}
+    if run_record is not None:
+        run_record.record_model(model)
+        model.training_config["research_run"] = {"run_id": run_record.run_id,
+                                                  "attempt": run_record.attempt.name,
+                                                  "config_hash": resolved.config_hash}
     model.training_config["dataset_seeds"] = {
         name: int(item.get("seed", args.seed + index)) for index, (name, item) in enumerate(datasets.items())
     }
@@ -604,9 +593,11 @@ def main():
         desc="epochs",
         dynamic_ncols=True,
     )
+    loss_component_history = []
     for epoch in epoch_iter:
         model.train()
         running_loss = 0.0
+        component_sums = {}
         sampled_names = rng.choice(names, size=steps_per_epoch, replace=True)
         step_iter = make_progress(
             sampled_names,
@@ -635,8 +626,9 @@ def main():
                 fwhm=item["fwhm"],
                 superpixel_scale=item["superpixel_scale"],
                 return_graph_info=args.graph_mode == "learned" or interaction_config.active,
+                **coverage_forward_kwargs(model,item.get('coverage_metadata')),
             )
-            loss = supervised_loss(
+            components = supervised_loss(
                 outputs,
                 item,
                 "train",
@@ -648,12 +640,18 @@ def main():
                     "entropy": args.graph_entropy_weight,
                     "balance": args.graph_balance_weight,
                 },
+                return_components=True,
             )
+            loss = components['total']
             loss.backward()
             optimizer.step()
             running_loss += float(loss.detach().cpu())
+            for key, value in detached_loss_values(components).items():
+                component_sums[key] = component_sums.get(key, 0.0) + value
 
         avg_train_loss = running_loss / steps_per_epoch
+        loss_component_history.append({'epoch': epoch, 'mean_per_step':
+                                       {key: value / steps_per_epoch for key, value in component_sums.items()}})
         should_validate = (epoch % args.val_interval == 0) or (epoch == args.epochs)
         val_loss = None
         macro_oa = None
@@ -765,6 +763,7 @@ def main():
                 fwhm=item["fwhm"],
                 superpixel_scale=item["superpixel_scale"],
                 return_graph_info=interaction_config.active,
+                **coverage_forward_kwargs(model,item.get('coverage_metadata')),
             )
             y = outputs[0]
             if len(outputs) > 3:
@@ -808,6 +807,7 @@ def main():
             "model_config": model.export_config(),
             "parameter_count": sum(parameter.numel() for parameter in model.parameters()),
             "interaction_diagnostics": interaction_diagnostics,
+            "loss_component_history": loss_component_history,
             "datasets": names,
             "seed": args.seed,
             "config": {
@@ -827,6 +827,9 @@ def main():
                 "locality_window": args.locality_window,
                 "norm_type": args.norm_type,
                 "graph_mode": args.graph_mode,
+                "graph_assignment_mode": args.graph_assignment_mode,
+                "graph_adjacency_mode": args.graph_adjacency_mode,
+                "region_residual_mode": getattr(args, "region_residual_mode", "none"),
                 "learned_assignment_dim": args.learned_assignment_dim,
                 "learned_assignment_radius": args.learned_assignment_radius,
                 "learned_graph_radius": args.learned_graph_radius,
@@ -854,6 +857,8 @@ def main():
             "eval_checkpoint_path": eval_path,
             "test": test_metrics,
         }
+        if run_record is not None:
+            payload["research_run"] = model.training_config["research_run"]
         with open(args.metrics_json, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
         print("write metrics json:", args.metrics_json)

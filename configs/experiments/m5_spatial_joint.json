@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "m5_paviau_joint",
+  "dataset": "paviaU",
+  "device": "cuda",
+  "model": {"graph_mode": "learned", "latent_channels": 64, "adapter_embed_dim": 32, "norm_type": "group_norm"},
+  "interaction": {"interaction_mode": "gated", "graph_update_mode": "joint"},
+  "training": {"epochs": 0, "steps_per_epoch": 2, "val_interval": 1, "seed": 2026, "primary_checkpoint": "val_loss"},
+  "tile_size": 32,
+  "gap": 2,
+  "split_seed": 2026
+}
