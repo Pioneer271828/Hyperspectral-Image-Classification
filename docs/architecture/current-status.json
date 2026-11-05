@@ -149,9 +149,16 @@
       "remaining": "另实验Issue预登记none27000+活动54000完整目标；完整54接受/独立审计/拟合逐类成本复盘后才同协议query；支持集/K/空间/传感器和head-only/light-module仍必测",
       "report": "research/reports/G4MatchedFullTarget_完整协议工程阶段记录_20261106.md",
       "chat_report": "本聊天2026-11-06 G4完整配对目标协议工程模块完成报告；持久内容见report及g4-matched-target-engineering-results.json"
+    },
+    {
+      "id": "G4完整54目标配对实验",
+      "state": "独立预登记后单卡队列运行中，首步前全部54身份与初始化已冻结",
+      "evidence": "固定生产331d718567b1a9726934f445665999df972392b1；54x1500=81000（none27000+活动54000），GPU1；预登记b2912ce2d22f40d52f1cd353c16400a4f32c3c4b，registration02与analysis-plan哈希见静态登记摘要；2026-11-06T03:15:09Z启动，先估12–24h加资源等待；原registration01抄录hash错误在训练前拦截并保留；首步前54 executable launch与9共同fresh证明已写入新full01，实际supervisor PID273458，资源不足自动等待，不干预其他项目",
+      "remaining": "54/81000完整接受、独立324指标4320召回162精确重载与源/目标输入不变、拟合逐类成本复盘；全部冻结后才同协议query和预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
+      "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "matched_ordered_full_target_engineering_accepted_full_study_registration_next",
+  "execution_state": "matched_ordered_full54_campaign_running",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
