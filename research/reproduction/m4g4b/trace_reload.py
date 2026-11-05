@@ -80,7 +80,24 @@ def compare_readout(saved, current):
     return result
 
 
-def csr_intervention(model, items, saved):
+def ordered_mm(matrix, features):
+    """Evaluation-only FP32 SpMM. Sum sorted columns separately for each row."""
+    if (torch.is_grad_enabled() or matrix.layout != torch.sparse_coo
+            or matrix.dtype != torch.float32 or features.dtype != matrix.dtype):
+        raise ValueError("Ordered reference requires no-grad FP32 sparse COO inputs")
+    csr = matrix.coalesce().to_sparse_csr()
+    lengths = csr.crow_indices().diff()
+    cols = csr.col_indices()
+    weights = csr.values()[:, None]
+    # Bound the temporary edge-by-channel gather on a full source scene.
+    blocks = []
+    for channels in features.split(16, dim=1):
+        messages = weights * channels.index_select(0, cols)
+        blocks.append(torch.segment_reduce(messages, "sum", lengths=lengths))
+    return torch.cat(blocks, dim=1)
+
+
+def csr_intervention(model, items, saved, *, ordered=False, reload_model=None):
     """Four fixed FP32 evaluation paths, three repeats each, same frozen weights."""
     from joint_baseline import forward, readout
     from target_initialization import state_id
@@ -94,12 +111,18 @@ def csr_intervention(model, items, saved):
         for task, item in items.items():
             first = None
             for repeat in range(3):
+                if ordered and reload_model is not None:
+                    model = reload_model().eval()
+                    if state_id(model) != initial:
+                        raise ValueError("Reloaded weights differ")
                 calls = []
                 def multiply(matrix, features):
                     caller = sys._getframe(1).f_code.co_name
                     if (caller == "pool_regions" and scope in ("pool", "pool_and_graph")
                             or caller == "_graph_conv" and scope in ("graph", "pool_and_graph")):
                         calls.append(caller)
+                        if ordered:
+                            return ordered_mm(matrix, features)
                         matrix = matrix.coalesce().to_sparse_csr()
                     return native_mm(matrix, features)
 
@@ -160,8 +183,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--csr-intervention", action="store_true",
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--csr-intervention", action="store_true",
                         help="Run the four frozen evaluation paths instead of layer tracing")
+    modes.add_argument("--ordered-intervention", action="store_true",
+                       help="Repeat each path across actual reloads with row-wise FP32 summation")
     args = parser.parse_args()
     # Import only the production checkout's model, loader and validation code.
     sys.path.insert(0, str(Path.cwd()))
@@ -200,16 +226,25 @@ def main():
         folder = Path(case["out"])
         state = torch.load(folder / "state-001002.pt", map_location="cpu", weights_only=True)
         saved = torch.load(folder / "selected-probabilities.pt", map_location="cpu", weights_only=True)
-        model = M4SourceFullRuntime().load_selected(folder / "primary.pt", items,
-            folder / "raw-validation-001002.pt", device="cuda")
+        def reload_model():
+            return M4SourceFullRuntime().load_selected(folder / "primary.pt", items,
+                folder / "raw-validation-001002.pt", device="cuda")
+        model = reload_model()
         if (state["start_code"] != code or state["best_step"] != 1002 or state["cursor"] != 1002
                 or model.training_config["provenance"] != case["provenance"]
                 or _tree_fingerprint(model.state_dict()) != _tree_fingerprint(state["best_model"])
                 or _tree_fingerprint(saved) != _tree_fingerprint(state["best_probabilities"])):
             raise ValueError("Frozen state or selected probabilities differ")
         del state
-        experiment = csr_intervention if args.csr_intervention else study_case
-        results[case["mode"]] = experiment(model, items, saved)
+        if args.ordered_intervention:
+            experiment = "ordered_intervention_with_reload"
+            results[case["mode"]] = csr_intervention(model, items, saved, ordered=True, reload_model=reload_model)
+        elif args.csr_intervention:
+            experiment = "csr_intervention"
+            results[case["mode"]] = csr_intervention(model, items, saved)
+        else:
+            experiment = "trace"
+            results[case["mode"]] = study_case(model, items, saved)
         del model
     if protected() != before or code_snapshot() != code or any(
             file_hash(p) != h for p, h in context.record["protected_files"].items()):
@@ -218,7 +253,7 @@ def main():
         "torch": str(torch.__version__), "cuda": torch.version.cuda, "device": torch.cuda.get_device_name(),
         "visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"), "protected_files": len(before),
         "protected_inputs": len(context.record["protected_files"]), "updates": 0,
-        "experiment": experiment.__name__, "target_access": False,
+        "experiment": experiment, "target_access": False,
         "original_failure_retained": True, "cases": results})
 
 

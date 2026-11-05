@@ -7,7 +7,7 @@ import torch
 from joint_baseline import forward, readout
 from m4_source_study import full_settings
 from model.research_config import ResearchConfig
-from research.reproduction.m4g4b.trace_reload import csr_intervention, differences, study_case
+from research.reproduction.m4g4b.trace_reload import csr_intervention, differences, ordered_mm, study_case
 from test_calibrated_selection import items
 
 
@@ -47,4 +47,13 @@ class ReloadTraceTests(unittest.TestCase):
         self.assertEqual(result["unequal"], 2)
         with self.assertRaises(ValueError):
             differences(original, torch.tensor([float("nan"), 0.9]))
+
+    def test_ordered_spmm_with_duplicate_entries_empty_row_and_channel_tail(self):
+        device = os.environ.get("M4G4B_DEVICE", "cpu")
+        q = torch.sparse_coo_tensor([[2, 0, 0], [1, 0, 0]], [2., 1., 3.], (3, 2)).to(device)
+        x = torch.arange(38, dtype=torch.float32, device=device).reshape(2, 19)
+        with torch.no_grad():
+            torch.testing.assert_close(ordered_mm(q, x), q.to_dense() @ x, atol=0, rtol=0)
+        with self.assertRaises(ValueError):
+            ordered_mm(q, x)
 
