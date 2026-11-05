@@ -113,7 +113,9 @@ def derive_case(case, accepted, history, trace):
         "updates": 1500, "validation_events": 51, "selected_step": selected["step"],
         "selected_at_budget_end": selected["step"] == 1500,
         "loss_first30": statistics.mean(loss[:30]), "loss_last30": statistics.mean(loss[-30:]),
-        "final_minus_150_updates_prior_validation_nll": history[-1]["val_loss"] - history[-6]["val_loss"],
+        "late_validation_window_start_step": history[-6]["step"],
+        "late_validation_window_updates": history[-1]["step"] - history[-6]["step"],
+        "final_minus_previous_five_events_validation_nll": history[-1]["val_loss"] - history[-6]["val_loss"],
         "selected_train_minus_val_fused_oa": selected_heads["train"]["fused"]["oa"] - selected_heads["val"]["fused"]["oa"],
         "changed_parameter_elements": changes, "positive_gradient_steps": positive,
         "lr_change_steps": lr_changes, "case_training_resume_wait_and_acceptance_seconds": accepted["elapsed_seconds"],
@@ -190,6 +192,8 @@ def export_review(root, launch_sha256, acceptance_sha256, audit_path, audit_sha2
         raise ValueError("Fresh review output required")
     audit = read(audit_path)
     validate_audit(launch, accepted, audit, code, launch_sha256, acceptance_sha256)
+    if any(not math.isfinite(v) or v < 0 for v in (accepted["elapsed_seconds"], audit["elapsed_seconds"])):
+        raise ValueError("Finite nonnegative controller/audit costs required")
     pins.update(files(root))
     pins[str(audit_path)] = audit_sha256
     check_files(pins)

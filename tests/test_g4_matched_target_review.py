@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+import subprocess
+import sys
 from unittest.mock import patch
 
 import numpy as np
@@ -162,7 +164,8 @@ class MatchedReviewTests(unittest.TestCase):
             self.assertEqual((len(result["cases"]), len(result["groups"]), result["optimizer_updates_reviewed"]), (54, 18, 81000))
             self.assertEqual((result["new_optimizer_updates"], result["query_labels_accessed"]), (0, False))
             self.assertEqual(len(list(out.glob("*-curve.csv"))), 54)
-            self.assertEqual(len(list(csv.DictReader(next(out.glob("*-curve.csv")).open()))), 51)
+            with next(out.glob("*-curve.csv")).open() as stream:
+                self.assertEqual(len(list(csv.DictReader(stream))), 51)
             self.assertEqual(before, files(root))
             self.assertTrue((out / "summary.json").is_file())
 
@@ -187,6 +190,18 @@ class MatchedReviewTests(unittest.TestCase):
                 with patch("g4_matched_target_review.plot_case", side_effect=mutate), patch("g4_matched_target_review.require_frozen_code"):
                     with self.assertRaises(ValueError): export_review(root, "l", "a", audit_path, file_hash(audit_path), out, code)
                 self.assertFalse((out / "summary.json").exists())
+
+    def test_cli_rejects_wrong_sha_before_accessing_training_or_query(self):
+        with tempfile.TemporaryDirectory() as temp:
+            missing = Path(temp) / "not-created"
+            command = [sys.executable, "research/reproduction/m4g4b/matched_target_report.py",
+                "--expected-commit", "0" * 40]
+            for field in ("run", "launch-sha256", "acceptance-sha256", "audit", "audit-sha256", "out"):
+                command.extend(["--" + field, str(missing)])
+            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Clean expected remote review exporter required", result.stderr)
+            self.assertFalse(missing.exists())
 
 
 if __name__ == "__main__":
