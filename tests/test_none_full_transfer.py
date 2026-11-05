@@ -102,6 +102,8 @@ class NoneFullTransferTests(unittest.TestCase):
             self.assertEqual(before, state_id(source))
             self.assertFalse(record["source_heads_copied"])
             self.assertFalse(record["source_domain_state_copied"])
+            self.assertEqual(record["policy"], "g4_target_shared_weights_fresh_domains_v1")
+            self.assertEqual(record["full_source_initialization"], "g4_none_full_source_binding_v2")
             for target, seed in (("paviaU", 64), ("xuzhou", 512)):
                 with self.assertRaises(ValueError): full_none_source(spec, target, seed)
             bad = copy.deepcopy(spec)

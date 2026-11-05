@@ -127,7 +127,9 @@ def initialize_none_full_target(target, method, *, model_seed, head_seed, source
             raise ValueError("Full none source mutated during initialization")
         record.update(source=binding, copied_backbone_keys=sorted(shared), source_graph_context="source_train_label_lda_slic")
         verify_spec_files(source_spec)
-    record.update(policy="g4_none_full_source_target_init_v2", method=method, initial_device=str(torch.device(device)),
+    # Retain the accepted fresh-domain initialization contract consumed by the
+    # unchanged target BN calibrator; bind the new source protocol separately.
+    record.update(full_source_initialization=SOURCE_BINDING, method=method, initial_device=str(torch.device(device)),
                   initial_state_sha256=state_id(model))
     model = model.to(device).train()
     model.training_config = {"target_initialization": copy.deepcopy(record)}
