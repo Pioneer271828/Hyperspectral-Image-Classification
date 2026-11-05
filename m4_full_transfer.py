@@ -43,7 +43,7 @@ def full_source(spec, target, seed, mode):
             or len(audited["cases"]) != 18):
         raise ValueError("Complete accepted v2 source batch required")
     case = select_case(launch, producer, target, seed, mode)
-    folder = Path(case["out"]).resolve(strict=True)
+    folder = Path(case["out"]).resolve()
     if (path != folder / "primary.pt" or Path(spec["source_result"]).resolve() != folder / "result.json"
             or Path(spec["source_launch"]).resolve() != folder.parent.parent / "launch.json"
             or Path(spec["source_acceptance"]).resolve() != folder.parent.parent / "training-acceptance.json"):
