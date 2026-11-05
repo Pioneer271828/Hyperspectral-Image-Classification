@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-05",
+  "as_of": "2026-11-06",
   "issue": 167,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
@@ -129,13 +129,13 @@
     },
     {
       "id": "G4 none同协议源对照",
-      "state": "工程与真实3x8短测通过，9x1002完整源队列已启动",
-      "evidence": "Issue178/PR179 Draft；a44 CPU5/GPU5/full532与LXC GPU5通过；真实24更新、36指标480召回、9精确重载、3只读恢复、3163历史文件输入不变，283.577s；52f3297 controller CPU2/GPU5/full534/checker通过，完整生产冻结52f32978419cbeda216a90bfb0ed76c393ef4f5d，源9例首步前全冻结；完整实验未验收",
-      "remaining": "跟完LXC runs/g4-none-source-issue178-full01九例9018更新，严格收尾/逐例拟合小类及成本复盘/独立全批次审计，再接同协议none18目标和活动36目标；工程通过不作效果结论",
-      "report": "research/reports/G4NoneSourceV2_源对照工程与短测_20261105.md"
+      "state": "同协议9例完整源控制与独立验收通过",
+      "evidence": "Issue178；生产52f32978419cbeda216a90bfb0ed76c393ef4f5d，9x1002=9018更新、严格收尾及完成0恢复通过；独立108指标1440召回/27精确重载/4270文件输入不变，更新0/query0，110.423s；控制器7111.151s，9真实曲线与小类复盘完成；8/9末步选中，不称充分收敛或目标收益",
+      "remaining": "新none完整源目标绑定与6x12真实短测，再预登记none18x1500与活动36x1500完整目标及全冻结同协议query；支持集/空间等仍必测",
+      "report": "research/reports/G4NoneSourceV2_同协议完整源训练与独立验收_20261105.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "ordered_none_source_full_campaign_running",
+  "execution_state": "ordered_none_source_accepted_target_adapter_next",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
