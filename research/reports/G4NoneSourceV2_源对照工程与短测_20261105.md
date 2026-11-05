@@ -37,3 +37,7 @@ receipt SHA256：`752301e32fd1585b5a4695adf00c7666be29b10b24fa797db7b9f5ade74e06
 首核心43候选的JSON位于整个冻结configs/experiments，被checker拒绝，远程source01保留。e8将同内容移到research，原规则不变。新CLI首次fixture把str传给Path helper，第二次缺source_context；远程`none-source-cli01-cpu.log`、`none-source-cli02-cpu.log`保留。均在真实训练前由测试发现，修正后a44重验通过；没有改训练数值或原验收门槛。
 
 完整源预登记见`research/experiments/G4NoneSourceV2_完整源对照预登记_20261105.md`。9模型×1002=9018，先冻结全部角色后执行；每例2+1000、完成0恢复、逐例拟合/小类/梯度/成本复盘及独立全批次audit通过才交付Issue178。已告知预计1–2小时，实际按运行吞吐更新。后续none18目标与活动36目标、全冻结query和支持集/空间等独立重复继续沿两主计划，不混旧native query结果。
+
+独立全批次审计工具版本`6c8a93eb2be0271c37782d254bcc2a8ada55fc20`已部署至rmvision `/home/rmvision/g4-none-source-audit01`和LXC `checkouts/g4-none-source-audit01`，均为独立同名分支、干净checkout。CPU3分别0.032/0.072s，rmvision全量535=172.543s、双方checker333 Python/77 JSON及CLI帮助通过。命令为`python -m unittest test_none_source_full_audit test_none_source_campaign -v`与全量discover。训练producer52所有源码在独立consumer中保持，运行中52不变。
+
+审计入口`research/reproduction/m4g4b/none_source_full_audit.py`固定expected-commit、producer、完整run及launch/acceptance/protected-files三份实际SHA，只接受9例9018和108指标/1440召回的完整接受凭据；从独立checkout重读source context/图、选模/曝光/状态/文件对，复算全部指标与三次精确重载，零更新/query。输出须为runs下全新同级目录。**工具工程通过不代表实际全批次审计通过**；当前训练仍在运行，须结束后读取新receipt。
