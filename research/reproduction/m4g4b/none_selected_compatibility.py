@@ -30,8 +30,8 @@ from source_pretrain import SourcePretrainRuntime, select_case
 from target_initialization import METHODS, state_id
 
 SOURCE_PRODUCER = "9c66e20f85d26e88ecb9e6790d8c1e2c62ae8ed1"
-SOURCE_JOINT = "7166ab50e740f2374c284aafcd50b55c295865f0ef3466f1a7203b5c85575eecf"
-TARGET_JOINT = "bd251819f990c344fbd0e307db7c315c844863b50b16ff31022937adc6e4bd4e9"
+SOURCE_JOINT = "7166ab50e740f2374c284afcd50b55c295865f0ef3466f1a7203b5c85575eecf"
+TARGET_JOINT = "bd251819f990c344fbd0e307db7c315c84863b50b16ff31022937adc6e4bd4e9"
 
 
 def nontraining_body(text):

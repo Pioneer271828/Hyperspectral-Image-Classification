@@ -32,6 +32,12 @@ class NoneCompatibilityTests(unittest.TestCase):
         current = {"files": {"joint_training.py": TARGET_JOINT}}
         proof = verify_source_implementation(producer, current)
         self.assertTrue(proof["joint_module_except_run_training_ast_identical"])
+        producer["files"]["other.py"] = "f" * 64
+        producer["source_hash"] = digest(producer["files"])
+        with self.assertRaises(ValueError):
+            verify_source_implementation(producer, current)
+        del producer["files"]["other.py"]
+        producer["source_hash"] = digest(producer["files"])
         current["files"]["joint_training.py"] = "0" * 64
         with self.assertRaises(ValueError):
             verify_source_implementation(producer, current)
