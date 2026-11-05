@@ -5,6 +5,7 @@ from joint_baseline import NAMES
 from loadData.dataset_registry import file_hash
 from target_initialization import METHODS
 from target_training import TargetRuntime,target_settings
+from source_pretrain import full_settings as source_full_settings
 
 EXPECTED={'protocol':'g4_target_adaptation_full_v1','targets':list(NAMES),'training_seeds':[64,512,2048],
     'methods':list(METHODS),'support_seed':64,'support_per_class':10,'validation_per_class':5,
@@ -63,11 +64,20 @@ def validate_source_case(case):
     binding=case['source_result'];spec=case['source_spec'];path=Path(binding['path'])
     if file_hash(path)!=binding['sha256']:raise ValueError('Full source result changed')
     value=json.loads(path.read_text());settings=value['settings']
+    sidecar=json.loads(Path(spec['source_path']+'.json').read_text())['training_config']
+    runtime=sidecar['joint_runtime']
     if (value['status']!='completed' or value['optimizer_steps']!=EXPECTED['source_declared_updates']
             or value['start_code']['commit']!=EXPECTED['source_producer_commit']
             or settings['protocol']!='g4_source_only_pretrain_full_v1'
             or settings['held_out']!=case['target'] or settings['model_seed']!=case['seed']
             or settings['source_tasks']!=[n for n in NAMES if n!=case['target']]
+            or settings!=source_full_settings(case['target'],case['seed'])
+            or {k:v for k,v in runtime.items() if k not in ('executed_optimizer_steps','selected_step')}!=settings
+            or runtime.get('executed_optimizer_steps')!=1002
+            or runtime.get('selected_step')!=value['selected_step']
+            or sidecar['checkpoint_optimizer_step']!=value['selected_step']
+            or sidecar['research_config']!=settings['config']
+            or sidecar['training_code']['commit']!=EXPECTED['source_producer_commit']
             or Path(spec['source_path']).resolve()!= (path.parent/'primary.pt').resolve()
             or spec['source_weight_sha256']!=value['artifacts']['primary.pt']
             or spec['source_sidecar_sha256']!=value['artifacts']['primary.pt.json']

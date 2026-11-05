@@ -11,6 +11,7 @@ from target_study import (EXPECTED,load_study,full_settings,TargetStudyRuntime,c
 from target_training import target_settings
 from test_target_training import fixture
 from test_joint_training import SOURCE,PROVENANCE,checkpoints,hashes
+from source_pretrain import full_settings as source_full_settings
 import test_target_initialization as initial_tests
 
 DEVICE=os.environ.get('G4H_DEVICE','cpu')
@@ -67,15 +68,20 @@ class TargetStudyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);source=initial_tests.TargetInitializationTests().source(root)
             result=root/'result.json'
+            source_opts=source_full_settings('xuzhou',64)
             value={'status':'completed','optimizer_steps':1002,'start_code':{'commit':EXPECTED['source_producer_commit']},
-                'settings':{'protocol':'g4_source_only_pretrain_full_v1','held_out':'xuzhou','model_seed':64,
-                    'source_tasks':[n for n in NAMES if n!='xuzhou']},
+                'settings':source_opts,'selected_step':1002,
                 'artifacts':{'primary.pt':source[1],'primary.pt.json':source[2]}}
             primary=root/'primary.pt';primary.write_bytes(source[0].read_bytes())
             Path(str(primary)+'.json').write_bytes(Path(str(source[0])+'.json').read_bytes())
+            meta=json.loads(Path(str(primary)+'.json').read_text());training=meta['training_config']
+            training.update(joint_runtime={**source_opts,'executed_optimizer_steps':1002,'selected_step':1002},
+                checkpoint_optimizer_step=1002,research_config=source_opts['config'],
+                training_code={'commit':EXPECTED['source_producer_commit']})
+            write_json(Path(str(primary)+'.json'),meta);value['artifacts']['primary.pt.json']=file_hash(str(primary)+'.json')
             write_json(result,value)
             case={'target':'xuzhou','seed':64,'method':METHODS[1],
-                'source_spec':dict(source_path=str(primary),source_weight_sha256=source[1],source_sidecar_sha256=source[2]),
+                'source_spec':dict(source_path=str(primary),source_weight_sha256=source[1],source_sidecar_sha256=value['artifacts']['primary.pt.json']),
                 'source_result':{'path':str(result),'sha256':file_hash(result)}}
             validate_source_case(case)
             for field in ('seed','target'):
