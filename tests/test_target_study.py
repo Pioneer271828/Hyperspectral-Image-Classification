@@ -117,5 +117,35 @@ class TargetStudyTests(unittest.TestCase):
         help_result=subprocess.run([sys.executable,'scripts/train_target_full.py','--help'],capture_output=True,text=True)
         self.assertEqual(help_result.returncode,0,help_result.stderr);self.assertIn('--launch-sha256',help_result.stdout)
 
+    def test_controller_freezes27_preupdate_cases_without_overwriting_existing_output(self):
+        from research.reproduction.g4h import supervise
+        import types
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);obs=root/'obs';families=root/'families';sources=root/'sources';out=root/'out'
+            for target in NAMES:
+                g=obs/target;g.mkdir(parents=True);(g/'observation.pt').write_bytes(b'fixture')
+                write_json(g/'record.json',{})
+                f=families/(target+'-64');f.mkdir(parents=True);write_json(f/'curator-family.json',{})
+                for seed in (64,512,2048):
+                    folder=sources/(target+'-s'+str(seed));folder.mkdir(parents=True)
+                    (folder/'primary.pt').write_bytes((target+str(seed)).encode())
+                    opts=source_full_settings(target,seed)
+                    write_json(folder/'primary.pt.json',{'training_config':{'joint_runtime':{**opts,
+                        'executed_optimizer_steps':1002,'selected_step':1002},'checkpoint_optimizer_step':1002,
+                        'research_config':opts['config'],'training_code':{'commit':EXPECTED['source_producer_commit']}}})
+                    write_json(folder/'result.json',{'status':'completed','optimizer_steps':1002,'settings':opts,
+                        'selected_step':1002,'start_code':{'commit':EXPECTED['source_producer_commit']},
+                        'artifacts':{k:file_hash(folder/k) for k in ('primary.pt','primary.pt.json')}})
+            with patch.object(supervise,'load_target_context',return_value=({}, {'protected_files':{}},lambda:None)),\
+                    patch.object(supervise,'initialize_target',return_value=(None,{'initial_state_sha256':'a'*64})) as build,\
+                    patch.object(supervise,'require_frozen_code'),\
+                    patch.object(supervise.shutil,'disk_usage',return_value=types.SimpleNamespace(free=30*2**30)):
+                launch=supervise.prepare(SOURCE,out,obs,families,sources)
+                self.assertEqual(len(launch['cases']),27);self.assertEqual(build.call_count,27)
+                self.assertEqual(json.loads((out/'preflight.json').read_text())['optimizer_updates'],0)
+                frozen=file_hash(out/'launch.json')
+                with self.assertRaises(FileExistsError):supervise.prepare(SOURCE,out,obs,families,sources)
+                self.assertEqual(file_hash(out/'launch.json'),frozen)
+
 
 if __name__=='__main__':unittest.main()
