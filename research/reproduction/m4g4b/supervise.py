@@ -15,17 +15,21 @@ from research_runtime import code_snapshot,external_directory,require_frozen_cod
 from loadData.dataset_registry import file_hash
 
 
-def prepare(code,out,prepared,data_root):
+def prepare(code,out,prepared,data_root,*,ordered=False):
+    if ordered:
+        from m4_ordered_source import load_study as study_loader, full_settings as settings_for, select_case as selector
+    else:
+        study_loader,settings_for,selector=load_study,full_settings,select_case
     out.mkdir(exist_ok=False)
     if shutil.disk_usage(out).free<20*2**30:raise RuntimeError('Need20GiB artifact headroom')
     for n in ('cases','logs','reviews','operation-costs'):(out/n).mkdir()
-    study=load_study();cases=[];manifest=load_plan('configs/experiments/base97_training.json')['prepared_manifest_sha256']
+    study=study_loader();cases=[];manifest=load_plan('configs/experiments/base97_training.json')['prepared_manifest_sha256']
     for held in study['held_targets']:
         ctx=load_source_context(prepared,data_root,held_out=held,consumer=code,manifest_sha256=manifest)
         binding=graph_binding(ctx.items)
         for seed in study['training_seeds']:
             for mode in study['modes']:
-                settings=full_settings(held,seed,mode);config=ResearchConfig.from_dict(settings['config'])
+                settings=settings_for(held,seed,mode);config=ResearchConfig.from_dict(settings['config'])
                 with torch.random.fork_rng(devices=[]):
                     torch.random.default_generator.manual_seed(seed)
                     model=config.build_model({n:ctx.items[n]['class_num'] for n in ctx.sources})
@@ -41,7 +45,7 @@ def prepare(code,out,prepared,data_root):
         del ctx
     launch={'code':code,'study':study,'out_dir':str(out),'prepared':prepared,'data_root':data_root,'cases':cases,
         'test_scoring':False,'expected_updates':18036,'supervisor_sha256':file_hash(__file__)}
-    for c in cases:select_case(launch,code,c['held_out'],c['seed'],c['mode'])
+    for c in cases:selector(launch,code,c['held_out'],c['seed'],c['mode'])
     require_frozen_code(code);write_json(out/'launch.json',launch)
     write_json(out/'preflight.json',{'status':'passed','code':code,'case_count':18,'optimizer_updates':0,
         'launch_sha256':file_hash(out/'launch.json'),'target_payload_accessed':False,'test_scoring':False})
@@ -52,7 +56,13 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('expected-commit','prepared-dir','data-root','out-dir'):p.add_argument('--'+k,required=True)
     p.add_argument('--gpus',type=int,nargs=2);p.add_argument('--prepare-only',action='store_true')
-    p.add_argument('--run-existing',action='store_true');a=p.parse_args();code=code_snapshot();load_study()
+    p.add_argument('--ordered-validation-v2',action='store_true')
+    p.add_argument('--run-existing',action='store_true');a=p.parse_args();code=code_snapshot()
+    if a.ordered_validation_v2:
+        from m4_ordered_source import load_study as study_loader, select_case as selector
+    else:
+        study_loader,selector=load_study,select_case
+    study_loader()
     if sys.platform!='linux' or not __debug__ or code['dirty'] or code['commit']!=a.expected_commit:
         raise RuntimeError('Clean expected remote code and assertions required')
     if a.prepare_only and a.run_existing:raise ValueError('Prepare/existing exclusive')
@@ -62,8 +72,8 @@ def main():
         launch=json.loads((out/'launch.json').read_text())
         if (launch['out_dir']!=str(out) or launch['prepared']!=a.prepared_dir or launch['data_root']!=a.data_root
                 or launch['supervisor_sha256']!=file_hash(__file__)):raise ValueError('Existing launch/controller differs')
-        for c in launch['cases']:select_case(launch,code,c['held_out'],c['seed'],c['mode'])
-    else:launch=prepare(code,out,a.prepared_dir,a.data_root)
+        for c in launch['cases']:selector(launch,code,c['held_out'],c['seed'],c['mode'])
+    else:launch=prepare(code,out,a.prepared_dir,a.data_root,ordered=a.ordered_validation_v2)
     launch_hash=file_hash(out/'launch.json')
     if a.prepare_only:print('M4_SOURCE_FULL_PREFLIGHT_PASSED',launch_hash,flush=True);return
     started=time.monotonic();stop=threading.Event();lock=threading.RLock();jobs=[]
@@ -71,6 +81,7 @@ def main():
         command=[sys.executable,str(ROOT/'scripts/train_m4_source_full.py'),'--expected-commit',a.expected_commit,
             '--launch-plan',str(out/'launch.json'),'--launch-sha256',launch_hash,'--held-out',c['held_out'],
             '--seed',str(c['seed']),'--mode',c['mode']]
+        if a.ordered_validation_v2:command.append('--ordered-validation-v2')
         jobs.append({'name':c['name'],'out':c['out'],'command':command,'gpu':a.gpus[index%2],'status':'queued'})
     def publish(final=None):
         with lock:write_json(out/'status.json',{'status':final or ('failed' if stop.is_set() else 'running'),
@@ -113,7 +124,9 @@ def main():
         for job in [j for j in jobs if j['gpu']==gpu]:
             if stop.is_set():return
             try:
-                require_frozen_code(code);c=next(c for c in launch['cases'] if c['name']==job['name'])
+                require_frozen_code(code)
+                c=next(c for c in launch['cases'] if c['name']==job['name'])
+                selector(launch,code,c['held_out'],c['seed'],c['mode'])
                 while not (Path(c['out'])/'result.json').exists():
                     free,util=map(int,subprocess.check_output(['nvidia-smi','-i',str(gpu),
                         '--query-gpu=memory.free,utilization.gpu','--format=csv,noheader,nounits'],text=True).strip().split(','))
