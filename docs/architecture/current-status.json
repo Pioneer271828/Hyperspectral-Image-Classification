@@ -133,9 +133,16 @@
       "evidence": "Issue178；生产52f32978419cbeda216a90bfb0ed76c393ef4f5d，9x1002=9018更新、严格收尾及完成0恢复通过；独立108指标1440召回/27精确重载/4270文件输入不变，更新0/query0，110.423s；控制器7111.151s，9真实曲线与小类复盘完成；8/9末步选中，不称充分收敛或目标收益",
       "remaining": "新none完整源目标绑定与6x12真实短测，再预登记none18x1500与活动36x1500完整目标及全冻结同协议query；支持集/空间等仍必测",
       "report": "research/reports/G4NoneSourceV2_同协议完整源训练与独立验收_20261105.md"
+    },
+    {
+      "id": "G4 none完整源目标接入",
+      "state": "工程验收通过，6例真实短接入运行中",
+      "evidence": "Issue180/PR181 Draft；生产9a42b21468442714f780badc2accf1b15e07db7e，CPU5/GPU5/full542通过，LXC GPU5及真实三方向源绑定通过；6x12=72更新已预登记启动，尚无完整receipt；首版校准metadata错误保留",
+      "remaining": "6/6短接入、独立36指标480召回/18精确重载/全部保护收尾及复盘后才验收；随后另登记none18x1500/活动36x1500与全冻结query",
+      "report": "research/reports/G4NoneFullTarget_完整源目标接入工程与短测_20261106.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "ordered_none_source_accepted_target_adapter_next",
+  "execution_state": "ordered_none_full_target_short_running",
   "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
 }
