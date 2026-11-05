@@ -245,16 +245,26 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
         counts={n:i['class_num'] for n,i in items.items()}
         model=(config.build_model(counts) if runtime_adapter is None else runtime_adapter.build_model(config,counts)).to(device)
         heads=list(model.heads.parameters())+list(model.hgnn_heads.parameters())+list(model.cnn_heads.parameters())
-        optimizer=torch.optim.Adam([{'params':model.backbone.parameters(),'lr':config.training.lr},
+        optimizer=(runtime_adapter.optimizer(model,config)
+                   if runtime_adapter is not None and hasattr(runtime_adapter,'optimizer') else
+                   torch.optim.Adam([{'params':model.backbone.parameters(),'lr':config.training.lr},
                                     {'params':heads,'lr':config.training.head_lr}],
-                                   weight_decay=config.training.weight_decay)
+                                   weight_decay=config.training.weight_decay))
         ids=[id(p) for g in optimizer.param_groups for p in g['params']]
         if len(set(ids))!=len(ids) or set(ids)!={id(p) for p in model.parameters() if p.requires_grad}:
             raise ValueError('Optimizer registration differs from all trainable parameters')
         scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',
                   factor=settings['scheduler']['factor'],patience=settings['scheduler']['patience'],
                   threshold=settings['scheduler']['threshold'],threshold_mode='rel')
-        state={'cursor':0,'trace':[],'history':[],'best_score':-1.,'best_step':None,
+        score_fn=(runtime_adapter.selection_score
+                  if runtime_adapter is not None and hasattr(runtime_adapter,'selection_score') else None)
+        candidate_fn=(runtime_adapter.validation_candidate
+                      if runtime_adapter is not None and hasattr(runtime_adapter,'validation_candidate') else validation_candidate)
+        calibration_key=getattr(runtime_adapter,'calibration_metadata_key','bn_calibration')
+        if (not isinstance(calibration_key,str) or not calibration_key
+                or calibration_key in ('research_config','joint_runtime','provenance','training_code','checkpoint_optimizer_step')):
+            raise ValueError('Calibration metadata key collides with canonical metadata')
+        state={'cursor':0,'trace':[],'history':[],'best_score':None if score_fn else -1.,'best_step':None,
                'best_model':None,'best_probabilities':None,'identity':identity,'start_code':source}
         restored_fingerprints=None
         if resume:
@@ -299,14 +309,17 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
                 candidate=model; receipt=None
                 if calibrated_selection:
                     model.eval()
-                    candidate,receipt=validation_candidate(model,items,
+                    candidate,receipt=candidate_fn(model,items,
                         directory/f'raw-validation-{state["cursor"]:06d}.pt')
                 metric,prob=snapshot(candidate,items)
                 scheduler.step(metric['val_loss'])
                 event={'epoch':epoch,'step':state['cursor'],**metric}
+                score=metric['macro_oa'] if score_fn is None else float(score_fn(metric))
+                if not math.isfinite(score):raise ValueError('Nonfinite checkpoint selection score')
+                if score_fn is not None:event['selection_score']=score
                 state['history'].append(event)
-                if metric['macro_oa']>state['best_score']:
-                    state.update(best_score=metric['macro_oa'],best_step=state['cursor'],
+                if state['best_score'] is None or score>state['best_score']:
+                    state.update(best_score=score,best_step=state['cursor'],
                                  best_model={n:t.detach().cpu().clone() for n,t in candidate.state_dict().items()},
                                  best_probabilities=prob)
                     if calibrated_selection: state['best_calibration']=receipt
@@ -321,13 +334,19 @@ def run_training(settings,items,directory,provenance,source,*,resume=False,
                         'cursor':state['cursor'],'restored_state_fingerprints':restored_fingerprints}
         # Final validation always publishes the final authoritative training state.
         runtime={**settings,'executed_optimizer_steps':len(schedule),'selected_step':state['best_step']}
+        extras=(runtime_adapter.checkpoint_metadata(model)
+                if runtime_adapter is not None and hasattr(runtime_adapter,'checkpoint_metadata') else {})
+        reserved={'research_config','joint_runtime','provenance','training_code','checkpoint_optimizer_step',
+                  'bn_calibration','target_bn_calibration',calibration_key}
+        if not isinstance(extras,dict) or reserved.intersection(extras):
+            raise ValueError('Runtime checkpoint metadata collides with canonical metadata')
         model.training_config={'research_config':config.to_dict(),'joint_runtime':runtime,
                                'provenance':provenance,'training_code':state['start_code'],
-                               'checkpoint_optimizer_step':len(schedule)}
+                               'checkpoint_optimizer_step':len(schedule),**extras}
         save_model_checkpoint(model,directory/'last.pt')
         model.load_state_dict(state['best_model'],strict=True)
         model.training_config['checkpoint_optimizer_step']=state['best_step']
-        if calibrated_selection: model.training_config['bn_calibration']=state['best_calibration']
+        if calibrated_selection: model.training_config[calibration_key]=state['best_calibration']
         save_model_checkpoint(model,directory/'primary.pt')
         _atomic_torch_save(state['best_probabilities'],directory/'selected-probabilities.pt')
         selected_loader=load_selected if runtime_adapter is None else runtime_adapter.load_selected
