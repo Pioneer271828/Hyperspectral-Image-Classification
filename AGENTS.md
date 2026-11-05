@@ -1,6 +1,6 @@
 # 执行入口
 
-主工作目录固定为 `F:/E2E_VCA`，开发分支 `codex/f-drive-primary`。先读 [交接文档](research/项目开发交接_20261105.md)；用户已要求暂停研究训练，目录整理不代表恢复训练。C盘历史工作树不再作为默认编辑入口；不得删除它们或覆盖外部备份。
+主工作目录固定为 `F:/E2E_VCA`，开发分支 `codex/f-drive-primary`。先读 [交接文档](research/项目开发交接_20261105.md)；用户已要求暂停研究训练，目录整理不代表恢复训练。C盘历史工作树不再作为默认编辑入口；不得删除它们或覆盖外部备份。本机遗留dataset/weights/logs按用户要求只读原位保留且不提交；远程训练产物仍在checkout外。
 
 当前交付状态只修改 `docs/architecture/current-status.json`，远程用 `python scripts/check_repository.py --write-status` 投影当前清单。两份主计划保留研究设计，历史下一步不代表当前队列。整合验收入口 `scripts/check_repository.py`；CI仅使用已授权训练容器的专用self-hosted运行器，未注册不得声称自动验收已运行。
 

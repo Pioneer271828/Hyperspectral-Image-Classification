@@ -1,6 +1,6 @@
 # 按模块贡献
 
-当前交付状态统一维护于 `docs/architecture/current-status.json`，并在远程生成当前清单；不要在README和两份计划重复维护任务状态。开发整合分支为 `codex/issue-167-development-integration`，冻结实验标签及运行中checkout保持固定。新增模块先进入经测试的开发整合候选，main由独立PR评审；修复须包含所有仍在使用的后继分支或明确登记待整合范围。
+当前交付状态统一维护于 `docs/architecture/current-status.json`，并在远程生成当前清单；不要在README和两份计划重复维护任务状态。日常主目录为 `F:/E2E_VCA`，开发整合分支为 `codex/f-drive-primary`，冻结实验标签及运行中checkout保持固定。新增模块先进入经测试的开发整合候选，main由独立PR评审；修复须包含所有仍在使用的后继分支或明确登记待整合范围。
 
 提交前在训练容器运行 `python scripts/check_repository.py --expected-commit <完整SHA>` 及相关回归。自动流程见 `.github/workflows/remote-validation.yml`，只在专用 `hsi-training-container` self-hosted运行器执行，不安装依赖或调用真实数据训练。运行器尚待注册，手动SSH验收仍须完成并报告；配置文件存在不等于CI已运行。
 

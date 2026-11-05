@@ -34,4 +34,27 @@ git stash apply --index f62205df00bd2cef47d00c4dddc8d45b38e5318c
 
 ## 验证边界
 
-本地仅文件读写、备份核对和Git；Python/JSON/静态检查、整合单测与GPU回归均在`ssh rmvision`训练容器运行。最终完整SHA、命令和结果在验收完成后补充记录。研究仍暂停：M4-G4B源批次只有1完成、1严格重载失败、16未启动；目录统一和整合通过也不意味着该科学实验完成。
+本地仅文件读写、备份核对和Git；Python/JSON/静态检查、整合单测与GPU回归均在`ssh rmvision`训练容器运行。实际源码验收SHA为 `30165d628fef2bc52a495cd3dbbe89b78a2e1fdf`，分支 `codex/f-drive-primary`，Docker容器、Python3.12.3，解释器 `/home/rmvision/venvs/hsi-baseline/bin/python`，独立checkout `/home/rmvision/f-drive-primary-20261105`。研究仍暂停：M4-G4B源批次只有1完成、1严格重载失败、16未启动；目录统一和整合通过也不意味着该科学实验完成。
+
+### 本轮结果
+
+- 交付检查通过：300个Python文件语法、71个JSON、8个必需祖先，模型/训练/实验配置与0de46ee保持一致。
+- 全量回归 **509/509** 通过（153.272秒）。
+- GPU条件专项 **33/33**：M4迁移5（21.843秒）、完整源4（13.752秒）、监测干预10（1.747秒）、VCA兼容3（1.873秒）、冻结评价11（80.998秒）全部通过。CPU精确等价夹具仍按其原范围保留，不扩大为独立CUDA逐比特保证。
+- 本机保留核验：848个备份哈希一致；881个原数据/权重/日志/结果路径、大小、修改时间不变；662个恢复原位的旧跟踪文件内容哈希一致。数据目录新增的唯一项目文件是dataset/README.md，不属于原始881文件。
+- 日志在checkout外 `/home/rmvision/f-drive-{check,full}01.log`、`f-drive-gpu-{m4a,m4b,mon,cache,query}01.log`。
+- 未读取真实query、未运行真实训练、未修改既有生产checkout。本轮GPU训练循环均为测试中的合成夹具。
+
+实际命令（均在远程、干净完整SHA核对后执行；python替换为上述绝对解释器）：
+
+```bash
+python scripts/check_repository.py --expected-commit 30165d628fef2bc52a495cd3dbbe89b78a2e1fdf
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m unittest discover -s tests -v
+M4G4_DEVICE=cuda OMP_NUM_THREADS=1 python -m unittest discover -s tests -p test_m4_transfer.py -v
+M4G4B_DEVICE=cuda OMP_NUM_THREADS=1 python -m unittest discover -s tests -p test_m4_source_study.py -v
+MON3B_DEVICE=cuda OMP_NUM_THREADS=1 python -m unittest discover -s tests -p test_monitoring_interventions.py -v
+REPAIR_DEVICE=cuda OMP_NUM_THREADS=1 python -m unittest discover -s tests -p test_vca_release_compatibility.py -v
+G4I_DEVICE=cuda OMP_NUM_THREADS=1 python -m unittest discover -s tests -p 'test_g4_query*.py' -v
+```
+
+后续仅Markdown交接/验收记录提交，不代替实际源码tested SHA；最终文档版本另跑交付检查，不重复宣称新增509+33测试。GitHub已推送新分支并设置跟踪`github/codex/f-drive-primary`；本机仍保留旧Gitee origin远程及master，不使用其作为当前开发入口。GitHub Issue/PR连接器本轮不可用，未新建迁移PR，也未合并main。若需评审，可从已推送分支建立PR。
