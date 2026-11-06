@@ -228,6 +228,14 @@
       "remaining": "184全54训练接受、独立审计、186真实复盘和原331全冻结ordered query后才能运行真实结果判定；本模块不提供真实收益结论。继续206既有M6完整源目标初始化/BN工程；支持/K/参数/空间/传感器、M1/E1/M6/M7/M8真实对照及其余计划范围保留",
       "report": "research/reports/G4MatchedAnalysis_完整54冻结评价预登记分析工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue204完整54冻结评价预登记分析工程验收进度；报告及g4-matched-target-analysis-engineering-results.json保留完整证据，完成后直接继续206，不重复报告"
+    },
+    {
+      "id": "G4 M6完整源目标初始化与BN组件工程",
+      "state": "既有六条件初始化/方向算子/总体BN与重载组件工程通过，真实M6训练效果未测",
+      "evidence": "Issue206/PR207；实际4ede0984ba78c9e31c5a176c4f8e54c74da3e97e，授权LXC CPU7/7 39.815s、GPU7/7 42.574s、全620项619通过+1既有GPU专用跳过750.025s，checker387Python94JSON/help。六条件×两角色共有状态/fresh头域/RNG、参数0/33280/58498/29249/29249/58498、原none前向/orderedBN精确、实际方向对齐、10角色各合成3步梯度与变化、12角色BN参数保护/各3精确重载及属性/文件/CLI拒绝通过；独立一gatedCPU双精度矩参考，非全网FP64。真实三景36初始化保留6基础初态，74文件不变22.054s；独立旧工厂6基础+原构造器重建36状态/架构/参数，75文件不变3.693s，新工厂未调用。真实NN/BN/优化/query0，无GPU上下文，原331文件不改；证据assembler01 65位SHA转录断言失败保留，02从原文件更正，非训练失败",
+      "remaining": "208有界M6目标12步/恢复/参与证据工程已登记继续；当前只是目标新建M6参数，不称M6预训练源迁移或初态恒等。真实支持/K/同容量分支内变换/空间/传感器/M4交互与完整效果待184全54接受、独立审计、186复盘、全冻结query及204预登记结论后登记；原生CUDA独立训练轨迹等价仍未接受",
+      "report": "research/reports/G4InteractionTarget_完整源M6目标初始化与BN工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue206既有M6完整源目标初始化与BN组件工程进度汇报；报告及g4-interaction-target-engineering-results.json保留证据，交付后连续208，不重复发送"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
