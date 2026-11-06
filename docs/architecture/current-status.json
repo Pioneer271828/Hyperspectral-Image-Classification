@@ -152,8 +152,8 @@
     },
     {
       "id": "G4完整54目标配对实验",
-      "state": "完整目标47/54已接受（70500/81000更新），资源续跑工程198正在独立验收",
-      "evidence": "Issue184/PR185 Draft；原331生产源码冻结；最近只读核对47例（PaviaU18+Xuzhou18+HongHu11）接受、70500更新。新增HongHu512 noneFT选1231/3945.850s、容量FT选721/1559.082s，后者首末30loss8.637129→0.070424、验证fused/graph/CNN OA81.82/77.27/81.82%，最低召回均0.4、无零召回；早选步/末段与历史HongHu64残差scratch CNN第11类0召回保留。完整acceptance/query尚无，固定81000预算不改；用户侧会话已登记Issue198独立资源排程工程，在其恢复/去重/审计兼容验收前不多启训练；本模块未停启184或运行全批次审计/query",
+      "state": "完整目标51/54已接受（76500/81000更新），剩余3例等待198资源控制器续接",
+      "evidence": "Issue184/PR185 Draft；原331生产源码冻结；只读progress为51例（PaviaU18+Xuzhou18+HongHu15），76500更新、306指标/3924逐类召回/153精确重载。新增48–51逐例复盘：HongHu512残差FT选721/1411.158s，loss8.657538→0.065660；HongHu2048三scratch均选1500，分别1377.949/1434.604/1418.977s，末30loss0.072509/0.072122/0.071518；三头最低召回均0.4、无零召回，实际模块参数变化/正梯度通过。早选步、末步选中及历史HongHu64残差scratch CNN第11类0召回保留，不是query收益。完整acceptance/query尚无，预算81000不改；用户侧198在合法51接受边界登记resources01/amendment.json（8e8004aa6b56da7d4b59b0526cbe5248cc588de76138ee624313e0c1e5f9be414），余4500步，原PID273458为有意暂停T，未见新控制器标记；不按旧status50的滞后字段误报失败，不在本模块接管资源操作或启动全批次审计/query",
       "remaining": "54/81000完整接受、独立324指标4320召回162精确重载与源/目标输入不变、拟合逐类成本复盘；全部冻结后才同协议query和预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
       "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md"
     },
@@ -209,9 +209,17 @@
       "id": "G4 E1目标初始化与校准组件工程",
       "state": "完整源初始化/元数据前向/总体BN/重载组件工程验收通过，E1目标训练尚未接入",
       "evidence": "Issue199/PR201；实际42a2f463ecdb4223d78537c4178a28191a50ad5e，授权LXC CPU6/6 35.539s、GPU6/6 40.226s、全599项598通过+1既有GPU专用跳过602.595s，checker378Python91JSON/help通过。none及四个194参数条件、原共享/fresh头域状态与RNG、完整/75%/缺口/范围元数据、无支撑保护、合成3步整体梯度/更新、总体BN参数保护/CPUFP64稀疏参考、三次精确重载和拒绝测试通过。真实三景×两角色×五条件30初始化，基础6状态与184一致，67文件不变6.259s；独立旧工厂6基础+E1算子重建30状态/架构，68文件不变3.468s。真实更新0/forward0/BN0/query0/无GPU上下文；原331 Python/config不改；首版K64误断言和FP64稠密图错误、外部脚本语法及GitHub传输失败保留",
-      "remaining": "下一有界E1目标训练/恢复/公平控制接入；本组件不是E1完整实验或真实收益。184接受/独立审计/真实复盘/全冻结query后才能登记真实对照；近似波长/缺FWHM与空间/传感器/支持重复等范围仍待完成，原生CUDA独立优化轨迹等价不在通过范围",
+      "remaining": "后续202有限训练/恢复/公平控制工程已通过；本组件仍不是E1完整实验或真实收益。184接受/独立审计/真实复盘/全冻结query后才能登记真实对照；近似波长/缺FWHM与空间/传感器/支持重复等范围保留，原生CUDA独立优化轨迹等价不在通过范围",
       "report": "research/reports/G4CoverageTarget_完整源目标覆盖初始化与BN校准工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue199 E1目标初始化与校准组件工程完成报告；持久报告及g4-coverage-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4 E1目标有界训练与恢复工程",
+      "state": "有限12步/恢复/公平控制及真实零更新身份工程通过，真实效果未测",
+      "evidence": "Issue202/PR203；实际5fd4c81e6c6fbdb9325fe2c82f89305904191968，授权LXC CPU5/5 104.154s、GPU5/5 125.945s、全604项603通过+1既有GPU专用跳过715.690s，checker381Python92JSON/help。五条件×scratch/完整none源FT合成12与新实例2+10/完成0/3次精确重载，CPU状态optimizer/scheduler/history/RNG/概率精确恢复；none完整控制CPU精确，GPU关闭对照仅事前声明固定图参考，原生独立优化轨迹不在通过范围。真实三景support512/K1/model64的60配置/720冻结记录/30初始化与196/199身份一致，69文件不变163.030s；独立不调用202设置/adapter重建60配置/720记录/30初态绑定，70文件不变23.994s。真实更新0/forward0/BN0/query0，无GPU上下文；原331 Python/config不改",
+      "remaining": "184全54接受→独立审计→186真实拟合逐类成本复盘→全冻结ordered query及预登记结论后，另登记真实支持/K/参数范围与M1/E1对照；目标新建E1不称E1源预训练；近似波长/无FWHM及空间/传感器/更多支持重复、M4交互和其余机制仍待完成",
+      "report": "research/reports/G4CoverageRuntime_E1目标有界训练与恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue202 E1目标有界训练与恢复工程完成报告；持久报告及g4-coverage-runtime-engineering-results.json为证据，不重复交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
