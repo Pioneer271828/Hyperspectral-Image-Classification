@@ -20,7 +20,6 @@ from g4_support_target import (NoneSupportTargetRuntime, prepare as support_prep
 from joint_baseline import NAMES, _item_fingerprint
 from joint_observation import PRESETS, _metadata_check, _stub
 from joint_training import run_training
-from loadData.dataset_registry import file_hash
 from loadData.observation_sampling import BandMetadata, replay, sample
 from model.research_config import digest
 from research_runtime import code_snapshot, require_frozen_code
@@ -51,8 +50,15 @@ def freeze_settings(base, items, metadata, *, preset, sampling_seed):
     rng = np.random.default_rng(sampling_seed)
     records = []
     for index in range(12):
-        _, record = sample(_stub(metadata, plan_hash), metadata,
+        selected, record = sample(_stub(metadata, plan_hash), metadata,
                            PRESETS[preset][index % len(PRESETS[preset])], rng)
+        # A subset may make legacy auto units ambiguous even if the full
+        # vector was unambiguous (e.g. mixed 1nm/20nm widths). Reject before
+        # any outputs/updates; do not silently alter inherited arithmetic.
+        sub = selected.bands
+        _metadata_check({"net_input": torch.empty(1, 1, len(sub.band_ids) + 2),
+            "bands": len(sub.band_ids), "wavelengths": torch.tensor(sub.wavelengths, dtype=item["wavelengths"].dtype),
+            "fwhm": None if sub.fwhm is None else torch.tensor(sub.fwhm, dtype=item["fwhm"].dtype)}, sub)
         records.append(record)
     policy = {"version": POLICY, "preset": preset, "sampling_seed": sampling_seed,
         "base_settings_sha256": digest(base), "metadata": asdict(metadata),

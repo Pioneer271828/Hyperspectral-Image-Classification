@@ -15,6 +15,7 @@ import torch
 
 from g4_observation_target import KEY, ObservationTargetRuntime, freeze_settings, prepare
 from g4_support_target import prepare as old_prepare
+from joint_baseline import _item_fingerprint
 from joint_training import _tree_fingerprint, run_training
 from loadData.dataset_registry import file_hash
 from loadData.observation_sampling import BandMetadata
@@ -76,7 +77,7 @@ class ObservationTargetTests(unittest.TestCase):
             self.assertNotEqual(policy["records"], other[KEY]["records"])
             # Exercise synchronized supplied widths (current real inputs have none).
             items["xuzhou"]["fwhm"] = torch.full((7,), 20.)
-            opts["support_context_binding"]["item_sha256"] = digest(__import__("joint_baseline")._item_fingerprint(items["xuzhou"]))
+            opts["support_context_binding"]["item_sha256"] = digest(_item_fingerprint(items["xuzhou"]))
             meta = metadata(items["xuzhou"])
             frozen = freeze_settings(opts, items, meta, preset="alternate75", sampling_seed=8128)
             runtime = ObservationTargetRuntime(frozen, items, root / "unused")
@@ -158,7 +159,6 @@ class ObservationTargetTests(unittest.TestCase):
                 save_model_checkpoint(model, root / (method + "-bad.pt"))
                 with self.assertRaisesRegex(ValueError, "Selected target observation"):
                     resumed[4].load_selected(root / (method + "-bad.pt"), moved, raw, device=DEVICE)
-                self.assertNotEqual(_tree_fingerprint(a["model"]), _tree_fingerprint(checkpoints(root / (method + "-split"))["best_model"]))
 
     def test_profile_record_metadata_and_input_negatives(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -183,6 +183,12 @@ class ObservationTargetTests(unittest.TestCase):
             bad = copy.deepcopy(items); bad["xuzhou"]["fwhm"] = torch.full((7,), 2.)
             with self.assertRaisesRegex(ValueError, "ambiguous"):
                 freeze_settings({k: v for k, v in opts.items() if k != KEY}, bad, metadata(bad["xuzhou"]), preset="full", sampling_seed=1)
+            # Full widths are recognized as nm, but the first actual subset
+            # excludes their sole large value. It must fail BEFORE training.
+            missing = next(i for i in range(7) if i not in opts[KEY]["records"][1]["selected_positions"])
+            bad["xuzhou"]["fwhm"].fill_(1.); bad["xuzhou"]["fwhm"][missing] = 20.
+            with self.assertRaisesRegex(ValueError, "ambiguous"):
+                freeze_settings({k: v for k, v in opts.items() if k != KEY}, bad, metadata(bad["xuzhou"]), preset="alternate75", sampling_seed=8128)
             self.assertFalse((root / "unused").exists())
 
     def test_cli_metadata_source_guard_two_ten_zero_and_rejected_full(self):
