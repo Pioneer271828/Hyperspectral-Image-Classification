@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "issue": 218,
+  "checked_on": "2026-11-06",
+  "plan_sections": ["master12.5/16", "implementation13/16.1", "20261030 MiTA and width review E0-R checklist"],
+  "paper": {
+    "title": "How Much of a Model Do We Need? Redundancy and Slimmability in Remote Sensing Foundation Models",
+    "authors": ["Leonard Hackel", "Tom Burgert", "Begum Demir"],
+    "version": "arxiv2601.22841v2",
+    "url": "https://arxiv.org/html/2601.22841v2",
+    "sections_read_now": ["3.1 architecture distinction", "3.2 centered SVD, covariance participation ratio and channel correlation"],
+    "html_limit": "Rendering ends early in4.1; not a fresh complete PDF read",
+    "paper_license": "CC-BY-4.0 per arXiv; not an upstream code license",
+    "inherited_pdf_sha256_not_reverified": "4175e43a4c295d4e45844808253da971a5cc136da57d69128911ed3ec99f8441"
+  },
+  "author_code_check": {
+    "sources": ["https://arxiv.org/abs/2601.22841v2", "https://www.bifold.berlin/people/leonard-hackel.html", "https://www.bifold.berlin/impact-transfer/publications/view/publication-detail/how-much-of-a-model-do-we-need-redundancy-and-slimmability-in-remote-sensing-foundation-models"],
+    "searches": ["exact paper title plus github", "Leonard Hackel Slimmability code"],
+    "status": "unconfirmed_from_inspected_primary_pages",
+    "note": "Inspected paper/author pages still announce future publication. Bounded search does not establish absence everywhere.",
+    "upstream_commit": null,
+    "code_license": null,
+    "code_copied": false,
+    "upstream_executed": false
+  },
+  "implementation": "Independent standard FP64 descriptive statistics; project-defined sparse Q region alignment and fixed common sampling. No paper trainer, checkpoints or slimming architecture transferred.",
+  "new_dependency": false,
+  "limits": ["No ViT result transferred to CNN/HGCN", "No pruning, channel selection, retraining or latency conclusion", "Equal region weighting is project design; covariance depends on channel scaling and variance floor", "Real feature extraction and accepted freeze/context provenance remain separate"]
+}
