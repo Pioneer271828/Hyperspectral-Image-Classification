@@ -54,11 +54,11 @@
     "external_data_weights_downloaded": false
   },
   "allowed_new_paths": [
-    "model/position_gated_fusion.py",
+    "position_gated_fusion.py",
     "tests/test_position_gated_fusion.py",
     "docs/references/m8-position-gate-reference-review.json"
   ],
-  "implementation_plan_path_exception": "Additive companion instead of editing frozen model/branch_fusion.py; later explicit adapter separate acceptance",
+  "implementation_plan_path_exception": "Top-level additive companion because frozen guard covers entire model directory; initial7cb checker rejected new model path after CPU6pass1.047s, no GPU/full run; relocation preserves model tree and guard. Later explicit adapter separate acceptance",
   "limits": [
     "No original GMU reproduction/HSI efficacy/physical reliability claim",
     "C64 gate129params; extra operations cost not yet measured",

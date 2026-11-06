@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from model.branch_fusion import fixed_fusion
-from model.position_gated_fusion import POLICY, PositionGatedFusion
+from position_gated_fusion import POLICY, PositionGatedFusion
 from model.task_losses import probability_loss_components
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 

@@ -14,7 +14,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from .branch_fusion import fixed_fusion
+from model.branch_fusion import fixed_fusion
 
 POLICY = "m8_position_scalar_fusion_kernel_v1"
 VERSION = 1
