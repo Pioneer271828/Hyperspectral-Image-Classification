@@ -54,6 +54,8 @@ PYTHONPATH=.:tests python -m unittest test_g4_support_context -v
 
 本版本未发生模块代码/数值测试失败。一次远程元数据提取包装因heredoc尾标记引起NameError，发生在已成功读取CPU/full结果之后；已改用外部文件驱动归档，原测试日志未改，不重跑择优。GitHub首次create transport失败后先GET核无Issue，再成功创建188，未产生重复Issue或平行提交。当前状态只改`current-status.json`并远程投影。
 
+最终文档交付同步时，共享clone的alternates嵌套达到Git上限，新`issue188-support-delivery-source01`检出失败；保留该失败目录，不reset/clean。随后`git clone --no-local`建立独立对象库，source02投影通过，后续最终source/primary验证均使用无alternates的独立clone。该问题属于交付对象库隔离，不修改冻结训练、实际tested SHA或已有验收结果。
+
 ## 结论和下一依赖
 
 **本输入绑定工程验收通过。**生产tag `module-g4-support-context-v1`指实际937861f；PR189独立评审、main不合并。支持/K真实效果、空间隔离、传感器家族泛化、head-only/light-module和其他计划必测项仍未完成，不能由27输入绑定替代。
