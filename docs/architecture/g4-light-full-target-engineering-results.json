@@ -1,0 +1,29 @@
+{
+  "status": "passed_registered_full_budget_worker",
+  "issue": 245,
+  "pr": 246,
+  "tested_commit": "228632c3dfd043569dcf7e35e79c3c5adaa3bfe4",
+  "source_hash": "07859aa1845315c832e84fc712bf024fbdc663652ded874da807728e628c34f8",
+  "cpu_tests": 7,
+  "cpu_seconds": 142.722,
+  "gpu_tests": 7,
+  "gpu_seconds": 265.315,
+  "full_synthetic_roles_per_device": 2,
+  "preflight_roles": 54,
+  "preflight_protected_files": 98,
+  "preflight_elapsed_seconds": 99.69919215096161,
+  "reference_launch_sha256": "0c447087a9679538e0a792aa72cb033197e743bc959cd096ac2e831e46eafdb1",
+  "engineering_receipt_sha256": "57720f99eb3295e8d585b91d1960efe6239785467755fd8ddaf5a288c86e9f9b",
+  "preflight_sha256": "2b04933aeeea6c262b0619d5538ccc1c644dc48a44797ffc20051915a512d118",
+  "log_sha256": {
+    "issue245-cpu01.log": "8e2b6e82955baac9fabe8381c5a9390a60c20f93d4b390c73ae5abf531f9d463",
+    "issue245-cpu02.log": "068bff410485e90d54bee096d84c52dda2a8d0d950e13637c4732e547834aa92",
+    "issue245-gpu02.log": "38239746a8c72ac84428f17b60ffb6258ac38132c69bf322c77766ff74729e0f",
+    "issue245-preflight02.log": "690bdd7e4aad2b0a844f779199621a8e54c65949d4813cec00ebbf64ecd77787",
+    "issue245-cli02.log": "4b0c8476fa54e3964d9dd66d7548c08e0c448d8eb00ca0196fb0c260ada3d5bc"
+  },
+  "real_training_updates": 0,
+  "new_query_release": false,
+  "report": "research/reports/G4LightFullTarget_完整预算轻量适配入口验收_20261107.md",
+  "next_issue": 247
+}
