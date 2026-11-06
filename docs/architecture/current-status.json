@@ -252,6 +252,14 @@
       "remaining": "212有界12步/恢复/消息边分项参与工程已登记推进；本项不是M6/M7源预训练或真实完整实验。仅归一化/同容量/支持K种子/空间传感器/M4组合及其余计划待184完整54接受、独立审计、186真实复盘、原331全冻结query和204预登记结论后另登记；原生CUDA独立优化轨迹等价未接受",
       "report": "research/reports/G4EdgeTarget_完整源M7二因素初始化与BN工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue210 M7二因素初始化/BN组件工程进度；完整报告及g4-edge-target-engineering-results.json保留证据，交付后连续212不等待确认"
+    },
+    {
+      "id": "G4 M7核心二因素目标有界训练与恢复工程",
+      "state": "有限12步/严格恢复/消息边分项参与及真实零更新身份工程通过，真实效果未测",
+      "evidence": "Issue212/PR213；实际f7dfcc54a93e348179f3071e77a5e637e7e9611d，授权LXC CPU6/6 123.528s、GPU6/6 146.841s、全639项638通过+1既有GPU专用跳过1008.835s，checker396Python98JSON/help。六条件×两角色合成12/新实例2+10/完成0、36精确重载/专项；CPU状态optimizer/scheduler/history/RNG/概率/trace逐位恢复，edge-off none/gated对208两角色精确控制，GPU关闭对照为事前固定图参考，启用原生GPU只验功能与ordered重载。实际消息两方向/edge分项正梯度和参数变化、mix属性/源上下文/嵌套回执拒绝、NaN消息及edge-only梯度在参数更新前拒绝通过。真实36配置/初始化绑定210，82文件不变116.245s；独立不调用212设置/runtime/factory手工重建36配置，83文件不变18.960s，真实NN/BN/更新/query0、无GPU上下文。原331文件与冻结184不改，实现版本测试失败0，连接器/TLS失败保留",
+      "remaining": "下一M8既有固定融合/辅助监督的完整源目标初始化/BN接入正在准备，任务登记需核验成功；仅归一化/同容量/支持K种子/空间传感器/M4组合及新门控、独立单分支、完整真实效果仍待184完整54接受、独立审计、186真实复盘、原331全冻结query和204预登记结论后分别登记。原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4EdgeRuntime_M7目标有界训练与严格恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue212 M7核心二因素有界训练/恢复工程进度；完整报告及g4-edge-runtime-engineering-results.json保留证据，交付后连续下一M8不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
