@@ -284,6 +284,22 @@
       "remaining": "Issue220/PR221原stage1/2只读采集和完整54/204分析身份边界继续；声明train/validation不构成提取来源证明，额外archive键解码后拒绝，不作原GT释放门。实际E0-R全角色特征/缩宽精度和成本仍待184全验收复盘/原331冻结query/204结论后执行；相关/低有效维不证明可无损裁剪",
       "report": "research/reports/RepresentationRedundancy_E0R同区域冻结特征统计工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue218 E0-R同区域冻结特征统计工程进度；报告及representation-redundancy-engineering-results.json保留证据，交付后连续220不等待确认"
+    },
+    {
+      "id": "E0-R原阶段只读采集与全54身份组件工程",
+      "state": "合成六角色原stage采集/状态保护及已完成54分析身份消费工程通过，真实采集未执行",
+      "evidence": "Issue220/PR221；实际87bc0835020c02067ffa0be9e2d6875d03d5d1f8，授权LXC CPU4/4 18.810s、GPU4/4 21.993s、全655项654通过+1既有GPU专用跳过1040.544s，checker405Python104JSON/help。三M4模式×两角色原stage1 128/stage2 64区域特征，四个原方法各一次、原三头预测CPU/GPU逐位一致，registered状态/flags/观察/CPU及使用卡RNG保护，成功/异常属性清理通过。原331全54+204固定源码/plan/计数/输出保护哈希在Tensor加载前核验，负主要收益仍允许；结构54其余53权重为文字占位，一例真实合成CLI，不冒充54独立审计。真实NN/BN/优化/query/特征读取0，原331不改。首版b3e 1pass3errors5.555s为合成fixture漏eval/输出父目录冲突，修正且不弱化守卫，失败保留",
+      "remaining": "Issue222/PR223 M7仅归一化组件继续；实际E0-R全54采集、独立空间/容量与成本未测。整图传导支持不伪称独立train/validation块；不保证瞬态非Tensor缓存不变。真实模型消费仍待184完整接受/审计/186复盘/原331冻结query/204预登记结论后执行，单case不是全模块研究完成",
+      "report": "research/reports/FrozenRepresentationCapture_E0R原阶段只读采集与全54身份工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue220 E0-R原阶段只读采集与54身份工程进度；报告及frozen-representation-capture-engineering-results.json保留完整证据，交付后连续222不等待确认"
+    },
+    {
+      "id": "G4 M7仅归一化与完整源目标组件工程",
+      "state": "四条件匹配M6初始化/先验归一化/orderedBN与显式重载组件工程通过，真实效果未测",
+      "evidence": "Issue222/PR223；实际5f85e2220ce3ce357d99e6faaccca51676ce8502，授权LXC CPU7/7 34.982s、GPU7/7 39.268s、全658项657通过+1既有GPU专用跳过1108.333s，checker405Python106JSON/help。none/row_normalized/gated/gated_row_normalized×两角色，匹配M6共有初态/RNG/fresh头域/权限，新增训练参数0、启用必需version buffer8字节。CPUFP64手算与原M7mix0先验、孤立点/候选支持/1e-12极小行阻尼、stage2位置、八角色各3合成更新/24精确重载及单角色总体矩参考通过，旧通用loader启用时拒绝。真实24初始化12匹配M6身份，78文件不变22.849s；独立旧206工厂12次手工24state/schema，79文件不变4.047s，同干净checkout不同进程、非独立BN/概率审计。真实NN/BN/更新/query0，原331不改。首次独立入口哈希转录多8在读模型前拒绝，原文件取hash后通过，失败保留",
+      "remaining": "Issue224/PR225仅归一化有界训练/严格恢复工程继续；原极小行和可能低于1，不静默数值修复。仅归一化vs学习M7/相近容量、支持K种子/空间传感器/M4组合真实效果仍待184全验收/独立审计/186复盘/原331全冻结query/204结论。原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4NormalizedEdgeTarget_M7仅归一化与完整源目标组件工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue222 M7仅归一化组件工程进度；报告及g4-normalized-edge-target-engineering-results.json保留完整证据，连续224不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
