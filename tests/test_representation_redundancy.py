@@ -125,6 +125,14 @@ class RepresentationTests(unittest.TestCase):
                 self.assertEqual(load.call_args.args[0], spec["feature_file"]["path"])
             self.assertFalse(result["checkpoint_deserialized"]); self.assertFalse(result["extraction_provenance_verified"])
             self.assertEqual(result["files_verified_unchanged"], 3)
+            self.assertEqual(result["summary"]["cnn"]["implicit_zero_eigenvalues"], 61)
+            alias = root / "features-link.pt"; alias.symlink_to(spec["feature_file"]["path"])
+            alias_spec = copy.deepcopy(spec); alias_spec["feature_file"]["path"] = str(alias)
+            alias_record = root / "alias-manifest.json"; write_json(alias_record, alias_spec)
+            with patch("torch.load", wraps=torch.load) as load:
+                aliased = analyze(alias_record, file_hash(alias_record), root / "alias-out")
+                self.assertEqual(load.call_args.args[0], spec["feature_file"]["path"])
+                self.assertEqual(aliased["resolved_input_paths"]["feature_file"], spec["feature_file"]["path"])
             for p, sha in pins.items(): self.assertEqual(file_hash(p), sha)
             for change in ({"split": "query"}, {"query_labels": "forbidden"}, {"stage": "head"},
                            {"feature_file": {**spec["feature_file"], "sha256": "0" * 64}}):

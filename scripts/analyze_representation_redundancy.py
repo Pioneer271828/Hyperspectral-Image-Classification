@@ -30,7 +30,7 @@ def analyze(manifest, expected_sha256, out):
             or set(entry["selection"]) != {"maximum_regions", "seed", "variance_floor"}):
         raise ValueError("Exact frozen train/validation feature manifest required; query refused")
     _hash(entry["observation_sha256"]); _hash(entry["model_commit"], 40)
-    files = {str(path): expected_sha256}
+    files = {str(path): expected_sha256}; resolved = {}
     for key in ("feature_file", "checkpoint"):
         value = entry[key]
         if set(value) != {"path", "sha256"} or not Path(value["path"]).is_absolute():
@@ -39,11 +39,12 @@ def analyze(manifest, expected_sha256, out):
         if str(p) in files or file_hash(p) != expected:
             raise ValueError("Frozen file collision or hash differs")
         files[str(p)] = expected
+        resolved[key] = str(p)
     target = Path(out).resolve()
     if target.exists() or target.is_relative_to(ROOT):
         raise ValueError("New output outside checkout required")
     # Checkpoint is hashed only. No checkpoint deserialization or model forward.
-    features = torch.load(entry["feature_file"]["path"], map_location="cpu", weights_only=True)
+    features = torch.load(resolved["feature_file"], map_location="cpu", weights_only=True)
     if not isinstance(features, dict) or set(features) != {"cnn", "graph", "Q"}:
         raise ValueError("Exact label-free CNN/Graph/Q tensor mapping required")
     width = 128 if entry["stage"] == "stage1" else 64
@@ -53,7 +54,7 @@ def analyze(manifest, expected_sha256, out):
     if any(file_hash(p) != sha for p, sha in files.items()):
         raise ValueError("Frozen diagnostic input changed")
     result = {"schema_version": 1, "protocol": "e0_region_redundancy_v1", "status": "computed",
-        "manifest": entry, "protected_files": files, "files_verified_unchanged": len(files),
+        "manifest": entry, "resolved_input_paths": resolved, "protected_files": files, "files_verified_unchanged": len(files),
         "summary": summary, "checkpoint_deserialized": False, "model_forwards": 0, "optimizer_updates": 0,
         "query_labels_accessed": False, "extraction_provenance_verified": False,
         "limit": "Hash identities do not prove extraction or label-access provenance; accepted freeze/context binding remains separate"}

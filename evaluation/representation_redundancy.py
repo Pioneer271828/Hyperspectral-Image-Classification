@@ -42,15 +42,17 @@ def matrix_summary(features, *, variance_floor=1e-24):
         raise ValueError("Finite nonnegative variance floor required")
     result = {"samples": len(x), "channels": x.shape[1], "centered": True, "covariance_ddof": 1,
         "variance_floor": variance_floor, "variance_units": "feature_squared",
-        "covariance_eigenvalues": [], "explained_variance_ratio": [], "cumulative_explained_variance_ratio": [],
+        "covariance_eigenvalues": [], "implicit_zero_eigenvalues": None,
+        "explained_variance_ratio": [], "cumulative_explained_variance_ratio": [],
         "numerical_rank": None, "rank_singular_value_tolerance": None, "effective_dimension": None,
         "components_at_variance": None, "valid_correlation_channels": [], "correlation_pairs": 0,
-        "mean_absolute_channel_correlation": None}
+        "mean_absolute_channel_correlation": None, "correlation_reason": "fewer_than_two_samples"}
     if len(x) < 2:
         return {**result, "status": "not_available", "reason": "fewer_than_two_samples"}
     xc, variance, valid = _center(x, variance_floor)
     indices = torch.where(valid)[0]
     result["valid_correlation_channels"] = indices.tolist()
+    result["correlation_reason"] = None if len(indices) >= 2 else "fewer_than_two_valid_channels"
     if len(indices) >= 2:
         corr = _correlation(xc[:, valid], xc[:, valid])
         pairs = torch.triu_indices(len(indices), len(indices), 1)
@@ -62,6 +64,7 @@ def matrix_summary(features, *, variance_floor=1e-24):
     if not torch.isfinite(eigen).all() or not torch.isfinite(total):
         raise ValueError("Feature scale overflows FP64 eigenspectrum")
     result["covariance_eigenvalues"] = eigen.tolist()
+    result["implicit_zero_eigenvalues"] = x.shape[1] - len(eigen)
     if total <= variance_floor:
         return {**result, "status": "not_available", "reason": "covariance_below_variance_floor"}
     # Participation ratio from normalized eigenvalues avoids squaring the trace.
