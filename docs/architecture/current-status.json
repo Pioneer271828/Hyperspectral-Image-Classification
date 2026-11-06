@@ -152,9 +152,9 @@
     },
     {
       "id": "G4完整54目标配对实验",
-      "state": "完整目标51/54已接受（76500/81000更新），剩余3例等待198资源控制器续接",
-      "evidence": "Issue184/PR185 Draft；原331生产源码冻结；只读progress为51例（PaviaU18+Xuzhou18+HongHu15），76500更新、306指标/3924逐类召回/153精确重载。新增48–51逐例复盘：HongHu512残差FT选721/1411.158s，loss8.657538→0.065660；HongHu2048三scratch均选1500，分别1377.949/1434.604/1418.977s，末30loss0.072509/0.072122/0.071518；三头最低召回均0.4、无零召回，实际模块参数变化/正梯度通过。早选步、末步选中及历史HongHu64残差scratch CNN第11类0召回保留，不是query收益。完整acceptance/query尚无，预算81000不改；用户侧198在合法51接受边界登记resources01/amendment.json（8e8004aa6b56da7d4b59b0526cbe5248cc588de76138ee624313e0c1e5f9be414），余4500步，原PID273458为有意暂停T，未见新控制器标记；不按旧status50的滞后字段误报失败，不在本模块接管资源操作或启动全批次审计/query",
-      "remaining": "54/81000完整接受、独立324指标4320召回162精确重载与源/目标输入不变、拟合逐类成本复盘；全部冻结后才同协议query和预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
+      "state": "完整目标51/54已接受（76500/81000更新），最后3例已由198控制器三卡并行续接",
+      "evidence": "Issue184/PR185 Draft；原331生产源码冻结；只读progress为51例（PaviaU18+Xuzhou18+HongHu15），76500更新、306指标/3924逐类召回/153精确重载。新增48–51逐例复盘：HongHu512残差FT选721/1411.158s，loss8.657538→0.065660；HongHu2048三scratch均选1500，分别1377.949/1434.604/1418.977s，末30loss0.072509/0.072122/0.071518；三头最低召回均0.4、无零召回，实际模块参数变化/正梯度通过。早选步、末步选中及历史HongHu64残差scratch CNN第11类0召回保留，不是query收益。完整acceptance/query尚无，81000预算不改。198已在51接受合法边界实际接管：新608030存活，status running/resource_amended_queue；最后3例4500更新预算在GPU1/3/7按first2+continue1498+readonly0及原逐例审计执行，first2三例均exit0，续跑worker608618/608619/608620已核。原273458及wrapper的EXIT137/TOTAL77555/FINISH_UTC2026-11-07T00:47:44Z是登记的协调器计划退役，无训练子进程被杀，不作数值失败。资源源码5db71e82ad3fc36f3cef7046a22c1162be756097干净，resources01/amendment.json哈希8e8004aa6b56da7d4b59b0526cbe5248cc588de76138e624313e0c1e5f9be414、execution-handoff.json已核；原331源码、launch0c447087a9679538e0a792aa72cb033197e743bc959cd096ac2e831e46eafdb1、protected024c947ebd2c4accf45c0d45672b96f09a3e87dd7a1fdf46bc51eac38196798f冻结不改。按case名识别并行完成行，动态卡分配不按旧PID猜测；198独立交接证据/模块报告由资源聊天收尾。vca仍ACTIVE/30分钟，只读值守；新控制器真实completed/failed/终止先PAUSED核验后普通回合承接审计，不接管资源操作或提前query",
+      "remaining": "54/81000完整接受后独立331全批次审计并补充198资源交接审计，核324指标4320召回162精确重载与源/目标输入不变，再186拟合逐类成本复盘、全54冻结同协议query及204预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
       "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md"
     },
     {
@@ -335,6 +335,6 @@
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "matched_ordered_full54_campaign_running",
+  "execution_state": "matched_ordered_full54_resource_amended_queue_running",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用"
 }
