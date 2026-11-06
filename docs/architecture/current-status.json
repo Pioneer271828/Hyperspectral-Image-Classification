@@ -316,6 +316,14 @@
       "remaining": "Issue228/PR229有界12/2+10/完成0及像素/区域槽位参与证据继续；只有中层算子无跨路消息，整网仍共享adapter/Q/融合。同参数不等计算匹配/提速，初始差值gate输入0，不称所有标量正梯度。真实容量/计算匹配/支持K空间传感器/M4组合仍待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，原生CUDA独立优化轨迹等价未接受",
       "report": "research/reports/G4BranchLocalTarget_M6同参数分支内对照与目标组件工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue226 M6同参数分支内目标组件工程进度；报告及g4-branch-local-target-engineering-results.json保留完整证据，连续228不等待确认"
+    },
+    {
+      "id": "G4 M6同参数分支内目标有界训练与严格恢复工程",
+      "state": "六角色有界12与2+10/完成0恢复工程通过，真实效果未测",
+      "evidence": "Issue228/PR229；实际03df02b5c886e19d58b12a43f3a6c3c321642bf3，授权LXC CPU6/6 90.473s、GPU6/6 107.810s、全671项670通过+1既有GPU专用跳过1170.278s，checker411Python113JSON/help。六角色合成12/新实例2+10/完成0、18精确重载/专项，CPU模型optimizer/scheduler/history/RNG/概率/trace逐位。none/gated对208精确，GPU此对照为事前FixedGraphReference；原生启用GPU功能/ordered重载。gated/local同58498参数/初态、local8字节version，明确pixel_slot/region_slot正组梯度和实际变化，三头/NaN/实际算子与版本/完整M6绑定/嵌套原BN回执保护通过。消费226完整receipt并核443共享代码文件不变。真实18配置初始化81文件不变73.214s；独立手写18配置82文件不变19.252s，同干净checkout不同进程，不调用新settings/runtime/factory。NN/BN/优化/query0。数值测试失败0；首版只读汇总转录hash被创建输出前拒绝，从SCP exit0原件修正，不改输入或守卫",
+      "remaining": "按主清单M8/实施12继续独立位置门控融合核，先核论文/作者固定源码许可；仅中层local无跨路，整网共享adapter/Q/融合。同参数不等计算匹配/提速，初始差值gate输入0。CPU恢复GPU登记短测仍先用原GPU重建，失败BN缓冲未承诺回滚。真实容量/计算匹配/支持K空间传感器/M4组合与原生CUDA独立优化轨迹待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，main不合",
+      "report": "research/reports/G4BranchLocalRuntime_M6同参数分支内目标有界训练与恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-07 Issue228 M6同参数分支内目标有界工程进度；完整报告及g4-branch-local-runtime-engineering-results.json留证，连续M8核搭建不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
