@@ -136,6 +136,17 @@ def invoke(paths, out):
 
 
 class MatchedAnalysisTests(unittest.TestCase):
+    def test_preregistered_arithmetic_source_unchanged_from204(self):
+        import ast
+        path = "g4_matched_target_analysis.py"
+        original = subprocess.check_output(["git", "show", "73234283581c536f6e42c49bf0b3326ce3067d60:" + path], text=True)
+        current = (ROOT / path).read_text()
+        def functions(source):
+            return {node.name: ast.get_source_segment(source, node) for node in ast.parse(source).body
+                    if isinstance(node, ast.FunctionDef) and node.name != "export_analysis"}
+        self.assertEqual(functions(original), functions(current))
+        self.assertEqual(len(functions(original)), 8)
+
     def test_resource_review_profile_hash_cost_and_audit_binding(self):
         from g4_matched_target_analysis import RESOURCE_REVIEW_PRODUCER, RESOURCE_REVIEW_POLICY
         with tempfile.TemporaryDirectory() as temp:
