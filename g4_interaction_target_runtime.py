@@ -112,6 +112,10 @@ class InteractionTargetRuntime(NoneSupportTargetRuntime):
         save_tensor_mapping({n: t.detach().cpu().clone() for n, t in model.state_dict().items()}, raw_source_path)
         candidate, receipt = calibrate(model, observation(model, items[self.settings["target"]]),
             expected_binding=self.interaction_binding, source_state_sha256=state_id(model))
+        # The trainer serializes this declared receipt key and rebuilds canonical
+        # metadata. Keep the complete hash-bound legacy receipt inside it; do
+        # not add the trainer's reserved target_bn_calibration key to extras.
+        receipt["legacy_calibration_receipt"] = copy.deepcopy(candidate.training_config["target_bn_calibration"])
         receipt["raw_source_file_sha256"] = file_hash(raw_source_path)
         candidate.training_config[CALIBRATION_KEY] = copy.deepcopy(receipt)
         return candidate, receipt
@@ -139,6 +143,11 @@ class InteractionTargetRuntime(NoneSupportTargetRuntime):
             raise ValueError("Selected M6 raw source file changed")
         raw = torch.load(raw_source_path, map_location="cpu", weights_only=True)
         source = digest({n: tensor_hash(v) for n, v in raw.items()})
+        legacy = receipt.get("legacy_calibration_receipt")
+        if (not isinstance(legacy, dict) or digest(legacy) != receipt["legacy_receipt_sha256"]
+                or ("target_bn_calibration" in meta and meta["target_bn_calibration"] != legacy)):
+            raise ValueError("Nested original calibration receipt identity differs")
+        model.training_config["target_bn_calibration"] = copy.deepcopy(legacy)
         verify_calibrated(model, observation(model, items[self.settings["target"]]),
                           expected_binding=self.interaction_binding, source_state_sha256=source)
         return model

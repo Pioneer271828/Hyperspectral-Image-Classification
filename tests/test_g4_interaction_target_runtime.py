@@ -121,6 +121,12 @@ class InteractionRuntimeTests(unittest.TestCase):
                     model.training_config[CALIBRATION_KEY]["source_state_sha256"] = "0" * 64
                     bad = root / (label + "-bad.pt"); save_model_checkpoint(model, bad)
                     with self.assertRaises(ValueError): b[4].load_selected(bad, moved, raw, device=DEVICE)
+                    if condition == "gated" and method == METHODS[0]:
+                        nested = load_model_checkpoint(split / "primary.pt", device="cpu")
+                        nested.training_config[CALIBRATION_KEY]["legacy_calibration_receipt"]["state_sha256"] = "0" * 64
+                        path = root / "bad-nested-receipt.pt"; save_model_checkpoint(nested, path)
+                        with self.assertRaisesRegex(ValueError, "Nested original calibration receipt"):
+                            b[4].load_selected(path, moved, raw, device=DEVICE)
 
     def test_policy_operator_query_and_nonfinite_message_preupdate_guard(self):
         with tempfile.TemporaryDirectory() as temp:
