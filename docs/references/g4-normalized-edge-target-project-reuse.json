@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "issue": 222,
+  "plan_sections": ["master7.1/7.2", "implementation11/18/19 only-normalization control"],
+  "sources": [
+    {"commit": "331d718567b1a9726934f445665999df972392b1", "path": "model/graph_edge_update.py", "scope": "Reuse exact original positive candidate prior, isolated self-loop and mass floor1e-12; no proposal/query/key"},
+    {"commit": "4ede0984ba78c9e31c5a176c4f8e54c74da3e97e", "path": "g4_interaction_target.py", "scope": "Matching none/gated target factories/operator signatures and original ordered FP32 population BN wrapper pattern"},
+    {"commit": "0827fb3c64b3e7d473c4443183288c25a3d2fdea", "report": "research/reports/G4EdgeTarget_完整源M7二因素初始化与BN工程验收_20261106.md", "scope": "Read M7 controls and retained need for only-normalization comparison"}
+  ],
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "license_scope": "Internal reuse of existing project implementation; no new external source/license grant claimed",
+  "checkpoint_contract": "Enabled control has mandatory8-byte version buffer. Generic old loader rejects it; explicit normalization-aware loader is required. Original export kwargs describe learned M7 off, separate binding declares normalization.",
+  "limits": ["No new trainable control parameters, but matching gated base still adds58498 M6 target parameters", "Tiny positive row mass uses original1e-12 floor and may sum below1; no silent numeric repair", "No learned M7 scoring, remote candidates or pruning", "No real NN/BN/updates/query until184 complete acceptance/audit/review/freeze-query/204analysis", "Component only; bounded runtime, full effect and same-capacity/spatial/support experiments remain"]
+}
