@@ -29,45 +29,47 @@ CONTROLS = (HEAD_ONLY, ADAPTER_HEADS)
 HEAD_PREFIXES = ("heads.", "hgnn_heads.", "cnn_heads.")
 
 
-def contract(method):
+def contract(method, *, updates=12):
     if method not in CONTROLS:
         raise ValueError("Explicit head-only or VCA-adapter/heads control required")
+    if type(updates) is not int or updates not in (12, 1500):
+        raise ValueError("Declared short or full update budget required")
     return {"method": method, "trainable_prefixes": list(HEAD_PREFIXES) +
         (["backbone.adapter."] if method == ADAPTER_HEADS else []),
         "backbone_training_mode": "eval_with_gradients_for_declared_parameters",
         "initial_bn": "ordered_unlabeled_target_scene_once_per_initialization",
         "candidate_bn": "unchanged_frozen_backbone_rebind" if method == HEAD_ONLY else "ordered_target_recalibration",
         "frozen_bn_during_optimizer_updates": True, "graph_and_cnn_and_m4_parameters_frozen": True,
-        "optimizer_updates": 12, "query_labels_accessed": False}
+        "optimizer_updates": updates, "query_labels_accessed": False}
 
 
 def allowed(name, method):
     return name.startswith(tuple(contract(method)["trainable_prefixes"]))
 
 
-def apply_parameters(model, method):
+def apply_parameters(model, method, *, updates=12):
     for name, parameter in model.named_parameters():
         parameter.requires_grad_(allowed(name, method))
     model.eval()
-    return parameter_binding(model, method)
+    return parameter_binding(model, method, updates=updates)
 
 
 def frozen_hash(model, method):
     return digest({n: tensor_hash(p) for n, p in model.named_parameters() if not allowed(n, method)})
 
 
-def parameter_binding(model, method):
+def parameter_binding(model, method, *, updates=12):
     if any(p.requires_grad != allowed(n, method) for n, p in model.named_parameters()):
         raise ValueError("Trainable parameter permission differs")
     names = {n: p.numel() for n, p in model.named_parameters() if allowed(n, method)}
     if not names or (method == ADAPTER_HEADS and not any(n.startswith("backbone.adapter.") for n in names)):
         raise ValueError("Declared trainable parameters missing")
-    return {"policy": contract(method), "trainable_parameters": names, "trainable_elements": sum(names.values()),
+    return {"policy": contract(method, updates=updates), "trainable_parameters": names, "trainable_elements": sum(names.values()),
             "frozen_parameter_sha256": frozen_hash(model, method)}
 
 
-def initialize(target, method, mode, *, model_seed, head_seed, source_spec, device="cpu"):
-    contract(method)
+def initialize(target, method, mode, *, model_seed, head_seed, source_spec, device="cpu", updates=12):
+    policy = contract(method, updates=updates)
     if mode not in bounded.MODES or not source_spec:
         raise ValueError("Accepted full source and explicit architecture required")
     kwargs = dict(model_seed=model_seed, head_seed=head_seed, source_spec=source_spec, device=device)
@@ -78,9 +80,9 @@ def initialize(target, method, mode, *, model_seed, head_seed, source_spec, devi
     record = copy.deepcopy(record)
     record.update(method=method, full_source_initializer_method=METHODS[1],
                   head_only_requires_target_bn_calibration=method == HEAD_ONLY,
-                  light_target_parameter_policy=contract(method))
+                  light_target_parameter_policy=policy)
     model.training_config = {"target_initialization": record}
-    binding = apply_parameters(model, method)
+    binding = apply_parameters(model, method, updates=updates)
     return model, record, binding
 
 
@@ -93,6 +95,9 @@ def settings(target, method, mode, *, model_seed, support_seed, per_class, bindi
 
 
 class LightTargetRuntime(TargetRuntime):
+    def _parameter_binding(self, model):
+        return parameter_binding(model, self.settings["method"], updates=self.settings["optimizer_steps"])
+
     def validate(self, options):
         expected = settings(options["target"], options["method"], options["config"]["model"]["region_residual_mode"],
             model_seed=options["model_seed"], support_seed=options["support_seed"], per_class=options["support_per_class"],
@@ -133,9 +138,12 @@ class LightTargetRuntime(TargetRuntime):
         if counts != {target: DATASETS[target][2]}:
             raise ValueError("Target class counts differ")
         start = time.perf_counter()
-        model, _, self.parameter_contract = initialize(target, method, config.model.region_residual_mode,
+        model, record, self.parameter_contract = initialize(target, method, config.model.region_residual_mode,
             model_seed=self.settings["model_seed"], head_seed=self.settings["head_seed"],
-            source_spec=self.source_spec, device=config.device)
+            source_spec=self.source_spec, device=config.device, updates=self.settings["optimizer_steps"])
+        expected_initial = self.settings.get("expected_initial_state_sha256")
+        if expected_initial is not None and record["initial_state_sha256"] != expected_initial:
+            raise ValueError("Light target initial state differs from the matched full-finetune case")
         self._cost("full_source_initialization", start)
         start = time.perf_counter()
         with OrderedValidation():
@@ -145,12 +153,12 @@ class LightTargetRuntime(TargetRuntime):
         self._cost("initial_ordered_target_calibration", start)
         self.initialization = copy.deepcopy(model.training_config["target_initialization"])
         self.optimizer_buffers = digest({n: tensor_hash(v) for n, v in model.named_buffers()})
-        if parameter_binding(model, method) != self.parameter_contract:
+        if self._parameter_binding(model) != self.parameter_contract:
             raise ValueError("Calibration changed parameter permissions or values")
         return model
 
     def optimizer(self, model, config):
-        binding = parameter_binding(model, self.settings["method"])
+        binding = self._parameter_binding(model)
         if binding != self.parameter_contract:
             raise ValueError("Optimizer parameter contract changed")
         groups = []
@@ -167,7 +175,7 @@ class LightTargetRuntime(TargetRuntime):
     def train_step_at(self, cursor, model, optimizer, name, item, config):
         start = time.perf_counter()
         method = self.settings["method"]
-        if parameter_binding(model, method) != self.parameter_contract:
+        if self._parameter_binding(model) != self.parameter_contract:
             raise ValueError("Frozen parameter contract changed before update")
         if digest({n: tensor_hash(v) for n, v in model.named_buffers()}) != self.optimizer_buffers:
             raise ValueError("Frozen optimizer-phase buffers changed before update")
@@ -194,7 +202,7 @@ class LightTargetRuntime(TargetRuntime):
             row = {"dataset": name, "loss": {k: float(v.detach()) for k, v in terms.items()},
                    "gradient_norms": grad, "learning_rates": [g["lr"] for g in optimizer.param_groups]}
         if (any(p.grad is not None for n, p in model.named_parameters() if not allowed(n, method))
-                or parameter_binding(model, method) != self.parameter_contract
+                or self._parameter_binding(model) != self.parameter_contract
                 or any(not torch.equal(v, buffers[n]) for n, v in model.named_buffers())):
             raise ValueError("Optimizer changed frozen parameters, buffers or gradients")
         row.update(frozen_parameters_unchanged=True, frozen_buffers_unchanged=True,
@@ -220,7 +228,7 @@ class LightTargetRuntime(TargetRuntime):
         return value
 
     def checkpoint_metadata(self, model):
-        if parameter_binding(model, self.settings["method"]) != self.parameter_contract:
+        if self._parameter_binding(model) != self.parameter_contract:
             raise ValueError("Checkpoint parameter contract changed")
         return {**super().checkpoint_metadata(model), "light_target_contract": self.parameter_contract,
                 "support_context_binding": self.settings["support_context_binding"],
@@ -229,7 +237,7 @@ class LightTargetRuntime(TargetRuntime):
     def load_selected(self, path, items, raw_source_path, *, device="cpu"):
         self.validate_inputs(items)
         model = super().load_selected(path, items, raw_source_path, device=device)
-        actual = apply_parameters(model, self.settings["method"])
+        actual = apply_parameters(model, self.settings["method"], updates=self.settings["optimizer_steps"])
         meta = model.training_config
         if (actual != self.parameter_contract or meta.get("light_target_contract") != actual
                 or meta.get("support_context_binding") != self.settings["support_context_binding"]
