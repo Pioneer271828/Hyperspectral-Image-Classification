@@ -132,7 +132,9 @@ class NormalizedEdgeTargetRuntime(NoneSupportTargetRuntime):
         sidecar = Path(str(path) + ".json")
         pins = {str(p): file_hash(p) for p in (path, sidecar)}
         metadata = read(sidecar); meta = metadata["training_config"]
-        model = self.build_model(replace(ResearchConfig.from_dict(self.settings["config"]), device="cpu"),
+        # Initialization metadata records the registered training device. Rebuild
+        # that identity before moving to the explicitly requested restore device.
+        model = self.build_model(ResearchConfig.from_dict(self.settings["config"]),
                                  {self.settings["target"]: DATASETS[self.settings["target"]][2]})
         if {k: v for k, v in metadata.items() if k != "training_config"} != model.export_config():
             raise ValueError("Selected normalization-aware architecture differs")
