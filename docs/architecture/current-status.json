@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-06",
+  "as_of": "2026-11-07",
   "issue": 167,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
@@ -324,6 +324,14 @@
       "remaining": "按主清单M8/实施12继续独立位置门控融合核，先核论文/作者固定源码许可；仅中层local无跨路，整网共享adapter/Q/融合。同参数不等计算匹配/提速，初始差值gate输入0。CPU恢复GPU登记短测仍先用原GPU重建，失败BN缓冲未承诺回滚。真实容量/计算匹配/支持K空间传感器/M4组合与原生CUDA独立优化轨迹待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，main不合",
       "report": "research/reports/G4BranchLocalRuntime_M6同参数分支内目标有界训练与恢复工程验收_20261106.md",
       "chat_report": "本聊天2026-11-07 Issue228 M6同参数分支内目标有界工程进度；完整报告及g4-branch-local-runtime-engineering-results.json留证，连续M8核搭建不等待确认"
+    },
+    {
+      "id": "M8默认关闭位置标量门控融合核工程",
+      "state": "独立核与原三头/掩码损失合成工程通过，目标整网及真实效果未测",
+      "evidence": "Issue230/PR231；实际a6ef1f93adbbf68b62c24e4fd9ae78834f311a95，授权LXC CPU6/6 1.073s、GPU6/6 2.335s、分支全533/533 214.298s跳过0，checker322Python113JSON。默认0参数精确旧固定融合及输入梯度，启用64维129参数/8字节version/构造无RNG；独立NumPyFP64公式/全输入权重偏置导数1e-12及有限差分、凸界/交换/置换分块/空/有限性拒绝、严格配对weights_only重载无部分覆盖通过。原三头logits/prob与13掩码损失、合成3步门和头参数实际变化、无标签行/零aux梯度通过。作者1702.01992v1原方法/结果及源码95226b0d265743e7a9330549bc35b95fcb60e1dd MIT已读，独立适配无外部源码复制/执行/依赖。原model/config/损失/训练器不改；真实输入/初始化/NN/BN/更新/query0。首7cb CPU6pass1.047s后checker拒绝新model路径，改顶层伴随文件后通过，未改守卫，旧clone/log保留",
+      "remaining": "Issue232完整none源目标组件继续，真实配置证明须先消费230完整receipt；独立核extra_state非直接兼容原G4张量state_id，须显式适配。不是完整GMU复现/HSI收益/物理可靠度；启用初态仅数值接近fixed。同预算容量、速度、原生CUDA独立轨迹、目标整网BN/runtime、B0/R/F/R+F及支持K空间传感器实际对照仍待184全接受→331审计→186复盘→原331全冻结query→204结论，main不合",
+      "report": "research/reports/M8PositionFusion_默认关闭位置标量门控融合核工程验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue230位置标量门控融合核工程进度；完整报告与m8-position-fusion-engineering-results.json留证，连续Issue232不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
