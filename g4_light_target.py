@@ -99,6 +99,8 @@ class LightTargetRuntime(TargetRuntime):
         return parameter_binding(model, self.settings["method"], updates=self.settings["optimizer_steps"])
 
     def validate(self, options):
+        if options.get("profile") != "engineering" or options.get("optimizer_steps") != 12:
+            raise ValueError("The short light target runtime requires its engineering budget")
         expected = settings(options["target"], options["method"], options["config"]["model"]["region_residual_mode"],
             model_seed=options["model_seed"], support_seed=options["support_seed"], per_class=options["support_per_class"],
             binding=options["support_context_binding"], source_spec=self.source_spec, device=options["config"]["device"])
