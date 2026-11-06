@@ -145,7 +145,7 @@ class MatchedAnalysisTests(unittest.TestCase):
             return {node.name: ast.get_source_segment(source, node) for node in ast.parse(source).body
                     if isinstance(node, ast.FunctionDef) and node.name != "export_analysis"}
         self.assertEqual(functions(original), functions(current))
-        self.assertEqual(len(functions(original)), 8)
+        self.assertEqual(set(functions(original)), {"_hash", "_stats", "validate_rows", "_value", "contrast", "analyze_rows", "report_markdown"})
 
     def test_resource_review_profile_hash_cost_and_audit_binding(self):
         from g4_matched_target_analysis import RESOURCE_REVIEW_PRODUCER, RESOURCE_REVIEW_POLICY
