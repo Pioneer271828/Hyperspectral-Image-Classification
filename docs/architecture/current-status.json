@@ -154,7 +154,7 @@
       "id": "G4完整54目标配对实验",
       "state": "完整实验验收通过：54模型81000更新、独立审计/资源终验/复盘、全部冻结query及预登记分析完成；主要与四次要收益未通过",
       "evidence": "Issue184/PR185；实际331d718567b1a9726934f445665999df972392b1，51单卡+3三卡完整81000，324 train/val头记录4320召回162精确重载/完成恢复0；原331独立14189文件输入不变1443.803s、5dcc资源终验14217/51旧行5763旧文件/7930输入/12阶段+1零等待70.347s。2df真实复盘54PNG/54CSV/18组215.471s、38末步/42末段NLL仍改善、HongHu64残差scratch CNN类11零召回。原331全54freeze14036文件、同协议query54模型162头1372.674s、训练更新0，bdb原判据分析14202输入不变121.003s。主要宏OA差+0.330636pp（样本SD1.613334），seed差-1.086878/-0.007431/+2.086215pp，仅1/3正，HongHu类8均召回-3.053561pp；AA/HongHuOA门槛通过，种子/逐类未过，四次要均未过。全部证据/完整SHA/命令和失败见报告及full-results/full-analysis-results；资源只读修订PR235/236/237，vca保持PAUSED，main不合并。",
-      "remaining": "继续Issue234/Draft PR238 M8位置门控有界训练与恢复工程，CPU7/GPU7通过，全回归670项669通过和1项既有GPU专用跳过；真实12组合与独立手工核验待完成。支持seeds512/2048、K1/5、空间/传感器/波长质量、head-only/light-module、M4+门控四组和两计划其余机制仍必测；后续E0消费真实新分析身份须独立登记兼容。",
+      "remaining": "234位置门控工程已通过。继续E0-R冻结表征入口兼容184实际分析版本。支持seeds512/2048、K1/5、空间/传感器/波长质量、head-only/light-module和M4+门控完整四组仍待。",
       "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md",
       "chat_report": "本聊天2026-11-07 Issue184完整实验交付：54/81000、审计/复盘/冻结query与负收益，完整报告和结果JSON保留；继续Issue234，不等待确认。"
     },
@@ -349,9 +349,17 @@
       "remaining": "Issue234有界12/2+10/完成0及显式门梯度/参数变化trace、完整原M8绑定/嵌套BN恢复继续；真实配置须先消费232完整receipt。组件不代表完整GMU/目标训练/容量/速度/精度或物理可靠度；启用初态只数值接近fixed。真实B0/R/F/R+F及支持K/空间/传感器/M4组合、原生CUDA独立优化轨迹仍待184全接受→331审计+198资源终验→186真实复盘→原331全冻结query→204结论，main不合",
       "report": "research/reports/G4PositionFusionTarget_M8位置门控末端融合完整源目标组件工程验收_20261107.md",
       "chat_report": "本聊天2026-11-07 Issue232 M8位置门控末端融合目标组件工程进度；完整报告和g4-position-fusion-target-engineering-results.json留证，连续Issue234不等待确认"
+    },
+    {
+      "id": "G4 M8位置门控有界运行时",
+      "state": "有界训练、严格恢复及真实配置组合工程通过",
+      "evidence": "Issue234/PR238。tested c78696ac494030871ac68676a956459afb88fad3。CPU7/7，GPU7/7，完整669/670含既有跳过1项。真实12组合/独立12复核，99/100保护文件不变，真实NN/BN/优化/query0。详见验收报告和回执。",
+      "remaining": "E0-R实际分析身份兼容及冻结诊断。真实B0/R/F/R+F、配对收益、逐类和受控成本保留待办。",
+      "report": "research/reports/G4PositionFusionRuntime_M8位置门控有界训练与恢复工程验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue234工程验收简报。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "issue184_full54_experiment_accepted_primary_negative_issue234_real_composition_pending",
+  "execution_state": "issue234_bounded_runtime_accepted_e0_frozen_analysis_binding_next",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用"
 }
