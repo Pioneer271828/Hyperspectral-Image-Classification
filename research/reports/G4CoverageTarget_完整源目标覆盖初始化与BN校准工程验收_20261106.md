@@ -1,6 +1,6 @@
 # E1完整源目标初始化与BN校准组件工程验收
 
-Issue #199 / Draft PR #201；开发分支`codex/issue-199-coverage-target`，工作树`F:/E2E_VCA_worktrees/issue-199-coverage-target`。实际测试/生产组件SHA **`42a2f463ecdb4223d78537c4178a28191a50ad5e`**。本项完成初始化和校准推理组件，**不等于E1目标训练、完整实验或真实收益已完成**。
+Issue #199 / PR #201；开发分支`codex/issue-199-coverage-target`，工作树`F:/E2E_VCA_worktrees/issue-199-coverage-target`。实际测试/生产组件SHA **`42a2f463ecdb4223d78537c4178a28191a50ad5e`**。本项完成初始化和校准推理组件，**不等于E1目标训练、完整实验或真实收益已完成**。
 
 ## 对应计划、用途和实现
 
@@ -50,7 +50,7 @@ producer为`runs/g4-coverage-target-issue199-preflight01/receipt.json`，SHA `77
 
 首版`09884202808e683a76cff7cb55d5c556a58bc63d` CPU6项为4通过、1失败、1错误，35.047s：断言误写潜在K64而真实128；FP64 oracle使用稠密邻接触发原图缓存Float/Double不符。42版本使用实际K，FP64参考显式稀疏图，并提前拒绝不支持的FP64邻接，没有修改原骨干。原日志`runs/issue199-cpu01.log`保留。外部真实审计脚本01因`else194`语法错误，在运行前拒绝，未读输入或写receipt；02修正，原脚本/日志保留。
 
-GitHub TLS/连接器传输故障、初次REST路径404及超时不冒充成功；不确定POST后先GET检查，未重复创建PR。42提交最终已推送并核远程完整SHA，PR201保持Draft直至本组件交付收尾。原生CUDA独立优化轨迹等价仍不在已通过范围，196原失败继续保留。
+GitHub TLS/连接器传输故障、初次REST路径404及超时不冒充成功；不确定POST后先GET检查，未重复创建PR。42提交最终已推送并核远程完整SHA，PR201保持Draft直至本组件交付收尾。一次SCP投影取回中断，e614中间文档提交未带新投影，另提交补齐后才核验最终版本；不将该中间快照写成通过。原生CUDA独立优化轨迹等价仍不在已通过范围，196原失败继续保留。
 
 当前仍是少样本整景传导式上下文。三组中心仍approximate、FWHM/SRF缺失；400–2500nm是原全局参考，不是重新认证仪器范围或逐像素可靠性。空间隔离、传感器家族排除、更多模型/支持集种子与真实同条件结果仍需计划后续实验。
 
