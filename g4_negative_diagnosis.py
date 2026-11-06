@@ -27,7 +27,7 @@ INPUTS = {
     "prepared": ("base97a-honghu-issue97-20261103-prepared01/manifest.json",
                  "414084cb22aef1c1866bb6512fa1f99c4397425de625c6fc2608ce0fb3eb1b6b"),
     "contexts": ("g4-support-context-issue188-preflight01/manifest.json",
-                 "57d13699414b1c041c5332d834a392e7d3af499684a56886d75e76c33c87d66c6"),
+                 "57d13699414b1c041c5332d834a392e7d3af499684a56886d75e76c3c87d66c6"),
 }
 QUANTILES = (.01, .05, .5, .95, .99)
 
@@ -262,6 +262,8 @@ def run(runs, out, expected_commit):
         observation = torch.load(observation_files["observation"], map_location="cpu", weights_only=True)
         observation_record = json.loads(Path(observation_files["record"]).read_text())
         if (set(observation) != OBS_KEYS | {"name", "height", "width", "bands", "class_num"}
+                or observation_record["graph_fit_labels"] != 0
+                or observation_record["target"] != target
                 or _item_fingerprint(observation) != observation_record["prepared_fields"]):
             raise ValueError("Label-free observation fingerprint differs")
         overlay = torch.load(overlay_path, map_location="cpu", weights_only=True)

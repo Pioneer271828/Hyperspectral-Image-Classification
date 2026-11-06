@@ -1,12 +1,20 @@
 """Numeric edge cases for the post hoc spectral and Q diagnostics."""
 import unittest
+import json
+from pathlib import Path
 import numpy as np
 import torch
 
-from g4_negative_diagnosis import graph_statistics, spectral_statistics, spectrum
+from g4_negative_diagnosis import INPUTS, graph_statistics, spectral_statistics, spectrum
 
 
 class NegativeDiagnosisTests(unittest.TestCase):
+    def test_accepted_context_pin_and_hash_format(self):
+        for _, sha in INPUTS.values():
+            self.assertRegex(sha, r"^[0-9a-f]{64}$")
+        accepted = json.loads((Path(__file__).resolve().parents[1] / "docs/architecture/g4-support-context-engineering-results.json").read_text())
+        self.assertEqual(INPUTS["contexts"][1], accepted["lxc"]["manifest_sha256"])
+
     def test_known_spectra(self):
         self.assertAlmostEqual(spectrum(np.eye(4))["participation_dimension"], 4)
         one = spectrum(np.ones((4, 4)))
