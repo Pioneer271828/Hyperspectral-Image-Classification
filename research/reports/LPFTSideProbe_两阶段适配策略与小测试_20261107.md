@@ -1,0 +1,42 @@
+# Issue250：隔离LP-FT两阶段策略候选与小测试
+
+对应主清单P4 §10.3–10.4及实施计划§19。用户在独立侧聊授权优化与小测试，并明确要求不干扰主对话分支。本候选基于已交付 `f1bb584a3430088438500a3473aedda40e253447`，分支 `codex/side-lpft-probe-20261107`，工作树 `F:/E2E_VCA_worktrees/side-lpft-probe-20261107`。主规划 `HIC项目搭建与测试2` 已收到分工与Issue250通知。
+
+## 问题、假设和实现
+
+Issue184完整54模型支持点已拟合，HongHu残差全量微调相对从头约下降3.10pp。新随机头与源骨干同时更新可能造成有用特征偏移；该假设尚未被因果对照确认。本候选先训练新头，再用小学习率更新骨干，供后续与仅头、适配器加头、原全量微调进行同预算比较。
+
+新增 `lpft_probe` 包，未接入任何已有训练器、CLI、配置或检查点路径。`LPFTPlan` 显式绑定总预算、头训练步数、两组学习率和weight decay。头训练预算计入总预算，两个阶段必须非空；骨干学习率不得大于头学习率。模型只允许 `backbone.` 和 `heads.` / `hgnn_heads.` / `cnn_heads.` 参数，拒绝未知参数、别名共享和缺失分组。
+
+`start_phase` 只允许在0和probe_steps边界调用。阶段切换保留所有模型张量，重建Adam并明确清空全部优化器历史。两阶段均设整网eval，BN统计及dropout行为冻结；BN仿射参数只在第二阶段训练。这是本项目的独立候选合同，不是声称原论文或原G4全量微调采用同一BN策略。调用者必须保持该模式、维护实际更新游标并弃用旧优化器。函数本身不是防重放、故障恢复或完整运行时。
+
+`phase_binding` 为策略、精确参数名/形状/dtype和训练权限生成指纹；不认证源权重、数据、实际执行步数或完整检查点。生产接入仍需主规划另行验收。
+
+## 文献与代码复用边界
+
+- 原论文：Kumar等，*Fine-Tuning can Distort Pretrained Features and Underperform Out-of-Distribution*，arXiv:2202.10054v1，2022-02-21，§4.2 LP-FT；https://arxiv.org/abs/2202.10054v1 。已读取原论文HTML的摘要、方法动机和理论设定，§4.2完整正文提取受间歇TLS失败影响，仍需补核；不冒充全文核验完成。
+- 论文认为在较好预训练特征和较大分布差异下，同时更新随机头与特征可能损伤OOD表现；并非所有任务上微调都更差。本文不将其图像基准提升幅度外推为HSI收益。
+- 原文HTML可见fastai相关示例链接，但不是本论文作者代码官方性证据。按作者名尝试查询 `AnanyaKumar/transfer_learning`，API持续TLS失败；作者主页候选返回404。因此作者仓库、固定SHA和实际许可范围仍为 **unconfirmed**，不声称仓库不存在或许可允许复用。
+- 当前组件完全独立实现，无上游源文件复制、模型下载、依赖安装或外部训练协议引入。仅使用项目已有PyTorch。
+
+## 小测试范围与当前执行状态
+
+新增 `tests/test_lpft_probe.py` 共10项：非法预算/学习率、游标与总预算、冻结骨干/BN和三头实际变化、阶段切换保留权重/清空Adam/分组学习率、12步对独立手写策略精确一致、边界序列化重启一致、非边界无副作用拒绝、未知/别名参数拒绝、只读策略指纹、现有G4网络6步合成支持点训练。
+
+合成边界恢复只验证两个阶段之间重启，阶段内部恢复、RNG/调度/生产接受和数据身份绑定未实现。最后一项用现有G4构造器及合成标签，未使用真实源权重或真实场景，因此不能称真实迁移测试。无GPU、真实GT、query访问或长训练。
+
+截至候选提交：本侧聊尚未执行Python测试。独立SSH连接LXC被拒绝（publickey,password），备用rmvision连接在banner阶段超时。没有读取主对话认证材料或复用其活动会话。Git空白检查可在Windows执行；测试须在授权Linux容器独立checkout运行，不能把已编写用例当作通过。
+
+建议主规划使用独立 `checkouts/side-lpft-issue250-probe01`，认证本分支实际完整SHA并保持干净，产物放checkout外，使用既有CPU环境：
+
+```bash
+export CUDA_VISIBLE_DEVICES= PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:tests
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+/home/lbx/hsi-pioneer271828/envs/hsi/bin/python -m unittest discover -s tests -p test_lpft_probe.py -v
+```
+
+主线程负责Issue249既有双卡批次、半小时值守和current-status.json；本候选不改动这些资源。正式训练须另行登记源身份、支持集/预算、BN策略对照、验证频次和选模，先补完整恢复再执行。比较BN冻结与原校准策略时应单独控制，不能将复合改变全部归因于LP-FT。真实收益要用独立支持种子/空间评价确认，保留184负结果。
+
+## 交付边界
+
+状态：候选实现及测试代码完成，远程执行和真实效果均待确认。允许变更仅为 `lpft_probe/`、`tests/test_lpft_probe.py` 和本报告。没有修改主入口、main、已有模型/配置/CLI、current-status.json或主计划；不合并其他分支。主规划收到固定提交后可独立评审和测试，再决定串行接入。临时侧聊不创建自身定时任务，长训练及值守由主聊天登记。
