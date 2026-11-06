@@ -119,6 +119,9 @@ def _metadata(model, metadata):
 def forward_observation(model, observation, metadata, *, diagnostics=False):
     """Only label-free actual observation fields; metadata cannot be upgraded."""
     observation_id(observation)
+    if observation["net_input"].dtype == torch.float64 and (
+            observation["net_input"].device.type != "cpu" or observation["A"].layout != torch.sparse_coo):
+        raise ValueError("CPUFP64 reference requires an explicitly sparse adjacency")
     binding = _metadata(model, metadata)
     item = {**observation, "bands": len(metadata.band_ids)}
     _metadata_check(item, metadata)

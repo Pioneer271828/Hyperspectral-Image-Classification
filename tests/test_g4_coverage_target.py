@@ -110,7 +110,7 @@ class CoverageTargetTests(unittest.TestCase):
                     for x, y in zip(expected, actual[:3]): torch.testing.assert_close(x, y, rtol=0, atol=0)
                     info = actual[3]["coverage"]
                     self.assertEqual(info["metadata_hash"], selected.fingerprint)
-                    self.assertEqual(info["features"].shape, (64, 9))
+                    self.assertEqual(info["features"].shape, (model.backbone.adapter.latent_channels, 9))
                     torch.testing.assert_close(current["net_input"][..., -2:], data["net_input"][..., -2:], rtol=0, atol=0)
                     with self.assertRaises(ValueError): forward_observation(model, current, replace(selected, wavelength_quality="verified"))
             # Index-only is an explicit fallback, even with nonzero biases.
@@ -123,6 +123,17 @@ class CoverageTargetTests(unittest.TestCase):
                 actual = forward_observation(model, indexed, index, diagnostics=True)
             self.assertEqual(actual[3]["coverage"]["fallback_reason"], "index_only_metadata")
             self.assertEqual(actual[3]["coverage"]["usable_anchors"], 0)
+            outside = replace(meta, source_id="no-support-fixture",
+                wavelengths=tuple(torch.linspace(3000, 3200, 7).tolist()))
+            outside_data = {**data, "wavelengths": torch.tensor(outside.wavelengths, dtype=data["net_input"].dtype, device=DEVICE)}
+            off, _ = create(outside, "none"); on, _ = create(outside)
+            with torch.no_grad(), OrderedValidation():
+                on.backbone.coverage_modulation.generator[2].bias.fill_(.7)
+                expected = forward_observation(off, outside_data, outside)
+                actual = forward_observation(on, outside_data, outside, diagnostics=True)
+            self.assertEqual(actual[3]["coverage"]["fallback_reason"], "no_in_reference_bands")
+            self.assertEqual(actual[3]["coverage"]["usable_anchors"], 0)
+            for x, y in zip(expected, actual[:3]): torch.testing.assert_close(x, y, rtol=0, atol=0)
 
     def test_all_equal_capacity_conditions_have_gradients_and_actual_updates(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -168,6 +179,9 @@ class CoverageTargetTests(unittest.TestCase):
             # dtype roundtrip claim for the legacy FP32 checkpoint constructor.
             model, binding = create(meta, device="cpu"); model.double()
             double = {k: v.cpu().double() if torch.is_tensor(v) else v for k, v in data.items()}
+            with self.assertRaisesRegex(ValueError, "sparse adjacency"):
+                forward_observation(model, double, meta)
+            double["A"] = double["A"].to_sparse().coalesce()
             oracle = copy.deepcopy(model)
             for module in oracle.modules():
                 if isinstance(module, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)):
