@@ -244,6 +244,14 @@
       "remaining": "Issue210下一既有M7候选边重加权与两套二因素初始化/BN工程已登记。真实完整训练与支持/K/同容量/空间/传感器/M4组合等仍须184完整54接受、独立审计、186真实复盘、原331全冻结query和204预登记结论后另登记",
       "report": "research/reports/G4InteractionRuntime_M6目标有界训练与恢复工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue208 M6目标有界训练/恢复工程进度汇报；完整报告及g4-interaction-runtime-engineering-results.json保留证据，交付后继续210不等待确认"
+    },
+    {
+      "id": "G4 M7完整源目标二因素初始化与BN组件工程",
+      "state": "六条件初始化/实际边算子/总体BN与重载组件工程通过，真实效果未测",
+      "evidence": "Issue210/PR211；实际0827fb3c64b3e7d473c4443183288c25a3d2fdea，授权LXC CPU8/8 37.979s、GPU8/8 40.475s、全633项632通过+1既有GPU专用跳过873.291s，checker393Python97JSON/help。none/gated/graph/gated_graph/joint/gated_joint两套二因素12角色、新增参数0/58498/8448/66946/16896/75394、共有状态/fresh头域/RNG、稀疏支持/行和/孤立回退、独立小张量FP64边公式/梯度及原调度后消息输入通过；10启用角色各合成3步，消息和边各自正梯度/实际变化；多候选图BN保护及36精确重载/专项。真实36初始化与206对应状态一致，79文件不变23.104s；独立旧none工厂6基础+原构造器重建36状态，80文件不变3.760s，真实NN/BN/优化/query0。首版identity图正确零梯度与错误正梯度测试冲突保留，最终用多候选合成参与/BN；assembler旧目录前缀错误保留，源码/真实图/阈值未改",
+      "remaining": "212有界12步/恢复/消息边分项参与工程已登记推进；本项不是M6/M7源预训练或真实完整实验。仅归一化/同容量/支持K种子/空间传感器/M4组合及其余计划待184完整54接受、独立审计、186真实复盘、原331全冻结query和204预登记结论后另登记；原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4EdgeTarget_完整源M7二因素初始化与BN工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue210 M7二因素初始化/BN组件工程进度；完整报告及g4-edge-target-engineering-results.json保留证据，交付后连续212不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
