@@ -357,9 +357,17 @@
       "remaining": "E0-R实际分析身份兼容及冻结诊断。真实B0/R/F/R+F、配对收益、逐类和受控成本保留待办。",
       "report": "research/reports/G4PositionFusionRuntime_M8位置门控有界训练与恢复工程验收_20261107.md",
       "chat_report": "本聊天2026-11-07 Issue234工程验收简报。"
+    },
+    {
+      "id": "E0-R资源兼容分析身份接入",
+      "state": "工程验收通过",
+      "evidence": "Issue239/PR240，tested a81d9ca88c472ce4939bd4132d337fca44f8d5fa。CPU4/4 20.130s、checker405Python107JSON。实际184全54边界及一个case身份认证，14205保护文件通过355.069s，模型前向/权重反序列化/训练更新/query释放0。",
+      "remaining": "全批次表征采集工程调度、真实54表征统计与诊断复盘。",
+      "report": "research/reports/E0FrozenBinding_资源兼容分析身份接入工程验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue239入口工程验收简报。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "issue234_bounded_runtime_accepted_e0_frozen_analysis_binding_next",
+  "execution_state": "e0_resource_analysis_binding_accepted_batch_capture_engineering_next",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用"
 }
