@@ -5,8 +5,10 @@ The context catalogue stays execution-disabled and never releases query labels.
 """
 import argparse
 import copy
+from contextlib import redirect_stdout
 import json
 from pathlib import Path
+import sys
 
 from g4_support_context import POLICY as CONTEXT_POLICY, check_files, context_name, load_context, read
 from joint_baseline import NAMES, _item_fingerprint
@@ -53,6 +55,9 @@ def settings(target, method, mode, *, model_seed, support_seed, per_class, bindi
 
 class _BoundContext:
     def validate(self, options):
+        mode = options["config"]["model"]["region_residual_mode"]
+        if (mode == "none") != isinstance(self, NoneFullSourceTargetRuntime):
+            raise ValueError("Adapter class and explicit architecture mode differ")
         expected = settings(options["target"], options["method"], options["config"]["model"]["region_residual_mode"],
             model_seed=options["model_seed"], support_seed=options["support_seed"],
             per_class=options["support_per_class"], binding=options["support_context_binding"],
@@ -166,8 +171,9 @@ def main(argv=None):
         target=args.target, method=args.method, mode=args.mode, model_seed=args.model_seed,
         support_seed=args.support_seed, per_class=args.per_class,
         source_spec=read(args.source_spec) if args.source_spec else None, source_files=pins, device=args.device)
-    result = run_training(options, items, args.out, provenance, source, runtime_adapter=runtime,
-        finish_guard=guard, resume=args.resume, stop_after=args.stop_after, device=args.device)
+    with redirect_stdout(sys.stderr):
+        result = run_training(options, items, args.out, provenance, source, runtime_adapter=runtime,
+            finish_guard=guard, resume=args.resume, stop_after=args.stop_after, device=args.device)
     print(json.dumps(result, allow_nan=False))
 
 
