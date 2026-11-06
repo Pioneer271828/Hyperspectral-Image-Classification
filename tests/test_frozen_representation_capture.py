@@ -60,19 +60,20 @@ def synthetic_boundary(root):
         "short_acceptances": {"none": {"root": str(root / "short-none")}, "active": {"root": str(root / "short-active")}}})
     frozen.update(producer=producer, code=producer, launch_sha256=file_hash(launch))
     frozen["protected_files"].update({str(p): file_hash(p) for p in (*paths, launch)})
-    freeze = root / "freeze.json"; write_json(freeze, frozen)
+    (root / "frozen").mkdir(); (root / "analysis").mkdir()
+    freeze = root / "frozen" / "freeze.json"; write_json(freeze, frozen)
     current = code_snapshot(); names = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", ANALYSIS_COMMIT], text=True).splitlines()
     files = {n: current["files"][n] for n in names if n in current["files"]}
     analysis_code = {**current, "commit": ANALYSIS_COMMIT, "files": files, "source_hash": digest(files)}
     outputs = {}
     for n in ("analysis.json", "report.md"):
-        p = root / n; p.write_text("SYNTHETIC_STRUCTURAL_METADATA_NOT_REAL54_ANALYSIS"); outputs[n] = file_hash(p)
+        p = root / "analysis" / n; p.write_text("SYNTHETIC_STRUCTURAL_METADATA_NOT_REAL54_ANALYSIS"); outputs[n] = file_hash(p)
     analysis = {"status": "passed", "policy": ANALYSIS_POLICY, "code": analysis_code, "plan_sha256": PLAN_SHA256,
         "freeze_sha256": file_hash(freeze), "models_analyzed": 54, "heads_analyzed": 162, "groups": 18,
         "new_optimizer_updates": 0, "raw_labels_deserialized": False, "model_inference_executed": False,
         "new_query_release": False, "input_query_metrics_consumed": True, "primary_benefit_supported": False,
         "protected_files": frozen["protected_files"], "outputs": outputs}
-    receipt = root / "analysis-receipt.json"; write_json(receipt, analysis)
+    receipt = root / "analysis" / "receipt.json"; write_json(receipt, analysis)
     return freeze, receipt, chosen["name"], paths
 
 
@@ -87,6 +88,7 @@ class FrozenCaptureTests(unittest.TestCase):
             for mode in MODES:
                 for method in METHODS[:2]:
                     model, _ = initialize("xuzhou", 64, method, mode, source_spec=sources[mode] if method == METHODS[1] else None, device=DEVICE)
+                    model.eval()
                     before = state_id(model); rng = torch.get_rng_state().clone()
                     with torch.no_grad(), OrderedValidation(): expected = tuple(v.detach().cpu().clone() for v in forward(model, "xuzhou", obs))
                     stages, predictions, proof = capture(model, "xuzhou", obs)
