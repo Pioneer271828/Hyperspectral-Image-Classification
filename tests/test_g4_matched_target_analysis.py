@@ -136,6 +136,59 @@ def invoke(paths, out):
 
 
 class MatchedAnalysisTests(unittest.TestCase):
+    def test_preregistered_arithmetic_source_unchanged_from204(self):
+        import ast
+        path = "g4_matched_target_analysis.py"
+        original = subprocess.check_output(["git", "show", "73234283581c536f6e42c49bf0b3326ce3067d60:" + path], text=True)
+        current = (ROOT / path).read_text()
+        def functions(source):
+            return {node.name: ast.get_source_segment(source, node) for node in ast.parse(source).body
+                    if isinstance(node, ast.FunctionDef) and node.name != "export_analysis"}
+        self.assertEqual(functions(original), functions(current))
+        self.assertEqual(set(functions(original)), {"_hash", "_stats", "validate_rows", "_value", "contrast", "analyze_rows", "report_markdown"})
+
+    def test_resource_review_profile_hash_cost_and_audit_binding(self):
+        from g4_matched_target_analysis import RESOURCE_REVIEW_PRODUCER, RESOURCE_REVIEW_POLICY
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            paths = files_fixture(root, self.producer)
+            freeze = json.loads(paths[1].read_text())
+            review = json.loads(paths[2].read_text())
+            proof_folder = root / "resource-audit"
+            proof_folder.mkdir()
+            proof_path = proof_folder / "receipt.json"
+            proof = {"policy": "g4_issue184_resource_final_independent_v1", "status": "passed",
+                "consumer": {"commit": "5dcc6964a25858f6793995126ec4606dfb8ad533"},
+                "launch_sha256": freeze["launch_sha256"], "acceptance_sha256": freeze["acceptance_sha256"],
+                "full_audit_sha256": freeze["independent_audit_sha256"], "models": 54, "preserved_rows": 51,
+                "new_optimizer_updates": 0, "query_labels_accessed": False, "test_scoring": False}
+            write_json(proof_path, proof)
+            review["code"]["commit"] = RESOURCE_REVIEW_PRODUCER
+            review.update(policy=RESOURCE_REVIEW_POLICY, resource_audit=str(proof_path),
+                resource_audit_sha256=file_hash(proof_path), acceptance_elapsed_seconds=review.pop("controller_seconds_excluding_initial_freeze"),
+                acceptance_elapsed_scope="resource_controller_segment_only")
+            write_json(paths[2], review)
+            with patch("torch.load", side_effect=AssertionError("No tensor decoding")), \
+                    patch("torch.nn.Module._call_impl", side_effect=AssertionError("No inference")):
+                receipt = invoke(paths, root / "resource-analysis")
+            analysis = json.loads((root / "resource-analysis/analysis.json").read_text())
+            self.assertEqual(analysis["recorded_cost_scopes"]["acceptance_elapsed"], "resource_controller_segment_only")
+            self.assertNotIn("controller_seconds_excluding_initial_freeze", analysis["recorded_cost_seconds"])
+            self.assertTrue(receipt["primary_benefit_supported"])
+            self.assertEqual(analysis["primary"], analyze_rows(json.loads(paths[0].read_text())["models"])["primary"])
+            for key, value in (("query_labels_accessed", True), ("new_optimizer_updates", 1),
+                    ("acceptance_sha256", "f" * 64), ("status", "failed"), ("preserved_rows", 50)):
+                write_json(proof_path, {**proof, key: value})
+                bad_review = {**review, "resource_audit_sha256": file_hash(proof_path)}
+                write_json(paths[2], bad_review)
+                with self.assertRaises(ValueError):
+                    invoke(paths, root / "bad-resource-analysis")
+                self.assertFalse((root / "bad-resource-analysis").exists())
+            write_json(proof_path, proof)
+            write_json(paths[2], {**review, "resource_audit_sha256": "0" * 64})
+            with self.assertRaises(ValueError):
+                invoke(paths, root / "wrong-proof-pin")
+
     @classmethod
     def setUpClass(cls):
         cls.producer = producer_fixture()
