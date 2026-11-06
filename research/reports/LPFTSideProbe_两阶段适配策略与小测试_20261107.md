@@ -16,7 +16,8 @@ Issue184完整54模型支持点已拟合，HongHu残差全量微调相对从头�
 
 - 原论文：Kumar等，*Fine-Tuning can Distort Pretrained Features and Underperform Out-of-Distribution*，arXiv:2202.10054v1，2022-02-21，§4.2 LP-FT；https://arxiv.org/abs/2202.10054v1 。已读取原论文HTML的摘要、方法动机和理论设定，§4.2完整正文提取受间歇TLS失败影响，仍需补核；不冒充全文核验完成。
 - 论文认为在较好预训练特征和较大分布差异下，同时更新随机头与特征可能损伤OOD表现；并非所有任务上微调都更差。本文不将其图像基准提升幅度外推为HSI收益。
-- 原文HTML可见fastai相关示例链接，但不是本论文作者代码官方性证据。按作者名尝试查询 `AnanyaKumar/transfer_learning`，API持续TLS失败；作者主页候选返回404。因此作者仓库、固定SHA和实际许可范围仍为 **unconfirmed**，不声称仓库不存在或许可允许复用。
+- 原文HTML可见fastai相关示例链接，但不是本论文作者代码官方性证据。直连API曾TLS失败、主页候选返回404；随后GitHub连接器成功读取作者仓库 `https://github.com/AnanyaKumar/transfer_learning`，README明确称为本论文代码。已固定SHA `13c3e2bbb8a34bbb781e28cee96ddf20bed5f76f`，读取README及 `unlabeled_extrapolation/baseline_train.py` 的头初始化、linear_probe冻结、线性头权重加载、eval模式和优化器分组部分。
+- 固定版本完整树只有 `CLIP/LICENSE` 许可文件，根API license为null。该嵌套许可不能覆盖本次查阅的训练器；作者训练器复用许可仍未确认，因此不复制源码。上游线性探针可用提取特征加sklearn逻辑回归，接入头系数后再微调；本候选采用项目三头Adam，明确是思想适配而非上游数值复现。
 - 当前组件完全独立实现，无上游源文件复制、模型下载、依赖安装或外部训练协议引入。仅使用项目已有PyTorch。
 
 ## 小测试范围与当前执行状态
@@ -26,6 +27,8 @@ Issue184完整54模型支持点已拟合，HongHu残差全量微调相对从头�
 合成边界恢复只验证两个阶段之间重启，阶段内部恢复、RNG/调度/生产接受和数据身份绑定未实现。最后一项用现有G4构造器及合成标签，未使用真实源权重或真实场景，因此不能称真实迁移测试。无GPU、真实GT、query访问或长训练。
 
 截至候选提交：本侧聊尚未执行Python测试。独立SSH连接LXC被拒绝（publickey,password），备用rmvision连接在banner阶段超时。没有读取主对话认证材料或复用其活动会话。Git空白检查可在Windows执行；测试须在授权Linux容器独立checkout运行，不能把已编写用例当作通过。
+
+候选源码提交 `f46a1ec92733a3b517193a4db69e5d4c4a77e150`，Git空白检查通过，已推送专属分支并建立 [Draft PR251](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/251)。首次push TLS失败、第二次正常成功，未强推。完整SHA及增量bundle `F:/E2E_VCA_worktrees/side-lpft-issue250-probe01.bundle` 已发主规划请求独立Linux测试；不是已收到测试结果。
 
 建议主规划使用独立 `checkouts/side-lpft-issue250-probe01`，认证本分支实际完整SHA并保持干净，产物放checkout外，使用既有CPU环境：
 
