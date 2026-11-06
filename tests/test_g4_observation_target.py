@@ -1,5 +1,6 @@
 """Target M1: actual changed B, matched full control, immutable replay/reload."""
 import copy
+from contextlib import nullcontext
 from dataclasses import asdict
 import json
 import os
@@ -12,6 +13,7 @@ import unittest
 
 import numpy as np
 import torch
+from torch.overrides import TorchFunctionMode
 
 from g4_observation_target import KEY, ObservationTargetRuntime, freeze_settings, prepare
 from g4_support_target import prepare as old_prepare
@@ -28,6 +30,20 @@ from test_joint_training import checkpoints, hashes
 from test_none_full_transfer import fixture as source_fixture
 
 DEVICE = os.environ.get("OBS_TARGET_DEVICE", "cpu")
+
+
+class FixedGraphReference(TorchFunctionMode):
+    """Test-only equal-order GPU control, never a production training policy.
+
+    Native sparse CUDA trajectories failed equality, including old-vs-old.
+    Keep that failed evidence. Dense graph sums on the SMALL synthetic fixture
+    isolate M1/full-view equivalence without relaxing exact state comparisons.
+    The other GPU tests exercise unchanged native sparse training/reloads.
+    """
+    def __torch_function__(self, func, types, args=(), kwargs=None):
+        if func is torch.sparse.mm:
+            return torch.mm(args[0].to_dense(), args[1])
+        return func(*args, **(kwargs or {}))
 
 
 def metadata(item):
@@ -96,7 +112,7 @@ class ObservationTargetTests(unittest.TestCase):
             self.assertEqual(original, _tree_fingerprint(item))
 
     def test_full_control_matches_accepted_target_arithmetic(self):
-        with tempfile.TemporaryDirectory() as temp:
+        with tempfile.TemporaryDirectory() as temp, (FixedGraphReference() if DEVICE == "cuda" else nullcontext()):
             root = Path(temp)
             manifest, _, meta = setup(root)
             _, spec = source_fixture(root / "source")
