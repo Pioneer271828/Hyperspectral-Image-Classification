@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "issue": 214,
+  "scope": "Existing M8 fixed fusion and original auxiliary probability loss G4 target adapter; no new fusion or loss mechanism",
+  "project_sources": [
+    {"commit": "4675ed200e5b2f8f3699de750fc5cfac8e7b1f0c", "report": "research/reports/M8_固定融合与损失契约验收_20261029.md", "guide": "docs/guides/fusion-losses.md", "action": "Read accepted original feature fusion/logits/probability loss and mask/auxiliary/weight-decay semantics; preserve its spatial two-step evidence at its original scope"},
+    {"commit": "331d718567b1a9726934f445665999df972392b1", "paths": ["model/branch_fusion.py", "model/task_losses.py", "model/utils.py", "model/VCASAHGCN.py", "none_full_transfer.py", "target_bn_calibration.py", "target_training.py"], "action": "Reuse original implementations; opt-in binding and original ordered population BN only"}
+  ],
+  "design_sources": ["research/研究内容整合与详细搭建测试计划_2026-10-28.md sections6.2/7", "research/模块化搭建与测试消融实施计划_2026-10-28.md section12/18/19"],
+  "external_source_copied": false,
+  "new_external_dependency": false,
+  "upstream_executed": false,
+  "paper_reproduction_claim": false,
+  "license_scope": "No new external source or license grant asserted for pre-existing project code",
+  "limits": ["No learned gate, shared semantic head or logits CE introduced", "Alpha endpoints select features for the fused head; not independently trained single branches or necessarily auxiliary-head predictions", "Zero auxiliary loss weights remove their loss gradients, not fused/shared gradients or optimizer weight decay", "Original complete M8 effect, gated fusion x decomposition and spatial/sensor/support controls remain separate required scopes", "No real NN/BN/update/query or accuracy/speed claim in zero-forward initialization acceptance"]
+}
