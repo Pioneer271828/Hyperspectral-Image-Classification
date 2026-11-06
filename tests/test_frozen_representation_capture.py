@@ -123,7 +123,8 @@ class FrozenCaptureTests(unittest.TestCase):
             def call(out): return export_case(freeze, file_hash(freeze), analysis, file_hash(analysis), name, out,
                 code_snapshot(), device=DEVICE, maximum_regions=4, seed=64)
             original = json.loads(analysis.read_text())
-            for key, value in (("models_analyzed", 53), ("new_optimizer_updates", 1), ("new_query_release", True)):
+            for key, value in (("models_analyzed", 53), ("new_optimizer_updates", 1), ("new_query_release", True),
+                               ("code", {**original["code"], "source_hash": "0" * 64})):
                 write_json(analysis, {**original, key: value})
                 with patch("torch.load", side_effect=AssertionError("No archive before gate")):
                     with self.assertRaises(ValueError): call(root / "blocked")

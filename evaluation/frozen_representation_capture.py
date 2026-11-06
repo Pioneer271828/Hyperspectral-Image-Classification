@@ -21,6 +21,7 @@ from target_bn_calibration import GRAPH_POLICY, OBS_KEYS, observation_id
 from target_initialization import state_id
 
 ANALYSIS_COMMIT = "73234283581c536f6e42c49bf0b3326ce3067d60"
+ANALYSIS_SOURCE = "a7dfd3e784d0463c45ed5dcbe0b9bbd91cdbeaf88d39d5a9cd13f7dcf3995cdf"
 POLICY = "e0_frozen_full54_stage_capture_v1"
 ARCHIVE_KEYS = OBS_KEYS | {"name", "height", "width", "bands", "class_num"}
 STAGES = {"cnn_stage1": ("stage1", "cnn", 128), "graph_stage1": ("stage1", "graph", 128),
@@ -91,16 +92,18 @@ def authenticate(freeze_path, freeze_sha256, analysis_path, analysis_sha256, nam
     require_frozen_boundary(frozen)
     producer = frozen["producer"]
     if (producer["commit"] != PRODUCER or producer["source_hash"] != PRODUCER_SOURCE
-            or frozen["code"]["commit"] != PRODUCER
+            or frozen["code"]["commit"] != PRODUCER or frozen["code"]["source_hash"] != PRODUCER_SOURCE
             or analysis["status"] != "passed" or analysis["policy"] != ANALYSIS_POLICY
-            or analysis["code"]["commit"] != ANALYSIS_COMMIT or analysis["plan_sha256"] != PLAN_SHA256
+            or analysis["code"]["commit"] != ANALYSIS_COMMIT or analysis["code"]["source_hash"] != ANALYSIS_SOURCE
+            or analysis["plan_sha256"] != PLAN_SHA256
             or analysis["freeze_sha256"] != freeze_sha256
             or (analysis["models_analyzed"], analysis["heads_analyzed"], analysis["groups"]) != (54, 162, 18)
             or analysis["new_optimizer_updates"] != 0 or analysis["raw_labels_deserialized"] is not False
             or analysis["model_inference_executed"] is not False or analysis["new_query_release"] is not False
             or analysis["input_query_metrics_consumed"] is not True):
         raise ValueError("Completed original331 full54 and204 analysis required before feature/model load")
-    unchanged_producer(producer, code); unchanged_producer(analysis["code"], code)
+    unchanged_producer(producer, code); unchanged_producer(producer, frozen["code"])
+    unchanged_producer(analysis["code"], code)
     if (any(analysis["protected_files"].get(p) != sha for p, sha in frozen["protected_files"].items())
             or set(analysis["outputs"]) != {"analysis.json", "report.md"}):
         raise ValueError("Analysis inputs/outputs do not cover accepted frozen boundary")
