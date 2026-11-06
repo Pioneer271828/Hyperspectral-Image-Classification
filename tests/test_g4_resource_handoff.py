@@ -129,6 +129,7 @@ class ResourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);items,actual,_=actual_case(root,device='cuda')
             code,reg,rp=registration_fixture(root,out=root/'campaign')
+            reg['gpu']=gpu;write_json(rp,reg)
             out=Path(reg['out_dir']);out.mkdir();launch=launch_fixture(out)
             launch.update(code=code,phase='full_campaign',execution_enabled=True,optimizer_updates=81000,
                           registration_path=str(rp),registration_sha256=file_hash(rp))
@@ -138,18 +139,27 @@ class ResourceTests(unittest.TestCase):
                 if case['name']==actual['name']:
                     actual['out']=case['out'];case.update(actual);selected=case
             lp=out/'launch.json';write_json(lp,launch)
+            env=dict(os.environ,CUDA_VISIBLE_DEVICES=str(gpu),PYTHONDONTWRITEBYTECODE='1')
+            original=[sys.executable,str(ROOT/'scripts/train_g4_matched_target_full.py'),
+                '--expected-commit',code['commit'],'--registration',str(rp),'--registration-sha256',file_hash(rp),
+                '--launch-plan',str(lp),'--launch-sha256',file_hash(lp),'--target',selected['target'],
+                '--seed',str(selected['seed']),'--method',selected['method'],'--mode',selected['mode'],'--stop-after','2']
+            result=subprocess.run(original,cwd=ROOT,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+            self.assertEqual(result.returncode,0,result.stdout[-7000:])
+            first=json.loads(result.stdout.splitlines()[-1])
+            self.assertEqual((first['operation'],first['updates_this_call']),('interrupted',2))
             ar=root/'resource';ar.mkdir();(ar/'events').mkdir()
             others=[{'name':c['name'],'updates':1500} for c in launch['cases'] if c['name']!=selected['name']]
             a={'policy':m.POLICY,'gpus':[gpu,gpu+1],'optimizer_updates_total':81000,'query_labels_accessed':False,
                'frozen_checkout':str(ROOT),'controller_checkout':str(ROOT),'producer':code,'controller_code':code,
                'pins':{str(lp):file_hash(lp),str(rp):file_hash(rp)},'run':str(out),
                'launch':{'path':str(lp),'sha256':file_hash(lp)},'registration':{'path':str(rp),'sha256':file_hash(rp)},
-               'jobs':{selected['name']:'first2'},'completed_rows':others,'remaining_updates':1500}
+               'jobs':{selected['name']:'continue'},'completed_rows':others,'remaining_updates':1498}
             ap=ar/'amendment.json';write_json(ap,a)
             command=[sys.executable,str(ROOT/'g4_resource_handoff.py'),'worker','--amendment',str(ap),
                 '--amendment-sha256',file_hash(ap),'--case',selected['name'],'--gpu',str(gpu),'--stage']
-            env=dict(os.environ,CUDA_VISIBLE_DEVICES=str(gpu),PYTHONDONTWRITEBYTECODE='1')
             for stage,expected in m.STEPS.items():
+                if stage=='first2':continue
                 before=hashes(Path(selected['out'])) if stage=='readonly' else None
                 result=subprocess.run(command+[stage],cwd=ROOT,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
                 self.assertEqual(result.returncode,0,result.stdout[-7000:])
