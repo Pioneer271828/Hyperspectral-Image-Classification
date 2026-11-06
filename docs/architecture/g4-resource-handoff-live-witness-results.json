@@ -1,0 +1,131 @@
+{
+  "status": "passed",
+  "scope": "live resource handoff witness; not full54 independent numerical acceptance",
+  "issue": 198,
+  "pr": 200,
+  "utc": "2026-11-07T00:50:16.059276+00:00",
+  "witness_sha256": "4b655a5b20a675c236d093fd6d4a891e73b445d2a43a9259002e3acf5f940dcc",
+  "amendment": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-resources01/amendment.json",
+  "amendment_sha256": "8e8004aa6b56da7d4b59b0526cbe5248cc588de76138e624313e0c1e5f9be414",
+  "execution_handoff": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-resources01/execution-handoff.json",
+  "execution_handoff_sha256": "fa8cb90b9acc434d456bd22b6f1933a15c13be39808aa93d488c7a456256eea2",
+  "source": {
+    "checkout": "/home/lbx/hsi-pioneer271828/checkouts/g4-matched-target-issue184-production01",
+    "commit": "331d718567b1a9726934f445665999df972392b1",
+    "dirty": false
+  },
+  "controller": {
+    "checkout": "/home/lbx/hsi-pioneer271828/checkouts/g4-resource-issue198-production01",
+    "commit": "5db71e82ad3fc36f3cef7046a22c1162be756097",
+    "dirty": false
+  },
+  "controller_pid": 608030,
+  "gpus": [
+    1,
+    3,
+    7
+  ],
+  "original_pins_unchanged": 4,
+  "original_input_pins_unchanged": 7930,
+  "prior_completed_models_preserved": 51,
+  "prior_model_files_unchanged": 5763,
+  "partial_files_unchanged": 0,
+  "total_update_budget": 81000,
+  "remaining_at_handoff": 4500,
+  "completed_stage_updates_observed": 6,
+  "events_snapshot": [
+    {
+      "case": "whu-honghu-s2048-x_residual-source_pretrained_full_finetune",
+      "stage": "first2",
+      "gpu": 3,
+      "pid": 608148,
+      "exit_code": 0,
+      "log": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-resources01/logs/whu-honghu-s2048-x_residual-source_pretrained_full_finetune-first2-092a615c6b864fb6.log",
+      "log_sha256": "c951a9b6ed548b4b9f5abec81fe87b47623d424fdb51e137fea74cb6622f6ae4",
+      "seconds": 21.607607514597476,
+      "result": {
+        "operation": "interrupted",
+        "updates_this_call": 2
+      }
+    },
+    {
+      "case": "whu-honghu-s2048-capacity_control-source_pretrained_full_finetune",
+      "stage": "first2",
+      "gpu": 7,
+      "pid": 608147,
+      "exit_code": 0,
+      "log": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-resources01/logs/whu-honghu-s2048-capacity_control-source_pretrained_full_finetune-first2-ad82d27353d46940.log",
+      "log_sha256": "a3febfda1d7b0ef0ac7b42adfcc99e5aeffd2e38e53afe564d31b3503f6590fd",
+      "seconds": 21.926946504972875,
+      "result": {
+        "operation": "interrupted",
+        "updates_this_call": 2
+      }
+    },
+    {
+      "case": "whu-honghu-s2048-none-source_pretrained_full_finetune",
+      "stage": "first2",
+      "gpu": 1,
+      "pid": 608146,
+      "exit_code": 0,
+      "log": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-resources01/logs/whu-honghu-s2048-none-source_pretrained_full_finetune-first2-2e1eb612b3f36d12.log",
+      "log_sha256": "c72e63914dd5260aba834d100c387361e19d0eddb8b1ffe3a455ee1300651138",
+      "seconds": 22.260985946282744,
+      "result": {
+        "operation": "interrupted",
+        "updates_this_call": 2
+      }
+    }
+  ],
+  "live_workers": [
+    {
+      "pid": 608618,
+      "gpu": 3,
+      "case": "whu-honghu-s2048-none-source_pretrained_full_finetune",
+      "stage": "continue",
+      "CUDA_VISIBLE_DEVICES": "3"
+    },
+    {
+      "pid": 608619,
+      "gpu": 7,
+      "case": "whu-honghu-s2048-capacity_control-source_pretrained_full_finetune",
+      "stage": "continue",
+      "CUDA_VISIBLE_DEVICES": "7"
+    },
+    {
+      "pid": 608620,
+      "gpu": 1,
+      "case": "whu-honghu-s2048-x_residual-source_pretrained_full_finetune",
+      "stage": "continue",
+      "CUDA_VISIBLE_DEVICES": "1"
+    }
+  ],
+  "progress_snapshot": [
+    {
+      "case": "whu-honghu-s2048-none-source_pretrained_full_finetune",
+      "status": "running",
+      "cursor": 211
+    },
+    {
+      "case": "whu-honghu-s2048-capacity_control-source_pretrained_full_finetune",
+      "status": "running",
+      "cursor": 211
+    },
+    {
+      "case": "whu-honghu-s2048-x_residual-source_pretrained_full_finetune",
+      "status": "running",
+      "cursor": 121
+    }
+  ],
+  "completed_cases_observed": 51,
+  "cross_gpu_synthetic_log": "/home/lbx/hsi-pioneer271828/runs/issue198-resource-crossgpu01.log",
+  "cross_gpu_synthetic_log_sha256": "84320a10b1de5868066c21083e7b49287c66b6930a9cdcf5ddf38d02cfc5b014",
+  "legacy_wrapper_exit": 137,
+  "legacy_wrapper_wall_seconds": 77555,
+  "legacy_exit_reason": "planned stopped child-free coordinator handoff; no training child killed",
+  "query_execution_by_witness": 0,
+  "optimizer_updates_by_witness": 0,
+  "full54_audit_pending": true,
+  "resource_final_audit_pending": true,
+  "elapsed_seconds": 29.373428823892027
+}
