@@ -152,8 +152,8 @@
     },
     {
       "id": "G4完整54目标配对实验",
-      "state": "完整目标批次运行中，44/54例已控制器验收（66000/81000更新）",
-      "evidence": "Issue184/PR185 Draft；生产331d718567b1a9726934f445665999df972392b1干净冻结，supervisor273458/wrapper273455存活，GPU1；44例（PaviaU18+Xuzhou18+HongHu8）各1500/51事件，264头指标3000召回132精确重载和完成0恢复通过；第45例HongHu512残差scratch继续。新增容量scratch选751/LR1382、1409.895s，首末30loss8.974768→0.077302，三头验证OA74.55/76.36/73.64%，最低召回0.4/0.4/0.2、无零召回，M4正梯度1500步/实际变化8320；HongHu64残差scratch验证CNN第11类0召回等历史弱项保留。无失败/完整training-acceptance/query，固定81000预算不改",
+      "state": "完整目标批次45/54已验收（67500/81000更新），控制器合法等待GPU资源",
+      "evidence": "Issue184/PR185 Draft；生产331d718567b1a9726934f445665999df972392b1冻结；45例（PaviaU18+Xuzhou18+HongHu9）各1500/51事件，270头指标3132召回135精确重载和完成0恢复通过。新增HongHu512残差scratch选931/LR1442、1417.550s，首末30loss8.973352→0.072348，验证三头OA77.27/80.00/73.64%，最低召回0.4/0.4/0.2、无零召回，M4正梯度1500步/实际变化8256；此前HongHu64残差scratch验证CNN第11类0召回保留。最近GPU1 free14581MiB/util87%高于启动利用率门槛，控制器按合同等资源，不是失败。完整接受/query尚无，固定81000预算不改",
       "remaining": "54/81000完整接受、独立324指标4320召回162精确重载与源/目标输入不变、拟合逐类成本复盘；全部冻结后才同协议query和预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
       "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md"
     },
@@ -188,6 +188,14 @@
       "remaining": "184完整接受、独立审计、真实拟合逐类成本复盘及全冻结query后，另登记支持/K与参数范围的真实同条件对照；真实初始BN/缓存/12步与全训练尚未验收，不判精度或部署加速；空间/传感器和波长质量及其余机制按两计划继续",
       "report": "research/reports/G4LightTarget_完整源仅头与适配器工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue192完整源仅头与适配器目标工程模块完成报告；持久报告及g4-light-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4冻结观察物理元信息与结论权限工程",
+      "state": "只读三观察/27角色绑定及结论权限工程通过，物理标定和严格泛化缺口未完成",
+      "evidence": "Issue194/PR195；实际4f454b217f79576de92afc769fb6cb8452e71874，CPU6/6 9.528s、完整588项587通过+1既有GPU专用跳过369.611s，checker372Python88JSON/help；新增GPU专项0。LXC真实3观察/27角色、52输入不变6.672s，只解码3观察、不解析覆盖层/family标签；独立809波长值/27预算/6权限/54文件不变4.457s。三组approximate、无真实FWHM/SRF，严格空间/传感器DG/已核家族留出/实测中心/物理FWHM拒绝；当前Pavia实际向量471.491–856.228nm，Xuzhou包报告HYSPEX但型号/映射未核，旧registry不改。更新0/forward0/query0/无GPU上下文，原331源码与输入不改，EHU403保留",
+      "remaining": "当前工程不认证仪器标定或源家族完整排除，不重做E0B1/B2，不判精度/速度；184全54接受/独立审计/真实复盘/全冻结query后再真实支持/K/参数/空间对照。认证中心/原始带号/FWHM/SRF、独立空间/传感器与其余两计划必测项继续保留",
+      "report": "research/reports/G4ObservationProvenance_冻结观察物理元信息与结论权限工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue194冻结观察物理元信息与结论权限工程模块完成报告；持久报告及g4-observation-provenance-engineering-results.json为证据，不重复交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
