@@ -22,6 +22,8 @@ POLICY = "g4_matched_full54_preregistered_analysis_v1"
 PRODUCER = "331d718567b1a9726934f445665999df972392b1"
 PRODUCER_SOURCE = "48b28cfeee55e4d351fbf873d35e2e0d0f22ccca12910ef8a9f147e0c9bdbad8"
 REVIEW_PRODUCER = "ad60ce0a863aad1991ee6c84d547c3efd995290f"
+RESOURCE_REVIEW_PRODUCER = "2df9d2882364137791cef89e92bcb6cc3e29283b"
+RESOURCE_REVIEW_POLICY = "g4_matched_full54_trainval_review_resource_v2"
 PLAN_SHA256 = "0bd71779546fd5ee0cbaab57b7b3639a1c378bcf9d1379f8afb1a80231a92dee"
 HEADS = ("fused", "graph", "cnn")
 METRICS = ("oa", "aa", "kappa", "nll")
@@ -224,8 +226,11 @@ def export_analysis(query_path, query_sha256, freeze_path, freeze_sha256, review
     pin(launch["registration_path"], launch["registration_sha256"])
     pin(registration["analysis_plan"]["path"], PLAN_SHA256)
     pin(registration["engineering_acceptance"]["path"], registration["engineering_acceptance"]["sha256"])
-    if (review["status"] != "passed" or review["policy"] != REVIEW_POLICY or review["producer"] != producer
-            or review["code"]["commit"] != REVIEW_PRODUCER or review["query_labels_accessed"] is not False
+    resource_review = review["code"]["commit"] == RESOURCE_REVIEW_PRODUCER
+    expected_review_policy = RESOURCE_REVIEW_POLICY if resource_review else REVIEW_POLICY
+    if (review["status"] != "passed" or review["policy"] != expected_review_policy or review["producer"] != producer
+            or review["code"]["commit"] not in (REVIEW_PRODUCER, RESOURCE_REVIEW_PRODUCER)
+            or review["query_labels_accessed"] is not False
             or review["test_scoring"] is not False or review["new_optimizer_updates"] != 0
             or review["optimizer_updates_reviewed"] != 81000
             or review["launch_sha256"] != freeze["launch_sha256"]
@@ -234,6 +239,21 @@ def export_analysis(query_path, query_sha256, freeze_path, freeze_sha256, review
             or len(review["cases"]) != 54 or {r["name"] for r in review["cases"]} != {case_name(*k) for k in grid()}
             or any(r["updates"] != 1500 or r["validation_events"] != 51 for r in review["cases"])):
         raise ValueError("Complete independent54 train/validation review required")
+    if resource_review:
+        proof_path = Path(review["resource_audit"]).resolve(strict=True)
+        pin(proof_path, review["resource_audit_sha256"])
+        check_files(pins)
+        proof = read(proof_path)
+        if (proof.get("policy") != "g4_issue184_resource_final_independent_v1" or proof.get("status") != "passed"
+                or proof.get("consumer", {}).get("commit") != "5dcc6964a25858f6793995126ec4606dfb8ad533"
+                or proof.get("launch_sha256") != freeze["launch_sha256"]
+                or proof.get("acceptance_sha256") != freeze["acceptance_sha256"]
+                or proof.get("full_audit_sha256") != freeze["independent_audit_sha256"]
+                or proof.get("models") != 54 or proof.get("preserved_rows") != 51
+                or proof.get("new_optimizer_updates") != 0 or proof.get("query_labels_accessed") is not False
+                or proof.get("test_scoring") is not False
+                or review.get("acceptance_elapsed_scope") != "resource_controller_segment_only"):
+            raise ValueError("Resource-aware review requires matching zero-update independent resource audit")
     unchanged_producer(producer, review["code"])
     expected_exports = {case_name(*k) + suffix for k in grid() for suffix in (".png", "-curve.csv")}
     if set(review["exported_files"]) != expected_exports:
@@ -241,7 +261,7 @@ def export_analysis(query_path, query_sha256, freeze_path, freeze_sha256, review
     for name, sha in review["exported_files"].items():
         pin(paths[2].parent / name, sha)
     analysis = analyze_rows(query["models"])
-    cost_fields = ("controller_seconds_excluding_initial_freeze", "independent_audit_seconds",
+    cost_fields = (("acceptance_elapsed_seconds" if resource_review else "controller_seconds_excluding_initial_freeze"), "independent_audit_seconds",
                    "sum_case_training_resume_wait_and_acceptance_seconds", "report_elapsed_seconds")
     if (any(type(review[k]) not in (int, float) or not math.isfinite(review[k]) or review[k] < 0 for k in cost_fields)
             or type(query["elapsed_seconds"]) not in (int, float) or not math.isfinite(query["elapsed_seconds"])
@@ -249,6 +269,9 @@ def export_analysis(query_path, query_sha256, freeze_path, freeze_sha256, review
         raise ValueError("Finite nonnegative separately scoped stage costs required")
     analysis["recorded_cost_seconds"] = {k: review[k] for k in cost_fields}
     analysis["recorded_cost_seconds"]["ordered_query"] = query["elapsed_seconds"]
+    analysis["recorded_cost_scopes"] = {"acceptance_elapsed": review.get("acceptance_elapsed_scope", "legacy_controller_excluding_initial_freeze"),
+        "review_producer": review["code"]["commit"], "resource_audit_sha256": review.get("resource_audit_sha256"),
+        "case_sum": "sum of recorded case wall durations; not elapsed batch wall time"}
     analysis["training_budgets"] = {"source": 27054, "short_target": 216, "current_target": 81000}
     analysis["cost_limitations"] = "Resource waiting is included; sums of case costs are not parallel elapsed wall time or controlled speed comparisons."
     if digest(query["paired_summary"]) != digest(paired_summary(query["models"])):
