@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "issue": 226,
+  "plan_sections": ["master7.2 same-parameter within-branch control", "implementation10/18/19"],
+  "project_design_review": ["research/本对话完整研究纪要_双支路骨干五个方向_2026-10-28.md8.2", "双支路网络创新方向与技术研究方案_按推荐程度整理.md5.11/5.12"],
+  "sources": [
+    {"commit": "331d718567b1a9726934f445665999df972392b1", "path": "model/cross_branch_interaction.py", "scope": "Original SelectiveMessage transforms, layer norms, bias-free projection, scalar gate, strength0.1, hidden32 and chunk16384; each local transform uses own branch input"},
+    {"commit": "4ede0984ba78c9e31c5a176c4f8e54c74da3e97e", "path": "g4_interaction_target.py", "scope": "Matching none/gated target factories and operator signature; fixed target initialized M6 weights, not M6 pretraining"},
+    {"commit": "5f85e2220ce3ce357d99e6faaccca51676ce8502", "path": "g4_normalized_edge_target.py", "scope": "Required protocol buffer, explicit custom binding and paired hash loader plus original ordered BN wrapper pattern"}
+  ],
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "license_scope": "Existing internal project design/control and code reuse only; no new external mechanism or license grant claimed",
+  "parameters": "gated and branch_local each58498 trainable M6-slot parameters; local adds only8-byte mandatory version buffer",
+  "limits": [
+    "No cross message at this intermediate operator; shared upstream adapter/graph dependence remains",
+    "Same parameters and transform depth do not establish matched compute budget or speed",
+    "Identical initial source/target LNs make initial difference gate input zero; no every-element positive-gradient claim",
+    "Historical parameter-slot names retained for same state schema; local gate diagnostics are explicitly named pixel_local/region_local",
+    "Component only, no bounded/full/campaign/query entry; old generic gated loader refuses local version buffer",
+    "Real numerical experiments remain after184all54accept/audit/186review/original331freezequery/204analysis"
+  ]
+}
