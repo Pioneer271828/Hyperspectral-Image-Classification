@@ -204,6 +204,14 @@
       "remaining": "原生CUDA独立轨迹等价仍未接受，未来真实M1须明确数值执行合同；先E1独立目标覆盖工程。184完整接受/独立审计/真实复盘/全冻结query后才登记真实M1/E1及支持/K/空间/传感器对照；物理标定、真实收益/速度未验收",
       "report": "research/reports/G4ObservationTarget_目标真实波段子集工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue196目标真实波段子集工程模块完成报告；持久报告及g4-observation-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4 E1目标初始化与校准组件工程",
+      "state": "完整源初始化/元数据前向/总体BN/重载组件工程验收通过，E1目标训练尚未接入",
+      "evidence": "Issue199/PR201；实际42a2f463ecdb4223d78537c4178a28191a50ad5e，授权LXC CPU6/6 35.539s、GPU6/6 40.226s、全599项598通过+1既有GPU专用跳过602.595s，checker378Python91JSON/help通过。none及四个194参数条件、原共享/fresh头域状态与RNG、完整/75%/缺口/范围元数据、无支撑保护、合成3步整体梯度/更新、总体BN参数保护/CPUFP64稀疏参考、三次精确重载和拒绝测试通过。真实三景×两角色×五条件30初始化，基础6状态与184一致，67文件不变6.259s；独立旧工厂6基础+E1算子重建30状态/架构，68文件不变3.468s。真实更新0/forward0/BN0/query0/无GPU上下文；原331 Python/config不改；首版K64误断言和FP64稠密图错误、外部脚本语法及GitHub传输失败保留",
+      "remaining": "下一有界E1目标训练/恢复/公平控制接入；本组件不是E1完整实验或真实收益。184接受/独立审计/真实复盘/全冻结query后才能登记真实对照；近似波长/缺FWHM与空间/传感器/支持重复等范围仍待完成，原生CUDA独立优化轨迹等价不在通过范围",
+      "report": "research/reports/G4CoverageTarget_完整源目标覆盖初始化与BN校准工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue199 E1目标初始化与校准组件工程完成报告；持久报告及g4-coverage-target-engineering-results.json为证据，不重复交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
