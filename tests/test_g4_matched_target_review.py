@@ -80,6 +80,69 @@ def campaign_fixture(root):
 
 
 class MatchedReviewTests(unittest.TestCase):
+    def resource_fixture(self, root):
+        launch, accepted, audit, code = campaign_fixture(root)
+        accepted["resource_execution"] = {"sha256": "resource-amendment", "receipt_sha256": "resource-receipt"}
+        accepted["elapsed_scope"] = "resource_controller_segment_only"
+        for row in accepted["models"][-3:]:
+            row.update(elapsed_scope="resource_case_wall_with_waits", resource_amendment_sha256="resource-amendment")
+        proof = {"policy": "g4_issue184_resource_final_independent_v1", "status": "passed",
+            "consumer": {"commit": "5dcc6964a25858f6793995126ec4606dfb8ad533"},
+            "amendment_sha256": "resource-amendment", "resource_receipt_sha256": "resource-receipt",
+            "launch_sha256": "l", "acceptance_sha256": "a", "models": 54, "preserved_rows": 51,
+            "preserved_completed_files": 5763, "new_optimizer_updates": 0,
+            "query_labels_accessed": False, "test_scoring": False,
+            "totals": {"updates": 81000, "head_metrics": 324, "class_recalls": 4320, "exact_reload_repeats": 162}}
+        return launch, accepted, audit, code, proof
+
+    def test_resource_cost_metadata_requires_bound_proof_and_preserves_numeric_gate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            launch, accepted, audit, code, proof = self.resource_fixture(Path(temp) / "run")
+            with self.assertRaises(ValueError):
+                validate_audit(launch, accepted, audit, code, "l", "a")
+            validate_audit(launch, accepted, audit, code, "l", "a", proof)
+            for key, value in (("status", "failed"), ("query_labels_accessed", True),
+                    ("acceptance_sha256", "changed"), ("amendment_sha256", "changed"),
+                    ("preserved_rows", 50), ("new_optimizer_updates", 1)):
+                bad = {**proof, key: value}
+                with self.assertRaises(ValueError):
+                    validate_audit(launch, accepted, audit, code, "l", "a", bad)
+            for field, value in (("selected_step", 1500), ("resource_amendment_sha256", "wrong"),
+                    ("elapsed_scope", "whole_batch"), ("unrecognized_metadata", True),
+                    ("positive_gradient_steps", {"adapter": 0, "graph": 1500})):
+                bad = copy.deepcopy(accepted)
+                bad["models"][-1][field] = value
+                with self.assertRaises(ValueError):
+                    validate_audit(launch, bad, audit, code, "l", "a", proof)
+
+    def test_resource_export_hash_binding_and_cost_scope(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            root, out = base / "run", base / "review"
+            launch, accepted, audit, code, proof = self.resource_fixture(root)
+            audit_path = base / "audit" / "receipt.json"
+            proof_path = base / "resource-audit" / "receipt.json"
+            audit_path.parent.mkdir()
+            proof_path.parent.mkdir()
+            write_json(audit_path, audit)
+            proof["full_audit_sha256"] = file_hash(audit_path)
+            write_json(proof_path, proof)
+            with patch("g4_matched_target_review.full_acceptance", return_value=(launch, accepted, {})), \
+                    patch("g4_matched_target_review.require_frozen_code"), \
+                    patch("g4_matched_target_review.plot_case"):
+                for bad in ("wrong", None):
+                    with self.assertRaises(ValueError):
+                        export_review(root, "l", "a", audit_path, file_hash(audit_path), out, code,
+                            resource_audit_path=proof_path, resource_audit_sha256=bad)
+                    self.assertFalse(out.exists())
+                result = export_review(root, "l", "a", audit_path, file_hash(audit_path), out, code,
+                    resource_audit_path=proof_path, resource_audit_sha256=file_hash(proof_path))
+            self.assertEqual(result["acceptance_elapsed_scope"], "resource_controller_segment_only")
+            self.assertEqual(result["resource_audit_sha256"], file_hash(proof_path))
+            self.assertNotIn("controller_seconds_excluding_initial_freeze", result)
+            self.assertEqual(sum(r["case_elapsed_scope"] == "resource_case_wall_with_waits" for r in result["cases"]), 3)
+            self.assertEqual((result["new_optimizer_updates"], result["query_labels_accessed"]), (0, False))
+
     def test_first_min_tie_supported_zero_unsupported_na_and_png(self):
         with tempfile.TemporaryDirectory() as temp:
             case, accepted, history, trace = fixture(Path(temp), mode="x_residual")
