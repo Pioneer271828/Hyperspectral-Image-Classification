@@ -1,0 +1,51 @@
+{
+  "policy": "g4_observation_evidence_catalog_v1",
+  "reviewed_on": "2026-11-06",
+  "scope": "Nominal dataset descriptions and current loader metadata; no instrument calibration certification",
+  "scenes": {
+    "paviaU": {
+      "bands": 103,
+      "reported_sensor": "ROSIS",
+      "evidence_level": "registry_and_cached_provider_description",
+      "wavelength_quality": "approximate",
+      "original_sensor_band_mapping_authenticated": false,
+      "per_band_centers_authenticated": false,
+      "fwhm_authenticated": false,
+      "srf_authenticated": false,
+      "note": "Explicit loader vector and declared bad-band removal are not a verified instrument calibration table. EHU direct retrieval returned403."
+    },
+    "xuzhou": {
+      "bands": 436,
+      "reported_sensor": "HYSPEX",
+      "evidence_level": "local_package_readme_only_model_unresolved",
+      "wavelength_quality": "approximate",
+      "original_sensor_band_mapping_authenticated": false,
+      "per_band_centers_authenticated": false,
+      "fwhm_authenticated": false,
+      "srf_authenticated": false,
+      "note": "Package reports retained bands after noisy-band deletion; linear positions do not reconstruct deleted original indices. Legacy registry remains unknown."
+    },
+    "whu-honghu": {
+      "bands": 270,
+      "reported_sensor": "Headwall Nano-Hyperspec",
+      "evidence_level": "provider_and_original_dataset_paper_nominal_description",
+      "wavelength_quality": "approximate",
+      "original_sensor_band_mapping_authenticated": false,
+      "per_band_centers_authenticated": false,
+      "fwhm_authenticated": false,
+      "srf_authenticated": false,
+      "note": "WHU-Hi is a dataset collection, not a separate sensor type per scene. Nominal sensor description does not supply local per-band centers or SRF."
+    }
+  },
+  "local_documents": {
+    "xuzhou_package_readme": {"sha256": "f5701ba89e56a570822adbf53234096882d8b09d1850313e8f78ac85e61cb3d7", "kind": "package_text", "authenticity": "local_copy_not_independently_authenticated"},
+    "honghu_local_metadata": {"sha256": "96d3d49574bd75b8d8dc8a0d184827518bab4d9e89fa53417181e044b7f3f142", "kind": "project_metadata", "authenticity": "project_description_not_calibration"}
+  },
+  "references": [
+    {"url": "https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm", "classification": "dataset_provider", "inspection": "page_read_2026-11-06", "scope": "WHU-Hi nominal sensor and collection membership", "terms": "Academic-only data use and citation required; no dataset redistribution by this module"},
+    {"url": "https://arxiv.org/pdf/2012.13920v2", "classification": "original_dataset_paper", "inspection": "v2_pages1-3_read_2026-11-06", "scope": "WHU-Hi nominal acquisition and Pavia ROSIS table; no per-band instrument files authenticated"},
+    {"url": "https://www.ehu.eus/ccwintco/index.php?title=Hyperspectral_Remote_Sensing_Scenes", "classification": "dataset_provider_description", "inspection": "search_cached_description_visible_direct403", "scope": "Pavia nominal ROSIS description; direct current page not retrieved"}
+  ],
+  "external_code_reused": false,
+  "dataset_downloaded_by_this_module": false
+}
