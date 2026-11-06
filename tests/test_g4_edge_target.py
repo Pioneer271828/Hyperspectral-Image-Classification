@@ -1,4 +1,4 @@
-"""Existing M6 factory/BN integration; synthetic learning only, no real effect."""
+"""Existing M7 core-factor factory/BN integration; synthetic learning only."""
 import copy
 import json
 import os
@@ -64,6 +64,10 @@ class EdgeTargetTests(unittest.TestCase):
             g = torch.randn(4, 5, dtype=torch.float64, requires_grad=True)
             c = torch.randn(4, 5, dtype=torch.float64, requires_grad=True)
             gg, cc = g.detach().clone().requires_grad_(), c.detach().clone().requires_grad_()
+            identity, _ = module(g, torch.eye(4, dtype=torch.float64), c)
+            torch.testing.assert_close(identity.to_dense(), torch.eye(4, dtype=torch.float64), rtol=0, atol=0)
+            frozen = torch.autograd.grad(identity.to_dense().square().sum(), tuple(module.parameters()))
+            self.assertTrue(all(int(torch.count_nonzero(v)) == 0 for v in frozen))
             actual, info = module(g, adjacency.to_sparse(), c, collect_stats=True, return_diagnostics=True)
             expected = reference(other, gg, cc)
             torch.testing.assert_close(actual.to_dense(), expected, rtol=1e-5, atol=1e-6)
@@ -166,6 +170,11 @@ class EdgeTargetTests(unittest.TestCase):
     def test_enabled_conditions_three_synthetic_updates_gradients_and_enrollment(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); _, item, _ = fixture(root); data = data_for(item)
+            # The inherited context fixture has A=I: one candidate per row makes
+            # softmax reweighting constant and correctly gives zero gradients.
+            # Only this synthetic participation test uses two legal candidates.
+            count = data["A"].shape[0]
+            data["A"] = .5 * torch.eye(count, device=DEVICE) + .5 * torch.eye(count, device=DEVICE).roll(1, dims=1)
             _, spec = source_fixture(root / "source")
             from joint_baseline import load_config
             config = load_config("configs/experiments/base97_joint.json")
@@ -182,11 +191,17 @@ class EdgeTargetTests(unittest.TestCase):
                         outputs = forward_observation(model, data, expected_binding=binding)
                         selected = tuple(v[item["train_indices"].to(DEVICE)] for v in outputs)
                         loss_terms(selected, item["train_labels"].to(DEVICE), config)["total"].backward()
-                        params = [p for n, p in model.named_parameters() if n.startswith(PREFIXES)]
-                        self.assertTrue(all(p.grad is not None and torch.isfinite(p.grad).all() for p in params))
-                        self.assertGreater(sum(float(p.grad.abs().sum()) for p in params), 0.)
+                        for prefix in PREFIXES:
+                            params = [p for n, p in model.named_parameters() if n.startswith(prefix)]
+                            if params:
+                                self.assertTrue(all(p.grad is not None and torch.isfinite(p.grad).all() for p in params))
+                                self.assertGreater(sum(float(p.grad.abs().sum()) for p in params), 0.)
                         optimizer.step()
                     self.assertGreater(sum(int(torch.count_nonzero(p.detach() - before[n])) for n, p in model.named_parameters() if n in before), 0)
+                    for prefix in PREFIXES:
+                        names = [n for n in before if n.startswith(prefix)]
+                        if names:
+                            self.assertGreater(sum(int(torch.count_nonzero(model.state_dict()[n] - before[n])) for n in names), 0)
 
     def test_all_roles_immutable_population_bn_and_three_exact_checkpoint_reloads(self):
         with tempfile.TemporaryDirectory() as temp:
