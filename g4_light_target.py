@@ -12,7 +12,7 @@ import torch
 import g4_support_target as bounded
 from joint_baseline import NAMES, _item_fingerprint
 from joint_training import run_training
-from loadData.dataset_registry import DATASETS
+from loadData.dataset_registry import DATASETS, file_hash
 from m4_full_transfer import initialize_full_target
 from m4_full_target_runtime import TARGET_ARITHMETIC
 from m4_ordered_source import OrderedValidation
@@ -105,6 +105,13 @@ class LightTargetRuntime(TargetRuntime):
         super().validate_inputs(items)
         if digest(_item_fingerprint(items[self.settings["target"]])) != self.settings["support_context_binding"]["item_sha256"]:
             raise ValueError("Bound support context changed")
+        if self.settings["method"] == HEAD_ONLY and (self.directory / "progress.json").exists():
+            progress = bounded.read(self.directory / "progress.json")
+            if progress["cursor"] > 0:
+                manifest = self.directory / "feature-bank.json"
+                bank = self.directory / "feature-bank.pt"
+                if not manifest.is_file() or not bank.is_file() or file_hash(bank) != bounded.read(manifest)["bank_sha256"]:
+                    raise ValueError("Resume feature bank changed before model initialization")
 
     def _cost(self, phase, start):
         # Verification after completion stays readonly, including direct reload probes.

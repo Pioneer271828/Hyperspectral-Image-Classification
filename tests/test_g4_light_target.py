@@ -114,8 +114,14 @@ class LightTargetTests(unittest.TestCase):
             with self.assertRaises(ValueError):runtime.optimizer(model,cfg)
             frozen.requires_grad_(False)
             optimizer=runtime.optimizer(model,cfg)
+            original=frozen.detach().clone()
             with torch.no_grad(): frozen.add_(.01)
             with self.assertRaisesRegex(ValueError,"Frozen parameter"):
+                runtime.train_step_at(0,model,optimizer,"xuzhou",items["xuzhou"],cfg)
+            with torch.no_grad():
+                frozen.copy_(original)
+                next(model.buffers()).add_(1)
+            with self.assertRaisesRegex(ValueError,"Frozen optimizer-phase buffers"):
                 runtime.train_step_at(0,model,optimizer,"xuzhou",items["xuzhou"],cfg)
             with self.assertRaises(ValueError):bound(root,catalog/"manifest.json","bad","target_scratch_full","none",spec)
             with self.assertRaises(ValueError):bound(root,catalog/"manifest.json","bad",HEAD_ONLY,"none",{})
@@ -132,14 +138,16 @@ class LightTargetTests(unittest.TestCase):
                 run_training(wrong[0],wrong[1],root/"run",wrong[2],wrong[3],runtime_adapter=wrong[4],resume=True)
             self.assertEqual(before,hashes(root/"run"))
             with (root/"run/feature-bank.pt").open("ab") as stream:stream.write(b"changed")
-            fresh=bound(root,catalog/"manifest.json","run",HEAD_ONLY,"none",spec)
+            before=hashes(root/"run")
             with self.assertRaises(ValueError):
+                fresh=bound(root,catalog/"manifest.json","run",HEAD_ONLY,"none",spec)
                 run_training(fresh[0],fresh[1],root/"run",fresh[2],fresh[3],runtime_adapter=fresh[4],resume=True)
+            self.assertEqual(before,hashes(root/"run"))
 
     def test_cli_actual_two_ten_zero_and_full_or_wrong_sha_rejection(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);_,_,catalog,_=prepared(root);_,spec=none_source(root/"source")
-            specfile=root/"source-spec.json";write_json(specfile,spec);manifest=catalog/"manifest.json"
+            specfile=root/"source/source-spec.json";write_json(specfile,spec);manifest=catalog/"manifest.json"
             device=os.environ.get("LIGHT_TARGET_DEVICE","cpu")
             command=[sys.executable,"scripts/train_g4_light_target_short.py","--expected-commit",code_snapshot()["commit"],
                 "--manifest",str(manifest),"--manifest-sha256",file_hash(manifest),"--source-spec",str(specfile),
