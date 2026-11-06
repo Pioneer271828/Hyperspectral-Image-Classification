@@ -20,7 +20,7 @@ from joint_baseline import NAMES
 from joint_training import run_training
 from loadData.dataset_registry import DATASETS, file_hash
 from model.interaction_config import InteractionConfig
-from g4_interaction_target import PREFIX, configuration as matching_configuration
+from g4_interaction_target import KEY as MATCHING_BINDING_KEY, PREFIX, configuration as matching_configuration
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, require_frozen_code, tensor_hash
 from target_initialization import METHODS, state_id
@@ -123,6 +123,7 @@ class NormalizedEdgeTargetRuntime(NoneSupportTargetRuntime):
 
     def checkpoint_metadata(self, model):
         return {**super().checkpoint_metadata(model), BINDING_KEY: copy.deepcopy(self.normalization_binding),
+                MATCHING_BINDING_KEY: copy.deepcopy(self.normalization_binding["base_binding"]),
                 KEY: copy.deepcopy(self.settings[KEY])}
 
     def load_selected(self, path, items, raw_source_path, *, device="cpu"):
@@ -140,6 +141,7 @@ class NormalizedEdgeTargetRuntime(NoneSupportTargetRuntime):
                 or meta.get("research_config") != self.settings["config"]
                 or meta.get("target_initialization") != self.initialization
                 or meta.get("support_context_binding") != self.settings["support_context_binding"]
+                or meta.get(MATCHING_BINDING_KEY) != self.normalization_binding["base_binding"]
                 or meta.get(KEY) != self.settings[KEY] or meta.get(BINDING_KEY) != self.normalization_binding):
             raise ValueError("Selected normalization source/context/condition/configuration differs")
         receipt = meta[CALIBRATION_KEY]
