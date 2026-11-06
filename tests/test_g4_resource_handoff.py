@@ -52,6 +52,16 @@ class ResourceTests(unittest.TestCase):
         ledger.finish(3,{"case":"a","stage":"first2","gpu":3})
         self.assertEqual(list(ledger.pending),[("b","first2")])
 
+    def test_zero_update_resource_deferral_can_move_to_another_card(self):
+        ledger=m.Ledger([('a','continue')],[],['a'])
+        self.assertEqual(ledger.claim(1),('a','continue'))
+        ledger.defer(1,{'case':'a','stage':'continue','gpu':1,
+                       'result':{'operation':'resource_wait','updates_this_call':0}})
+        self.assertEqual(ledger.claim(3),('a','continue'))
+        with self.assertRaises(ValueError):
+            ledger.defer(3,{'case':'a','stage':'continue','gpu':3,
+                           'result':{'operation':'interrupted','updates_this_call':2}})
+
     def test_phase_only_accepts_unstarted_exact2_or_completed1500_and_owned_lock(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/"case";case={"out":str(root)}

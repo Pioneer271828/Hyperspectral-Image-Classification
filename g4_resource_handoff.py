@@ -129,8 +129,18 @@ class Ledger:
             elif NEXT[stage] is not None and not self.error:
                 self.pending.appendleft((name, NEXT[stage]))
 
+    def defer(self, gpu, event):
+        with self.lock:
+            job = self.active[gpu]
+            if (event['case'], event['stage'], event['gpu']) != (*job, gpu): raise ValueError('Deferred owner changed')
+            if event['result'] != {'operation': 'resource_wait', 'updates_this_call': 0}: raise ValueError('Only zero-update resource waiting may defer')
+            self.active.pop(gpu)
+            self.stages.remove(job)
+            self.events.append(event)
+            if not self.error: self.pending.append(job)
 
-def gate(gpu, slot, aborted=lambda: False):
+
+def gate(gpu, slot, aborted=lambda: False, *, once=False):
     if os.environ.get("CUDA_VISIBLE_DEVICES") not in (None, str(gpu)): raise ValueError("Explicit physical GPU mismatch")
     while not aborted():
         free, util = map(int, subprocess.check_output(["nvidia-smi", "-i", str(gpu),
@@ -138,6 +148,7 @@ def gate(gpu, slot, aborted=lambda: False):
         write(slot, {"status": "ready" if free >= 12288 and util <= 60 else "waiting_for_resources",
                      "gpu": gpu, "free_mib": free, "utilization": util})
         if free >= 12288 and util <= 60: return True
+        if once: return False
         time.sleep(5)
     return False
 
@@ -193,8 +204,10 @@ def worker(args):
     case = next(c for c in launch["cases"] if c["name"] == args.case)
     case, _ = b["read_full_case"](a["launch"]["path"], a["launch"]["sha256"], a["registration"]["path"],
         a["registration"]["sha256"], a["producer"], (case["target"], case["seed"], case["method"], case["mode"]))
-    gate(args.gpu, Path(args.amendment).parent / ("gpu-" + str(args.gpu) + ".json"))
+    slot = Path(args.amendment).parent / ("gpu-" + str(args.gpu) + ".json")
     if args.stage == "audit":
+        if not gate(args.gpu, slot, once=True):
+            print(json.dumps({'operation': 'resource_wait', 'updates_this_call': 0})); return
         row = b["audit_case"](case, a["producer"], a["launch"]["sha256"], a["registration"]["sha256"])
         out = Path(args.amendment).parent / "events" / (args.case + "-audit.json")
         if out.exists(): raise ValueError("Audit output already exists")
@@ -203,6 +216,8 @@ def worker(args):
     if (args.stage == "first2" and current != "first2") or (args.stage == "continue" and current != "continue") or (args.stage == "readonly" and current != "readonly"):
         raise ValueError("Case cursor does not match assigned operation")
     items, value, finish = provenance(case, a, b); finish()
+    if not gate(args.gpu, slot, once=True):
+        print(json.dumps({'operation': 'resource_wait', 'updates_this_call': 0})); return
     before = tree(case["out"]) if args.stage == "readonly" else None
     result = b["run_training"](case["settings"], items, case["out"], value, a["producer"], device="cuda",
         resume=args.stage != "first2", stop_after=2 if args.stage == "first2" else None,
@@ -244,21 +259,28 @@ def controller(args):
             name, stage = job; publish()
             command = [sys.executable, str(Path(__file__).resolve()), "worker", "--amendment", args.amendment,
                 "--amendment-sha256", args.amendment_sha256, "--case", name, "--stage", stage, "--gpu", str(gpu)]
-            path = folder / "logs" / (name + "-" + stage + ".log")
+            path = folder / "logs" / (name + "-" + stage + "-" + os.urandom(8).hex() + ".log")
             started = time.monotonic()
             try:
+                before_stage = tree(next(c['out'] for c in launch['cases'] if c['name'] == name))
                 with path.open("x") as log:
                     proc = subprocess.Popen(command, cwd=a["frozen_checkout"], env=dict(os.environ,
                         CUDA_VISIBLE_DEVICES=str(gpu), PYTHONDONTWRITEBYTECODE="1"), stdout=log, stderr=subprocess.STDOUT)
                     pid = proc.pid; rc = proc.wait()
                 if rc: raise RuntimeError("Resource stage failed: " + str(path))
                 result = json.loads(path.read_text().splitlines()[-1])
+                if result == {'operation': 'resource_wait', 'updates_this_call': 0}:
+                    if before_stage != tree(next(c['out'] for c in launch['cases'] if c['name'] == name)):
+                        raise ValueError('Resource deferral mutated model output')
+                    ledger.defer(gpu, {'case':name, 'stage':stage, 'gpu':gpu, 'pid':pid, 'exit_code':rc,
+                        'log':str(path), 'log_sha256':sha(path), 'seconds':time.monotonic()-started, 'result':result})
+                    publish(); continue
                 row = None
                 if stage == "audit":
                     if sha(result["audit"]) != result["sha256"]: raise ValueError("Audit receipt changed")
                     row = read(result["audit"])
                     row.update(completed_resume_updates=0, elapsed_seconds=time.monotonic() - ledger.started[name],
-                        elapsed_scope="resource_handoff_case_segment_excludes_prior_legacy_wait_and_first2" if a["jobs"][name] != "first2" else "resource_case_wall_with_waits",
+                        elapsed_scope="resource_handoff_case_segment_excludes_prior_legacy_training_and_resource_wait" if a["jobs"][name] != "first2" else "resource_case_wall_with_waits",
                         resource_amendment_sha256=args.amendment_sha256)
                 elif (result["operation"], result["updates_this_call"]) != STEPS[stage]: raise ValueError("Worker operation differs")
                 ledger.finish(gpu, {"case": name, "stage": stage, "gpu": gpu, "pid": pid, "exit_code": rc,
@@ -272,6 +294,8 @@ def controller(args):
         futures = [pool.submit(queue, gpu) for gpu in a["gpus"]]
         for future in futures: future.result()
     if ledger.error: raise RuntimeError(ledger.error)
+    if sum(e['result'].get('updates_this_call', 0) for e in ledger.events) != a['remaining_updates']:
+        raise ValueError('Migrated operations did not exactly spend remaining update budget')
     rows = [ledger.rows[n] for n in order]
     if (len(rows) != 54 or sum(r["updates"] for r in rows) != 81000 or sum(r["head_metrics"] for r in rows) != 324
             or sum(r["class_recalls"] for r in rows) != 4320 or sum(r["exact_reload_repeats"] for r in rows) != 162):
