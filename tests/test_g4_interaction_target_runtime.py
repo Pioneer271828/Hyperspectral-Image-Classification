@@ -106,7 +106,7 @@ class InteractionRuntimeTests(unittest.TestCase):
                             if stats:
                                 self.assertGreater(stats["gradient_norm"], 0.); self.assertGreater(stats["changed_elements"], 0)
                     moved = {n: {k: v.to(DEVICE) if torch.is_tensor(v) else v for k, v in item.items()} for n, item in b[1].items()}
-                    raw = split / f'raw-validation-{result["selected_step"]:06d}.pt'
+                    raw = split / f'raw-validation-{result["result"]["selected_step"]:06d}.pt'
                     expected = _tree_fingerprint(torch.load(split / "selected-probabilities.pt", weights_only=True))
                     for _ in range(3):
                         loaded = b[4].load_selected(split / "primary.pt", moved, raw, device=DEVICE)
