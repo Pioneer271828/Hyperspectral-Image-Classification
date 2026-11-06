@@ -332,6 +332,14 @@
       "remaining": "Issue232完整none源目标组件继续，真实配置证明须先消费230完整receipt；独立核extra_state非直接兼容原G4张量state_id，须显式适配。不是完整GMU复现/HSI收益/物理可靠度；启用初态仅数值接近fixed。同预算容量、速度、原生CUDA独立轨迹、目标整网BN/runtime、B0/R/F/R+F及支持K空间传感器实际对照仍待184全接受→331审计→186复盘→原331全冻结query→204结论，main不合",
       "report": "research/reports/M8PositionFusion_默认关闭位置标量门控融合核工程验收_20261107.md",
       "chat_report": "本聊天2026-11-07 Issue230位置标量门控融合核工程进度；完整报告与m8-position-fusion-engineering-results.json留证，连续Issue232不等待确认"
+    },
+    {
+      "id": "G4既有54批次三卡资源续跑交接工程",
+      "state": "资源工程和51接受安全边界后的真实三卡接管通过，184全批次实验仍运行",
+      "evidence": "Issue198 closed/PR200 ready未合；资源侧实际tested/生产5db71e82ad3fc36f3cef7046a22c1162be756097，最终文档235266c7abf0b554d0deaf091704026c1eede52e。授权LXC CPU8项7pass+1GPU-onlyskip4.801s、GPU3专项8/8 102.296s、GPU7可见全585项583pass+2GPU-onlyskip457.483s；额外原CLI GPU3先2→新worker GPU7续1498/完成0→GPU3原严格1500/6指标54召回3精确重载合成用例1/1 100.260s。原331字节/81000预算/数值不改。实际608030三卡1/3/7接管余3例4500预算，first2共6更新；独立外部见证7930输入/51例5763文件与原进度行原样、331/5db干净、旧PID退役/3真实worker可见性/日志哈希通过29.373429s，receipt c444385c6caa03ec977342af749815ec085b772b795709158ee302b878f01e3d。主任务核三文档blob同235及见证副本SHA，精确接纳文档不合资源源码，不冒称主任务复跑资源训练。52c CPU5pass1error1skip5.062s遇受限proc1/cwd，后改核身份协调器直接子进程；rmvision失败/大回执截断拒收记录保留",
+      "remaining": "仅资源工程及交接当时见证，非全54数值独立审计或跨卡训练轨迹逐位等价。原wrapper137/77555s为计划协调器交接段，新acceptance.resource_execution和资源elapsed仅覆盖新段；完整报告须分段成本。184真completed/failed/新控制器终止先暂停vca核验，再普通回合331全批次审计+资源终验→186真实复盘→原331全冻结query→204结论；198报告不关闭184、不提前query或发起下一真实实验，main不合",
+      "report": "research/reports/G4ResourceHandoff_既有54批次三卡续跑工程与现场交接_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue198资源工程与三卡真实交接交付接纳；根任务核源235三份文档身份并记录完整报告/两摘要，训练验收为资源侧实际执行范围，不重复原184实验交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
