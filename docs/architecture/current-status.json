@@ -265,9 +265,17 @@
       "id": "G4 M8完整源固定融合与损失BN组件工程",
       "state": "既有三条件初始化/原概率损失/orderedBN与重载工程通过，真实效果未测",
       "evidence": "Issue214/PR215；实际045a35ae431b75149367256a476b40b2a3777440，授权LXC CPU6/6 32.224s、GPU6/6 35.586s、全645项644通过+1既有GPU专用跳过1033.119s，checker399Python101JSON/help。default/aux_off/alpha035×两角色，共有初态/fresh头域/RNG零新增参数，default原none前向BN精确、13项概率损失/独立手算NLL、实际alpha与logits端点、辅助零梯度且保留衰减，六角色各3合成更新及18精确重载/专项通过。真实18初始化6基础、88文件不变20.295s；独立旧工厂6基础手工重建18状态，89文件不变3.616s，NN/BN/优化/query0。SCP未等exit0提前消费被Git拒绝且测试0，纠正后验收，失败保留；原331文件不改",
-      "remaining": "Issue216/PR217有界12步、2+10/完成0与分头证据工程继续；新门控/M4组合/独立单分支/语义映射/支持K空间传感器完整效果仍待184全54接受、独立审计、186真实复盘、原331全冻结query与204结论后分别登记。原生CUDA独立优化轨迹等价未接受",
+      "remaining": "216有界12与严格恢复工程已通过；既有M8组件仍非完整效果验收。新门控/M4组合/独立单分支/语义映射/支持K空间传感器仍待184完整接受、审计、复盘、原331全冻结query与204结论后登记，原生CUDA独立优化轨迹等价未接受",
       "report": "research/reports/G4FusionTarget_完整源M8固定融合与损失BN组件工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue214 M8固定融合/损失BN组件工程进度；完整报告及g4-fusion-target-engineering-results.json保留证据，交付后连续216不等待确认"
+    },
+    {
+      "id": "G4 M8目标有界训练与严格恢复工程",
+      "state": "既有固定融合/辅助监督六角色有界12与严格恢复工程通过，真实效果未测",
+      "evidence": "Issue216/PR217；实际9b0e76a75f6c8907eda9c3654ccf45b84c3c68de，授权LXC CPU5/5 76.129s、GPU5/5 89.472s、全650项649通过+1既有GPU专用跳过1093.234s，checker402Python101JSON/help。六角色完整12/新实例2+10/完成0、18精确重载/专项，CPU状态optimizer/scheduler/history/RNG/概率/trace逐位恢复；default对190两角色精确，GPU该控制为事前固定图参考。13原loss项、aux_off raw非零/weighted0/辅助梯度0且保留衰减头变化、实际alpha/配置和嵌套原BN回执、NaN辅助梯度在参数更新前拒绝通过。真实18配置/初始化绑定214，91文件不变72.937s；独立不调用216设置/runtime/factory手工重建18配置，92文件不变18.704s，真实NN/BN/更新/query0。原331不改，版本测试失败0，文档FF拒绝与TLS记录保留",
+      "remaining": "Issue218/PR219 E0-R同区域冻结特征诊断工程继续；新门控/独立单分支/M4组合/语义映射/支持K空间传感器完整真实效果仍待184全54接受、独立审计、186复盘、原331全冻结query及204预登记结论后登记。原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4FusionRuntime_M8目标有界训练与严格恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue216 M8有界训练/严格恢复工程进度；完整报告及g4-fusion-runtime-engineering-results.json保留证据，交付后连续218不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
