@@ -1,0 +1,116 @@
+{
+  "status": "engineering_passed",
+  "issue": 182,
+  "cpu_passed": true,
+  "gpu_passed": true,
+  "full_regression_passed": true,
+  "worker_campaign_audit_contracts_passed": true,
+  "preflight_receipt_sha256": "2dacef05240b2d41854c4e70f97e7e3887a3b64bb2e1c3872ffead9bb97d82a5",
+  "query_labels_accessed": false,
+  "full_training_completed": false,
+  "real_full_target_optimizer_updates": 0,
+  "preflight": {
+    "root": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue182-preflight01",
+    "cases": 54,
+    "common_initial_proofs": 9,
+    "protected_files_and_inputs": 7923,
+    "elapsed_seconds": 37.75342195108533,
+    "consumer_revalidation": {
+      "commit": "331d718567b1a9726934f445665999df972392b1",
+      "protected_files_and_metadata": 7926,
+      "elapsed_seconds": 115.59162913030013,
+      "passed": true,
+      "reran_initialization": false
+    },
+    "protected_sha256": "0a03659a0a3726da00f4c095544244ef7b5b5a51c959d7f8f552149681affbbd"
+  },
+  "environments": {
+    "rmvision": {
+      "root": "/home/rmvision/matched-target-pipeline03",
+      "branch": "codex/matched-target-pipeline03",
+      "python": "3.12.3",
+      "torch": "2.7.0a0+ecf3bae40a.nv25.02",
+      "cuda": "12.8",
+      "gpu": "GPU0 NVIDIA GeForce RTX 4090",
+      "driver": "610.88"
+    },
+    "lxc": {
+      "root": "/home/lbx/hsi-pioneer271828/checkouts/g4-matched-target-pipeline03",
+      "branch": "codex/g4-matched-target-pipeline03",
+      "python": "3.10.20",
+      "torch": "2.7.1+cu128",
+      "cuda": "12.8",
+      "gpu": "GPU1 NVIDIA GeForce RTX 4090",
+      "driver": "595.71.05"
+    }
+  },
+  "tests": [
+    {
+      "name": "rmvision_cpu_targeted",
+      "ran": 12,
+      "passed": 11,
+      "skipped": 1,
+      "seconds": 28.268,
+      "command": "PYTHONPATH=.:tests python -m unittest test_g4_matched_target_execution test_g4_matched_target_audit test_g4_matched_target_worker_cli -v",
+      "log": "/home/rmvision/matched-target-pipeline03-cpu.log",
+      "sha256": "6ffea7b624287271ade9f6ad2b057eb308a21809a635281becc41e948d24a610"
+    },
+    {
+      "name": "rmvision_gpu",
+      "ran": 16,
+      "passed": 16,
+      "skipped": 0,
+      "seconds": 237.292,
+      "command": "CUDA_VISIBLE_DEVICES=0 MATCHED_TARGET_DEVICE=cuda PYTHONPATH=.:tests python -m unittest test_g4_matched_target_study test_g4_matched_target_execution test_g4_matched_target_audit test_g4_matched_target_worker_cli -v",
+      "log": "/home/rmvision/matched-target-pipeline03-gpu.log",
+      "sha256": "aced673f605faf0aae3fe0c0ebd4081d4456870a0f82a9661bfecb61c8c3450e"
+    },
+    {
+      "name": "rmvision_full_cpu",
+      "ran": 558,
+      "passed": 557,
+      "skipped": 1,
+      "seconds": 263.18,
+      "command": "MATCHED_TARGET_DEVICE=cpu python -m unittest discover -s tests -v",
+      "log": "/home/rmvision/matched-target-pipeline03-full.log",
+      "sha256": "830aea3b8cc99c1b0b4cde3541cf21d65b4f564d3ac44c4ae4c14f5779c52d91"
+    },
+    {
+      "name": "lxc_gpu",
+      "ran": 12,
+      "passed": 12,
+      "skipped": 0,
+      "seconds": 231.156,
+      "command": "CUDA_VISIBLE_DEVICES=1 MATCHED_TARGET_DEVICE=cuda PYTHONPATH=.:tests python -m unittest test_g4_matched_target_execution test_g4_matched_target_audit test_g4_matched_target_worker_cli -v",
+      "log": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-pipeline03-gpu.log",
+      "sha256": "159a5ffe73b22829acd2a7aa0502829a36ec27a2b35bdcb91e526a121113c7cf"
+    }
+  ],
+  "checker": {
+    "passed": true,
+    "python_files": 357,
+    "json_files": 81
+  },
+  "cli_help": {
+    "passed": true,
+    "sha256": "ea7905eee79ecdc2da298285060f4b81fcec4e13c464b7d7d1dbf264b1d50d64"
+  },
+  "scope": {
+    "actual_preflight": "54 research identities and 9 common fresh proofs; no research updates or query labels",
+    "fixture": "Synthetic 9-class target full1500 CLI 2+1498+readonly0 and independent selected-state audit; global54 count/freeze guards tested with synthetic catalog",
+    "synthetic_gt_release_test": true,
+    "independent_metrics": "Selected train/validation heads only; nonselected raw states checked by hash/history/selection/LR, not every nonselected probability",
+    "real_effect_conclusion": "Not measured; full81000 study and post-freeze query pending",
+    "real_query_labels_read": false
+  },
+  "failures_preserved": [
+    "a6ec24d missing dirty field in grid fixture; corrected test metadata, production contract unchanged",
+    "Engineering receipt construction aborted before output: protected SHA mis-transcribed; actual file hash re-read unchanged"
+  ],
+  "next": "Separate preregistered full54 experiment issue before any research training",
+  "tested_commit": "331d718567b1a9726934f445665999df972392b1",
+  "branch": "codex/g4-matched-target-pipeline03",
+  "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue182-engineering01/receipt.json",
+  "receipt_sha256": "80a18ffb42d9b7de0c4b1acc20c48e4e37ce04ef398e0c16137c16e5fb766715",
+  "code_source_hash": "48b28cfeee55e4d351fbf873d35e2e0d0f22ccca12910ef8a9f147e0c9bdbad8"
+}
