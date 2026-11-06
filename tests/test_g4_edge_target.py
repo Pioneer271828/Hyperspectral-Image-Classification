@@ -38,8 +38,13 @@ def create(condition="gated_joint", method=METHODS[0], spec=None, device=DEVICE)
 
 
 def data_for(item, device=DEVICE):
-    # Use the old observation-only field extractor with an explicit device.
-    return obs(item, device=device)
+    # A synthetic multi-candidate observation exercises edge-conditioned BN
+    # and reloads as well as forward/gradients. The on-disk catalogue is intact;
+    # the separate CLI test only initializes from its original authenticated A.
+    value = obs(item, device=device)
+    count = value["A"].shape[0]
+    value["A"] = .5 * torch.eye(count, device=device) + .5 * torch.eye(count, device=device).roll(1, dims=1)
+    return value
 
 
 class EdgeTargetTests(unittest.TestCase):
