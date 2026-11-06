@@ -152,8 +152,8 @@
     },
     {
       "id": "G4完整54目标配对实验",
-      "state": "完整目标批次运行中，43/54例已控制器验收（64500/81000更新）",
-      "evidence": "Issue184/PR185 Draft；生产331d718567b1a9726934f445665999df972392b1干净冻结，supervisor273458和wrapper273455存活，GPU1；43例（PaviaU18+Xuzhou18+HongHu7）各1500/51事件，258头指标2868召回129精确重载及完成0恢复通过；第44例HongHu512容量scratch继续。新增HongHu512-none scratch选751/LR1382、1412.740s，首末30loss8.978245→0.080421，验证三头OA73.64/75.45/73.64%，最小召回0.4/0.4/0.2，无零召回；模块实际变化和正梯度通过。HongHu64残差FT选721/LR1352与残差scratch验证CNN第11类0召回（5支持）保留，无控制器失败/完整接受/query；预算不改",
+      "state": "完整目标批次运行中，44/54例已控制器验收（66000/81000更新）",
+      "evidence": "Issue184/PR185 Draft；生产331d718567b1a9726934f445665999df972392b1干净冻结，supervisor273458/wrapper273455存活，GPU1；44例（PaviaU18+Xuzhou18+HongHu8）各1500/51事件，264头指标3000召回132精确重载和完成0恢复通过；第45例HongHu512残差scratch继续。新增容量scratch选751/LR1382、1409.895s，首末30loss8.974768→0.077302，三头验证OA74.55/76.36/73.64%，最低召回0.4/0.4/0.2、无零召回，M4正梯度1500步/实际变化8320；HongHu64残差scratch验证CNN第11类0召回等历史弱项保留。无失败/完整training-acceptance/query，固定81000预算不改",
       "remaining": "54/81000完整接受、独立324指标4320召回162精确重载与源/目标输入不变、拟合逐类成本复盘；全部冻结后才同协议query和预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
       "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md"
     },
@@ -177,9 +177,17 @@
       "id": "G4独立支持集与K目标训练工程",
       "state": "有限12步工程验收通过，真实支持集/K训练与效果尚未执行",
       "evidence": "Issue190/PR191；实际e7424559e1bc72c655f511c213e551ced9b95be3，rmvision CPU5/5 41.286s、GPU5/5 65.231s、完整577项576通过+1既有GPU专用跳过336.113s；六角色12与2+10/完成0/3精确重载、CPU状态精确恢复、实际CLI通过。LXC真实Xuzhou support512/K1/model64六初始化与184冻结状态相同，63文件不变47.675s，更新0/forward0/query0，无GPU上下文。原331文件不变；CLI输出、CUDA环境和证据hash转录失败保留",
-      "remaining": "184按全54接受→331独立审计→186真实复盘→全冻结query/预登记结论推进，之后另登记真实支持/K重复；下一独立工程为完整源head-only/light-module参数/恢复合同，空间/传感器等仍必测",
+      "remaining": "Issue192完整源仅头/适配器有限工程已验收；184仍按全54接受→331独立审计→186真实复盘→全冻结query/预登记结论推进，之后另登记支持/K及参数范围真实对照；空间/传感器和波长质量等仍必测",
       "report": "research/reports/G4SupportTarget_独立支持集与K目标训练工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue190独立支持集与K目标训练工程模块完成报告；持久报告及g4-support-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4完整源仅头与适配器目标工程",
+      "state": "两种参数范围×三模式有限12步工程验收通过，真实数值效果未测",
+      "evidence": "Issue192/PR193；实际37e24c56f13465fef4270698e2e4c3cbcb6ba028；rmvision CPU5/5 37.322s、GPU5/5 61.108s、完整582项581通过+1既有GPU专用跳过364.507s，checker369Python86JSON/help通过；六角色12与新实例2+10/完成0/三次精确重载、CPU模型optimizer/scheduler/history/概率精确一致；冻结参数和BN缓冲区优化期不变、适配器正梯度/实际更新、阶段成本及缓存负例通过。LXC真实Xuzhou support512/K1/model64六初始化/权限核验52.444s，63文件不变，仅头1755、适配器+头12220参数；更新0/forward0/真实BN校准0/query0，无GPU上下文，原331文件未改；首版CLI夹具隔离拒绝保留",
+      "remaining": "184完整接受、独立审计、真实拟合逐类成本复盘及全冻结query后，另登记支持/K与参数范围的真实同条件对照；真实初始BN/缓存/12步与全训练尚未验收，不判精度或部署加速；空间/传感器和波长质量及其余机制按两计划继续",
+      "report": "research/reports/G4LightTarget_完整源仅头与适配器工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue192完整源仅头与适配器目标工程模块完成报告；持久报告及g4-light-target-engineering-results.json为证据，不重复交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
