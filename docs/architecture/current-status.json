@@ -152,8 +152,8 @@
     },
     {
       "id": "G4完整54目标配对实验",
-      "state": "完整目标批次运行中，25/54例已控制器验收（37500/81000更新）",
-      "evidence": "Issue184/PR185 Draft；固定生产331d718567b1a9726934f445665999df972392b1，GPU1，54x1500=81000；首步前全54身份/9共同fresh冻结，7930保护项；本次核对25例（PaviaU18+Xuzhou7）完成1500并通过51事件、150头指标/1350召回、75精确重载和完成0恢复，第26例Xuzhou-s512容量scratch继续中；新增3例逐一只读复盘通过，无失败、完整training-acceptance尚无、query未读；生产源码干净，原估12–24h加资源等待",
+      "state": "完整目标批次运行中，41/54例已控制器验收（61500/81000更新）",
+      "evidence": "Issue184/PR185 Draft；固定生产331d718567b1a9726934f445665999df972392b1，GPU1，54x1500=81000；首步前全54身份/9共同fresh冻结，7930保护项；本次核对41例（PaviaU18+Xuzhou18+HongHu5）完成1500并通过51事件、246头指标/2604召回、123精确重载和完成0恢复，第42例HongHu-s64残差全微调继续；完成例均只读复盘，无控制器失败；HongHu残差scratch验证CNN第11类0召回（5支持）保留；完整training-acceptance尚无、query未读；生产源码干净，原估12–24h加资源等待",
       "remaining": "54/81000完整接受、独立324指标4320召回162精确重载与源/目标输入不变、拟合逐类成本复盘；全部冻结后才同协议query和预登记收益判定；独立支持集/K/空间/传感器及head-only/light-module仍待后续",
       "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md"
     },
@@ -164,6 +164,14 @@
       "remaining": "Issue184全54接受和独立审计通过后运行本导出器完成真实曲线/逐类/成本复盘，再统一冻结query；工程通过不代表真实精度收益",
       "report": "research/reports/G4MatchedTargetReview_完整54训练复盘导出工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue186复盘导出工程模块完成报告；持久报告及g4-matched-target-review-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4独立支持集与K输入绑定工程",
+      "state": "27支持/K输入绑定及独立零更新验收通过，真实重复实验待登记执行",
+      "evidence": "Issue188/PR189；实际937861fe87ce1fe619268063dfed1193d416853e；rmvision CPU7/7 6.562s、完整572项571通过+1既有GPU专用跳过285.960s，checker363Python84JSON/help通过；LXC CPU7/7 9.649s；真实27覆盖层13.406s，独立54阶段/108标签张量/27观察图/47文件不变160.582s；输入18文件不变，更新0/query0，无GPU上下文；原331文件未改",
+      "remaining": "保持184既定全54接受/独立审计/复盘/冻结query顺序；之后另登记支持种子/K的显式训练接入及真实重复；本工程不判精度、空间/传感器或支持集重复收益",
+      "report": "research/reports/G4SupportContext_独立支持集与K输入绑定工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue188独立支持集与K输入绑定工程模块完成报告；持久报告及g4-support-context-engineering-results.json为证据，不重复交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
