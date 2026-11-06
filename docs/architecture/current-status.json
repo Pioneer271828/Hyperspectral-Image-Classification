@@ -308,6 +308,14 @@
       "remaining": "Issue226/PR227同参数分支内变换组件继续；CPU恢复GPU登记短测会先在原登记训练设备重建，不称无GPU迁移。失败前向BN缓冲未承诺全回滚。原生CUDA独立优化轨迹等价、仅归一化vs学习M7/同容量/支持K空间传感器/M4组合实际效果待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，main不合",
       "report": "research/reports/G4NormalizedEdgeRuntime_M7仅归一化目标有界训练与恢复工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue224 M7仅归一化有界训练/严格恢复工程进度；报告及g4-normalized-edge-runtime-engineering-results.json保留完整证据，连续226不等待确认"
+    },
+    {
+      "id": "G4 M6同参数分支内对照与完整源目标组件工程",
+      "state": "六角色同参数初态/中层自身支路变换/orderedBN与显式重载工程通过，真实容量效果未测",
+      "evidence": "Issue226/PR227；实际6e78153c50467d67f6de46f8f2d1d564b6a915da，授权LXC CPU7/7 34.040s、GPU7/7 37.633s、全665项664通过+1既有GPU专用跳过1148.738s，checker408Python110JSON/help。none/gated/branch_local×两角色；gated/local同58498参数和初态、local多8字节version，fresh头/域/源/权限/RNG匹配。CPUFP64手工公式与输入/参数梯度、固定中间输入跨支路Jacobian未连接/Q与另一支路变动不影响本路、空/强度0/分块、none/gated对206前向BN精确通过。六角色各合成3更新、图/两槽位/三头正组梯度与实际变化、18精确重载/专项、单角色总体矩参考及旧通用loader拒绝version通过。真实18初始化12匹配基础，78文件不变21.823s；独立干净clone仅旧206工厂12次手工18state/schema/config，79文件不变3.937s；NN/BN/更新/query0。实现测试失败0，原331不改",
+      "remaining": "Issue228/PR229有界12/2+10/完成0及像素/区域槽位参与证据继续；只有中层算子无跨路消息，整网仍共享adapter/Q/融合。同参数不等计算匹配/提速，初始差值gate输入0，不称所有标量正梯度。真实容量/计算匹配/支持K空间传感器/M4组合仍待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4BranchLocalTarget_M6同参数分支内对照与目标组件工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue226 M6同参数分支内目标组件工程进度；报告及g4-branch-local-target-engineering-results.json保留完整证据，连续228不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
