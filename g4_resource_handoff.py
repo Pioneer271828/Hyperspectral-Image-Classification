@@ -67,7 +67,7 @@ def process(pid):
                 "command_sha256": hashlib.sha256((p / "cmdline").read_bytes()).hexdigest(),
                 "command": (p / "cmdline").read_bytes().replace(b"\0", b" ").decode(),
                 "cwd": str((p / "cwd").resolve()), "uid": p.stat().st_uid}
-    except (FileNotFoundError, ProcessLookupError): return None
+    except (FileNotFoundError, ProcessLookupError, PermissionError): return None
 
 
 def same_process(pin):
@@ -76,8 +76,13 @@ def same_process(pin):
 
 
 def live_children(pid):
-    rows = [process(int(p.name)) for p in Path("/proc").iterdir() if p.name.isdigit()]
-    return [p for p in rows if p and p["ppid"] == pid and p["state"] != "Z"]
+    child_file = Path("/proc") / str(pid) / "task" / str(pid) / "children"
+    rows = []
+    for name in child_file.read_text().split():
+        row = process(int(name))
+        if row is None and (Path("/proc") / name).exists(): raise PermissionError("Uninspectable direct child")
+        if row and row["ppid"] == pid and row["state"] != "Z": rows.append(row)
+    return rows
 
 
 def phase(case):
