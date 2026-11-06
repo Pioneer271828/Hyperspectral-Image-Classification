@@ -236,6 +236,14 @@
       "remaining": "208有界M6目标12步/恢复/参与证据工程已登记继续；当前只是目标新建M6参数，不称M6预训练源迁移或初态恒等。真实支持/K/同容量分支内变换/空间/传感器/M4交互与完整效果待184全54接受、独立审计、186复盘、全冻结query及204预登记结论后登记；原生CUDA独立训练轨迹等价仍未接受",
       "report": "research/reports/G4InteractionTarget_完整源M6目标初始化与BN工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue206既有M6完整源目标初始化与BN组件工程进度汇报；报告及g4-interaction-target-engineering-results.json保留证据，交付后连续208，不重复发送"
+    },
+    {
+      "id": "G4 M6目标有界训练与恢复工程",
+      "state": "有限12步/恢复/方向参与及真实零更新身份工程通过，真实效果未测",
+      "evidence": "Issue208/PR209 Draft；实际1a6a7a0613f3833108193ecc2085583d628aea05，授权LXC CPU5/5 107.638s、GPU5/5 131.819s，全625项624通过+1既有GPU专用跳过833.216s，checker390Python96JSON/help。六条件×scratch/完整none源FT合成12、新实例2+10/完成0及36精确重载，CPU完整恢复逐位一致；GPU关闭控制为事前固定图参考，启用实际更新/恢复与ordered重载，不称原生独立优化轨迹等价。真实三景36配置/初始化与206接受绑定一致，77文件不变115.408s；独立不调用208设置/runtime/factory重建36配置，78文件不变18.881s。真实NN/BN/更新/query0；首版原BN回执元数据丢失3错误与二版测试返回层级1错误均保留，修复不改原训练器/校准器/阈值",
+      "remaining": "Issue210下一既有M7候选边重加权与两套二因素初始化/BN工程已登记。真实完整训练与支持/K/同容量/空间/传感器/M4组合等仍须184完整54接受、独立审计、186真实复盘、原331全冻结query和204预登记结论后另登记",
+      "report": "research/reports/G4InteractionRuntime_M6目标有界训练与恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue208 M6目标有界训练/恢复工程进度汇报；完整报告及g4-interaction-runtime-engineering-results.json保留证据，交付后继续210不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
