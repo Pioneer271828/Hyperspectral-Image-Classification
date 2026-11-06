@@ -11,11 +11,11 @@ from unittest.mock import patch
 
 import torch
 
-from evaluation.frozen_representation_capture import ANALYSIS_COMMIT, STAGES, capture, export_case
+from evaluation.frozen_representation_capture import ANALYSIS_COMMIT, STAGES, capture, export_batch, export_case
 from g4_matched_target_analysis import POLICY as ANALYSIS_POLICY, PLAN_SHA256
-from g4_matched_target_study import METHODS, MODES, initialize
-from joint_baseline import forward
-from loadData.dataset_registry import file_hash
+from g4_matched_target_study import METHODS, MODES, case_name, grid, initialize
+from joint_baseline import NAMES, _item_fingerprint, forward
+from loadData.dataset_registry import DATASETS, file_hash
 from m4_ordered_source import OrderedValidation
 from model.checkpoint_io import save_model_checkpoint
 from model.research_config import digest
@@ -36,8 +36,8 @@ def observation(root):
     return {k: v.to(DEVICE) if torch.is_tensor(v) else v for k, v in items["xuzhou"].items() if k in OBS_KEYS}, paths
 
 
-def synthetic_boundary(root):
-    #53 other weights are literal text, not trained tensors or independent audit.
+def synthetic_boundary(root, all_cases=False):
+    # Batch fixture repeats one synthetic model per scene, with structural metadata only.
     frozen = boundary_fixture(root / "train"); producer = producer_fixture()
     obs, paths = observation(root / "inputs")
     model, _ = initialize("xuzhou", 64, METHODS[0], "none")
@@ -49,11 +49,35 @@ def synthetic_boundary(root):
         chosen[key] = check[key] = file_hash(path)
         frozen["protected_files"][str(path)] = frozen["boundary_files"][str(path)] = file_hash(path)
     cases = []
+    observations = {"xuzhou": paths}
+    if all_cases:
+        template = torch.load(paths[0], map_location="cpu", weights_only=True)
+        for target in NAMES:
+            if target == "xuzhou":
+                continue
+            folder = root / target
+            folder.mkdir()
+            item = {**template, "name": target, "class_num": DATASETS[target][2]}
+            archive, record = folder / "observation.pt", folder / "record.json"
+            torch.save(item, archive)
+            write_json(record, {**json.loads(paths[1].read_text()), "target": target,
+                "observation_sha256": file_hash(archive), "prepared_fields": _item_fingerprint(item)})
+            observations[target] = (archive, record, paths[2])
+            frozen["protected_files"].update({str(p): file_hash(p) for p in (archive, record)})
+        models = {target: initialize(target, 64, METHODS[0], "none")[0] for target in NAMES}
     for row in frozen["models"]:
+        archive, record, family = observations[row["target"]] if all_cases else paths
         case = {**{k: row[k] for k in ("name", "target", "seed", "method", "mode")},
             "out": str(root / "train" / "cases" / row["name"]), "source_spec": {},
-            "inputs": {"observation": str(paths[0]), "record": str(paths[1]), "record_sha256": file_hash(paths[1]),
-                       "family": str(paths[2]), "family_sha256": file_hash(paths[2])}}
+            "inputs": {"observation": str(archive), "record": str(record), "record_sha256": file_hash(record),
+                       "family": str(family), "family_sha256": file_hash(family)}}
+        if all_cases:
+            checkpoint = Path(case["out"]) / "primary.pt"
+            save_model_checkpoint(models[row["target"]], checkpoint)
+            audit_row = next(r for r in frozen["independent_checks"] if r["name"] == row["name"])
+            for path, key in ((checkpoint, "primary_sha256"), (Path(str(checkpoint) + ".json"), "sidecar_sha256")):
+                row[key] = audit_row[key] = file_hash(path)
+                frozen["protected_files"][str(path)] = frozen["boundary_files"][str(path)] = row[key]
         row["case_sha256"] = digest(case); cases.append(case)
     launch = root / "train" / "launch.json"
     write_json(launch, {"code": producer, "cases": cases, "out_dir": str(root / "train"),
@@ -78,6 +102,38 @@ def synthetic_boundary(root):
 
 
 class FrozenCaptureTests(unittest.TestCase):
+    def test_full_batch_actual_synthetic_forward_outputs_and_late_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            freeze, analysis, _, _ = synthetic_boundary(root, all_cases=True)
+            code = code_snapshot()
+            inputs = (freeze, file_hash(freeze), analysis, file_hash(analysis))
+            out = root / "batch"
+            with patch("g4_matched_target_evaluation.read_query_labels", side_effect=AssertionError("No query reader")), patch("torch.optim.Adam", side_effect=AssertionError("No optimizer")):
+                result = export_batch(*inputs, out, code, device=DEVICE, maximum_regions=4)
+            self.assertEqual(result["model_forwards"], 54)
+            self.assertEqual([r["name"] for r in result["cases"]], [case_name(*role) for role in grid()])
+            self.assertEqual(len(list(out.iterdir())), 55)
+            samples = {}
+            for row in result["cases"]:
+                path = out / row["summary"]
+                self.assertEqual(file_hash(path), row["summary_sha256"])
+                for stage, value in json.loads(path.read_text())["stages"].items():
+                    key = (row["target"], stage)
+                    self.assertEqual(samples.setdefault(key, value["sampled_region_indices"]), value["sampled_region_indices"])
+            for path, sha in result["protected_files"].items():
+                self.assertEqual(file_hash(path), sha)
+            with patch("torch.load", side_effect=AssertionError("Existing output must fail before decode")):
+                with self.assertRaises(FileExistsError):
+                    export_batch(*inputs, out, code, device=DEVICE, maximum_regions=4)
+            last = result["cases"][-1]
+            sidecar = root / "train" / "cases" / last["name"] / "primary.pt.json"
+            sidecar.write_text("changed")
+            with patch("torch.load", side_effect=AssertionError("Any late pin mismatch must fail before decode")):
+                with self.assertRaises(ValueError):
+                    export_batch(*inputs, root / "blocked", code, device=DEVICE, maximum_regions=4)
+            self.assertFalse((root / "blocked").exists())
+
     def test_actual_six_synthetic_roles_original_stages_predictions_state_rng_and_cleanup(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); obs, _ = observation(root / "obs")
