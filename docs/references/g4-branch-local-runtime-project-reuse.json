@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "issue": 228,
+  "plan_sections": ["master7.2", "implementation10/18/19 same-parameter branch-local control"],
+  "sources": [
+    {"commit": "6e78153c50467d67f6de46f8f2d1d564b6a915da", "path": "g4_branch_local_target.py", "scope": "Unchanged six-role local capacity component and mandatory-version loader semantics, original ordered BN"},
+    {"commit": "5c7ae64e2e0f4a1ecd4ef90c2d225369ebaa2749", "path": "g4_normalized_edge_target_runtime.py", "scope": "Bounded12, complete matching M6 metadata and nested original BN receipt; canonical registered-device reconstruction before restore-device migration"},
+    {"commit": "1a6a7a0613f3833108193ecc2085583d628aea05", "path": "g4_interaction_target_runtime.py", "scope": "Original none/gated controls, two-slot pre-optimizer finite gradients and unchanged update function"}
+  ],
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "license_scope": "Internal project code/control reuse only; no new external mechanism/license grant",
+  "slots": {"pixel_slot": "historical backbone.interaction.graph_to_cnn", "region_slot": "historical backbone.interaction.cnn_to_graph"},
+  "limits": [
+    "Only intermediate local control removes cross messages; whole network retains original upstream sharing and Q/fusion",
+    "Same58498 parameters is not matched compute budget or speed",
+    "Bounded12 only, no full/campaign/query",
+    "CPU exact recovery and native GPU functional/ordered reload are distinct",
+    "CPU restore of GPU-registered run first rebuilds on registered training device; not device-agnostic migration",
+    "Real config/init proof only after226 engineering receipt passed; real NN/BN/updates/query wait184complete/audit/review/originalquery/204analysis",
+    "NaN guards protect optimizer parameter step, not full failure-forward BN rollback"
+  ]
+}
