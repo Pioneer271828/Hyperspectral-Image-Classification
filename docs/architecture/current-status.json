@@ -381,9 +381,17 @@
       "remaining": "Issue245完整预算轻量适配注册、执行和恢复工程。真实收益、源初态表征、独立支持种子/K和M8对照待后续验收。",
       "report": "research/reports/E0FrozenRepresentation_全54区域表征采集与配对诊断_20261107.md",
       "chat_report": "本聊天2026-11-07全54冻结采集与轻量适配预检进度及交付。"
+    },
+    {
+      "id": "G4完整预算轻量适配登记与单例执行",
+      "state": "单例完整预算工程验收通过",
+      "evidence": "Issue245/PR246。228632c3dfd043569dcf7e35e79c3c5adaa3bfe4，CPU/GPU各7项通过，none两种方法合成1500步、51次验证及恢复通过。公开入口合成2步与同卡锁拒绝通过。真实54角色预检98保护文件，99.699秒，零优化和新增query。",
+      "remaining": "Issue247两三卡队列、独立完整性验收和真实实验预登记。之后完成真实轻量对照、独立支持K、源初态表征和M8效果。",
+      "report": "research/reports/G4LightFullTarget_完整预算轻量适配入口验收_20261107.md",
+      "chat_report": "本聊天2026-11-07完整预算轻量适配worker交付。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "e0_full54_representation_accepted_light_full_runtime_next",
+  "execution_state": "g4_light_full_worker_accepted_multigpu_campaign_audit_next",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。"
 }
