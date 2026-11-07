@@ -429,9 +429,25 @@
       "remaining": "真实持续采集、受控监测开销、单通道/依赖组干预、MON-4映射与真实压缩对照。全量搭建测试清单仍为完成条件，Issue249恢复另行推进。",
       "report": "research/reports/MONSustainedCandidates_持续窗口与条件保护工程验收_20261107.md",
       "chat_report": "本聊天2026-11-07 MON持续窗口模块工程进度。"
+    },
+    {
+      "id": "MON可逆通道依赖组",
+      "state": "依赖组可逆干预工程通过，真实G4候选待验",
+      "evidence": "tested ee2c3d54283c9c26746adf8360f776709773a79d。CPU监测40/40，checker通过。固定合成双分支单组均通过而组合被拒，逐类和小类保护有效。",
+      "remaining": "真实G4依赖位置、持续候选、固定验证保护及受控开销。",
+      "report": "research/reports/MONDependencyGroups_可逆通道依赖组工程验收_20261107.md",
+      "chat_report": "本聊天MON可逆依赖组工程进度。"
+    },
+    {
+      "id": "MON结构通道新旧映射",
+      "state": "紧凑状态映射工程通过，真实G4物理剪枝待接入",
+      "evidence": "tested 2128a1cb4f774e987654132b1b0e9e6dc208da67。CPU专项3/3，监测40/40、掩码6/6，checker通过。合成模型3→2通道、参数39→28，三头与可逆屏蔽输出一致。",
+      "remaining": "真实G4可裁剪层及闭包、固定前向复验、等预算恢复和实测成本。长训练暂缓。",
+      "report": "research/reports/MONCompactChannelMap_结构通道新旧映射工程验收_20261107.md",
+      "chat_report": "本聊天MON紧凑张量映射工程进度。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "mon_sustained_candidates_accepted_issue249_recovery_pending",
+  "execution_state": "mon_compact_channel_map_accepted_issue249_training_deferred",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。"
 }
