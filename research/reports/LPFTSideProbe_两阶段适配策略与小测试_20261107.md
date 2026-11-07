@@ -26,9 +26,9 @@ Issue184完整54模型支持点已拟合，HongHu残差全量微调相对从头�
 
 合成边界恢复只验证两个阶段之间重启，阶段内部恢复、RNG/调度/生产接受和数据身份绑定未实现。最后一项用现有G4构造器及合成标签，未使用真实源权重或真实场景，因此不能称真实迁移测试。无GPU、真实GT、query访问或长训练。
 
-截至候选提交：本侧聊尚未执行Python测试。独立SSH连接LXC被拒绝（publickey,password），备用rmvision连接在banner阶段超时。没有读取主对话认证材料或复用其活动会话。Git空白检查可在Windows执行；测试须在授权Linux容器独立checkout运行，不能把已编写用例当作通过。
+候选提交时本侧聊尚未执行Python测试。独立SSH连接LXC被拒绝（publickey,password），备用rmvision连接在banner阶段超时。没有读取主对话认证材料或复用其活动会话。随后主规划经已有授权连接，在独立远程检出执行并于本聊天可读记录确认 **10项CPU小测试通过**，含阶段切换、边界恢复一致性和合成网络接入。侧聊已核读主规划的确认消息，未将它写为本侧独立重跑。
 
-候选源码提交 `f46a1ec92733a3b517193a4db69e5d4c4a77e150`，Git空白检查通过，已推送专属分支并建立 [Draft PR251](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/251)。首次push TLS失败、第二次正常成功，未强推。完整SHA及增量bundle `F:/E2E_VCA_worktrees/side-lpft-issue250-probe01.bundle` 已发主规划请求独立Linux测试；不是已收到测试结果。
+候选源码提交 `f46a1ec92733a3b517193a4db69e5d4c4a77e150`，Git空白检查通过，已推送专属分支并建立 [Draft PR251](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/251)。首次push TLS失败、第二次正常成功，未强推。完整SHA及增量bundle `F:/E2E_VCA_worktrees/side-lpft-issue250-probe01.bundle` 已发主规划。主规划已核本地SHA并将同一bundle传入授权LXC；后续仅报告修改，三份Python源码未变。实际日志、耗时、环境清单及执行回执已请求导出至独立 `F:/E2E_VCA_worktrees/side-lpft-issue250-evidence01/`，本报告当前尚未收齐这些原始记录，PR继续Draft。
 
 建议主规划使用独立 `checkouts/side-lpft-issue250-probe01`，认证本分支实际完整SHA并保持干净，产物放checkout外，使用既有CPU环境：
 
@@ -42,4 +42,4 @@ export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 
 ## 交付边界
 
-状态：候选实现及测试代码完成，远程执行和真实效果均待确认。允许变更仅为 `lpft_probe/`、`tests/test_lpft_probe.py` 和本报告。没有修改主入口、main、已有模型/配置/CLI、current-status.json或主计划；不合并其他分支。主规划收到固定提交后可独立评审和测试，再决定串行接入。临时侧聊不创建自身定时任务，长训练及值守由主聊天登记。
+状态：候选实现完成，主规划独立远程CPU小测试10项通过，原始验收记录归档待收齐；GPU、全仓回归、完整运行时集成、阶段内部恢复和真实效果未验。允许变更仅为 `lpft_probe/`、`tests/test_lpft_probe.py` 和本报告。没有修改主入口、main、已有模型/配置/CLI、current-status.json或主计划；不合并其他分支。主规划后续独立评审，再决定串行接入。临时侧聊不创建自身定时任务，长训练及值守由主聊天登记。
