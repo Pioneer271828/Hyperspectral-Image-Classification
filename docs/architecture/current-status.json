@@ -389,9 +389,17 @@
       "remaining": "Issue247两三卡队列、独立完整性验收和真实实验预登记。之后完成真实轻量对照、独立支持K、源初态表征和M8效果。",
       "report": "research/reports/G4LightFullTarget_完整预算轻量适配入口验收_20261107.md",
       "chat_report": "本聊天2026-11-07完整预算轻量适配worker交付。"
+    },
+    {
+      "id": "G4完整预算轻量适配多卡队列与独立验收",
+      "state": "Issue247工程验收通过，Issue249双卡真实训练已启动",
+      "evidence": "Issue247/PR248，tested 2cfca12ae52308189c81c6d32dcea10f0ac1b50c。CPU/GPU各4/4，双卡两合成案例3000步、独立审计和只读重入146.557秒。Issue249在物理GPU1/5，54×1500=81000步，登记b3cca8f1028004da30177704b107e959cd2fa47aa7892390522e4589fe39e735，vca每30分钟值守。",
+      "remaining": "全54真实接受后复盘并按同协议冻结评价。后续确认独立支持种子、K1/5、源初态表征和M8效果。",
+      "report": "research/reports/G4LightFullCampaign_多卡队列与独立验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue247多卡工程交付与Issue249训练启动进度。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "g4_light_full_worker_accepted_multigpu_campaign_audit_next",
+  "execution_state": "g4_light_full_multigpu_accepted_issue249_running_frozen_query_next",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。"
 }
