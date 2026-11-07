@@ -365,9 +365,17 @@
       "remaining": "全批次表征采集工程调度、真实54表征统计与诊断复盘。",
       "report": "research/reports/E0FrozenBinding_资源兼容分析身份接入工程验收_20261107.md",
       "chat_report": "本聊天2026-11-07 Issue239入口工程验收简报。"
+    },
+    {
+      "id": "G4完整54负结果与数据特征诊断",
+      "state": "只读诊断验收通过，候选改进效果待验证",
+      "evidence": "Issue241/PR242。tested f5070aa1c9eeb96c119e205d394a9120156c3c06，CPU5/5 0.026s，checker407Python127JSON，实际54模型/162头+三景每景2万无标签像素22.985s，16输入不变。独立81配对OA差/6组SVD18.622s通过，模型/优化/原GT读取/新query0。主要收益原失败不变，优先轻量适配/M8及支持集重复，完整报告保留初始清单SHA转录拒绝和因果未测项。",
+      "remaining": "E0-R冻结阶段表征采集工程与完整真实诊断，按P4支持seed512/2048、K1/5和仅头/轻量/全量适配及M8真实对照。候选收益须预登记实验，原184不重新选模。",
+      "report": "research/reports/G4NegativeDiagnosis_完整54负结果与数据集特征分析_20261107.md",
+      "chat_report": "本聊天2026-11-07用户要求分析主要收益失败原因、数据集特征及改进方法的Issue241诊断交付。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "e0_resource_analysis_binding_accepted_batch_capture_engineering_next",
+  "execution_state": "issue184_negative_diagnosis_delivered_frozen_representation_next",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用"
 }
