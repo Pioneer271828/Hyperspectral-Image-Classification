@@ -1,5 +1,7 @@
 # Issue250：隔离LP-FT两阶段策略候选与小测试
 
+> 当前进度以文末“独立连接恢复后的真实短测与显存路径”一节为准；前文保留各阶段历史记录，旧的连接阻塞和待测描述不是当前状态。
+
 对应主清单P4 §10.3–10.4及实施计划§19。用户在独立侧聊授权优化与小测试，并明确要求不干扰主对话分支。本候选基于已交付 `f1bb584a3430088438500a3473aedda40e253447`，分支 `codex/side-lpft-probe-20261107`，工作树 `F:/E2E_VCA_worktrees/side-lpft-probe-20261107`。主规划 `HIC项目搭建与测试2` 已收到分工与Issue250通知。
 
 ## 问题、假设和实现
@@ -71,3 +73,67 @@ OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
 主对话已明确交接后续搭建；显存探针实测 `7d09fd14821964fb398b8ff1669537b0fcbbdce8`，报告提交 `ae803d2086531df0d223be11f61ae5928e3b8a95` 只读保留。原Issue249为failed、35/54独立接受、vca暂停，恢复训练未启动。本侧没有覆盖其分支或current-status。主对话确认工具不支持可验证的跨聊天SSH会话移交，本侧已向用户请求可用连接配置；研发代码仍仅落在独立Issue250分支，等待连接后执行新增接入验证。
 
 状态：原策略及阶段内运行状态合计21项CPU通过、1GPU跳过；新增G4源/目标小步接入待验，GPU、全仓回归、完整训练入口和真实效果未验。允许变更仅为 `lpft_probe/`、`tests/test_lpft_probe*.py` 和本报告。没有修改主入口、main、已有模型/配置/CLI、current-status.json或主计划；不合并其他分支。后续搭建由本侧接手，保持独立工作树，避免双写。临时侧聊不创建自身定时任务，长训练及值守由主聊天登记。
+
+## 独立连接恢复后的真实短测与显存路径（2026-11-07）
+
+### 实现与环境
+
+本侧已通过独立SSH登录授权LXC，未移交或占用主对话会话。实际环境为用户lbx、hostname lbx、LXC、Python 3.10.20、PyTorch 2.7.1+cu128；Python入口 `/home/lbx/hsi-pioneer271828/envs/hsi/bin/python`。本节全部执行均在Linux完成，所有训练输出位于 `/home/lbx/hsi-pioneer271828/runs/`，没有把权重、数据或认证内容提交到仓库。
+
+首次G4接入版本 `1cdfd12d00f59eb509345e73a7cda7b22d54d260` 在校准前未将完整模型置eval，两项测试被校准入口拒绝，耗时5.159秒；日志 `issue250-g4short01-cpu.log` 保留。修复仅为显式 `.eval()`，源码 `a163c46185df320792b064ca3330fb0cbb7ff2f9`：G4接入CPU 2/2通过9.731秒，GPU同设备恢复1/1通过2.526秒，checker通过417 Python/130 JSON。分别见 `issue250-g4short02-cpu.log`、`issue250-runtime-gpu01.log`、`issue250-g4short02-checker.log`。
+
+新源码 `6a1b31dacefd3f7b29bdd852ccd9339b1f21d67f` 增加显式 `saved_tensors=device|cpu`。默认保留原device路径；CPU路径使用已安装PyTorch的 `torch.autograd.graph.save_on_cpu(pin_memory=False)` 暂存前向中间张量，反向时传回原设备，不改变dtype或加入混合精度。已直接读取该安装版本函数实现，未复制外部训练器。真实数值同一性需要实测，不能仅根据API含义断言GPU逐位一致。
+
+该策略同时写入G4案例身份和runtime快照；runtime格式升为v2，旧v1快照及跨策略恢复会被拒绝，没有迁移或覆盖a163旧产物。模型、三头损失、Adam、4+8阶段预算及学习率保持本候选原合同；并非恢复Issue249或修改Issue184配方。远程独立分支 `codex/side-lpft-offload01`，检出 `/home/lbx/hsi-pioneer271828/checkouts/side-lpft-issue250-offload01`，测试前后核完整SHA及干净状态。
+
+### 定向验收
+
+下列命令均在上述6a1检出，设置 `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:tests OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1`：
+
+```bash
+CUDA_VISIBLE_DEVICES='' /home/lbx/hsi-pioneer271828/envs/hsi/bin/python -m unittest discover -s tests -p 'test_lpft_probe*.py' -v
+CUDA_VISIBLE_DEVICES=4 LPFT_RUNTIME_DEVICE=cuda /home/lbx/hsi-pioneer271828/envs/hsi/bin/python -m unittest test_lpft_probe_runtime.RuntimeTests.test_cuda_offload_tiny_model_exact_updates_and_resume test_lpft_probe_runtime.RuntimeTests.test_cuda_same_device_resume -v
+/home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/check_repository.py
+```
+
+CPU共27项，25通过、2项显式GPU跳过，用时9.875秒；两项GPU另跑2/2通过2.509秒，退出码均0。CPU和小模型GPU验证了原路径/暂存路径的逐步损失、参数与Adam状态精确一致，以及暂存路径的阶段内部恢复。G4合成源/目标接入测试也使用CPU暂存策略。checker通过417 Python/130 JSON。没有重复全仓回归；本次不声称完整网络GPU逐位等价或全项目验收。
+
+证据日志（均在runs目录）：
+
+| 文件 | SHA256 |
+| --- | --- |
+| issue250-offload01-cpu.log | 882c0998aea2e144360d5a6a67f8f26456d9103610c3765f8fccff56e1ec77cd6 |
+| issue250-offload01-gpu.log | a5802ce545b3da80b9fdd0cc4d5059e2bbe1090ebc0d711f4a4c77d8d25e45b12 |
+| issue250-offload01-checker.log | 23ee692550b55b02de4ce748013d6a9141d1c6d23114f2e78e60ad51a22984b3 |
+
+### 第一组真实短测：保留HongHu失败
+
+外部目录 `runs/issue250-lpft-real-short01`，执行a163冻结消费者，seed64、none架构、每场景12步（先4步头、再8步骨干），头学习率0.0005、骨干0.000005，原三头损失。PaviaU在GPU4，Xuzhou在GPU5；Xuzhou结束后HongHu使用GPU5，所有启动检查free≥12288MiB且util≤60%，每卡一队列。仅训练/验证端点，无query、选模或长训练。
+
+| 场景 | 完成更新 | 耗时秒 | GPU峰值分配字节 | 首末训练loss | fused验证OA初→末 |
+| --- | ---: | ---: | ---: | --- | --- |
+| PaviaU | 12 | 27.896159 | 7633015808 | 6.922524→6.409271 | 8.8889%→31.1111% |
+| Xuzhou | 12 | 35.770623 | 16315833344 | 6.630093→6.213160 | 13.3333%→20.0000% |
+| HongHu | 4 | 35.717785 | 23042810880 | 仅头阶段完成 | 无训练后端点 |
+
+第一组实际28/36成功更新，8步未执行。HongHu在首次解冻骨干时显存耗尽，请求额外540MiB时剩余仅6.31MiB，PyTorch已分配约21.46GiB，保留未分配仅50.66MiB；因此当前失败更符合容量不足，不能凭此归因于大量碎片。原失败回执、trace和0–4步快照保留，没有原地重训或变更阈值。PaviaU与Xuzhou仍分别有3类、6类fused验证零召回；12步用于工程接入，不能据loss下降宣布精度改进有效。
+
+### 第二组HongHu显存可行性短测
+
+新版本6a1在独立 `runs/issue250-lpft-offload-short01` 登记单HongHu12步，CPU暂存，GPU5；预算先向用户告知，预计60–300秒。保留第一组失败，不将第二组作为原路径成功恢复。
+
+外部计划复制时遗留旧聚合字段 `planned_total_updates=36`，而目标列表仅HongHu、每例上限12以及新字段 `planned_updates=12` 均一致。发现后保留原文件并写独立 `plan-aggregate-erratum.json`，记录原计划哈希和正确合计12；不改运行中输入，不增加预算。该元数据错误属于本次执行限制，后续正式消费者应在首更新前自动核验所有聚合预算。
+
+实际12/12完成，用时339.340586秒，比预计上界多39.34秒，峰值GPU分配2100396544字节（约1.956GiB）。第一组失败时约21.46GiB；两者是失败路径与完成路径的显存记录，不构成同等完成工作的加速比。没有记录本次完整进程的CPU峰值，后续调度不能只根据GPU节省量决定并发。
+
+loss由9.655043降至9.194064。HongHu验证fused OA保持3.6364%，graph由10.0000%至11.8182%，CNN由3.6364%至4.5455%；末端三头分别仍有20/16/18类零召回，最低召回均为0。fused NLL由3.256815降至3.138264。短预算未显示fused精度改善，不作成功收益结论，更不能替代完整训练/独立query判据。
+
+只读快照复盘确认：三场景头阶段骨干变化均0；微调阶段PaviaU/Xuzhou/HongHu实际改变骨干张量元素59652/59812/59670；各自三头在两个阶段均实际变化，固定缓冲全程不变，Adam步数与阶段游标一致。HongHu两版本的初始模型张量精确相同，但首步loss存在约9.54e-7差异，因此保留完整GPU原路径与暂存路径未证明逐位一致的限制。不能将新路径作为旧冻结训练的透明替换。
+
+复盘输出 `/home/lbx/hsi-pioneer271828/runs/issue250-short-review01/summary.json`，SHA256 `1aba228f7bd5163df05d818515e7f76b32677aa2c55873a0d09506f27d9f5c0a`，包含四条运行记录、三头训练/验证逐类召回、快照实际变化和全部原产物哈希。只读复盘脚本 `/home/lbx/hsi-pioneer271828/runs/issue250-short-review01.py`，SHA256 `f4389d4748c240baa82b7e37a635c054dfc19eb0c3b9b563c4536fa18100868cf`；退出0，更新0、query0。本复盘读取已保存指标及快照，不独立重算概率，不称完整实验独立验收。用户本机副本位于 `F:/E2E_VCA_worktrees/side-lpft-issue250-evidence02/summary.json`，checkout外保存。
+
+### 当前结论与下一依赖
+
+两阶段策略、阶段内部恢复、G4完整源/目标接入以及显式CPU暂存已实现；对应定向CPU/GPU测试和三场景真实小步接入完成，HongHu原路径OOM作为负例保留。共实际成功更新40步（原28+新12），不存在“第一组36步全部通过”的结论。原冻结生产文件、主入口、main、Issue249产物和暂停状态没有变更。
+
+Issue250/PR251仍保持open/Draft：还没有完整训练CLI、三方法同预算对照、完整真实训练及精度收益验收，也未完成全仓回归。下一研发项为带首更新前预算一致性核验的正式短测/对照消费者，随后按P4/§19登记头训练、直接微调与LP-FT的共同初始化及同预算比较；内存策略与BN策略作为显式因素，不将复合变化全部归因于LP-FT。任何长训练须先告知总预算、估时和资源安排，再向主聊天移交半小时值守；本轮没有启动长训练或改动定时任务。
