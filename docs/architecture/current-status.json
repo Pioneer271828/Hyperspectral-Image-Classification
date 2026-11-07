@@ -405,9 +405,17 @@
       "remaining": "固定同协议query入口与预登记配对统计。真实54完整接受、复盘和独立冻结前保持query关闭。",
       "report": "research/reports/G4LightFrozenBoundary_全54冻结门禁工程验收_20261107.md",
       "chat_report": "本聊天2026-11-07 Issue249全54冻结门禁工程进度。"
+    },
+    {
+      "id": "G4轻量适配同协议只读评分",
+      "state": "评分入口工程验收通过，真实训练进行中",
+      "evidence": "Issue249，tested 4be3db3db6b8de5983a761b33c9c5e46d98ae881。CPU专项6/6、相关回归19/19，CLI和checker通过。两种方法各一个1500步合成检查点的只读有序三头评分通过，已核对既有184全54参考行，无原始GT读取。",
+      "remaining": "完成训练/验证复盘与成本导出。真实全54独立接受、复盘与冻结后执行同协议评价。",
+      "report": "research/reports/G4LightOrderedQuery_同协议只读评分工程验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue249同协议只读评分工程进度。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "g4_light_frozen_boundary_accepted_issue249_running_query_evaluator_next",
+  "execution_state": "g4_light_ordered_query_accepted_issue249_running_trainval_review_next",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。"
 }
