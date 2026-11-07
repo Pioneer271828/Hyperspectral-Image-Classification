@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-07",
+  "as_of": "2026-11-08",
   "issue": 167,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
@@ -445,9 +445,17 @@
       "remaining": "真实G4可裁剪层及闭包、固定前向复验、等预算恢复和实测成本。长训练暂缓。",
       "report": "research/reports/MONCompactChannelMap_结构通道新旧映射工程验收_20261107.md",
       "chat_report": "本聊天MON紧凑张量映射工程进度。"
+    },
+    {
+      "id": "G4 CNN 第一阶段物理缩宽",
+      "state": "依赖闭包和真实冻结前向验收通过",
+      "evidence": "tested 0f17c8a9626df57fac471f2b382a737c895193e9。CPU专项3/3、相关回归12/12、checker通过。PaviaU固定45验证点，128→125通道，61696→61276参数，三头概率绝对差0且分类变化0。BN前屏蔽失败原样留档。",
+      "remaining": "紧凑检查点重载、GPU和全量回归、真实MON候选与逐类保护、等预算恢复、冻结query及实测成本。长训练暂缓。",
+      "report": "research/reports/G4CompactCNNStage1_第一阶段物理缩宽与冻结前向验收_20261108.md",
+      "chat_report": "本聊天2026-11-08 G4 CNN第一阶段物理缩宽模块进度。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "mon_compact_channel_map_accepted_issue249_training_deferred",
-  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。"
+  "execution_state": "g4_cnn_stage1_geometry_accepted_training_deferred",
+  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
