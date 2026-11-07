@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "issue": 206,
+  "scope": "Existing in-project M6 initialization/calibration adapter; no new research mechanism or external algorithm replication",
+  "project_sources": [
+    {"commit": "e3adf597e0606c7a366db88494856361319e5782", "report": "research/reports/M6_对齐与选择性交互验收_20261029.md", "components": ["model/region_pixel_alignment.py", "model/cross_branch_interaction.py"], "action": "Read accepted engineering report and preserve its original alignment, scalar gate, direction and strength semantics"},
+    {"commit": "331d718567b1a9726934f445665999df972392b1", "components": ["model/VCASAHGCN.py", "model/interaction_config.py", "none_full_transfer.py", "target_bn_calibration.py", "m4_ordered_source.py"], "action": "Call existing constructors, authenticated full-NONE initialization and ordered population BN without modifying these files"}
+  ],
+  "design_sources": ["research/研究内容整合与详细搭建测试计划_2026-10-28.md P1§7/P4§10.3", "research/模块化搭建与测试消融实施计划_2026-10-28.md §10/§18/§19"],
+  "external_source_copied": false,
+  "new_external_dependency": false,
+  "upstream_trainer_executed": false,
+  "external_paper_reproduction_claim": false,
+  "license_claim": "No new external source is copied. No new license grant or reattribution is asserted for pre-existing project files.",
+  "limits": ["Target-initialized M6 parameters are not M6-pretrained-source weights", "Add is normalized/projected residual messaging, not raw addition", "Global changes only cross-branch alignment; graph still uses Q", "Scalar gates are not calibrated reliability or per-channel gates", "No new paper result or real target benefit inferred from engineering"]
+}

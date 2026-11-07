@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-06",
+  "as_of": "2026-11-07",
   "issue": 167,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
@@ -149,9 +149,209 @@
       "remaining": "另实验Issue预登记none27000+活动54000完整目标；完整54接受/独立审计/拟合逐类成本复盘后才同协议query；支持集/K/空间/传感器和head-only/light-module仍必测",
       "report": "research/reports/G4MatchedFullTarget_完整协议工程阶段记录_20261106.md",
       "chat_report": "本聊天2026-11-06 G4完整配对目标协议工程模块完成报告；持久内容见report及g4-matched-target-engineering-results.json"
+    },
+    {
+      "id": "G4完整54目标配对实验",
+      "state": "完整实验验收通过：54模型81000更新、独立审计/资源终验/复盘、全部冻结query及预登记分析完成；主要与四次要收益未通过",
+      "evidence": "Issue184/PR185；实际331d718567b1a9726934f445665999df972392b1，51单卡+3三卡完整81000，324 train/val头记录4320召回162精确重载/完成恢复0；原331独立14189文件输入不变1443.803s、5dcc资源终验14217/51旧行5763旧文件/7930输入/12阶段+1零等待70.347s。2df真实复盘54PNG/54CSV/18组215.471s、38末步/42末段NLL仍改善、HongHu64残差scratch CNN类11零召回。原331全54freeze14036文件、同协议query54模型162头1372.674s、训练更新0，bdb原判据分析14202输入不变121.003s。主要宏OA差+0.330636pp（样本SD1.613334），seed差-1.086878/-0.007431/+2.086215pp，仅1/3正，HongHu类8均召回-3.053561pp；AA/HongHuOA门槛通过，种子/逐类未过，四次要均未过。全部证据/完整SHA/命令和失败见报告及full-results/full-analysis-results；资源只读修订PR235/236/237，vca保持PAUSED，main不合并。",
+      "remaining": "继续Issue234/Draft PR238 M8位置门控有界训练与恢复工程，CPU7/GPU7通过，全回归670项669通过和1项既有GPU专用跳过；真实12组合与独立手工核验待完成。支持seeds512/2048、K1/5、空间/传感器/波长质量、head-only/light-module、M4+门控四组和两计划其余机制仍必测；后续E0消费真实新分析身份须独立登记兼容。",
+      "report": "research/reports/G4MatchedFullTarget_完整54目标配对训练记录_20261106.md",
+      "chat_report": "本聊天2026-11-07 Issue184完整实验交付：54/81000、审计/复盘/冻结query与负收益，完整报告和结果JSON保留；继续Issue234，不等待确认。"
+    },
+    {
+      "id": "G4完整54训练复盘导出工程",
+      "state": "独立复盘导出模块工程验收通过，真实全54复盘待训练及独立审计",
+      "evidence": "Issue186/PR187；实际ad60ce0a863aad1991ee6c84d547c3efd995290f，rmvision CPU7/7 50.309s、GPU16/16 231.098s、完整565项564通过+1GPU专用跳过276.393s，跳过项已GPU通过；checker360Python83JSON/help/PNG视觉QA通过；全54合成JSON导出、首次最小NLL、逐类NA、不可覆盖认证哈希及访问/输出负例通过，原331生产文件未改",
+      "remaining": "Issue184全54接受和独立审计通过后运行本导出器完成真实曲线/逐类/成本复盘，再统一冻结query；工程通过不代表真实精度收益",
+      "report": "research/reports/G4MatchedTargetReview_完整54训练复盘导出工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue186复盘导出工程模块完成报告；持久报告及g4-matched-target-review-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4独立支持集与K输入绑定工程",
+      "state": "27支持/K输入绑定及独立零更新验收通过，真实重复实验待登记执行",
+      "evidence": "Issue188/PR189；实际937861fe87ce1fe619268063dfed1193d416853e；rmvision CPU7/7 6.562s、完整572项571通过+1既有GPU专用跳过285.960s，checker363Python84JSON/help通过；LXC CPU7/7 9.649s；真实27覆盖层13.406s，独立54阶段/108标签张量/27观察图/47文件不变160.582s；输入18文件不变，更新0/query0，无GPU上下文；原331文件未改",
+      "remaining": "Issue190有限12步显式目标工程已验收；184完整接受/独立审计/真实复盘/冻结query后才登记真实支持集/K重复；空间/传感器和head-only/light-module仍必测",
+      "report": "research/reports/G4SupportContext_独立支持集与K输入绑定工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue188独立支持集与K输入绑定工程模块完成报告；持久报告及g4-support-context-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4独立支持集与K目标训练工程",
+      "state": "有限12步工程验收通过，真实支持集/K训练与效果尚未执行",
+      "evidence": "Issue190/PR191；实际e7424559e1bc72c655f511c213e551ced9b95be3，rmvision CPU5/5 41.286s、GPU5/5 65.231s、完整577项576通过+1既有GPU专用跳过336.113s；六角色12与2+10/完成0/3精确重载、CPU状态精确恢复、实际CLI通过。LXC真实Xuzhou support512/K1/model64六初始化与184冻结状态相同，63文件不变47.675s，更新0/forward0/query0，无GPU上下文。原331文件不变；CLI输出、CUDA环境和证据hash转录失败保留",
+      "remaining": "Issue192完整源仅头/适配器有限工程已验收；184仍按全54接受→331独立审计→186真实复盘→全冻结query/预登记结论推进，之后另登记支持/K及参数范围真实对照；空间/传感器和波长质量等仍必测",
+      "report": "research/reports/G4SupportTarget_独立支持集与K目标训练工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue190独立支持集与K目标训练工程模块完成报告；持久报告及g4-support-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4完整源仅头与适配器目标工程",
+      "state": "两种参数范围×三模式有限12步工程验收通过，真实数值效果未测",
+      "evidence": "Issue192/PR193；实际37e24c56f13465fef4270698e2e4c3cbcb6ba028；rmvision CPU5/5 37.322s、GPU5/5 61.108s、完整582项581通过+1既有GPU专用跳过364.507s，checker369Python86JSON/help通过；六角色12与新实例2+10/完成0/三次精确重载、CPU模型optimizer/scheduler/history/概率精确一致；冻结参数和BN缓冲区优化期不变、适配器正梯度/实际更新、阶段成本及缓存负例通过。LXC真实Xuzhou support512/K1/model64六初始化/权限核验52.444s，63文件不变，仅头1755、适配器+头12220参数；更新0/forward0/真实BN校准0/query0，无GPU上下文，原331文件未改；首版CLI夹具隔离拒绝保留",
+      "remaining": "184完整接受、独立审计、真实拟合逐类成本复盘及全冻结query后，另登记支持/K与参数范围的真实同条件对照；真实初始BN/缓存/12步与全训练尚未验收，不判精度或部署加速；空间/传感器和波长质量及其余机制按两计划继续",
+      "report": "research/reports/G4LightTarget_完整源仅头与适配器工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue192完整源仅头与适配器目标工程模块完成报告；持久报告及g4-light-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4冻结观察物理元信息与结论权限工程",
+      "state": "只读三观察/27角色绑定及结论权限工程通过，物理标定和严格泛化缺口未完成",
+      "evidence": "Issue194/PR195；实际4f454b217f79576de92afc769fb6cb8452e71874，CPU6/6 9.528s、完整588项587通过+1既有GPU专用跳过369.611s，checker372Python88JSON/help；新增GPU专项0。LXC真实3观察/27角色、52输入不变6.672s，只解码3观察、不解析覆盖层/family标签；独立809波长值/27预算/6权限/54文件不变4.457s。三组approximate、无真实FWHM/SRF，严格空间/传感器DG/已核家族留出/实测中心/物理FWHM拒绝；当前Pavia实际向量471.491–856.228nm，Xuzhou包报告HYSPEX但型号/映射未核，旧registry不改。更新0/forward0/query0/无GPU上下文，原331源码与输入不改，EHU403保留",
+      "remaining": "当前工程不认证仪器标定或源家族完整排除，不重做E0B1/B2，不判精度/速度；184全54接受/独立审计/真实复盘/全冻结query后再真实支持/K/参数/空间对照。认证中心/原始带号/FWHM/SRF、独立空间/传感器与其余两计划必测项继续保留",
+      "report": "research/reports/G4ObservationProvenance_冻结观察物理元信息与结论权限工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue194冻结观察物理元信息与结论权限工程模块完成报告；持久报告及g4-observation-provenance-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4目标真实波段子集工程",
+      "state": "有限12步及真实输入零更新工程验收通过，原生CUDA跨运行轨迹等价未通过",
+      "evidence": "Issue196/PR197；最终b32ac0af1559f59fab1a39bd62d9e849c48d02df，授权LXC CPU5/5 58.376s、GPU5/5 67.504s、全593项592通过+1既有GPU专用跳过571.491s，checker375Python89JSON/help通过。CPU完整对照状态精确一致；GPU完整对照仅测试专用固定图归约参考，其他功能走原稀疏路径；原生4/5及诊断1分类变化保留，不放宽阈值。12与新实例2+10/完成0/3次精确重载、真实B及子集单位歧义拒绝通过。真实producer e74的27上下文/54策略/648记录/36视图/6冻结初始化/65文件不变368.941s；最终b32独立消费者54策略+独立648记录/36视图/66文件不变145.150s。实际B103/78、436/327、270/203；真实更新0/forward0/BN0/query0/无GPU上下文，原331文件未改",
+      "remaining": "原生CUDA独立轨迹等价仍未接受，未来真实M1须明确数值执行合同；先E1独立目标覆盖工程。184完整接受/独立审计/真实复盘/全冻结query后才登记真实M1/E1及支持/K/空间/传感器对照；物理标定、真实收益/速度未验收",
+      "report": "research/reports/G4ObservationTarget_目标真实波段子集工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue196目标真实波段子集工程模块完成报告；持久报告及g4-observation-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4 E1目标初始化与校准组件工程",
+      "state": "完整源初始化/元数据前向/总体BN/重载组件工程验收通过，E1目标训练尚未接入",
+      "evidence": "Issue199/PR201；实际42a2f463ecdb4223d78537c4178a28191a50ad5e，授权LXC CPU6/6 35.539s、GPU6/6 40.226s、全599项598通过+1既有GPU专用跳过602.595s，checker378Python91JSON/help通过。none及四个194参数条件、原共享/fresh头域状态与RNG、完整/75%/缺口/范围元数据、无支撑保护、合成3步整体梯度/更新、总体BN参数保护/CPUFP64稀疏参考、三次精确重载和拒绝测试通过。真实三景×两角色×五条件30初始化，基础6状态与184一致，67文件不变6.259s；独立旧工厂6基础+E1算子重建30状态/架构，68文件不变3.468s。真实更新0/forward0/BN0/query0/无GPU上下文；原331 Python/config不改；首版K64误断言和FP64稠密图错误、外部脚本语法及GitHub传输失败保留",
+      "remaining": "后续202有限训练/恢复/公平控制工程已通过；本组件仍不是E1完整实验或真实收益。184接受/独立审计/真实复盘/全冻结query后才能登记真实对照；近似波长/缺FWHM与空间/传感器/支持重复等范围保留，原生CUDA独立优化轨迹等价不在通过范围",
+      "report": "research/reports/G4CoverageTarget_完整源目标覆盖初始化与BN校准工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue199 E1目标初始化与校准组件工程完成报告；持久报告及g4-coverage-target-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4 E1目标有界训练与恢复工程",
+      "state": "有限12步/恢复/公平控制及真实零更新身份工程通过，真实效果未测",
+      "evidence": "Issue202/PR203；实际5fd4c81e6c6fbdb9325fe2c82f89305904191968，授权LXC CPU5/5 104.154s、GPU5/5 125.945s、全604项603通过+1既有GPU专用跳过715.690s，checker381Python92JSON/help。五条件×scratch/完整none源FT合成12与新实例2+10/完成0/3次精确重载，CPU状态optimizer/scheduler/history/RNG/概率精确恢复；none完整控制CPU精确，GPU关闭对照仅事前声明固定图参考，原生独立优化轨迹不在通过范围。真实三景support512/K1/model64的60配置/720冻结记录/30初始化与196/199身份一致，69文件不变163.030s；独立不调用202设置/adapter重建60配置/720记录/30初态绑定，70文件不变23.994s。真实更新0/forward0/BN0/query0，无GPU上下文；原331 Python/config不改",
+      "remaining": "184全54接受→独立审计→186真实拟合逐类成本复盘→全冻结ordered query及预登记结论后，另登记真实支持/K/参数范围与M1/E1对照；目标新建E1不称E1源预训练；近似波长/无FWHM及空间/传感器/更多支持重复、M4交互和其余机制仍待完成",
+      "report": "research/reports/G4CoverageRuntime_E1目标有界训练与恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue202 E1目标有界训练与恢复工程完成报告；持久报告及g4-coverage-runtime-engineering-results.json为证据，不重复交付"
+    },
+    {
+      "id": "G4完整54冻结评价预登记分析工程",
+      "state": "预登记主要/次要判据及全54冻结结果身份工程通过，真实query分析未执行",
+      "evidence": "Issue204/PR205；实际73234283581c536f6e42c49bf0b3326ce3067d60，授权LXC CPU9/9 13.732s、全613项612通过+1既有GPU专用跳过731.784s，checker384Python93JSON/help；新GPU专项0，计数/JSON组件。精确混淆分数计算主要/四次要保护，场景等权与像素池相反、1/2pp等号和单计数越界、主要失败次要全成功、三头/类别/配对/差中差及原paired_summary一致通过；合成54/162头/18组实际CLI与冻结/复盘/源/路径/禁止Tensor反序列化保护通过。真实query receipt0、NN0/优化0/原GT0，原331 Python/config不改，合成schema不冒充真实81000或PNG视觉QA",
+      "remaining": "184全54训练接受、独立审计、186真实复盘和原331全冻结ordered query后才能运行真实结果判定；本模块不提供真实收益结论。继续206既有M6完整源目标初始化/BN工程；支持/K/参数/空间/传感器、M1/E1/M6/M7/M8真实对照及其余计划范围保留",
+      "report": "research/reports/G4MatchedAnalysis_完整54冻结评价预登记分析工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue204完整54冻结评价预登记分析工程验收进度；报告及g4-matched-target-analysis-engineering-results.json保留完整证据，完成后直接继续206，不重复报告"
+    },
+    {
+      "id": "G4 M6完整源目标初始化与BN组件工程",
+      "state": "既有六条件初始化/方向算子/总体BN与重载组件工程通过，真实M6训练效果未测",
+      "evidence": "Issue206/PR207；实际4ede0984ba78c9e31c5a176c4f8e54c74da3e97e，授权LXC CPU7/7 39.815s、GPU7/7 42.574s、全620项619通过+1既有GPU专用跳过750.025s，checker387Python94JSON/help。六条件×两角色共有状态/fresh头域/RNG、参数0/33280/58498/29249/29249/58498、原none前向/orderedBN精确、实际方向对齐、10角色各合成3步梯度与变化、12角色BN参数保护/各3精确重载及属性/文件/CLI拒绝通过；独立一gatedCPU双精度矩参考，非全网FP64。真实三景36初始化保留6基础初态，74文件不变22.054s；独立旧工厂6基础+原构造器重建36状态/架构/参数，75文件不变3.693s，新工厂未调用。真实NN/BN/优化/query0，无GPU上下文，原331文件不改；证据assembler01 65位SHA转录断言失败保留，02从原文件更正，非训练失败",
+      "remaining": "208有界M6目标12步/恢复/参与证据工程已登记继续；当前只是目标新建M6参数，不称M6预训练源迁移或初态恒等。真实支持/K/同容量分支内变换/空间/传感器/M4交互与完整效果待184全54接受、独立审计、186复盘、全冻结query及204预登记结论后登记；原生CUDA独立训练轨迹等价仍未接受",
+      "report": "research/reports/G4InteractionTarget_完整源M6目标初始化与BN工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue206既有M6完整源目标初始化与BN组件工程进度汇报；报告及g4-interaction-target-engineering-results.json保留证据，交付后连续208，不重复发送"
+    },
+    {
+      "id": "G4 M6目标有界训练与恢复工程",
+      "state": "有限12步/恢复/方向参与及真实零更新身份工程通过，真实效果未测",
+      "evidence": "Issue208/PR209 Draft；实际1a6a7a0613f3833108193ecc2085583d628aea05，授权LXC CPU5/5 107.638s、GPU5/5 131.819s，全625项624通过+1既有GPU专用跳过833.216s，checker390Python96JSON/help。六条件×scratch/完整none源FT合成12、新实例2+10/完成0及36精确重载，CPU完整恢复逐位一致；GPU关闭控制为事前固定图参考，启用实际更新/恢复与ordered重载，不称原生独立优化轨迹等价。真实三景36配置/初始化与206接受绑定一致，77文件不变115.408s；独立不调用208设置/runtime/factory重建36配置，78文件不变18.881s。真实NN/BN/更新/query0；首版原BN回执元数据丢失3错误与二版测试返回层级1错误均保留，修复不改原训练器/校准器/阈值",
+      "remaining": "Issue210下一既有M7候选边重加权与两套二因素初始化/BN工程已登记。真实完整训练与支持/K/同容量/空间/传感器/M4组合等仍须184完整54接受、独立审计、186真实复盘、原331全冻结query和204预登记结论后另登记",
+      "report": "research/reports/G4InteractionRuntime_M6目标有界训练与恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue208 M6目标有界训练/恢复工程进度汇报；完整报告及g4-interaction-runtime-engineering-results.json保留证据，交付后继续210不等待确认"
+    },
+    {
+      "id": "G4 M7完整源目标二因素初始化与BN组件工程",
+      "state": "六条件初始化/实际边算子/总体BN与重载组件工程通过，真实效果未测",
+      "evidence": "Issue210/PR211；实际0827fb3c64b3e7d473c4443183288c25a3d2fdea，授权LXC CPU8/8 37.979s、GPU8/8 40.475s、全633项632通过+1既有GPU专用跳过873.291s，checker393Python97JSON/help。none/gated/graph/gated_graph/joint/gated_joint两套二因素12角色、新增参数0/58498/8448/66946/16896/75394、共有状态/fresh头域/RNG、稀疏支持/行和/孤立回退、独立小张量FP64边公式/梯度及原调度后消息输入通过；10启用角色各合成3步，消息和边各自正梯度/实际变化；多候选图BN保护及36精确重载/专项。真实36初始化与206对应状态一致，79文件不变23.104s；独立旧none工厂6基础+原构造器重建36状态，80文件不变3.760s，真实NN/BN/优化/query0。首版identity图正确零梯度与错误正梯度测试冲突保留，最终用多候选合成参与/BN；assembler旧目录前缀错误保留，源码/真实图/阈值未改",
+      "remaining": "212有界12步/恢复/消息边分项参与工程已登记推进；本项不是M6/M7源预训练或真实完整实验。仅归一化/同容量/支持K种子/空间传感器/M4组合及其余计划待184完整54接受、独立审计、186真实复盘、原331全冻结query和204预登记结论后另登记；原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4EdgeTarget_完整源M7二因素初始化与BN工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue210 M7二因素初始化/BN组件工程进度；完整报告及g4-edge-target-engineering-results.json保留证据，交付后连续212不等待确认"
+    },
+    {
+      "id": "G4 M7核心二因素目标有界训练与恢复工程",
+      "state": "有限12步/严格恢复/消息边分项参与及真实零更新身份工程通过，真实效果未测",
+      "evidence": "Issue212/PR213；实际f7dfcc54a93e348179f3071e77a5e637e7e9611d，授权LXC CPU6/6 123.528s、GPU6/6 146.841s、全639项638通过+1既有GPU专用跳过1008.835s，checker396Python98JSON/help。六条件×两角色合成12/新实例2+10/完成0、36精确重载/专项；CPU状态optimizer/scheduler/history/RNG/概率/trace逐位恢复，edge-off none/gated对208两角色精确控制，GPU关闭对照为事前固定图参考，启用原生GPU只验功能与ordered重载。实际消息两方向/edge分项正梯度和参数变化、mix属性/源上下文/嵌套回执拒绝、NaN消息及edge-only梯度在参数更新前拒绝通过。真实36配置/初始化绑定210，82文件不变116.245s；独立不调用212设置/runtime/factory手工重建36配置，83文件不变18.960s，真实NN/BN/更新/query0、无GPU上下文。原331文件与冻结184不改，实现版本测试失败0，连接器/TLS失败保留",
+      "remaining": "Issue214既有M8固定融合/损失BN组件工程通过，Issue216有界恢复继续；仅归一化/同容量/支持K种子/空间传感器/M4组合、新门控和独立单分支完整效果仍待184完整验收评价后登记；原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4EdgeRuntime_M7目标有界训练与严格恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue212 M7核心二因素有界训练/恢复工程进度；完整报告及g4-edge-runtime-engineering-results.json保留证据，交付后连续下一M8不等待确认"
+    },
+    {
+      "id": "G4 M8完整源固定融合与损失BN组件工程",
+      "state": "既有三条件初始化/原概率损失/orderedBN与重载工程通过，真实效果未测",
+      "evidence": "Issue214/PR215；实际045a35ae431b75149367256a476b40b2a3777440，授权LXC CPU6/6 32.224s、GPU6/6 35.586s、全645项644通过+1既有GPU专用跳过1033.119s，checker399Python101JSON/help。default/aux_off/alpha035×两角色，共有初态/fresh头域/RNG零新增参数，default原none前向BN精确、13项概率损失/独立手算NLL、实际alpha与logits端点、辅助零梯度且保留衰减，六角色各3合成更新及18精确重载/专项通过。真实18初始化6基础、88文件不变20.295s；独立旧工厂6基础手工重建18状态，89文件不变3.616s，NN/BN/优化/query0。SCP未等exit0提前消费被Git拒绝且测试0，纠正后验收，失败保留；原331文件不改",
+      "remaining": "216有界12与严格恢复工程已通过；既有M8组件仍非完整效果验收。新门控/M4组合/独立单分支/语义映射/支持K空间传感器仍待184完整接受、审计、复盘、原331全冻结query与204结论后登记，原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4FusionTarget_完整源M8固定融合与损失BN组件工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue214 M8固定融合/损失BN组件工程进度；完整报告及g4-fusion-target-engineering-results.json保留证据，交付后连续216不等待确认"
+    },
+    {
+      "id": "G4 M8目标有界训练与严格恢复工程",
+      "state": "既有固定融合/辅助监督六角色有界12与严格恢复工程通过，真实效果未测",
+      "evidence": "Issue216/PR217；实际9b0e76a75f6c8907eda9c3654ccf45b84c3c68de，授权LXC CPU5/5 76.129s、GPU5/5 89.472s、全650项649通过+1既有GPU专用跳过1093.234s，checker402Python101JSON/help。六角色完整12/新实例2+10/完成0、18精确重载/专项，CPU状态optimizer/scheduler/history/RNG/概率/trace逐位恢复；default对190两角色精确，GPU该控制为事前固定图参考。13原loss项、aux_off raw非零/weighted0/辅助梯度0且保留衰减头变化、实际alpha/配置和嵌套原BN回执、NaN辅助梯度在参数更新前拒绝通过。真实18配置/初始化绑定214，91文件不变72.937s；独立不调用216设置/runtime/factory手工重建18配置，92文件不变18.704s，真实NN/BN/更新/query0。原331不改，版本测试失败0，文档FF拒绝与TLS记录保留",
+      "remaining": "Issue218/PR219 E0-R同区域冻结特征诊断工程继续；新门控/独立单分支/M4组合/语义映射/支持K空间传感器完整真实效果仍待184全54接受、独立审计、186复盘、原331全冻结query及204预登记结论后登记。原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4FusionRuntime_M8目标有界训练与严格恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue216 M8有界训练/严格恢复工程进度；完整报告及g4-fusion-runtime-engineering-results.json保留证据，交付后连续218不等待确认"
+    },
+    {
+      "id": "E0-R同区域冻结特征统计组件工程",
+      "state": "合成数值/显式哈希读取组件工程通过，真实特征冗余与缩宽效果未测",
+      "evidence": "Issue218/PR219；实际528865a631eb7c1d2620113ae8e623cbe5948fbb，授权LXC CPU6/6 11.428s、全651项650通过+1既有GPU专用跳过1068.499s，checker402Python103JSON/help；新增GPU专项0，统计CPU FP64，全量GPU0可见供旧钩子。手算秩/参与率/重复正交通道、空常数单样本null、NumPy独立cov/eig/corr、全局与通道尺度/floor敏感性、密集COO/CSR加权Q零质量区和同索引抽样、全局RNG/输入不变通过。实际合成CLI规范路径/符号链接、checkpoint仅哈希不反序列化、未知schema/hash/stage/query/输出拒绝通过。真实特征读取/NN/BN/更新/query0；原331不改。前版bd66CPU6通过后补规范路径/隐含零维度/null原因，最终完整重验，数值测试失败0",
+      "remaining": "Issue220/PR221原stage1/2只读采集和完整54/204分析身份边界继续；声明train/validation不构成提取来源证明，额外archive键解码后拒绝，不作原GT释放门。实际E0-R全角色特征/缩宽精度和成本仍待184全验收复盘/原331冻结query/204结论后执行；相关/低有效维不证明可无损裁剪",
+      "report": "research/reports/RepresentationRedundancy_E0R同区域冻结特征统计工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue218 E0-R同区域冻结特征统计工程进度；报告及representation-redundancy-engineering-results.json保留证据，交付后连续220不等待确认"
+    },
+    {
+      "id": "E0-R原阶段只读采集与全54身份组件工程",
+      "state": "合成六角色原stage采集/状态保护及已完成54分析身份消费工程通过，真实采集未执行",
+      "evidence": "Issue220/PR221；实际87bc0835020c02067ffa0be9e2d6875d03d5d1f8，授权LXC CPU4/4 18.810s、GPU4/4 21.993s、全655项654通过+1既有GPU专用跳过1040.544s，checker405Python104JSON/help。三M4模式×两角色原stage1 128/stage2 64区域特征，四个原方法各一次、原三头预测CPU/GPU逐位一致，registered状态/flags/观察/CPU及使用卡RNG保护，成功/异常属性清理通过。原331全54+204固定源码/plan/计数/输出保护哈希在Tensor加载前核验，负主要收益仍允许；结构54其余53权重为文字占位，一例真实合成CLI，不冒充54独立审计。真实NN/BN/优化/query/特征读取0，原331不改。首版b3e 1pass3errors5.555s为合成fixture漏eval/输出父目录冲突，修正且不弱化守卫，失败保留",
+      "remaining": "Issue222/PR223 M7仅归一化组件继续；实际E0-R全54采集、独立空间/容量与成本未测。整图传导支持不伪称独立train/validation块；不保证瞬态非Tensor缓存不变。真实模型消费仍待184完整接受/审计/186复盘/原331冻结query/204预登记结论后执行，单case不是全模块研究完成",
+      "report": "research/reports/FrozenRepresentationCapture_E0R原阶段只读采集与全54身份工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue220 E0-R原阶段只读采集与54身份工程进度；报告及frozen-representation-capture-engineering-results.json保留完整证据，交付后连续222不等待确认"
+    },
+    {
+      "id": "G4 M7仅归一化与完整源目标组件工程",
+      "state": "四条件匹配M6初始化/先验归一化/orderedBN与显式重载组件工程通过，真实效果未测",
+      "evidence": "Issue222/PR223；实际5f85e2220ce3ce357d99e6faaccca51676ce8502，授权LXC CPU7/7 34.982s、GPU7/7 39.268s、全658项657通过+1既有GPU专用跳过1108.333s，checker405Python106JSON/help。none/row_normalized/gated/gated_row_normalized×两角色，匹配M6共有初态/RNG/fresh头域/权限，新增训练参数0、启用必需version buffer8字节。CPUFP64手算与原M7mix0先验、孤立点/候选支持/1e-12极小行阻尼、stage2位置、八角色各3合成更新/24精确重载及单角色总体矩参考通过，旧通用loader启用时拒绝。真实24初始化12匹配M6身份，78文件不变22.849s；独立旧206工厂12次手工24state/schema，79文件不变4.047s，同干净checkout不同进程、非独立BN/概率审计。真实NN/BN/更新/query0，原331不改。首次独立入口哈希转录多8在读模型前拒绝，原文件取hash后通过，失败保留",
+      "remaining": "Issue224/PR225仅归一化有界训练/严格恢复工程继续；原极小行和可能低于1，不静默数值修复。仅归一化vs学习M7/相近容量、支持K种子/空间传感器/M4组合真实效果仍待184全验收/独立审计/186复盘/原331全冻结query/204结论。原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4NormalizedEdgeTarget_M7仅归一化与完整源目标组件工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue222 M7仅归一化组件工程进度；报告及g4-normalized-edge-target-engineering-results.json保留完整证据，连续224不等待确认"
+    },
+    {
+      "id": "G4 M7仅归一化目标有界训练与严格恢复工程",
+      "state": "八角色有界12与2+10/完成0恢复工程通过，真实效果未测",
+      "evidence": "Issue224/PR225；实际5c7ae64e2e0f4a1ecd4ef90c2d225369ebaa2749，授权LXC CPU6/6 99.465s、GPU6/6 122.531s、全664项663通过+1既有GPU专用跳过1215.666s，checker408Python110JSON/help。八角色合成12/新实例2+10/完成0、24精确重载/专项，CPU模型optimizer/scheduler/history/RNG/概率/trace逐位；none/gated对208两角色精确，GPU该对照为事前FixedGraphReference，原生启用GPU仅功能/ordered重载。仅归一化0训练参数/8字节version、匹配gated58498；M6分向正梯度/实际变化，原头保护、floor/mode/version/源/上下文/完整匹配M6绑定和嵌套原BN回执拒绝通过。真实24配置初始化82文件不变87.407s；独立手写24配置83文件不变18.967s，不调用新settings/runtime/factory，同干净checkout不同进程。NN/BN/优化/query0。首版0fe CPU3errors25.452s漏M6 metadata，中间c93 CPU6pass99.259s/GPU3errors30.602s因CPU重建和CUDA登记设备身份不符；完整保留，不放宽守卫",
+      "remaining": "Issue226/PR227同参数分支内变换组件继续；CPU恢复GPU登记短测会先在原登记训练设备重建，不称无GPU迁移。失败前向BN缓冲未承诺全回滚。原生CUDA独立优化轨迹等价、仅归一化vs学习M7/同容量/支持K空间传感器/M4组合实际效果待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，main不合",
+      "report": "research/reports/G4NormalizedEdgeRuntime_M7仅归一化目标有界训练与恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue224 M7仅归一化有界训练/严格恢复工程进度；报告及g4-normalized-edge-runtime-engineering-results.json保留完整证据，连续226不等待确认"
+    },
+    {
+      "id": "G4 M6同参数分支内对照与完整源目标组件工程",
+      "state": "六角色同参数初态/中层自身支路变换/orderedBN与显式重载工程通过，真实容量效果未测",
+      "evidence": "Issue226/PR227；实际6e78153c50467d67f6de46f8f2d1d564b6a915da，授权LXC CPU7/7 34.040s、GPU7/7 37.633s、全665项664通过+1既有GPU专用跳过1148.738s，checker408Python110JSON/help。none/gated/branch_local×两角色；gated/local同58498参数和初态、local多8字节version，fresh头/域/源/权限/RNG匹配。CPUFP64手工公式与输入/参数梯度、固定中间输入跨支路Jacobian未连接/Q与另一支路变动不影响本路、空/强度0/分块、none/gated对206前向BN精确通过。六角色各合成3更新、图/两槽位/三头正组梯度与实际变化、18精确重载/专项、单角色总体矩参考及旧通用loader拒绝version通过。真实18初始化12匹配基础，78文件不变21.823s；独立干净clone仅旧206工厂12次手工18state/schema/config，79文件不变3.937s；NN/BN/更新/query0。实现测试失败0，原331不改",
+      "remaining": "Issue228/PR229有界12/2+10/完成0及像素/区域槽位参与证据继续；只有中层算子无跨路消息，整网仍共享adapter/Q/融合。同参数不等计算匹配/提速，初始差值gate输入0，不称所有标量正梯度。真实容量/计算匹配/支持K空间传感器/M4组合仍待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，原生CUDA独立优化轨迹等价未接受",
+      "report": "research/reports/G4BranchLocalTarget_M6同参数分支内对照与目标组件工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-06 Issue226 M6同参数分支内目标组件工程进度；报告及g4-branch-local-target-engineering-results.json保留完整证据，连续228不等待确认"
+    },
+    {
+      "id": "G4 M6同参数分支内目标有界训练与严格恢复工程",
+      "state": "六角色有界12与2+10/完成0恢复工程通过，真实效果未测",
+      "evidence": "Issue228/PR229；实际03df02b5c886e19d58b12a43f3a6c3c321642bf3，授权LXC CPU6/6 90.473s、GPU6/6 107.810s、全671项670通过+1既有GPU专用跳过1170.278s，checker411Python113JSON/help。六角色合成12/新实例2+10/完成0、18精确重载/专项，CPU模型optimizer/scheduler/history/RNG/概率/trace逐位。none/gated对208精确，GPU此对照为事前FixedGraphReference；原生启用GPU功能/ordered重载。gated/local同58498参数/初态、local8字节version，明确pixel_slot/region_slot正组梯度和实际变化，三头/NaN/实际算子与版本/完整M6绑定/嵌套原BN回执保护通过。消费226完整receipt并核443共享代码文件不变。真实18配置初始化81文件不变73.214s；独立手写18配置82文件不变19.252s，同干净checkout不同进程，不调用新settings/runtime/factory。NN/BN/优化/query0。数值测试失败0；首版只读汇总转录hash被创建输出前拒绝，从SCP exit0原件修正，不改输入或守卫",
+      "remaining": "按主清单M8/实施12继续独立位置门控融合核，先核论文/作者固定源码许可；仅中层local无跨路，整网共享adapter/Q/融合。同参数不等计算匹配/提速，初始差值gate输入0。CPU恢复GPU登记短测仍先用原GPU重建，失败BN缓冲未承诺回滚。真实容量/计算匹配/支持K空间传感器/M4组合与原生CUDA独立优化轨迹待184完整接受→独立331审计→186复盘→原331全冻结query→204结论，main不合",
+      "report": "research/reports/G4BranchLocalRuntime_M6同参数分支内目标有界训练与恢复工程验收_20261106.md",
+      "chat_report": "本聊天2026-11-07 Issue228 M6同参数分支内目标有界工程进度；完整报告及g4-branch-local-runtime-engineering-results.json留证，连续M8核搭建不等待确认"
+    },
+    {
+      "id": "M8默认关闭位置标量门控融合核工程",
+      "state": "独立核与原三头/掩码损失合成工程通过，目标整网及真实效果未测",
+      "evidence": "Issue230/PR231；实际a6ef1f93adbbf68b62c24e4fd9ae78834f311a95，授权LXC CPU6/6 1.073s、GPU6/6 2.335s、分支全533/533 214.298s跳过0，checker322Python113JSON。默认0参数精确旧固定融合及输入梯度，启用64维129参数/8字节version/构造无RNG；独立NumPyFP64公式/全输入权重偏置导数1e-12及有限差分、凸界/交换/置换分块/空/有限性拒绝、严格配对weights_only重载无部分覆盖通过。原三头logits/prob与13掩码损失、合成3步门和头参数实际变化、无标签行/零aux梯度通过。作者1702.01992v1原方法/结果及源码95226b0d265743e7a9330549bc35b95fcb60e1dd MIT已读，独立适配无外部源码复制/执行/依赖。原model/config/损失/训练器不改；真实输入/初始化/NN/BN/更新/query0。首7cb CPU6pass1.047s后checker拒绝新model路径，改顶层伴随文件后通过，未改守卫，旧clone/log保留",
+      "remaining": "Issue232完整none源目标组件继续，真实配置证明须先消费230完整receipt；独立核extra_state非直接兼容原G4张量state_id，须显式适配。不是完整GMU复现/HSI收益/物理可靠度；启用初态仅数值接近fixed。同预算容量、速度、原生CUDA独立轨迹、目标整网BN/runtime、B0/R/F/R+F及支持K空间传感器实际对照仍待184全接受→331审计→186复盘→原331全冻结query→204结论，main不合",
+      "report": "research/reports/M8PositionFusion_默认关闭位置标量门控融合核工程验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue230位置标量门控融合核工程进度；完整报告与m8-position-fusion-engineering-results.json留证，连续Issue232不等待确认"
+    },
+    {
+      "id": "G4既有54批次三卡资源续跑交接工程",
+      "state": "资源工程和51接受安全边界后的真实三卡接管通过，184全批次实验仍运行",
+      "evidence": "Issue198 closed/PR200 ready未合；资源侧实际tested/生产5db71e82ad3fc36f3cef7046a22c1162be756097，最终文档235266c7abf0b554d0deaf091704026c1eede52e。授权LXC CPU8项7pass+1GPU-onlyskip4.801s、GPU3专项8/8 102.296s、GPU7可见全585项583pass+2GPU-onlyskip457.483s；额外原CLI GPU3先2→新worker GPU7续1498/完成0→GPU3原严格1500/6指标54召回3精确重载合成用例1/1 100.260s。原331字节/81000预算/数值不改。实际608030三卡1/3/7接管余3例4500预算，first2共6更新；独立外部见证7930输入/51例5763文件与原进度行原样、331/5db干净、旧PID退役/3真实worker可见性/日志哈希通过29.373429s，receipt c444385c6caa03ec977342af749815ec085b772b795709158ee302b878f01e3d。主任务核三文档blob同235及见证副本SHA，精确接纳文档不合资源源码，不冒称主任务复跑资源训练。52c CPU5pass1error1skip5.062s遇受限proc1/cwd，后改核身份协调器直接子进程；rmvision失败/大回执截断拒收记录保留",
+      "remaining": "仅资源工程及交接当时见证，非全54数值独立审计或跨卡训练轨迹逐位等价。原wrapper137/77555s为计划协调器交接段，新acceptance.resource_execution和资源elapsed仅覆盖新段；完整报告须分段成本。184真completed/failed/新控制器终止先暂停vca核验，再普通回合331全批次审计+资源终验→186真实复盘→原331全冻结query→204结论；198报告不关闭184、不提前query或发起下一真实实验，main不合",
+      "report": "research/reports/G4ResourceHandoff_既有54批次三卡续跑工程与现场交接_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue198资源工程与三卡真实交接交付接纳；根任务核源235三份文档身份并记录完整报告/两摘要，训练验收为资源侧实际执行范围，不重复原184实验交付"
+    },
+    {
+      "id": "G4 M8位置门控末端融合完整源目标组件工程",
+      "state": "四角色初始化/末端算子/orderedBN与专属重载工程通过，真实效果及runtime未测",
+      "evidence": "Issue232/PR233；实际2bce85d1258c7908086e0f6147158e883a3c7b89，授权LXC CPU7/7 32.991s、GPU7/7 34.875s、全658项657pass+1既有GPU-onlyskip1107.966s，checker404Python105JSON/help。fixed/position_gate×scratch/完整none源FT；默认无算子状态，启用129参数另8字节marker，原共享/新头/DomainBN/权限/RNG匹配。核230receipt及357原代码同hash；本地骨干子类只覆盖末端融合，原三头13损失不改。绑定外置配置且整网Tensor-only，旧通用loader拒绝启用态。固定两角色214前向/BN逐位，手工末端门/辅助头不变；四角色各合成3更新、CNN/Graph/门/三头正组梯度与变化、5层10BN缓冲保护、12精确重载/专项、单角色CPUFP64总体矩与版本方法/源标签/嵌套回执拒绝通过。真实12初始化95文件不变19.845s；独立旧214工厂6次手工12state/config/schema/权限，96文件不变3.487s，同干净checkout另一进程不调用新factory或核构造；NN/BN/优化/query0。数值失败0，注册/TLS及既有报告EOF空行提示保留",
+      "remaining": "Issue234有界12/2+10/完成0及显式门梯度/参数变化trace、完整原M8绑定/嵌套BN恢复继续；真实配置须先消费232完整receipt。组件不代表完整GMU/目标训练/容量/速度/精度或物理可靠度；启用初态只数值接近fixed。真实B0/R/F/R+F及支持K/空间/传感器/M4组合、原生CUDA独立优化轨迹仍待184全接受→331审计+198资源终验→186真实复盘→原331全冻结query→204结论，main不合",
+      "report": "research/reports/G4PositionFusionTarget_M8位置门控末端融合完整源目标组件工程验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue232 M8位置门控末端融合目标组件工程进度；完整报告和g4-position-fusion-target-engineering-results.json留证，连续Issue234不等待确认"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "matched_ordered_full_target_engineering_accepted_full_study_registration_next",
-  "long_training_policy": "2026-11-05用户授权后续按计划自主执行长训练；每次提前告知预计时长，完成后复盘，模块验收后连续推进"
+  "execution_state": "issue184_full54_experiment_accepted_primary_negative_issue234_real_composition_pending",
+  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用"
 }
