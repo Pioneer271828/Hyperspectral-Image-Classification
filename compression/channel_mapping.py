@@ -73,19 +73,26 @@ def compact_state(reference, template, intervention_plan, receipt, declaration, 
     if mapped_sites != sites:
         raise ValueError("Every validated dependency site needs explicit tensor mappings")
 
+    result = _slice_state(original, target, {key: plan["new_to_old"] for key, plan in axis_plans.items()})
+    return result, {"policy": "mon_explicit_compact_channel_map_v1", "plan_sha256": expected_sha256,
+                    "reference_state": state_sha, "compact_state": _tree_fingerprint(result), "groups": names,
+                    "axes": list(axis_plans.values()), "optimizer_state_transferred": False}
+
+
+def _slice_state(original, target, kept):
+    if set(original) != set(target):
+        raise ValueError("Same named state schema required")
     result = {}
     for name, old in original.items():
         new = target[name]
-        shape = tuple(len(axis_plans[name, i]["new_to_old"]) if (name, i) in axis_plans else size
-                      for i, size in enumerate(old.shape))
+        shape = tuple(len(kept[name, axis]) if (name, axis) in kept else size
+                      for axis, size in enumerate(old.shape))
         if (old.dtype != new.dtype or old.layout != new.layout or old.device != new.device or shape != tuple(new.shape)):
             raise ValueError("Compact template does not match the complete mapped state schema: " + name)
         value = old.detach()
         for axis in range(old.ndim):
-            if (name, axis) in axis_plans:
-                indices = torch.tensor(axis_plans[name, axis]["new_to_old"], dtype=torch.long, device=old.device)
+            if (name, axis) in kept:
+                indices = torch.tensor(kept[name, axis], dtype=torch.long, device=old.device)
                 value = value.index_select(axis, indices)
         result[name] = value.clone()
-    return result, {"policy": "mon_explicit_compact_channel_map_v1", "plan_sha256": expected_sha256,
-                    "reference_state": state_sha, "compact_state": _tree_fingerprint(result), "groups": names,
-                    "axes": list(axis_plans.values()), "optimizer_state_transferred": False}
+    return result
