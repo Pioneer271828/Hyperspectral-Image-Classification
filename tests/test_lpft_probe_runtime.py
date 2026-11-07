@@ -2,6 +2,8 @@
 import copy
 import io
 import os
+from pathlib import Path
+import tempfile
 import unittest
 
 import torch
@@ -177,6 +179,32 @@ class RuntimeTests(unittest.TestCase):
             run.step(lambda _: self.fail("Changed policy must not execute"))
         self.assertEqual(run.completed_steps, 0)
         self.assert_equal(before, run.model.state_dict())
+
+    def test_existing_g4_network_interior_resume_and_input_guard(self):
+        from model.research_config import ResearchConfig
+        from target_initialization import initialize_target, METHODS
+        from target_training import loss_terms, selected_outputs, target_settings
+        from test_target_training import fixture
+        with tempfile.TemporaryDirectory() as directory:
+            (items, _, guard), _ = fixture(Path(directory))
+            template, _ = initialize_target('xuzhou', METHODS[0], model_seed=64, head_seed=1064)
+            config = ResearchConfig.from_dict(target_settings('xuzhou', METHODS[0])['config'])
+            plan = LPFTPlan(6, 2, .001, .0001)
+
+            def loss(model):
+                outputs = selected_outputs(model, 'xuzhou', items['xuzhou'], 'train')
+                return loss_terms(outputs, items['xuzhou']['train_labels'], config)['total']
+
+            run = LPFTRun(template, plan, self.identity)
+            for _ in range(3):
+                run.step(loss)
+            snapshot = run.snapshot()
+            losses = [run.step(loss) for _ in range(3)]
+            final = run.snapshot()
+            resumed = LPFTRun.restore(template, plan, self.identity, snapshot)
+            self.assertEqual(losses, [resumed.step(loss) for _ in range(3)])
+            self.assert_equal(final, resumed.snapshot())
+            guard()
 
     @unittest.skipUnless(os.environ.get("LPFT_RUNTIME_DEVICE") == "cuda",
                          "Explicit isolated GPU allocation required")
