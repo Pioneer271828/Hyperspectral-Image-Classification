@@ -109,7 +109,7 @@ def matched_releases(reference_freeze, rows, references, data_root, prepared, pr
     return releases, pins
 
 
-def score_model(root, reference, frozen, release, protected):
+def score_model(root, reference, frozen, release, protected, *, device="cuda:0"):
     target, seed, method, mode = frozen["role"]
     folder = case_directory(root, (target, seed, method, mode))
     primary = folder / "primary.pt"
@@ -117,7 +117,6 @@ def score_model(root, reference, frozen, release, protected):
     pins = {**frozen["model_files"], str(raw): protected[str(raw)]}
     check_files(pins)
     items, _, guard = case_data(reference)
-    device = "cuda:0"
     runtime = FullLightTargetRuntime(reference, method, items, folder, REGISTRATION_SHA256,
                                      frozen["physical_gpu"], device=device)
     moved = {name: {k: v.to(device) if torch.is_tensor(v) else v for k, v in item.items()} for name, item in items.items()}
@@ -178,6 +177,7 @@ def evaluate(args, code):
                "models": rows, "analysis": analysis, "query_labels_accessed": True, "optimizer_updates": 0,
                "physical_gpu": args.gpu, "elapsed_seconds": time.monotonic() - started}
     write_json(out / "receipt.json", receipt)
+    write_json(out / "status.json", {"status": "completed", "cases": len(rows), "gpu": args.gpu})
     return receipt
 
 
