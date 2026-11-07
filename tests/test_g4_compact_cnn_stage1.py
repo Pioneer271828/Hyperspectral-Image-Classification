@@ -1,4 +1,5 @@
 """Exercise structural shortening through the real G4 forward entry."""
+import copy
 import unittest
 
 import torch
@@ -11,7 +12,6 @@ from monitoring.dependency_groups import HEADS, evaluate_groups
 from monitoring.interventions import _snapshot
 from monitoring.probes import FrozenProbe
 from research_runtime import tensor_hash
-import copy
 
 
 def fixture(norm="domain_bn", **kwargs):
@@ -38,6 +38,11 @@ class CompactG4Tests(unittest.TestCase):
         for norm in ("domain_bn", "batch_norm"):
             with self.subTest(norm=norm):
                 model, inputs, probe = fixture(norm)
+                second_norm = model.backbone.CNN_Branch[1].norm.norm
+                bn = second_norm.norms["scene"] if norm == "domain_bn" else second_norm
+                with torch.no_grad():
+                    bn.running_mean[2] = 1.25
+                    bn.bias[2] = .75
                 before = _snapshot(model)
                 evidence = compare_geometry(model, forward, inputs, probe, [2, 95, 126])
                 self.assertEqual(len(evidence["retained"]), 125)

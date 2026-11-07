@@ -3,6 +3,7 @@ import copy
 
 import torch
 
+from model.research_config import digest
 from model.VCASAHGCN import DatasetAwareSSConv, MultiDatasetVCASAHGCN, VCASAHGCNBackbone
 from monitoring.dependency_groups import HEADS
 from monitoring.interventions import ChannelIntervention, isolated_probe
@@ -10,7 +11,8 @@ from monitoring.interventions import ChannelIntervention, isolated_probe
 from .channel_mapping import _slice_state, compact_state
 
 
-ANCHOR = "backbone.CNN_Branch.0.act2"
+# Mask after normalization: a zero input may have a nonzero BN output.
+ANCHOR = "backbone.CNN_Branch.1.norm"
 FIRST = "backbone.CNN_Branch.0"
 SECOND = "backbone.CNN_Branch.1"
 
@@ -76,7 +78,7 @@ def _anchor(probe):
              if (call["spec"]["path"], call["call_index"], call["spec"]["layout"], call["spec"]["unit"])
              == (ANCHOR, 0, "NCHW", "pixel")]
     if len(found) != 1:
-        raise ValueError("Frozen stage-1 output probe anchor required")
+        raise ValueError("Frozen stage-2 normalized input probe anchor required")
     return found[0]
 
 
@@ -111,8 +113,6 @@ def compare_geometry(reference, forward, inputs, probe, removed):
 
 def compact_from_passed_groups(reference, probe, plan, receipt, names, *, expected_receipt_sha256):
     """Construct a fresh compact G4 using a pinned, passing reversible trial."""
-    from model.research_config import digest
-
     if digest(receipt) != expected_receipt_sha256 or plan["probe_identity"] != probe.identity:
         raise ValueError("Exact pinned validation receipt and stage-1 probe required")
     anchor = _anchor(probe)
