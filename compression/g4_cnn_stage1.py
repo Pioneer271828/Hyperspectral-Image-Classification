@@ -82,12 +82,17 @@ def _anchor(probe):
     return found[0]
 
 
-def compare_geometry(reference, forward, inputs, probe, removed):
-    """Numerical engineering probe. It publishes no candidate acceptance or checkpoint."""
-    anchor = _anchor(probe)
+def _mapped_geometry(reference, removed):
     template, retained, axes = _template(reference, removed)
     state = _slice_state(reference.state_dict(), template.state_dict(), {axis: retained for axis in axes})
     template.load_state_dict(state, strict=True)
+    return template, retained, axes
+
+
+def compare_geometry(reference, forward, inputs, probe, removed):
+    """Numerical engineering probe. It publishes no candidate acceptance or checkpoint."""
+    anchor = _anchor(probe)
+    template, retained, axes = _mapped_geometry(reference, removed)
     masked = isolated_probe(reference, lambda: copy.deepcopy(reference), forward, inputs, probe,
                             interventions=(ChannelIntervention(anchor, tuple(removed)),))
     compact = isolated_probe(template, lambda: copy.deepcopy(template), forward, inputs, probe)
