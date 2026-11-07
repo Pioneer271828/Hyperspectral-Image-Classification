@@ -77,12 +77,13 @@ class LightQueryReleaseTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             paths = {}
-            for arg in ("freeze", "reference_freeze", "reference_query", "prepared_manifest"):
+            for arg in ("freeze", "reference_freeze", "reference_query", "prepared_manifest", "review"):
                 paths[arg] = root / arg
                 query.write_json(paths[arg], {"status": "running"} if arg == "freeze" else {})
             out = root / "out"
             args = Namespace(**paths, out=out, freeze_sha256=query.file_hash(paths["freeze"]),
-                             prepared_sha256=query.file_hash(paths["prepared_manifest"]))
+                             prepared_sha256=query.file_hash(paths["prepared_manifest"]),
+                             review_sha256=query.file_hash(paths["review"]))
             with (patch.object(query, "REFERENCE_FREEZE_SHA256", query.file_hash(paths["reference_freeze"])),
                   patch.object(query, "REFERENCE_QUERY_SHA256", query.file_hash(paths["reference_query"])),
                   patch.object(query, "matched_releases") as release,

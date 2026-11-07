@@ -413,9 +413,17 @@
       "remaining": "完成训练/验证复盘与成本导出。真实全54独立接受、复盘与冻结后执行同协议评价。",
       "report": "research/reports/G4LightOrderedQuery_同协议只读评分工程验收_20261107.md",
       "chat_report": "本聊天2026-11-07 Issue249同协议只读评分工程进度。"
+    },
+    {
+      "id": "G4轻量适配训练复盘与评分前置",
+      "state": "复盘工程通过，Issue249训练显存异常待诊断",
+      "evidence": "tested 44696a60d68baffff5b636d2e107976b531abc3c，CPU专项2/2及相关回归17/17，已审计的两真实案例逐例曲线和成本导出通过。Issue249在已验收35/54时HongHu VCA加三头首步OOM，停止新派发，定时值守已暂停。",
+      "remaining": "验证显存路径与数值一致性，登记后处理恢复。真实全54接受、复盘和同协议评分待完成。",
+      "report": "research/reports/G4LightTrainvalReview_训练复盘与评分前置验收_20261107.md",
+      "chat_report": "本聊天2026-11-07 Issue249训练复盘工程与异常进度。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "g4_light_ordered_query_accepted_issue249_running_trainval_review_next",
+  "execution_state": "g4_light_trainval_review_accepted_issue249_oom_diagnosis_next",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。"
 }

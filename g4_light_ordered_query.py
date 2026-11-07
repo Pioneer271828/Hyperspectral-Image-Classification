@@ -26,6 +26,7 @@ from target_initialization import state_id
 
 
 POLICY = "g4_light_issue249_all54_ordered_query_v1"
+REVIEW_POLICY = "g4_light_issue249_all54_trainval_review_v1"
 REGISTRATION_SHA256 = "b3cca8f1028004da30177704b107e959cd2fa47aa7892390522e4589fe39e735"
 REFERENCE_FREEZE_SHA256 = "7dd7e87334766d74005d14345e994fc2e700e109f6d8141b462004831496b48c"
 REFERENCE_QUERY_SHA256 = "33d7d17130ee94834b9ab3bbc21e3e36917f3a638beb4e1dc188c99d64f81b54"
@@ -109,6 +110,22 @@ def matched_releases(reference_freeze, rows, references, data_root, prepared, pr
     return releases, pins
 
 
+def review_inputs(path, freeze_sha256, freeze, code):
+    review = read(path)
+    expected = [(m["name"], m["role"], m["selected_step"]) for m in freeze["models"]]
+    if (review["policy"] != REVIEW_POLICY or review["status"] != "passed"
+            or review["freeze_sha256"] != freeze_sha256 or review["acceptance_sha256"] != freeze["acceptance_sha256"]
+            or review["optimizer_updates_reviewed"] != 81000 or review["new_optimizer_updates"] != 0
+            or review["query_labels_accessed"] is not False
+            or [(r["name"], r["role"], r["selected_step"]) for r in review["cases"]] != expected):
+        raise ValueError("Complete matching train/validation review required before query")
+    unchanged_producer(review["code"], code)
+    exports = review["exported_files"]
+    if set(exports) != {name + suffix for name, _, _ in expected for suffix in (".png", "-curve.csv")}:
+        raise ValueError("All54 reviewed curves and figures required before query")
+    check_files({str(path.parent / name): sha for name, sha in exports.items()})
+
+
 def score_model(root, reference, frozen, release, protected, *, device="cuda:0"):
     target, seed, method, mode = frozen["role"]
     folder = case_directory(root, (target, seed, method, mode))
@@ -136,18 +153,20 @@ def score_model(root, reference, frozen, release, protected, *, device="cuda:0")
 
 
 def evaluate(args, code):
-    light, old_freeze, old_query, prepared = [Path(getattr(args, key)).resolve(strict=True)
-                                             for key in ("freeze", "reference_freeze", "reference_query", "prepared_manifest")]
+    light, old_freeze, old_query, prepared, review = [Path(getattr(args, key)).resolve(strict=True)
+        for key in ("freeze", "reference_freeze", "reference_query", "prepared_manifest", "review")]
     pins = {str(light): args.freeze_sha256, str(old_freeze): REFERENCE_FREEZE_SHA256,
-            str(old_query): REFERENCE_QUERY_SHA256, str(prepared): args.prepared_sha256}
-    if len(pins) != 4:
-        raise ValueError("Separate frozen, reference and prepared input files required")
+            str(old_query): REFERENCE_QUERY_SHA256, str(prepared): args.prepared_sha256,
+            str(review): args.review_sha256}
+    if len(pins) != 5:
+        raise ValueError("Separate frozen, reviewed, reference and prepared input files required")
     check_files(pins)
     freeze = read(light)
     root, launch, references = light_inputs(freeze, code)
+    review_inputs(review, args.freeze_sha256, freeze, code)
     baseline, query = read(old_freeze), read(old_query)
     reference_inputs(baseline, query, freeze["reference_launch"]["sha256"], code)
-    out = new_output(args.out, launch, (root, light.parent, old_freeze.parent, old_query.parent,
+    out = new_output(args.out, launch, (root, light.parent, old_freeze.parent, old_query.parent, review.parent,
                                         prepared.parent, Path(args.data_root).resolve(strict=True)))
     protected = freeze["protected_files"]
     if any(out == Path(path).resolve() or out in Path(path).resolve().parents for path in protected):
@@ -173,6 +192,7 @@ def evaluate(args, code):
     check_files(protected)
     require_frozen_code(code)
     receipt = {"policy": POLICY, "status": "passed", "code": code, "freeze_sha256": args.freeze_sha256,
+               "review_sha256": args.review_sha256,
                "reference_query_sha256": REFERENCE_QUERY_SHA256, "prepared_sha256": args.prepared_sha256,
                "models": rows, "analysis": analysis, "query_labels_accessed": True, "optimizer_updates": 0,
                "physical_gpu": args.gpu, "elapsed_seconds": time.monotonic() - started}
@@ -183,7 +203,7 @@ def evaluate(args, code):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("expected-commit", "freeze", "freeze-sha256", "reference-freeze", "reference-query",
+    for name in ("expected-commit", "freeze", "freeze-sha256", "review", "review-sha256", "reference-freeze", "reference-query",
                  "data-root", "prepared-manifest", "prepared-sha256", "out"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--gpu", type=int, required=True)
