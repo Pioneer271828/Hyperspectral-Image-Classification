@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "module": "Issue234 M8 bounded position-fusion runtime",
+  "plan": [
+    "研究主清单2.3/P4",
+    "模块实施计划12/18/19"
+  ],
+  "implementation": "Independent integration of already-accepted project components; no external source copied or executed",
+  "project_components": [
+    {
+      "commit": "2bce85d1258c7908086e0f6147158e883a3c7b89",
+      "files": [
+        "g4_position_fusion_target.py"
+      ]
+    },
+    {
+      "commit": "a6ef1f93adbbf68b62c24e4fd9ae78834f311a95",
+      "files": [
+        "position_gated_fusion.py"
+      ]
+    },
+    {
+      "commit": "9b0e76a75f6c8907eda9c3654ccf45b84c3c68de",
+      "files": [
+        "g4_fusion_target_runtime.py"
+      ],
+      "reuse": "Read-only closed fixed/default comparison"
+    },
+    {
+      "commit": "5c7ae64e2e0f4a1ecd4ef90c2d225369ebaa2749",
+      "files": [
+        "g4_normalized_edge_target_runtime.py"
+      ],
+      "reuse": "Canonical registered-device initialization, complete base binding and nested original BN receipt pattern"
+    }
+  ],
+  "external_reference_review": "Reuse Issue230/232 fixed paper/author-code/license review; new runtime imports no upstream code",
+  "budget": {
+    "profile": "engineering",
+    "updates": 12,
+    "resume": [
+      2,
+      10,
+      0
+    ],
+    "roles": 4,
+    "real_training_updates": 0,
+    "query_labels_accessed": false
+  },
+  "limitations": [
+    "No real accuracy/cost benefit or native independent CUDA optimization trajectory claim",
+    "CPU restore of GPU-registered runs can temporarily require original GPU",
+    "Pre-step failure preserves parameters/Adam; no full BN-forward rollback claim"
+  ]
+}

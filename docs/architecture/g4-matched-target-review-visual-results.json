@@ -1,0 +1,20 @@
+{
+  "status": "visual_qa_completed",
+  "as_of": "2026-11-07",
+  "review_sha256": "547f7a748a6ed7540366a0f8afe851ae7ad33da37d08891213cc64dc156af7d0",
+  "review_models": 54,
+  "all_54_pngs_inspected_in_scene_contacts": [
+    "qa/paviaU-contact.png",
+    "qa/xuzhou-contact.png",
+    "qa/whu-honghu-contact.png"
+  ],
+  "full_resolution_examples": [
+    "whu-honghu-s64-x_residual-target_scratch_full",
+    "whu-honghu-s2048-none-source_pretrained_full_finetune",
+    "xuzhou-s2048-capacity_control-source_pretrained_full_finetune",
+    "paviaU-s64-x_residual-source_pretrained_full_finetune"
+  ],
+  "result": "54 populated six-panel layouts; axes/titles/selection/LR/per-class bars present. Early selection, late improvement and CNN class11 zero retained",
+  "limitations": "Contact views at reduced scale; four originals inspected individually. Exact per-class values remain in JSON/CSV; some bar legends overlay bar areas. No publication-layout or query-benefit claim.",
+  "preserved_preflight_rejection": "First localQA/freeze preflight expected SHA transcription contained one extra f (65chars), rejected before freeze CLI/output/query. Both original files match actual64-character SHA; no producer file or gate modified."
+}
