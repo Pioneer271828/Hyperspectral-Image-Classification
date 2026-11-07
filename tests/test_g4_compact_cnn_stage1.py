@@ -1,9 +1,12 @@
 """Exercise structural shortening through the real G4 forward entry."""
 import copy
+from pathlib import Path
+import tempfile
 import unittest
 
 import torch
 
+from compression.compact_g4_checkpoint import load_compact_initialization, save_compact_initialization
 from compression.g4_cnn_stage1 import ANCHOR, compact_from_passed_groups, compare_geometry
 from model.research_config import digest
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
@@ -74,6 +77,32 @@ class CompactG4Tests(unittest.TestCase):
         self.assertEqual(evidence["axes"][0]["old_to_new"][2], None)
         with self.assertRaisesRegex(ValueError, "own checkpoint schema"):
             compact.export_config()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "compact.pt"
+            mapping_sha = digest(evidence)
+            rng_before = torch.get_rng_state()
+            checkpoint_sha = save_compact_initialization(path, compact, evidence, expected_mapping_sha256=mapping_sha)
+            with self.assertRaises(FileExistsError):
+                save_compact_initialization(path, compact, evidence, expected_mapping_sha256=mapping_sha)
+            with self.assertRaisesRegex(ValueError, "mapping hash mismatch"):
+                load_compact_initialization(path, expected_sha256=checkpoint_sha, expected_mapping_sha256="wrong")
+            restored, restored_mapping = load_compact_initialization(
+                path, expected_sha256=checkpoint_sha, expected_mapping_sha256=mapping_sha)
+            self.assertTrue(torch.equal(torch.get_rng_state(), rng_before))
+            self.assertEqual(restored_mapping, evidence)
+            self.assertEqual(_snapshot(restored)["state"], _snapshot(compact)["state"])
+            self.assertFalse(restored.training)
+            with torch.no_grad():
+                before, after = forward(compact, inputs), forward(restored, inputs)
+                for head in HEADS:
+                    torch.testing.assert_close(before[head], after[head], rtol=0, atol=0)
+                next(compact.parameters()).add_(1)
+            with self.assertRaisesRegex(ValueError, "mapped initialization"):
+                save_compact_initialization(Path(directory) / "changed.pt", compact, evidence,
+                                            expected_mapping_sha256=mapping_sha)
+            path.write_bytes(path.read_bytes() + b"changed")
+            with self.assertRaisesRegex(ValueError, "file hash mismatch"):
+                load_compact_initialization(path, expected_sha256=checkpoint_sha, expected_mapping_sha256=mapping_sha)
 
     def test_coupled_and_group_normalized_topologies_are_rejected(self):
         model, inputs, probe = fixture("group_norm")
