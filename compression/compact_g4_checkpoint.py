@@ -55,10 +55,13 @@ def save_compact_initialization(path, model, mapping, *, expected_mapping_sha256
                "state": state}
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".compact-init-", delete=False) as stream:
-        temporary = Path(stream.name)
+    descriptor, filename = tempfile.mkstemp(dir=path.parent, prefix=".compact-init-")
+    temporary = Path(filename)
     try:
-        torch.save(payload, temporary)
+        with os.fdopen(descriptor, "wb") as stream:
+            torch.save(payload, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
         raw_sha = hashlib.sha256(temporary.read_bytes()).hexdigest()
         os.link(temporary, path)
     finally:
