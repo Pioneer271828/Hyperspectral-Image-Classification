@@ -171,6 +171,51 @@ class RuntimeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 LPFTRun(self.model, self.plan, identity)
 
+    def _offload_comparison(self, template):
+        native = LPFTRun(template, self.plan, self.identity)
+        offload = LPFTRun(template, self.plan, self.identity, saved_tensors="cpu")
+        midpoint = None
+        tail = []
+        for cursor in range(8):
+            rng = torch.get_rng_state().clone()
+            cuda_rng = torch.cuda.get_rng_state() if template.heads.weight.is_cuda else None
+            expected = native.step(self.loss)
+            torch.set_rng_state(rng)
+            if cuda_rng is not None:
+                torch.cuda.set_rng_state(cuda_rng)
+            self.assertEqual(expected, offload.step(self.loss))
+            self.assert_equal(native.model.state_dict(), offload.model.state_dict())
+            self.assert_equal(native.optimizer.state_dict(), offload.optimizer.state_dict())
+            if cursor == 3:
+                midpoint = offload.snapshot()
+            elif cursor > 3:
+                tail.append(expected)
+        final = offload.snapshot()
+        resumed = LPFTRun.restore(template, self.plan, self.identity, midpoint,
+                                  saved_tensors="cpu")
+        self.assertEqual(tail, [resumed.step(self.loss) for _ in range(4)])
+        self.assert_equal(final, resumed.snapshot())
+
+    def test_cpu_offload_exact_updates_moments_and_resume(self):
+        self._offload_comparison(self.model)
+
+    def test_memory_policy_is_explicit_and_restore_cannot_switch_it(self):
+        with self.assertRaises(ValueError):
+            LPFTRun(self.model, self.plan, self.identity, saved_tensors="auto")
+        run = LPFTRun(self.model, self.plan, self.identity, saved_tensors="cpu")
+        run.step(self.loss)
+        rng = torch.get_rng_state().clone()
+        with self.assertRaisesRegex(ValueError, "mismatch"):
+            LPFTRun.restore(self.model, self.plan, self.identity, run.snapshot())
+        self.assert_equal(rng, torch.get_rng_state())
+
+    @unittest.skipUnless(os.environ.get("LPFT_RUNTIME_DEVICE") == "cuda",
+                         "Explicit isolated GPU allocation required")
+    def test_cuda_offload_tiny_model_exact_updates_and_resume(self):
+        self.assertTrue(torch.cuda.is_available())
+        self.x, self.y = self.x.cuda(), self.y.cuda()
+        self._offload_comparison(self.model.cuda())
+
     def test_live_optimizer_change_rejected_before_callback(self):
         run = self.new_run()
         run.optimizer.param_groups[0]["lr"] = .9

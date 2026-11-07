@@ -20,11 +20,12 @@ class G4ShortTests(unittest.TestCase):
             with patch('lpft_probe.g4_short.REFERENCE_LAUNCH_SHA256', ref['sha256']):
                 case = G4ShortCase(ref['path'], ref['sha256'], expected_commit=code['commit'],
                                    target='xuzhou', seed=64, mode='none',
-                                   plan=LPFTPlan(6, 2, .001, .0001))
+                                   plan=LPFTPlan(6, 2, .001, .0001), saved_tensors='cpu')
             before = case.endpoint_metrics()
             self.assertEqual(before['completed_steps'], 0)
             self.assertEqual(set(before['metrics']), {'train', 'val'})
             self.assertFalse(before['case']['query_labels_accessed'])
+            self.assertEqual(before['case']['saved_tensors'], 'cpu')
             self.assertEqual(case.step()['update_phase'], 'probe')
             self.assertEqual(case.step()['update_phase'], 'probe')
             self.assertEqual(case.step()['update_phase'], 'finetune')

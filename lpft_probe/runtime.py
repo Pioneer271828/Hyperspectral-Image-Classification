@@ -7,13 +7,14 @@ External checkpoint hashes and atomic file publication belong to the consumer.
 """
 import copy
 import re
+from contextlib import nullcontext
 
 import torch
 
 from .policy import _partition, phase_binding, start_phase
 
 
-FORMAT = "side_lpft_runtime_v1"
+FORMAT = "side_lpft_runtime_v2"
 
 
 def _identity(value):
@@ -63,7 +64,10 @@ class LPFTRun:
     No automatic retry, extra update, scheduler or calibration is performed.
     """
 
-    def __init__(self, model, plan, input_sha256):
+    def __init__(self, model, plan, input_sha256, *, saved_tensors="device"):
+        if saved_tensors not in ("device", "cpu"):
+            raise ValueError("saved_tensors must be device or cpu")
+        self._saved_tensors = saved_tensors
         self.input_sha256 = _identity(input_sha256)
         self.plan = plan
         self.model = copy.deepcopy(model)
@@ -73,6 +77,15 @@ class LPFTRun:
         self.completed_steps = 0
         self._failed = False
         self.optimizer, _ = start_phase(self.model, self.plan, 0)
+
+    @property
+    def saved_tensors(self):
+        """Bound memory policy; CPU mode transfers saved forward intermediates.
+
+        No dtype conversion or pinning is used. GPU bitwise equivalence to the
+        device path is not assumed. Each policy requires its own experiment.
+        """
+        return self._saved_tensors
 
     def _binding(self):
         # At completion the retained optimizer belongs to the final phase.
@@ -107,7 +120,10 @@ class LPFTRun:
             raise ValueError("Registered update budget exhausted")
         try:
             self.optimizer.zero_grad(set_to_none=True)
-            loss = loss_function(self.model)
+            context = (torch.autograd.graph.save_on_cpu(pin_memory=False)
+                       if self.saved_tensors == "cpu" else nullcontext())
+            with context:
+                loss = loss_function(self.model)
             if (not isinstance(loss, torch.Tensor) or loss.ndim != 0 or
                     not loss.requires_grad or not torch.isfinite(loss).item()):
                 raise ValueError("Finite differentiable scalar loss required")
@@ -132,6 +148,7 @@ class LPFTRun:
     def snapshot(self):
         self._validate_live()
         result = {"format": FORMAT, "contract": self.plan.contract(),
+                  "saved_tensors": self.saved_tensors,
                   "input_sha256": self.input_sha256, "device": str(self.device),
                   "completed_steps": self.completed_steps, "binding": self._binding(),
                   "model_schema": self.model_schema, "model": self.model.state_dict(),
@@ -181,19 +198,21 @@ class LPFTRun:
                 raise ValueError("Negative Adam squared moment")
 
     @classmethod
-    def restore(cls, template, plan, input_sha256, saved):
+    def restore(cls, template, plan, input_sha256, saved, *, saved_tensors="device"):
         """Validate fully before committing global Torch RNG; template unchanged.
 
         Only trusted, externally hash-verified snapshots may be supplied. Schema
         checks are consistency checks, not authentication of model values.
         Restore on the original device; cross-device equivalence is not claimed.
         """
-        run = cls(template, plan, input_sha256)
+        run = cls(template, plan, input_sha256, saved_tensors=saved_tensors)
         keys = {"format", "contract", "input_sha256", "device", "completed_steps",
-                "binding", "model_schema", "model", "optimizer", "torch_rng", "cuda_rng"}
+                "binding", "model_schema", "model", "optimizer", "torch_rng", "cuda_rng",
+                "saved_tensors"}
         if not isinstance(saved, dict) or set(saved) != keys:
             raise ValueError("Malformed runtime snapshot")
         if (saved["format"] != FORMAT or saved["contract"] != plan.contract() or
+                saved["saved_tensors"] != run.saved_tensors or
                 saved["input_sha256"] != run.input_sha256 or saved["device"] != str(run.device) or
                 saved["model_schema"] != run.model_schema):
             raise ValueError("Snapshot identity, plan, device or schema mismatch")

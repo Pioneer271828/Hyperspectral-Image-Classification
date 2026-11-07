@@ -26,7 +26,7 @@ from .runtime import LPFTRun
 
 
 REFERENCE_LAUNCH_SHA256 = "0c447087a9679538e0a792aa72cb033197e743bc959cd096ac2e831e46eafdb1"
-POLICY = "side_lpft_g4_short_v1"
+POLICY = "side_lpft_g4_short_v2"
 
 
 class G4ShortCase:
@@ -38,7 +38,9 @@ class G4ShortCase:
     """
 
     def __init__(self, launch_path, launch_sha256, *, expected_commit, target, seed,
-                 mode, plan, device="cpu"):
+                 mode, plan, device="cpu", saved_tensors="device"):
+        if saved_tensors not in ("device", "cpu"):
+            raise ValueError("saved_tensors must be device or cpu")
         if plan.total_steps > 12:
             raise ValueError("Short LP-FT consumer permits at most twelve updates")
         self.code = code_snapshot()
@@ -75,6 +77,7 @@ class G4ShortCase:
                 mode=BN_POLICY, context=CONTEXT, graph_policy=GRAPH_POLICY,
                 source_state_sha256=state_id(model))
         self.record = {"policy": POLICY, "target": target, "seed": seed, "mode": mode,
+                       "saved_tensors": saved_tensors,
                        "reference_case_sha256": digest(self.reference),
                        "launch_sha256": launch_sha256, "plan": plan.contract(),
                        "initialization": initialization, "initial_calibration": calibration,
@@ -86,7 +89,7 @@ class G4ShortCase:
         identity = {"reference": digest(self.reference), "protected_inputs": digest(self.pins),
                     "initial_calibrated_model": state_id(model), "consumer": self.code["source_hash"]}
         self._template = model
-        self.run = LPFTRun(model, plan, identity)
+        self.run = LPFTRun(model, plan, identity, saved_tensors=saved_tensors)
         self.guard()
 
     def guard(self):
@@ -120,7 +123,7 @@ class G4ShortCase:
                 snapshot["case"] != self.record):
             raise ValueError("LP-FT case snapshot belongs to another run")
         restored = LPFTRun.restore(self._template, self.run.plan, self.run.input_sha256,
-                                   snapshot["runtime"])
+                                   snapshot["runtime"], saved_tensors=self.run.saved_tensors)
         self.run = restored
         self.guard()
 
