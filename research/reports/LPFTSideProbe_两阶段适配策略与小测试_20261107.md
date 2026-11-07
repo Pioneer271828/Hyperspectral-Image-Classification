@@ -137,3 +137,23 @@ loss由9.655043降至9.194064。HongHu验证fused OA保持3.6364%，graph由10.0
 两阶段策略、阶段内部恢复、G4完整源/目标接入以及显式CPU暂存已实现；对应定向CPU/GPU测试和三场景真实小步接入完成，HongHu原路径OOM作为负例保留。共实际成功更新40步（原28+新12），不存在“第一组36步全部通过”的结论。原冻结生产文件、主入口、main、Issue249产物和暂停状态没有变更。
 
 Issue250/PR251仍保持open/Draft：还没有完整训练CLI、三方法同预算对照、完整真实训练及精度收益验收，也未完成全仓回归。下一研发项为带首更新前预算一致性核验的正式短测/对照消费者，随后按P4/§19登记头训练、直接微调与LP-FT的共同初始化及同预算比较；内存策略与BN策略作为显式因素，不将复合变化全部归因于LP-FT。任何长训练须先告知总预算、估时和资源安排，再向主聊天移交半小时值守；本轮没有启动长训练或改动定时任务。
+
+## 等待训练资源期间：登记与零更新预检模块（2026-11-07）
+
+用户最新要求显存紧张时长训练等待服务器空闲、优先模块搭建，已通知主规划。本节没有新增真实训练，也没有GPU分配或自动排队。再次回读主清单§10.3固定预算/同支持集比较、§10.4归一化因素及实施计划§19的先冻结预算与输入要求，新增 `lpft_probe/registration.py` 和三项定向测试，实际源码SHA `499e9fd00c3dddd67358891b16006e29951632a0`。
+
+新入口 `python -m lpft_probe.registration` 接收登记文件、其SHA256和预期完整commit，仅输出预检JSON：认证登记原字节和固定Issue184 launch，检查干净代码/原producer兼容性、案例角色及新输出隔离。严格字段集合拒绝重复JSON键、旧/额外预算字段、合计与案例乘积不一致、重复案例、超12步、非法种子/架构/显卡编号、query或选模开关。最多3例、每例最多12步，两阶段预算均非空；显存策略、估时、源launch及输出路径显式记录。返回前再核输入文件和代码身份，输出目录不创建，模型不构造，更新0、query0。它不检查实时GPU可用性，也不代替每个实际案例运行前的源/上下文全文件认证。
+
+验收环境同上LXC，独立干净检出 `/home/lbx/hsi-pioneer271828/checkouts/side-lpft-issue250-registration01`、远程分支 `codex/side-lpft-registration01`。命令：
+
+```bash
+CUDA_VISIBLE_DEVICES='' PYTHONPATH=.:tests /home/lbx/hsi-pioneer271828/envs/hsi/bin/python -m unittest test_lpft_probe_registration -v
+CUDA_VISIBLE_DEVICES='' /home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/check_repository.py
+/home/lbx/hsi-pioneer271828/envs/hsi/bin/python -m lpft_probe.registration --help
+```
+
+3/3 CPU通过2.784秒，包含15种合同负例、JSON重复键/哈希拒绝及项目合成参考launch的真实CLI调用、输入逐文件不变、旧输出/覆盖源/篡改拒绝；运行入口测试不构造目标训练器、不执行优化更新。checker通过419 Python/130 JSON，help退出0，工作树干净。只验证新增模块，不重复已通过的完整LPFT专项或全仓回归；GPU不适用本模块，完整实际实验仍待验。
+
+日志 `/home/lbx/hsi-pioneer271828/runs/issue250-registration01-cpu.log` SHA256 `5f9507fe2aca3c142fdda56a06211cc49e5ec1e9587419e13656cdf92488db87`；checker日志同目录 `issue250-registration01-checker.log` SHA256 `e31b5225a9cc35fb7e277651d9caae15abbcb4e64db0c3889b8510278b9479d7`。
+
+阶段结论：登记与只读预检实现、定向验收完成，修正了外部临时脚本缺少聚合预算自动核验的问题。当前不声称已搭好完整训练执行器或对照批次调度器；下一接入为消费已认证登记的有界执行与结果记录，继续使用独立Issue250工作树，不改主对话分支。长训练继续等待资源及完整协议，不因CPU暂存短测通过自动恢复旧失败批次。
