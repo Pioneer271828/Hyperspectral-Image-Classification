@@ -461,9 +461,17 @@
       "remaining": "真实候选及保护、真实检查点往返、GPU及全库回归、等预算恢复、冻结query及实测成本。长训练暂缓。",
       "report": "research/reports/G4CompactCheckpoint_紧凑初始化检查点工程验收_20261108.md",
       "chat_report": "本聊天2026-11-08 G4紧凑初始化检查点进度。"
+    },
+    {
+      "id": "G4 稠密与紧凑等预算恢复短测",
+      "state": "配对 CPU 工程与真实 PaviaU 短测通过",
+      "evidence": "tested d980f2ccf507c679b5bedb6227a7cee9b9a1193d。CPU专项1/1、相关回归66通过和1项既有CUDA依赖报错、checker通过。真实12+12更新，共用90支持与45验证，步1/4/7/10/12验证，首个最低融合NLL均选12，精确重载，query0。",
+      "remaining": "真实MON候选与逐类保护、GPU及全库回归、完整等预算实验、冻结query和实际加速。长训练暂缓。",
+      "report": "research/reports/G4RecoveryShort_稠密与紧凑等预算恢复短测_20261108.md",
+      "chat_report": "本聊天2026-11-08 G4稠密与紧凑等预算恢复短测。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "g4_compact_initialization_checkpoint_accepted_training_deferred",
+  "execution_state": "g4_equal_budget_recovery_short_accepted_training_deferred",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
