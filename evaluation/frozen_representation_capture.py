@@ -20,8 +20,8 @@ from research_runtime import require_frozen_code, write_json
 from target_bn_calibration import GRAPH_POLICY, OBS_KEYS, observation_id
 from target_initialization import state_id
 
-ANALYSIS_COMMIT = "73234283581c536f6e42c49bf0b3326ce3067d60"
-ANALYSIS_SOURCE = "a7dfd3e784d0463c45ed5dcbe0b9bbd91cdbeaf88d39d5a9cd13f7dcf3995cdf"
+ANALYSIS_COMMIT = "bdb4b3f14cc108e632b986ad7bffec7cd1a70bfc"
+ANALYSIS_SOURCE = "790a5e39400419ec9d51e06f56875a62520b348d4604c4a34f3902c2286e98ee"
 POLICY = "e0_frozen_full54_stage_capture_v1"
 ARCHIVE_KEYS = OBS_KEYS | {"name", "height", "width", "bands", "class_num"}
 STAGES = {"cnn_stage1": ("stage1", "cnn", 128), "graph_stage1": ("stage1", "graph", 128),
@@ -101,7 +101,7 @@ def authenticate(freeze_path, freeze_sha256, analysis_path, analysis_sha256, nam
             or analysis["new_optimizer_updates"] != 0 or analysis["raw_labels_deserialized"] is not False
             or analysis["model_inference_executed"] is not False or analysis["new_query_release"] is not False
             or analysis["input_query_metrics_consumed"] is not True):
-        raise ValueError("Completed original331 full54 and204 analysis required before feature/model load")
+        raise ValueError("Completed original331 full54 and accepted resource-aware analysis required before feature/model load")
     unchanged_producer(producer, code); unchanged_producer(producer, frozen["code"])
     unchanged_producer(analysis["code"], code)
     if (any(analysis["protected_files"].get(p) != sha for p, sha in frozen["protected_files"].items())
