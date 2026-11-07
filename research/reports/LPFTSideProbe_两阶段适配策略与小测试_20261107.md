@@ -50,6 +50,16 @@ export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 
 输入SHA是消费者提供的声明，组件不读取实际文件或自动证明其真实性。必须由生产消费者先核真实输入及checkpoint哈希。本阶段不实现磁盘原子发布、Python/NumPy/采样器状态、数据访问守卫、校准选模、完整CLI或跨设备等价；损失回调需使用固定数据或已纳入Torch RNG的随机性。单机单设备，不是多卡训练协调器。
 
-新增CPU短测试覆盖0至8每个断点的完整序列化恢复、与原阶段策略逐步精确比较、边界重置一次、完成零更新、13种损坏拒绝且模板/RNG不变、快照独立、失败实例停止、缺失头梯度/错误模式拒绝、输入声明拒绝。另提供显式GPU分配后才启用的同设备恢复测试。当前本侧LXC独立认证仍被拒，rmvision banner超时；已向主对话请求安全移交空闲认证会话，未索取或复制凭据。新增测试未执行，结果待远程验收，不声称通过或提升精度。
+新增12项测试（11CPU及1显式GPU），CPU覆盖0至8每个断点的完整序列化恢复、与原阶段策略逐步精确比较、边界重置一次、完成零更新、13种损坏拒绝且模板/RNG不变、快照独立、失败实例停止、缺失头梯度/错误模式拒绝、输入声明拒绝、运行时Adam合同改变拒绝及现有G4网络阶段内部恢复。GPU项仅在显式分配后启用同设备恢复验证。新增候选源码完整SHA `fa407abd7b3331488af02291d20949d912c10e9e` 已推送；首次两次push TLS失败后成功，未强推。增量bundle为 `F:/E2E_VCA_worktrees/side-lpft-issue250-runtime02.bundle`，不会更新任何生产checkout。当前本侧LXC独立认证仍被拒，rmvision banner超时；已向主对话请求安全移交空闲认证会话，未索取或复制凭据。新增测试未执行，结果待远程验收，不声称通过或提升精度。
 
-状态：候选实现完成，主规划独立远程CPU小测试10项通过，原始验收记录归档待收齐；GPU、全仓回归、完整运行时集成、阶段内部恢复和真实效果未验。允许变更仅为 `lpft_probe/`、`tests/test_lpft_probe.py` 和本报告。没有修改主入口、main、已有模型/配置/CLI、current-status.json或主计划；不合并其他分支。主规划后续独立评审，再决定串行接入。临时侧聊不创建自身定时任务，长训练及值守由主聊天登记。
+待运行命令（授权Linux，独立干净检出上述SHA，CPU不占GPU）：
+
+```bash
+CUDA_VISIBLE_DEVICES='' PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:tests \
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+/home/lbx/hsi-pioneer271828/envs/hsi/bin/python -m unittest discover -s tests -p 'test_lpft_probe*.py' -v
+```
+
+预期发现22项，CPU路径21项执行、1项显式GPU跳过；这是预期数量而非实际结果。远程通过后才补tested SHA、实际耗时与退出码。GPU专项和仓库检查按实际资源与回执继续。
+
+状态：原策略的主规划独立远程CPU小测试10项通过，原始记录归档待收齐；新增运行状态已实现但待远程验收，GPU、全仓回归、完整训练入口和真实效果未验。允许变更仅为 `lpft_probe/`、`tests/test_lpft_probe*.py` 和本报告。没有修改主入口、main、已有模型/配置/CLI、current-status.json或主计划；不合并其他分支。后续搭建由本侧接手，主对话收口中的显存探针另行交接，避免双写。临时侧聊不创建自身定时任务，长训练及值守由主聊天登记。
