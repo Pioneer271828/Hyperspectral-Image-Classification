@@ -69,7 +69,7 @@ class G4ShortCase:
         if (initialization != self.reference["initialization"] or
                 state_id(model) != self.reference["initial_state_sha256"]):
             raise ValueError("Matched source and fresh target initialization changed")
-        model = model.to(device)
+        model = model.to(device).eval()
         with OrderedValidation():
             model, calibration = calibrate_target(model, observation(model, self.item),
                 mode=BN_POLICY, context=CONTEXT, graph_policy=GRAPH_POLICY,
