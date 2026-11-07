@@ -169,6 +169,15 @@ class RuntimeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 LPFTRun(self.model, self.plan, identity)
 
+    def test_live_optimizer_change_rejected_before_callback(self):
+        run = self.new_run()
+        run.optimizer.param_groups[0]["lr"] = .9
+        before = copy.deepcopy(run.model.state_dict())
+        with self.assertRaisesRegex(ValueError, "options changed"):
+            run.step(lambda _: self.fail("Changed policy must not execute"))
+        self.assertEqual(run.completed_steps, 0)
+        self.assert_equal(before, run.model.state_dict())
+
     @unittest.skipUnless(os.environ.get("LPFT_RUNTIME_DEVICE") == "cuda",
                          "Explicit isolated GPU allocation required")
     def test_cuda_same_device_resume(self):

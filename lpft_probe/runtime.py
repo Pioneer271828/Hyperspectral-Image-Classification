@@ -99,6 +99,7 @@ class LPFTRun:
         if any(not torch.equal(self._buffers[n], v.detach().cpu())
                for n, v in self.model.named_buffers()):
             raise ValueError("Frozen model buffer changed")
+        self._validate_optimizer(self.optimizer.state_dict())
 
     def step(self, loss_function):
         self._validate_live()
@@ -139,7 +140,6 @@ class LPFTRun:
                   "cuda_rng": (torch.cuda.get_rng_state(self.device)
                                if self.device.type == "cuda" else None)}
         result = _cpu(result)
-        self._validate_optimizer(result["optimizer"])
         return result
 
     def _validate_optimizer(self, saved):
