@@ -493,9 +493,17 @@
       "remaining": "按训练轨迹补齐在线梯度/更新证据、独立筛选与验证保护。固定索引不进入结构裁剪。长训练暂缓。",
       "report": "research/reports/MONHistoricalTransfer_跨场景与跨种子固定通道复验_20261108.md",
       "chat_report": "本聊天2026-11-08 MON固定通道跨场景与跨种子逐类复验。"
+    },
+    {
+      "id": "MON HongHu 失效诊断与逐轨迹小类筛选",
+      "state": "筛选修正及真实历史筛选通过，三种子无合格候选",
+      "evidence": "tested 4695896d38eab523c1b46d92b664102541e0af69。CPU监测42/42，checker通过。HongHu单关融合36次由对转错，图头最大差约5.07e-7。三种子45训练场景步探针及105小类分桶独立复核，三个名单均空，0验证干预，更新0/query0。",
+      "remaining": "配对在线梯度/实际更新、固定验证保护、正式裁剪。原失败和全部通道保留，长训练暂缓。",
+      "report": "research/reports/MONTrajectoryScreen_HongHu失效诊断与逐轨迹小类保护_20261108.md",
+      "chat_report": "本聊天2026-11-08 HongHu失效诊断与筛选修正。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "mon_fixed_channel_transfer_stress_test_completed_training_deferred",
+  "execution_state": "mon_trajectory_small_class_screen_completed_training_deferred",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
