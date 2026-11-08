@@ -485,9 +485,17 @@
       "remaining": "在线逐通道梯度及单步更新、真实跨场景/种子保护、正式结构裁剪及完整恢复。长训练暂缓。",
       "report": "research/reports/MONHistoricalPaviaU_真实训练快照筛选与逐类验证_20261108.md",
       "chat_report": "本聊天2026-11-08 MON历史快照筛选与逐类验证。"
+    },
+    {
+      "id": "MON 固定通道跨场景与跨种子逐类复验",
+      "state": "九组合复验完成，三通道固定索引均未全通过",
+      "evidence": "tested 0fe08dcb2aa9a31c24e4cfec924af13b83814518。新增8组32前向，汇总9组1440逐类复算。44通过8/9，116和16各6/9，失败均HongHu；三头小类新增错误0，保护35文件，更新0/query0。",
+      "remaining": "按训练轨迹补齐在线梯度/更新证据、独立筛选与验证保护。固定索引不进入结构裁剪。长训练暂缓。",
+      "report": "research/reports/MONHistoricalTransfer_跨场景与跨种子固定通道复验_20261108.md",
+      "chat_report": "本聊天2026-11-08 MON固定通道跨场景与跨种子逐类复验。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "mon_paviau_historical_activation_screen_completed_training_deferred",
+  "execution_state": "mon_fixed_channel_transfer_stress_test_completed_training_deferred",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
