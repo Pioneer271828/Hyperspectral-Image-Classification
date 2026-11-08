@@ -501,9 +501,17 @@
       "remaining": "配对在线梯度/实际更新、固定验证保护、正式裁剪。原失败和全部通道保留，长训练暂缓。",
       "report": "research/reports/MONTrajectoryScreen_HongHu失效诊断与逐轨迹小类保护_20261108.md",
       "chat_report": "本聊天2026-11-08 HongHu失效诊断与筛选修正。"
+    },
+    {
+      "id": "MON HongHu 逐通道梯度与实际更新短测",
+      "state": "两次真实 Adam 更新及独立复算通过，无合格候选",
+      "evidence": "tested 4695896d38eab523c1b46d92b664102541e0af69。历史seed64第393/1203步模型和Adam独立恢复，HongHu实际更新2步，六张量共1536组逐通道读数，9原文件不变。梯度与实际更新低值交集为空，保留128通道，0验证干预/query0。",
+      "remaining": "多种子真实长窗口、其他场景配对证据和正式裁剪。保留既有HongHu逐类负结果及保护门槛，长训练暂缓。",
+      "report": "research/reports/MONHongHuUpdate_逐通道梯度与实际更新短测_20261108.md",
+      "chat_report": "本聊天2026-11-08 HongHu逐通道梯度与更新短测。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "mon_trajectory_small_class_screen_completed_training_deferred",
+  "execution_state": "mon_honghu_paired_update_short_completed_training_deferred",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
