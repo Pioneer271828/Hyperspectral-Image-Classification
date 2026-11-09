@@ -22,6 +22,14 @@ class VariableChannelAdapter(nn.Module):
         [H, W, B] or [N, B, H, W]
     Output shapes:
         [H, W, K * value_dim] or [N, K * value_dim, H, W]
+
+    Optional wavelength_unit/fwhm_unit: auto (legacy heuristic), nm, normalized.
+    Missing wavelengths use normalized indices and are marked in diagnostics.
+    band_mask is a boolean vector over the original B bands; removed bands and
+    their metadata are excluded before attention/value projection.
+    Inference attention caching is bounded and bypassed whenever autograd or
+    autocast is enabled. Use clear_attention_cache() after unsupported .data
+    writes or external changes that bypass PyTorch tensor version counters.
     """
 
     def __init__(
@@ -40,6 +48,7 @@ class VariableChannelAdapter(nn.Module):
         attention_mode="wavelength",
         chunk_pixels=0,
         checkpoint_chunks=False,
+        cache_attention=True,
     ):
         super(VariableChannelAdapter, self).__init__()
         if latent_channels <= 0:
@@ -66,6 +75,7 @@ class VariableChannelAdapter(nn.Module):
         self.attention_mode = attention_mode
         self.chunk_pixels = int(chunk_pixels)
         self.checkpoint_chunks = bool(checkpoint_chunks)
+        self.cache_attention = bool(cache_attention)
         if self.chunk_pixels < 0:
             raise ValueError("chunk_pixels must be non-negative")
 
@@ -126,7 +136,21 @@ class VariableChannelAdapter(nn.Module):
         return torch.cat(chunks, dim=0)
 
     def clear_attention_cache(self):
+        """Drop transient inference state; it is never part of state_dict."""
         self._eval_attention_cache = {}
+
+    def train(self, mode=True):
+        self.clear_attention_cache()
+        return super().train(mode)
+
+    def _apply(self, fn, recurse=True):
+        self.clear_attention_cache()
+        return super()._apply(fn, recurse=recurse)
+
+    def _load_from_state_dict(self, *args, **kwargs):
+        # This hook also runs when a parent module loads its checkpoint.
+        self.clear_attention_cache()
+        return super()._load_from_state_dict(*args, **kwargs)
 
     def _to_1d_tensor(self, values, length, device, dtype, name):
         if values is None:
@@ -140,20 +164,20 @@ class VariableChannelAdapter(nn.Module):
             raise ValueError("{} length must match spectral bands: {} vs {}".format(name, values.numel(), length))
         return values
 
-    def _normalize_wavelengths(self, wavelengths):
+    def _normalize_wavelengths(self, wavelengths, unit="auto"):
         # Treat [0, 1]-like metadata as already normalized. Known nanometer
         # metadata is mapped onto the global anchor range.
         if wavelengths.numel() == 0:
             raise ValueError("wavelengths cannot be empty")
-        if wavelengths.max() <= 2.0 and wavelengths.min() >= -0.5:
+        if unit == "normalized" or (unit == "auto" and wavelengths.max() <= 2.0 and wavelengths.min() >= -0.5):
             return wavelengths.clamp(0.0, 1.0)
         scale = self.wavelength_max - self.wavelength_min
         return ((wavelengths - self.wavelength_min) / scale).clamp(0.0, 1.0)
 
-    def _normalize_fwhm(self, fwhm, wavelengths):
+    def _normalize_fwhm(self, fwhm, wavelengths, unit="auto"):
         if fwhm is None:
             return torch.zeros_like(wavelengths)
-        if fwhm.max() <= 2.0 and fwhm.min() >= 0.0:
+        if unit == "normalized" or (unit == "auto" and fwhm.max() <= 2.0 and fwhm.min() >= 0.0):
             return fwhm.clamp(min=0.0)
         scale = self.wavelength_max - self.wavelength_min
         return (fwhm / scale).clamp(min=0.0)
@@ -217,12 +241,25 @@ class VariableChannelAdapter(nn.Module):
         return attention, anchor_valid.to(dtype=attention.dtype), anchors
 
     def _attention_cache_key(self, band_positions, fwhm):
-        if self.training or self.attention_dropout.p > 0:
+        if (not self.cache_attention or self.training or torch.is_grad_enabled()
+                or self.attention_dropout.p > 0
+                or torch.is_autocast_enabled(band_positions.device.type)):
             return None
-        wave_key = tuple(torch.round(band_positions.detach().cpu() * 1000000).to(torch.int64).tolist())
-        fwhm_key = tuple(torch.round(fwhm.detach().cpu() * 1000000).to(torch.int64).tolist())
+        try:
+            # Optimizers and normal in-place updates increment tensor versions.
+            # Identity also catches replacement via load_state_dict(assign=True).
+            state = tuple((name, id(tensor), tensor._version)
+                          for name, tensor in list(self.named_parameters()) + list(self.named_buffers()))
+        except RuntimeError:
+            # Tensors constructed in inference_mode have no version counter.
+            return None
+        # Exact effective metadata: rounding could alias distinct observations.
+        wave_key = tuple(band_positions.detach().cpu().tolist())
+        fwhm_key = tuple(fwhm.detach().cpu().tolist())
         return (
             self.attention_mode,
+            self.max_anchor_offset, self.locality_sigma, self.locality_window,
+            self.embed_dim, self.latent_channels, state,
             str(band_positions.device),
             str(band_positions.dtype),
             wave_key,
@@ -232,25 +269,61 @@ class VariableChannelAdapter(nn.Module):
     def _get_attention(self, band_positions, fwhm):
         cache_key = self._attention_cache_key(band_positions, fwhm)
         if cache_key is not None and cache_key in self._eval_attention_cache:
-            return self._eval_attention_cache[cache_key]
+            # Diagnostics returned to callers must not mutate the stored entry.
+            return tuple(tensor.clone() for tensor in self._eval_attention_cache[cache_key])
 
+        self.clear_attention_cache()
         attention, anchor_valid, anchors = self._attention(band_positions, fwhm)
         if cache_key is not None:
+            # Keep only the most recent observation, rather than every subset.
             self._eval_attention_cache[cache_key] = (
-                attention.detach(),
-                anchor_valid.detach(),
-                anchors.detach(),
+                attention.detach().clone(),
+                anchor_valid.detach().clone(),
+                anchors.detach().clone(),
             )
         return attention, anchor_valid, anchors
 
-    def _adapt_flat(self, flat_x, wavelengths=None, fwhm=None, return_attention=False):
+    def _adapt_flat(self, flat_x, wavelengths=None, fwhm=None, return_attention=False,
+                    wavelength_unit="auto", fwhm_unit="auto", band_mask=None):
         num_bands = flat_x.shape[1]
+        if num_bands == 0:
+            raise ValueError("at least one spectral band is required")
+        for name, unit in (("wavelength_unit", wavelength_unit), ("fwhm_unit", fwhm_unit)):
+            if unit not in ("auto", "nm", "normalized"):
+                raise ValueError(name + " must be auto, nm or normalized")
+        has_wavelengths = wavelengths is not None
+        if not has_wavelengths and wavelength_unit == "nm":
+            raise ValueError("wavelength_unit=nm requires wavelengths")
         wavelengths = self._to_1d_tensor(wavelengths, num_bands, flat_x.device, flat_x.dtype, "wavelengths")
         fwhm = self._to_1d_tensor(fwhm, num_bands, flat_x.device, flat_x.dtype, "fwhm") if fwhm is not None else None
-        wavelengths_norm = self._normalize_wavelengths(wavelengths)
+        band_indices = torch.arange(num_bands, device=flat_x.device)
+        if band_mask is not None:
+            band_mask = torch.as_tensor(band_mask, device=flat_x.device)
+            if band_mask.dtype != torch.bool or band_mask.ndim != 1 or band_mask.numel() != num_bands:
+                raise ValueError("band_mask must be a boolean vector matching spectral bands")
+            if not band_mask.any():
+                raise ValueError("band_mask must retain at least one spectral band")
+            flat_x = flat_x[:, band_mask]
+            wavelengths = wavelengths[band_mask]
+            fwhm = fwhm[band_mask] if fwhm is not None else None
+            band_indices = band_indices[band_mask]
+            num_bands = flat_x.shape[1]
+        if not torch.isfinite(wavelengths).all():
+            raise ValueError("retained wavelengths must be finite")
+        if fwhm is not None and (not torch.isfinite(fwhm).all() or (fwhm < 0).any()):
+            raise ValueError("retained fwhm must be finite and nonnegative")
+        resolved_wave_unit = wavelength_unit
+        if wavelength_unit == "auto":
+            resolved_wave_unit = "normalized" if wavelengths.max() <= 2.0 and wavelengths.min() >= -0.5 else "nm"
+        resolved_fwhm_unit = fwhm_unit
+        if fwhm is None:
+            resolved_fwhm_unit = "missing"
+        elif fwhm_unit == "auto":
+            resolved_fwhm_unit = "normalized" if fwhm.max() <= 2.0 else "nm"
+        wavelengths_norm = self._normalize_wavelengths(wavelengths, resolved_wave_unit)
         if self.attention_mode == "wavelength":
             band_positions = wavelengths_norm
-            fwhm_norm = self._normalize_fwhm(fwhm, wavelengths)
+            fwhm_norm = self._normalize_fwhm(fwhm, wavelengths, resolved_fwhm_unit)
         elif self.attention_mode == "index":
             band_positions = torch.linspace(0.0, 1.0, steps=num_bands, device=flat_x.device, dtype=flat_x.dtype)
             fwhm_norm = torch.zeros_like(band_positions)
@@ -273,15 +346,24 @@ class VariableChannelAdapter(nn.Module):
                 "wavelengths": wavelengths_norm,
                 "band_positions": band_positions,
                 "attention_mode": self.attention_mode,
+                "band_indices": band_indices,
+                "fwhm_normalized": fwhm_norm,
+                "wavelength_unit": resolved_wave_unit if has_wavelengths else "normalized_index",
+                "wavelength_source": "provided" if has_wavelengths else "index_fallback",
+                "position_source": ("wavelength_metadata" if self.attention_mode == "wavelength" and has_wavelengths
+                                    else "normalized_index"),
+                "fwhm_unit": resolved_fwhm_unit,
             }
             return latent, info
         return latent
 
-    def forward(self, x, wavelengths=None, fwhm=None, return_attention=False):
+    def forward(self, x, wavelengths=None, fwhm=None, return_attention=False, *,
+                wavelength_unit="auto", fwhm_unit="auto", band_mask=None):
+        metadata_options = dict(wavelength_unit=wavelength_unit, fwhm_unit=fwhm_unit, band_mask=band_mask)
         if x.dim() == 3:
             height, width, bands = x.shape
             flat_x = x.reshape(height * width, bands)
-            adapted = self._adapt_flat(flat_x, wavelengths=wavelengths, fwhm=fwhm, return_attention=return_attention)
+            adapted = self._adapt_flat(flat_x, wavelengths=wavelengths, fwhm=fwhm, return_attention=return_attention, **metadata_options)
             if return_attention:
                 adapted, info = adapted
                 return adapted.reshape(height, width, self.out_channels), info
@@ -290,7 +372,7 @@ class VariableChannelAdapter(nn.Module):
         if x.dim() == 4:
             batch, bands, height, width = x.shape
             flat_x = x.permute(0, 2, 3, 1).reshape(batch * height * width, bands)
-            adapted = self._adapt_flat(flat_x, wavelengths=wavelengths, fwhm=fwhm, return_attention=return_attention)
+            adapted = self._adapt_flat(flat_x, wavelengths=wavelengths, fwhm=fwhm, return_attention=return_attention, **metadata_options)
             if return_attention:
                 adapted, info = adapted
                 adapted = adapted.reshape(batch, height, width, self.out_channels).permute(0, 3, 1, 2)
