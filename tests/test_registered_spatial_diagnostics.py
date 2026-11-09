@@ -56,11 +56,16 @@ class RegisteredDiagnosticsTests(unittest.TestCase):
             self.assertEqual(set(report['heads']['fused']['boundary']),{'1','2','3'})
             for p,raw in before.items():self.assertEqual(p.read_bytes(),raw)
 
-    def test_freeze_runs_no_forward_or_optimizer_and_partial_rejected(self):
+    def test_freeze_only_rechecks_existing_selection_and_partial_rejected(self):
         c=self.cases[0]
         from model.VCASAHGCN import MultiDatasetVCASAHGCN
-        with patch.object(MultiDatasetVCASAHGCN,'forward',side_effect=AssertionError('freeze forward')),patch('torch.optim.Adam.step',side_effect=AssertionError('optimized')):
-            self.frozen(c)
+        original=MultiDatasetVCASAHGCN.forward;calls=[]
+        def forward(model,*args,**kwargs):
+            self.assertFalse(model.training);calls.append(1);return original(model,*args,**kwargs)
+        with patch.object(MultiDatasetVCASAHGCN,'forward',forward),patch('torch.optim.Adam.step',side_effect=AssertionError('optimized')),patch('evaluation.registered_spatial_diagnostics.review_block',side_effect=AssertionError('freeze diagnostic')):
+            pin=self.frozen(c)
+        _,base,_=_load_registration(c['reg']);self.assertEqual(len(calls),sum(t['role']=='devval' for t in base.record['roles']))
+        value=json.loads(_read(pin));self.assertTrue(value['selection_validation_rechecked']);self.assertFalse(value['diagnostic_scores_computed'])
         _,partial,_=_load_registration(c['reg']);folder=self.folder(c,'partial');folder.mkdir();p=folder/'step0.pt';pin=dict(path=str(p),sha256=partial.save(p))
         with self.assertRaises(ValueError):freeze_diagnostics(c['reg'],pin,c['requests'],out=self.folder(c,'bad'),expected_commit=c['sha'])
         self.assertFalse(self.folder(c,'bad').exists())
