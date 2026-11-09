@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 313,
+  "issue": 315,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "b317c01b0c7637147dce5b8cb909e1c0a6b48fd7",
+  "main_snapshot": "6fc0d3d83a2c745f0450884fb43f3bcba6767941",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -801,8 +801,15 @@
       "id": "E3-C5冻结选中态重要与随机删边干预",
       "state": "CPU只读干预及独立核验通过，真实关系价值未验",
       "evidence": "testedd73b587；专项7/另27回归；既有6合成模型+新增1个24步工程fixture，8505混淆/945召回/105头/560支持/584文件不变；旧预算2全部退化同控制",
-      "remaining": "下一§12.3/§16完整前向及反向成本核算；GPU、真实多种子逐类和独立空间确认待。全部合成三头零召回保留，长训练暂停",
+      "remaining": "E3-C6完整驻留块前向/反向CPU成本工程已验；GPU、真实多种子逐类/独立空间确认待。全部合成三头零召回保留，长训练暂停。",
       "report": "research/reports/E3C5_冻结选中态重要边与随机删边工程验收_20261109.md"
+    },
+    {
+      "id": "E3-C6驻留块完整前向与反向CPU成本",
+      "state": "CPU计时与插桩不变工程通过，真实部署成本未验",
+      "evidence": "tested1ccfa0c；专项6/另28回归；独立既有24合成模型48块/1824前向912反向/2880统计/4704梯度/212文件不变；优化0",
+      "remaining": "GPU、真实整景/完整优化步/I-O/显存能耗和配对速度对照待。下一实施§13输入敏感度/局部遮挡/区域替换；长训练暂停",
+      "report": "research/reports/E3C6_完整图路由前向反向CPU成本工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -976,6 +983,13 @@
       "tested_sha": "6a404304d7465070685a989b25cff9b0f5bca3d2",
       "merge_sha": "b317c01b0c7637147dce5b8cb909e1c0a6b48fd7",
       "scope": "E3-C4 CPU8 plus19; existing6 synthetic models/126 probes/378 heads/4032 reachability cells/504 masses/584 pins; no new optimization"
+    },
+    {
+      "pr_number": 314,
+      "head_sha": "69769e8259509d89199c3277ca55711ebef04fe5",
+      "tested_sha": "d73b5873fbd368f9b133c253b3d29c760d332b38",
+      "merge_sha": "6fc0d3d83a2c745f0450884fb43f3bcba6767941",
+      "scope": "E3-C5 CPU7 plus27; 6existing synthetic models +1new24-step fixture/8505cells/945recalls/584pins; budget2 degenerate, no accuracy claim"
     }
   ]
 }
