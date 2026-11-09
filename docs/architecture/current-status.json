@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 317,
+  "issue": 319,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "5042730f22076cb56d45d68c707ef9a262304de3",
+  "main_snapshot": "1aa8114441a56e20b2c7204e0210978cb633311b",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -815,9 +815,17 @@
       "id": "E0-B1冻结开发块输入敏感度与区域干预",
       "state": "CPU工程及独立梯度复算通过，真实机制未验",
       "evidence": "tested884db11；专项6/另28回归；24旧合成模型48块/373248精确梯度/720头概率/212文件不变；独立新增优化0；修复固定验证诊断no_grad截断",
-      "remaining": "GPU、真实逐类/小类、整景与非GraphRouteRun接入待；下一小目标/细窄结构诊断，长训练暂停",
+      "remaining": "E0-B2标注分量/细结构CPU工程已验；GPU、真实逐类/小类、整景与非GraphRouteRun接入待，长训练暂停",
       "report": "research/reports/E0B1_冻结开发块输入敏感度与局部替换工程验收_20261109.md",
       "chat_report": "本聊天E0-B1完整CPU工程交付；随后继续小目标/细窄结构诊断。"
+    },
+    {
+      "id": "E0-B2标注分量与小区域细窄结构诊断",
+      "state": "CPU几何与分层指标工程通过，真实空间效果未验",
+      "evidence": "testedb4717ab；专项7/另33回归；79几何/4192分量/22619距离格/97776混淆/11856召回/212旧文件不变；SciPy独立几何一致",
+      "remaining": "既有模型1488分量全部不完整，不能称真实小目标；完整真实空间标签/收益及GPU待。下一认证开发诊断导出，长训练暂停",
+      "report": "research/reports/E0B2_标注小分量与细窄结构诊断工程验收_20261109.md",
+      "chat_report": "本聊天E0-B2完整CPU工程交付；随后继续认证开发诊断导出。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -1005,6 +1013,13 @@
       "tested_sha": "1ccfa0c09a3986cfaa8c54e8d0ae25d59398bcfa",
       "merge_sha": "5042730f22076cb56d45d68c707ef9a262304de3",
       "scope": "E3-C6 CPU6 plus28; 24 synthetic models48blocks/2880statistics/4704gradient entries/212pins; CPU resident compute only"
+    },
+    {
+      "pr_number": 318,
+      "head_sha": "02d5dd5fb1d9ca94a40356a5e21f0333f4eda8d1",
+      "tested_sha": "884db1115f3a8bf6e4f74e85c10fccab79886380",
+      "merge_sha": "1aa8114441a56e20b2c7204e0210978cb633311b",
+      "scope": "E0-B1 CPU6 plus28; 24 old synthetic models48blocks/373248exact gradients/720heads/212pins; private fixed-val diagnostic gradient fix"
     }
   ]
 }

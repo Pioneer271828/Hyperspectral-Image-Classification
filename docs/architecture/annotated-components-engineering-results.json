@@ -1,0 +1,67 @@
+{
+  "status": "passed",
+  "scope": "E0-B2 CPU observed-component engineering",
+  "branch": "codex/annotated-components",
+  "tested_sha": "b4717ab8d32e83744a97ae97b26efd2b1611d91b",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "scipy": "1.15.3",
+  "device": "CPU",
+  "threads": 1,
+  "gpu_tests": 0,
+  "tests": [
+    {
+      "command": "python -m unittest tests.test_annotated_components -v",
+      "passed": 7,
+      "seconds": 0.795
+    },
+    {
+      "command": "python -m unittest tests.test_evaluation_e0a tests.test_spatial_diagnostics tests.test_block_input_diagnostics tests.test_repository_delivery -v",
+      "passed": 33,
+      "seconds": 5.635
+    }
+  ],
+  "checker": {
+    "python_files": 520,
+    "json_files": 164,
+    "frozen_runtime_unchanged": true
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/annotated-components-independent01/receipt.json",
+    "sha256": "194de4686679b30e336995d954b34defce1677a4201626754cef26246106dba8",
+    "summary": {
+      "status": "passed",
+      "tested_sha": "b4717ab8d32e83744a97ae97b26efd2b1611d91b",
+      "scipy": "1.15.3",
+      "geometry_cases": 79,
+      "component_records": 4192,
+      "independent_depth_cells": 22619,
+      "independent_confusion_cells": 97776,
+      "independent_recall_entries": 11856,
+      "existing_synthetic_models": 24,
+      "development_blocks": 48,
+      "synthetic_map_cases": 31,
+      "protected_files_unchanged": 212,
+      "optimizer_updates": 0,
+      "query": 0,
+      "real_training": 0,
+      "original_ground_truth_read": false,
+      "limits": [
+        "existing released sparse support labels only for network cases",
+        "observed fragments do not establish real small objects",
+        "no statistical independence or causal accuracy claim"
+      ],
+      "elapsed_seconds": 12.382797555066645
+    }
+  },
+  "observations": {
+    "network_component_records": 1488,
+    "network_incomplete_records": 1488,
+    "network_small_records": 1488,
+    "network_thin_records": 1488
+  },
+  "failures": [],
+  "optimizer_updates": 0,
+  "query": 0,
+  "real_training": 0
+}
