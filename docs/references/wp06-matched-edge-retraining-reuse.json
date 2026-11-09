@@ -1,0 +1,11 @@
+{
+  "issue": 351,
+  "scope": "Project experimental-control integration, master16/22 and implementation19.7",
+  "base_commit": "98cd441bd7fc6b6d7cdeedaad52df197e1d13ed5",
+  "reuse": ["transfer.graph_route_training.GraphRouteRun", "transfer.graph_route_context.RouteContextBank", "evaluation.matched_edge_controls", "evaluation.graph_edge_intervention"],
+  "prior_review": "docs/references/wp06-matched-edge-review-reuse.json",
+  "new_external_mechanism": false,
+  "external_code_copied": false,
+  "new_dependency": false,
+  "limits": ["Dynamic completed donor only", "Topology frozen; values and assignments trainable", "Original source restart; donor cost separate", "CPU engineering before any real effect claim"]
+}
