@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "tested_sha": "f349e0011cb896d93406c7d6d4080d622235035c",
+  "branch": "codex/graph-route-training",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 6,
+      "seconds": 37.021,
+      "command": "python -m unittest tests.test_graph_route_training -v"
+    },
+    "related": {
+      "passed": 37,
+      "seconds": 93.216,
+      "command": "python -m unittest tests.test_graph_route_training tests.test_graph_route_context tests.test_curriculum_training tests.test_observation_curriculum_training tests.test_curriculum_exposure tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "f349e0011cb896d93406c7d6d4080d622235035c",
+    "branch": "codex/graph-route-training",
+    "python_files": 507,
+    "json_files": 158,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/receipt.json",
+    "sha256": "f41689ebe13331dd8bdd39ebf924123be0a13d4de34b63a35c504568ed062438",
+    "models": 24,
+    "model_initialization_seed": 512,
+    "router_seed": 64,
+    "sampler_seeds": [
+      64,
+      512,
+      2048
+    ],
+    "optimizer_calls": 678,
+    "replay_checks": 6,
+    "training_routes": 576,
+    "normalization_cells": 9216,
+    "selected_confusion_cells": 5832,
+    "selected_recalls": 648,
+    "old_completed_artifacts": 15,
+    "completed_restore_updates": 0,
+    "protected_files": 139,
+    "seconds": 65.18626082269475
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-training-tests01/checker.log": "aca6f6f35b8cefffd9a98a9e099b636592b245d6096739f23a9ac930d447d978",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-training-tests01/cpu.log": "74bd901e1d6bbc6f15a3959fecdcefebfef0e602be4240dc96e9de59b3ebc976",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-training-tests01/audit.log": "50e102f219956d6e523929da754b47cf25b6068c829e588ecd5c603d9092522c",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-training-tests01/regression.log": "0f48adc9d0b4237ef78148299d2dd342a35491f35545144d6f96da39ddb08753"
+  },
+  "failures": [],
+  "real_training": 0,
+  "query": 0,
+  "limitations": [
+    "CPU FP32 API integration only; formal file CLI, GPU and real experiments remain pending.",
+    "Three sampler seeds share model initialization512 and router seed64; not three independent model seeds.",
+    "Synthetic low OA/zero recalls retained; no true effect or speed claim.",
+    "Fixed supports may originate from a separate registered selected source; real final-graph retraining study not performed."
+  ]
+}
