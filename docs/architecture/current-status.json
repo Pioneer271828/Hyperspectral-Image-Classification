@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 283,
+  "issue": 285,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "2d16c95876a6ad80376718c16ea42565a9e7c690",
+  "main_snapshot": "f54cb1e266b1573c2bf6f62238aff1059fe8a7a8",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -692,6 +692,14 @@
       "remaining": "GPU/真实逐类与遗忘/成本、一般多块联合曝光尚未验。首版JSON结构恢复失败保留并修复。下一CUR-S类别保护，未做二因素组合。",
       "report": "research/reports/CURO_等曝光观测课程与确定性恢复工程验收_20261109.md",
       "chat_report": "本聊天CUR-O1工程完成报告，随后继续CUR-S。"
+    },
+    {
+      "id": "CUR-S1训练支持类别保护课程",
+      "state": "CPU评分权重与五组恢复工程通过",
+      "evidence": "tested1b8ed4164d8ff3b5015f531456a58f5b54cf5331，7专项/36含专项回归、checker486Python146JSON。五组12步与5+7精确恢复；15policy/16200权重及6梯度独立复核，90支持评分/6块，真实优化query0。",
+      "remaining": "GPU/真实逐类小类/跨域教师偏差/成本、支持交叉评分、有限预算最低曝光与正式训练CLI仍待；下一事前曝光门槛与参与台账，不额外加步或改采样，暂不做CUR-O×CUR-S。",
+      "report": "research/reports/CURS_训练支持评分与类别保护课程工程验收_20261109.md",
+      "chat_report": "本聊天CUR-S1完整CPU工程报告后继续曝光验收。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -760,6 +768,13 @@
       "tested_sha": "f042520df090b1bfda7a5684bdb615dd52951007",
       "merge_sha": "2d16c95876a6ad80376718c16ea42565a9e7c690",
       "scope": "DY1 CPU9/51, independent10 arrays31files, no deployed accuracy claim"
+    },
+    {
+      "pr_number": 284,
+      "head_sha": "03edfda559b43475779a12a7f3eacc35ea0981cc",
+      "tested_sha": "ed9fe90461ef43d62cbcab66c6ed7316bba39e9b",
+      "merge_sha": "f54cb1e266b1573c2bf6f62238aff1059fe8a7a8",
+      "scope": "CUR-O1 CPU8/41 and independent12 policies; real benefits not established"
     }
   ]
 }
