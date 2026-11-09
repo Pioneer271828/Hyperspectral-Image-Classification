@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "scope": "E0-B1 CPU engineering, synthetic diagnostic only",
+  "branch": "codex/block-input-diagnostics",
+  "tested_sha": "884db1115f3a8bf6e4f74e85c10fccab79886380",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "device": "CPU",
+  "threads": 1,
+  "gpu_tests": 0,
+  "tests": [
+    {
+      "command": "python -m unittest tests.test_block_input_diagnostics -v",
+      "passed": 6,
+      "seconds": 5.811,
+      "log": "/home/lbx/hsi-pioneer271828/runs/block-input-diagnostics-engineering01/tests02.log"
+    },
+    {
+      "command": "python -m unittest tests.test_graph_edge_intervention tests.test_graph_support_diagnostics tests.test_graph_route_training tests.test_repository_delivery -v",
+      "passed": 28,
+      "seconds": 46.248,
+      "log": "/home/lbx/hsi-pioneer271828/runs/block-input-diagnostics-engineering01/related02.log"
+    }
+  ],
+  "checker": {
+    "python_files": 518,
+    "json_files": 163,
+    "frozen_runtime_unchanged": true
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/block-input-diagnostics-independent01/receipt.json",
+    "sha256": "460dda48a1f2b36ea8c78e05e9dee65de3eeca89dd082cf826e41b00bbf53882",
+    "summary": {
+      "status": "passed",
+      "tested_sha": "884db1115f3a8bf6e4f74e85c10fccab79886380",
+      "existing_synthetic_models": 24,
+      "development_blocks": 48,
+      "sampler_seeds": [
+        64,
+        512,
+        2048
+      ],
+      "model_initialization_seed": 512,
+      "route_modes": [
+        "weight",
+        "random",
+        "graph",
+        "joint"
+      ],
+      "fixed_and_dynamic": true,
+      "target_class": 1,
+      "target_pixels_per_block": 2,
+      "interventions_per_block": 4,
+      "independent_exact_gradient_entries": 373248,
+      "independent_probability_heads": 720,
+      "independent_target_scores": 720,
+      "independent_support_fields": 1200,
+      "protected_files_unchanged": 212,
+      "optimizer_updates": 0,
+      "query": 0,
+      "real_training": 0,
+      "original_ground_truth_read": false,
+      "limits": [
+        "synthetic 9-class blocks only",
+        "single predefined class probe is not a class recall study",
+        "local derivatives and intervention distribution shift are not causal accuracy effects"
+      ],
+      "elapsed_seconds": 20.241287115961313
+    }
+  },
+  "observations": {
+    "absolute_target_probability_delta_range": [
+      1.6391277313232422e-05,
+      0.00398603081703186
+    ],
+    "interventions_changing_support": 2
+  },
+  "history": [
+    "Initial 2cc542f tests 6/6 missed disconnected fixed-bank validation gradient. Review found no_grad interception; 884db11 private diagnostic enable_grad and nonzero-connectivity regression fix. Original tests01.log and checkout preserved."
+  ],
+  "real_training": 0,
+  "query": 0
+}
