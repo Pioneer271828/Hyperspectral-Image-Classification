@@ -27,11 +27,11 @@ class SourceBoundaryTests(unittest.TestCase):
         start = y0 * self.plan['shape'][1] + x0
         return [start, start + 1, start + 2]
 
-    def release(self, partition, **changes):
-        frozen = self.contract['source_releases'][self.scene][partition]
-        record = dict(scene=self.scene, partition=partition, plan_hash=self.plan['plan_hash'],
+    def release(self, role, **changes):
+        frozen = self.contract['source_releases'][self.scene][role]
+        record = dict(scene=self.scene, partition=role, plan_hash=self.plan['plan_hash'],
                       observation_sha256=frozen['observation_sha256'],
-                      indices=self.ids(partition), labels=[4, 6, 3])
+                      indices=self.ids(role), labels=[4, 6, 3])
         record.update(changes)
         payload = json.dumps(record).encode()
         frozen['labels_sha256'] = hashlib.sha256(payload).hexdigest()
