@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 303,
+  "issue": 305,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "d35b5dfc4e0d8e55922f42ba30cf539fdf80ca67",
+  "main_snapshot": "fb95764d938e1665efec333bd29991594276faba",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -626,7 +626,7 @@
       "id": "E3候选内预算硬连接",
       "state": "模型接入、整网恢复及独立观测审计工程通过",
       "evidence": "tested 4124c47cfdca9991a8ab9b2cc340d2d148754c3a，CPU536/536、checker；运行时8289e227275eabbafbb1eaea75cf4d6b0c1e8580，GPU8/8、24精确重载。PaviaU两开发块12组，100边降64、36重载；独立12传播/36概率/44文件不变，旧输出6数组逐位相同。真实优化/query0。",
-      "remaining": "完整训练CLI登记、多种子等预算真实训练/逐类保护/速度收益待验；当前耗时不一致改善，远程边扩展待局部效果依据。",
+      "remaining": "E3-C1逐块节点与固定支持身份已验；完整训练CLI登记、多种子等预算真实训练/逐类保护/速度收益待验，远程边仍待局部效果。",
       "report": "research/reports/E3_候选内预算硬连接与整网恢复工程验收_20261109.md",
       "chat_report": "本聊天2026-11-09 E3完整工程报告。"
     },
@@ -768,6 +768,13 @@
       "evidence": "testede2726c3；CPU5/40；独立12合成模型/288实际视图/216条件头/17496混淆/1944召回；53文件不变；旧3CUR-S3工件恢复0更新",
       "remaining": "GPU、真实课程多种子/逐类/遗忘/成本和二因素组合待；下一E3训练场景节点及固定支持身份绑定，长训练暂停",
       "report": "research/reports/CURO2_观测课程实际优化与条件复盘工程验收_20261109.md"
+    },
+    {
+      "id": "E3-C1逐块图身份与固定支持",
+      "state": "CPU上下文隔离/更新/恢复工程通过，正式训练链待",
+      "evidence": "testedf7ed986；CPU6/26；独立12合成模型/120含恢复更新/84上下文/1344归一化和梯度/2916混淆；90文件不变",
+      "remaining": "下一正式训练登记/选模/恢复链；GPU、真实多种子逐类保护及成本未完成，远程边待局部效果，长训练暂停",
+      "report": "research/reports/E3C1_逐训练块图身份与固定连接工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -906,6 +913,13 @@
       "tested_sha": "3661277d44253dfd435b2905e086d92c849a5090",
       "merge_sha": "d35b5dfc4e0d8e55922f42ba30cf539fdf80ca67",
       "scope": "CUR-S3 CPU7/35, six-arm exact recovery, independent6syntheticmodels/1100weights/1458cells/42pins; no real benefit claim"
+    },
+    {
+      "pr_number": 304,
+      "head_sha": "5c9146091a14e4094a30d1b3072ac9c557cec6f0",
+      "tested_sha": "e2726c3c7b0d5522209a41ddc447356fed343682",
+      "merge_sha": "fb95764d938e1665efec333bd29991594276faba",
+      "scope": "CUR-O2 CPU5/40; independent12syntheticmodels/288views/216heads/53pins; real effects pending"
     }
   ]
 }

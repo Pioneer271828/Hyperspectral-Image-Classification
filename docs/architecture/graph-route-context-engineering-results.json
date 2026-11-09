@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "tested_sha": "f7ed986ba848fc6a564dc87e45487360f62842c3",
+  "branch": "codex/graph-route-context",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 6,
+      "seconds": 4.105,
+      "command": "python -m unittest tests.test_graph_route_context -v"
+    },
+    "related": {
+      "passed": 26,
+      "seconds": 6.482,
+      "command": "python -m unittest tests.test_graph_route_context tests.test_budgeted_graph_router tests.test_development_training tests.test_spatial_development tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "f7ed986ba848fc6a564dc87e45487360f62842c3",
+    "branch": "codex/graph-route-context",
+    "python_files": 505,
+    "json_files": 157,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/receipt.json",
+    "sha256": "e0cccbdd890ef12b30ebb0904d5bf89f20594d115ee46902ffe2e1c7477674c2",
+    "models": 12,
+    "optimizer_calls": 120,
+    "frozen_contexts": 84,
+    "normalization_cells": 1344,
+    "gradient_entries": 1344,
+    "confusion_cells": 2916,
+    "protected_files": 90,
+    "seconds": 6.41477827122435
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-context-tests02/regression-corrected.log": "040b38f7e63b112a69cfdb2e88a74233c0679a798e421a42538d25d63620daa7",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-context-tests02/checker.log": "6ba28da9ff066bb8ea3a41bbb83b52a1477bf596c65b55c9ce31765bf6b881d9",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-context-tests02/cpu.log": "7b64ade09ae6eb892c7ccc95621fc672821ec2ab17e2e4a4e8c82b3920f87660",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-context-tests02/regression.log": "90db9581234d9ffb69eee8bfe9cb2e018ab519455141a71323ceb07dfcccfd6b",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-context-tests02/audit.log": "0671e90b199d1870e131227aef121d2f56c6f6e23eec8aea3d9e2cc7bff67e80",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-context-tests01/cpu.log": "f0f757cc63a7fa15bc665eb67bb4c3fae9c573469ca6ded45eb17b7b8970d206"
+  },
+  "failures": [
+    "9edceb2 test used devtrain instead of train_support; failed before optimizer update; corrected without production changes.",
+    "Initial related command referenced nonexistent tests.test_spatial_protocol: 24 actual tests passed + 1 import error; corrected suite26 passed."
+  ],
+  "real_training": 0,
+  "query": 0,
+  "limitations": [
+    "CPU FP32 learned GroupNorm, no GPU/real effect claim.",
+    "Context/support input only, does not yet implement training CLI/selection/optimizer checkpoint authentication.",
+    "Independent last-state validation is not selected-state acceptance; tiny synthetic zero recalls retained.",
+    "No new remote edges or changes to frozen model arithmetic."
+  ]
+}
