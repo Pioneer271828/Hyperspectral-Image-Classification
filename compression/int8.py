@@ -99,7 +99,14 @@ uses 0..255. This is a reduced-range activation baseline, stated explicitly.
         if bool(self.ranges_frozen):
             raise ValueError('calibration ranges are frozen')
         self._validate(x)
-        result = self._run(x)
+        states = [copy.deepcopy(quant.state_dict()) for quant in self.quantizers()]
+        try:
+            result = self._run(x)
+        except Exception:
+            # A rejected overflow must not leave partially updated observer ranges.
+            for quant, state in zip(self.quantizers(), states):
+                quant.load_state_dict(state)
+            raise
         self.batches_seen.add_(1)
         return result
 

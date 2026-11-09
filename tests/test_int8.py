@@ -1,6 +1,8 @@
 """CPU quantization contracts with independent integer arithmetic oracles."""
 import copy
 import io
+from pathlib import Path
+import tempfile
 import unittest
 
 import numpy as np
@@ -75,6 +77,15 @@ class Int8Tests(unittest.TestCase):
         cal.observe(x, role='target_support'); cal.freeze()
         with self.assertRaises(ValueError): cal.observe(x, role='source_train')
 
+    def test_finite_input_overflow_rolls_back_calibration(self):
+        layer = nn.Linear(4, 3, bias=False)
+        with torch.no_grad(): layer.weight.fill_(2.)
+        cal = CalibratedMatrix(layer)
+        saved = copy.deepcopy(cal.state_dict())
+        with self.assertRaises(ValueError):
+            cal.observe(torch.full((2, 4), 1e38), role='source_train')
+        equal_state(self, saved, cal.state_dict())
+
     def test_integer_linear_conv_bias_and_outliers_numpy_oracle(self):
         for conv in (False, True):
             for bias in (False, True):
@@ -100,9 +111,22 @@ class Int8Tests(unittest.TestCase):
         cal = CalibratedMatrix(layer)
         cal.observe(torch.ones(2, 4), role='source_train'); q = cal.freeze().convert()
         scales = q.kernel.weight().q_per_channel_scales().numpy()
-        codes = np.clip(np.rint(layer.weight.detach().numpy()/scales[:, None]), -127, 127)
+        # Fake quantization uses FP32 reciprocal multiplication. FP64 division
+        # at a half-integer can cross a rounding tie and is a different oracle.
+        inverse = np.reciprocal(scales.astype(np.float32))
+        codes = np.clip(np.rint(layer.weight.detach().numpy()*inverse[:, None]), -127, 127)
         np.testing.assert_array_equal(codes, q.kernel.weight().int_repr().numpy())
         self.assertAlmostEqual(scales[2]/scales[1], 100., places=4)
+
+    def test_exact_half_integer_round_to_even(self):
+        layer = nn.Linear(7, 1, bias=False)
+        with torch.no_grad():
+            layer.weight.copy_(torch.tensor([[-2.5, -1.5, -.5, .5, 1.5, 2.5, 127.]]))
+        cal = CalibratedMatrix(layer)
+        cal.observe(torch.zeros(2, 7), role='source_train')
+        q = cal.freeze().convert()
+        np.testing.assert_array_equal(q.kernel.weight().int_repr().numpy(),
+                                      [[-2, -2, 0, 0, 2, 2, 127]])
 
     def test_all_zero_and_constant_activations_finite_bias(self):
         for value in (0., 2., -2.):
@@ -147,8 +171,10 @@ class Int8Tests(unittest.TestCase):
         dense_bytes, quant_bytes = io.BytesIO(), io.BytesIO()
         torch.save(layer.state_dict(), dense_bytes); torch.save(q.state_dict(), quant_bytes)
         self.assertLess(quant_bytes.tell(), dense_bytes.tell()*.4)
-        quant_bytes.seek(0)
-        loaded = cal.convert(); loaded.load_state_dict(torch.load(quant_bytes, weights_only=True))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)/'int8.pt'
+            path.write_bytes(quant_bytes.getvalue())
+            loaded = cal.convert(); loaded.load_state_dict(torch.load(path, weights_only=True))
         self.assertTrue(torch.equal(q(x), loaded(x)))
 
     def test_qat_master_gradient_changes_and_frozen_surrogate_agreement(self):
