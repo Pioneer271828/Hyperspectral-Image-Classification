@@ -29,7 +29,7 @@ class MatchedRetrainingTests(unittest.TestCase):
                     if key!='graph_route':self.assertEqual(a.spec[key],donor.spec[key],key)
                 b=self.plan.start(donor,name,expected_hash=self.plan.plan_hash)
                 a.advance(24);b.advance(7);p=Path(d)/'run.pt';sha=b.save(p)
-                b=self.plan.restore(donor,name,p,expected_hash=self.plan.plan_hash,expected_sha256=sha);b.advance(17)
+                b=self.plan.restore(donor,name,p,expected_hash=self.plan.plan_hash,expected_sha256=sha);b.advance(24)
                 self.assertEqual(a.history,b.history);self.assertEqual(route_state_hash(a.model),route_state_hash(b.model))
                 self.assertEqual((a.selected_step,route_state_hash(a.model)),(b.selected_step,route_state_hash(b.model)))
                 for k,v in a.selected_state.items():
