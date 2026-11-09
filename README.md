@@ -12,6 +12,7 @@ Primary Windows workspace: **`F:/E2E_VCA`**, branch **`codex/f-drive-primary`**.
 - [Delivery and branch guide](docs/guides/current-baseline.md): exact branch roles, integration boundaries and remote validation.
 - [Module map](docs/architecture/module-map.json): code and test navigation; historical notes are evidence for their named versions.
 - [Research master plan](research/研究内容整合与详细搭建测试计划_2026-10-28.md), [implementation plan](research/模块化搭建与测试消融实施计划_2026-10-28.md), and [mandatory scope](research/全量研究模块必测清单_20261104.md): design and experiment requirements.
+- [Remaining scope and acceptance principles](research/研究内容整合与详细搭建测试计划_2026-10-28.md#remaining-scope-20261110) and [12 work packages](research/模块化搭建与测试消融实施计划_2026-10-28.md#remaining-plan-20261110): the 2026-11-10 planning revision. This documentation update does not resume implementation or training; execution state remains in the current status JSON.
 - [Contributing](CONTRIBUTING.md) and [execution rules](AGENTS.md).
 
 ## Obtain the development integration
@@ -25,9 +26,10 @@ git rev-parse HEAD
 
 Use full history: several regression fixtures read immutable historical commits.
 For a reported result, pin its tested SHA or immutable experiment tag instead of
-using the latest branch tip. This integration is a review candidate; main has not
-received these changes. The main-based VCA repair is separately reviewable on
-`codex/issue-167-main-cache-repair`.
+using the latest branch tip. Branch and merge status must be read from the current
+status and the corresponding PR; historical statements that main has not received
+the integration or the VCA repair are not a current merge checklist. A merge does
+not establish real-data accuracy or deployment speed acceptance.
 
 ## Validate remotely
 
