@@ -109,7 +109,7 @@ class SampleCurriculumTests(unittest.TestCase):
         for key,value in (('ranks',{}),('selection','query'),('sampler','uniform')):
             bad=p.to_dict();bad[key]=value;bad['policy_hash']=digest({k:v for k,v in bad.items() if k!='policy_hash'})
             with self.assertRaises(ValueError):SampleCurriculum(bad)
-        for change in ({'minimum_weight':0},{'full_at':13},{'start_fraction':float('nan')},{'seed':True},{'order':'bad'}):
+        for change in ({'minimum_weight':0},{'minimum_weight':1e-80},{'full_at':13},{'start_fraction':float('nan')},{'seed':True},{'order':'bad'}):
             args=dict(updates=12,order='balanced',seed=64,start_fraction=.2,full_at=10,minimum_weight=.1);args.update(change)
             with self.assertRaises(ValueError):SampleCurriculum.freeze(scores,**args)
         for ids,step in (([scores['support']['indices'][0]],0),([999999],1),([],1),([0],True)):

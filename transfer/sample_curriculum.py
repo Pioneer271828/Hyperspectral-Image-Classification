@@ -76,6 +76,7 @@ def _value(scores,updates,order,seed,start_fraction,full_at,minimum_weight):
     if type(updates) is not int or updates<1 or type(full_at) is not int or not 1<=full_at<=updates:raise ValueError('Invalid update/pacing budget')
     for v in (start_fraction,minimum_weight):
         if type(v) not in (int,float) or not math.isfinite(v) or not 0<v<=1:raise ValueError('Positive fraction and weight floor required')
+    if minimum_weight<torch.finfo(torch.float32).tiny:raise ValueError('Weight floor must remain positive normal FP32')
     value=dict(schema_version=1,scores=scores,updates=updates,order=order,seed=seed,start_fraction=start_fraction,full_at=full_at,
         minimum_weight=minimum_weight,ranks=_ranks(scores,order,seed),selection='unchanged_full_validation_nll',sampler='class_first')
     value['policy_hash']=digest(value)
