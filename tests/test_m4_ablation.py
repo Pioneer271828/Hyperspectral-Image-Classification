@@ -88,7 +88,8 @@ class M4CampaignTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             plan, scene, record = self.fixture(Path(directory))
             with patch.object(development_training, 'adapt', side_effect=RuntimeError('owned failure probe')):
-                with self.assertRaisesRegex(RuntimeError, 'owned failure'): run_case(plan, scene, record, 64, 'none')
+                with self.assertRaisesRegex(RuntimeError, 'owned failure'):
+                    run_case(plan, scene, record, 64, 'none', device='cpu')
             path = case_path(plan, 64, 'none'); before = (path / 'case.json').read_bytes()
             with self.assertRaises(ValueError): run_case(plan, scene, record, 64, 'none', resume=True)
             self.assertEqual(before, (path / 'case.json').read_bytes())
