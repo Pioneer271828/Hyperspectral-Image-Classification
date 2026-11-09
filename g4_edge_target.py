@@ -24,15 +24,21 @@ POLICY = "g4_m7_target_initialization_v1"
 CALIBRATION = "g4_m7_target_ordered_population_bn_v1"
 KEY = "edge_target_binding"
 CALIBRATION_KEY = "edge_target_calibration"
-CONDITIONS = ("none", "gated", "graph", "gated_graph", "joint", "gated_joint")
+CONDITIONS = ("none", "gated", "graph", "gated_graph", "joint", "gated_joint",
+              "add_joint", "global_joint")
 PREFIXES = ("backbone.interaction.", "backbone.edge_updater.")
 
 
 def configuration(condition):
     if condition not in CONDITIONS:
         raise ValueError("Explicit existing M7 core-factor condition required")
+    # I7/I9 reuse the existing operators. All six earlier configurations retain
+    # their exact values. Global alignment also supplies the joint edge input;
+    # graph pooling/broadcasting itself still uses the original Q.
     return asdict(replace(InteractionConfig(),
-        interaction_mode="gated" if condition.startswith("gated") else "none",
+        alignment_mode="global" if condition == "global_joint" else "region",
+        interaction_mode="add" if condition == "add_joint" else
+                         "gated" if condition.startswith("gated") or condition == "global_joint" else "none",
         graph_update_mode="graph" if condition.endswith("graph") else "joint" if condition.endswith("joint") else "none"))
 
 def operator_signature(module):

@@ -79,7 +79,8 @@ class EdgeRuntimeTests(unittest.TestCase):
                     self.assertEqual(sum(p.numel() for n, p in model.named_parameters() if n.startswith(PREFIXES)), COUNTS[condition])
                     self.assertEqual(options["optimizer_steps"], 12); self.assertFalse(options[KEY]["observation_augmentation"])
                     self.assertEqual(cfg.interaction.graph_update_mode,
-                        {"none": "none", "gated": "none", "graph": "graph", "gated_graph": "graph", "joint": "joint", "gated_joint": "joint"}[condition])
+                        {"none": "none", "gated": "none", "graph": "graph", "gated_graph": "graph",
+                         "joint": "joint", "gated_joint": "joint", "add_joint": "joint", "global_joint": "joint"}[condition])
                     self.assertEqual(cfg.model.coverage_mode, "none")
                     guard()
             for support, k, model in ((64, 10, 2048), (512, 1, 64), (2048, 5, 512)):
@@ -102,7 +103,7 @@ class EdgeRuntimeTests(unittest.TestCase):
                 self.assertEqual([{k: v for k, v in row.items() if k != "interaction"} for row in first["trace"]],
                     [{k: v for k, v in row.items() if k != "edge_components"} for row in second["trace"]])
 
-    def test_twelve_roles_updates_fresh_resume_participation_reload_and_completed_zero(self):
+    def test_sixteen_roles_updates_fresh_resume_participation_reload_and_completed_zero(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); manifest, _, _ = fixture(root); _, spec = source_fixture(root / "source")
             for method in METHODS[:2]:
@@ -124,7 +125,7 @@ class EdgeRuntimeTests(unittest.TestCase):
                         if condition != "none":
                             self.assertGreater(record["gradient_norm"], 0.); self.assertGreater(record["changed_elements"], 0)
                         for direction, stats in record["components"].items():
-                            disabled = condition in ("none", "gated") if direction == "edges" else not condition.startswith("gated")
+                            disabled = condition in ("none", "gated") if direction == "edges" else condition in ("none", "graph", "joint")
                             self.assertEqual(stats is None, disabled)
                             if stats:
                                 self.assertGreater(stats["gradient_norm"], 0.); self.assertGreater(stats["changed_elements"], 0)

@@ -30,7 +30,8 @@ from test_none_full_transfer import fixture as source_fixture
 
 DEVICE = os.environ.get("EDGE_TARGET_DEVICE", "cpu")
 torch.set_num_threads(1)
-COUNTS = {"none": 0, "gated": 58498, "graph": 8448, "gated_graph": 66946, "joint": 16896, "gated_joint": 75394}
+COUNTS = {"none": 0, "gated": 58498, "graph": 8448, "gated_graph": 66946, "joint": 16896,
+          "gated_joint": 75394, "add_joint": 50176, "global_joint": 75394}
 
 
 def create(condition="gated_joint", method=METHODS[0], spec=None, device=DEVICE):
@@ -105,7 +106,7 @@ class EdgeTargetTests(unittest.TestCase):
                     a = forward_observation(model, data, expected_binding=binding)
                     b = old_forward_bound(old, data, expected_binding=old_binding)
                 for first, second in zip(a, b): torch.testing.assert_close(first, second, rtol=0, atol=0)
-            for condition in ("gated_graph", "gated_joint"):
+            for condition in ("gated_graph", "gated_joint", "add_joint", "global_joint"):
                 model, binding = create(condition); backbone = model.backbone; order = []; saved = {}
                 original_message = backbone.interaction.forward_aligned
                 original_edge = backbone.edge_updater.forward
@@ -114,7 +115,7 @@ class EdgeTargetTests(unittest.TestCase):
                     saved.update(pixels=values[0], regions=values[1], Q=args[2]); return values
                 def edge(regions, adjacency, aligned_pixels, **kwargs):
                     order.append("edge"); torch.testing.assert_close(regions, saved["regions"], rtol=0, atol=0)
-                    if condition == "gated_joint":
+                    if condition.endswith("joint"):
                         torch.testing.assert_close(aligned_pixels, backbone.alignment.to_regions(saved["pixels"], saved["Q"]), rtol=0, atol=0)
                     else: self.assertIsNone(aligned_pixels)
                     return original_edge(regions, adjacency, aligned_pixels, **kwargs)
@@ -125,7 +126,7 @@ class EdgeTargetTests(unittest.TestCase):
                     bad = copy.deepcopy(model); setattr(bad.backbone.edge_updater, field, value)
                     with self.assertRaises(ValueError): verify_initialization_binding(bad, binding)
 
-    def test_all_twelve_roles_shared_state_rng_fresh_heads_and_parameter_counts(self):
+    def test_all_sixteen_roles_shared_state_rng_fresh_heads_and_parameter_counts(self):
         with tempfile.TemporaryDirectory() as temp:
             _, spec = source_fixture(Path(temp) / "source")
             for method in METHODS[:2]:
