@@ -17,7 +17,7 @@ from transfer.sample_curriculum import SampleCurriculum,score_training_support,c
 from transfer.tile_sampling import SupportTileSampler
 from tests.test_int8_model import fixture
 
-ORDERS=('balanced','random','easy_to_hard','hard_to_easy')
+ORDERS=('balanced','fixed','random','easy_to_hard','hard_to_easy')
 
 def setup():
     m,s,r=fixture();scores=score_training_support(m,s,r,expected_teacher_state=state_hash(m))
@@ -120,7 +120,7 @@ class SampleCurriculumTests(unittest.TestCase):
         wrong=next(t for t in s.plan['tiles'] if r['roles'][t['id']]['role']=='devval')
         with self.assertRaises(ValueError):curriculum_loss(out,s,r,wrong,policy=p,step=1,class_balance=True)
 
-    def test_four_arms_12_updates_disk_5_plus_7_exact_sampler_optimizer_and_selection(self):
+    def test_five_arms_12_updates_disk_5_plus_7_exact_sampler_optimizer_and_selection(self):
         source,s,r,scores=setup();initial=state_hash(source);all_draws=[]
         sampler=SupportTileSampler(s.plan,r['roles'],sparse_labels(r,s.plan,'train_support'),r['classes'],'class_first')
         for order in ORDERS:

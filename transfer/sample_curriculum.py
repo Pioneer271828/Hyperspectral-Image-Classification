@@ -59,7 +59,7 @@ def score_training_support(model,scene,record,*,expected_teacher_state):
 
 
 def _ranks(scores,order,seed):
-    if order not in ('balanced','random','easy_to_hard','hard_to_easy') or type(seed) is not int or not 0<=seed<2**32:raise ValueError('Invalid curriculum order/seed')
+    if order not in ('balanced','fixed','random','easy_to_hard','hard_to_easy') or type(seed) is not int or not 0<=seed<2**32:raise ValueError('Invalid curriculum order/seed')
     ranks={};ids=scores['support']['indices'];labels=scores['support']['labels'];losses=scores['losses']
     for cls in scores['classes']:
         indices=[j for j,c in enumerate(labels) if c==cls]
