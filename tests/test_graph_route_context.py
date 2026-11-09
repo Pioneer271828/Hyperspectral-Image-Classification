@@ -128,7 +128,7 @@ class RouteContextTests(unittest.TestCase):
                 self.assertEqual((graph.indices()[0]*graph.shape[0]+graph.indices()[1]).tolist(), fixed['selected'])
                 self.assertTrue(torch.all(graph.values() > 0)); self.assertLessEqual(graph._nnz(), 2*graph.shape[0])
             self.assertTrue(any(p.grad is not None and float(p.grad.abs().sum()) > 0
-                                for n,p in model.named_parameters() if 'graph_builder' in n))
+                                for n,p in model.named_parameters() if 'learnable_graph' in n))
 
     def test_mutated_candidates_or_bank_fail_and_state_restored(self):
         model, scene, record, ids, bank = setup()
