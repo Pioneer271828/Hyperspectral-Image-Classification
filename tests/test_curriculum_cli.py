@@ -31,7 +31,10 @@ def pin(path):
     return dict(path=str(path), sha256=hashlib.sha256(path.read_bytes()).hexdigest())
 
 
-def prepared(root, classes=9, arm='sample'):
+def prepared(root, classes=9, arm='sample', updates=None):
+    # The original 3-class/24-step synthetic fixture is an exposure rejection
+    # control. Its separate positive fixture has a fixed 48-step budget.
+    updates = (48 if classes == 3 else 24) if updates is None else updates
     routed, scene, record, _, _ = fixture(classes)
     kwargs = copy.deepcopy(routed.backbone_kwargs)
     kwargs.pop('graph_route')
@@ -43,21 +46,21 @@ def prepared(root, classes=9, arm='sample'):
     development = export_development(scene, record, inputs/'data')
     weight = inputs/'source.pt'
     save_model_checkpoint(source, weight)
-    plan = ExposurePlan.freeze(scene, record, updates=24, seed=64,
+    plan = ExposurePlan.freeze(scene, record, updates=updates, seed=64,
         minimum_class_blocks={str(c): 1 for c in record['classes']}, minimum_support_visits=1)
     exposure = inputs/'exposure.json'
     exposure.write_text(canonical_json(plan.to_dict()))
     sample, observation = None, None
     if arm == 'sample':
         scores = score_training_support(source, scene, record, expected_teacher_state=state_hash(source))
-        value = SampleCurriculum.freeze(scores, updates=24, order='easy_to_hard', seed=512,
-                                       start_fraction=.2, full_at=24, minimum_weight=.1)
+        value = SampleCurriculum.freeze(scores, updates=updates, order='easy_to_hard', seed=512,
+                                       start_fraction=.2, full_at=updates, minimum_weight=.1)
         path = inputs/'sample.json'
         path.write_text(canonical_json(value.to_dict()))
         sample = pin(path)
     if arm == 'observation':
         configs = [{'mode': 'none'}, {'mode': 'random_subset', 'keep_fraction': .5}]
-        base = ObservationPolicy.freeze(scene, record, updates=24, training_configs=configs,
+        base = ObservationPolicy.freeze(scene, record, updates=updates, training_configs=configs,
                                         train_seed=64, validation_seed=512)
         value = CurriculumPolicy.freeze(base, order='easy_to_hard', seed=2048,
                                         severity={digest(c): i for i, c in enumerate(configs)})
@@ -94,6 +97,7 @@ class CurriculumCLITests(unittest.TestCase):
                 with self.subTest(classes=classes, arm=arm), tempfile.TemporaryDirectory() as d:
                     root = Path(d)
                     inputs = prepared(root, classes, arm)
+                    budget = 48 if classes == 3 else 24
                     def cli(action, **values):
                         p = subprocess.run(command(self.sha, action, **values), cwd=ROOT, text=True,
                             capture_output=True, env={**os.environ, 'CUDA_VISIBLE_DEVICES': ''})
@@ -101,12 +105,12 @@ class CurriculumCLITests(unittest.TestCase):
                         return json.loads(p.stdout)
                     reg = cli('register', **inputs, out=root/'inputs/registration.json', lr=.0001, torch_seed=512)
                     part = cli('run', registration=reg, out=root/'part', to_step=2)
-                    done = cli('run', registration=reg, out=root/'done', to_step=24, resume=part['checkpoint'])
+                    done = cli('run', registration=reg, out=root/'done', to_step=budget, resume=part['checkpoint'])
                     with patch('torch.optim.Adam.step', side_effect=AssertionError('completed run updated')):
-                        zero = execute_curriculum(reg, out=root/'zero', to_step=24,
+                        zero = execute_curriculum(reg, out=root/'zero', to_step=budget,
                                                   expected_commit=self.sha, resume=done['checkpoint'])
-                    full = execute_curriculum(reg, out=root/'full', to_step=24, expected_commit=self.sha)
-                    self.assertEqual((part['new_updates'], done['new_updates'], zero['new_updates']), (2, 22, 0))
+                    full = execute_curriculum(reg, out=root/'full', to_step=budget, expected_commit=self.sha)
+                    self.assertEqual((part['new_updates'], done['new_updates'], zero['new_updates']), (2, budget-2, 0))
                     a = torch.load(done['checkpoint']['path'], weights_only=True)
                     b = torch.load(full['checkpoint']['path'], weights_only=True)
                     for key in ('history', 'selected_step', 'progress', 'rng', 'contract_hash'):
@@ -173,6 +177,13 @@ class CurriculumCLITests(unittest.TestCase):
                     execute_curriculum(reg, out=out, to_step=target, expected_commit=self.sha, resume=good['checkpoint'])
 
     def test_exposure_and_policy_budget_tamper_and_combination_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            original = prepared(root, classes=3, updates=24)
+            with patch('torch.optim.Adam.step', side_effect=AssertionError('underexposed registration updated')):
+                with self.assertRaisesRegex(ValueError, 'exposure'):
+                    self.register(root, original)
+            self.assertFalse((root/'inputs/registration.json').exists())
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             inputs = prepared(root)
