@@ -71,7 +71,7 @@ def historical_producer_compatible():
 
 
 HISTORICAL_PRODUCER_COMPATIBLE = historical_producer_compatible()
-HISTORICAL_SCOPE = "Historical331 consumer success requires pinned checkout; verified separately at 62209b06f58d69fc0a8ea910468211dd64ab85ec"
+HISTORICAL_SCOPE = "Historical331 consumer success requires pinned checkout; success is verified separately at f090ca302192a065de852c43e07e4f3beaeea6b4"
 
 def files_fixture(root, producer):
     """Complete original-schema boundary with text stand-ins; no trained tensors."""
