@@ -36,7 +36,7 @@ def setup(mode='weight'):
 def update(model, bank, scene, record, tile_id, optimizer, step):
     model.train(); optimizer.zero_grad(set_to_none=True)
     out = bank.forward(model, scene, record, tile_id, step=step)
-    labels = torch.tensor(sparse_labels(record, scene.plan, 'devtrain')[tile_slice(scene.plan['tiles'][tile_id])].reshape(-1))
+    labels = torch.tensor(sparse_labels(record, scene.plan, 'train_support')[tile_slice(scene.plan['tiles'][tile_id])].reshape(-1))
     good = labels > 0
     mask = good[:, None].expand(-1, scene.classes)
     onehot = torch.nn.functional.one_hot((labels-1).clamp_min(0), scene.classes).float() * mask
