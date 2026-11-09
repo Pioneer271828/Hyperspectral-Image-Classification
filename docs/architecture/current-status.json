@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 279,
+  "issue": 281,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "34884cfdc99e524f84024a2008bfa3edeac5bac1",
+  "main_snapshot": "2d966131867ad463e410d82d9a5dd6bb8adc54a9",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -676,6 +676,14 @@
       "remaining": "DY-1实际懒执行/跳图、轻模型训练/校准独立确认、多种子逐类/成本曲线仍待。终端CNN不是快路径，本例非充分训练负结论。",
       "report": "research/reports/DY0_离线互补与块级成本上界工程验收_20261109.md",
       "chat_report": "本聊天DY-0完整CPU工程交付，随后继续DY-1。"
+    },
+    {
+      "id": "DY-1独立CNN与延迟回退执行",
+      "state": "CPU执行与恢复工程通过，研究验收未完成",
+      "evidence": "tested f042520df090b1bfda7a5684bdb615dd52951007；9专项/51含专项回归、checker482Python143JSON。两块train影像10数组独立精确/31文件不变，快路径零建图；真实优化query0。",
+      "remaining": "轻模型训练/校准独立确认/随机同成本/多种子逐类/部署成本与GPU待验。全回退更慢，默认完整不变。下一CUR-O等曝光顺序和恢复工程。",
+      "report": "research/reports/DY1_独立CNN与整块延迟回退工程验收_20261109.md",
+      "chat_report": "本聊天DY1执行工程完成报告后继续CUR-O。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -730,7 +738,13 @@
       "tested_sha": "24e56fab584c6b109360c416e645d706c3df562f",
       "merge_sha": "34884cfdc99e524f84024a2008bfa3edeac5bac1",
       "scope": "TQ-2 CPU8/90 and independent30heads/39files, no accuracy/speed claim"
+    },
+    {
+      "pr_number": 280,
+      "head_sha": "9ab30f42bce7e17618451b753236955dec495f86",
+      "tested_sha": "c09f27606ba381818ea91afd43ca6fb8e94e9825",
+      "merge_sha": "2d966131867ad463e410d82d9a5dd6bb8adc54a9",
+      "scope": "DY0 CPU8/45; fixed45 validation negative result, no routing claim"
     }
   ]
 }
-

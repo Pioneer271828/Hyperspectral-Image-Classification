@@ -1,15 +1,28 @@
 {
-  "module": "DY-0 offline complementarity",
+  "module": "DY-0 diagnostics and DY-1 independent lazy execution",
   "paper": "https://proceedings.mlr.press/v97/kaya19a/kaya19a.pdf",
   "version": "ICML2019 PMLR97 3301-3310, final PDF sections3/4/5.1",
   "hypothesis": "Fast and full predictions may have complementary errors; oracle diagnosis is not deployable routing or HSI evidence.",
   "upstream": "https://github.com/yigitcankaya/Shallow-Deep-Networks",
   "classification": "author repository linked by README and paper/project",
   "fixed_sha": "a55644624c9dc064d1372f6a486055edd94c9def",
-  "read_files": ["README.md", "LICENSE", "early_exit_experiments.py", "model_funcs.py lines1-70"],
-  "license": {"file": "LICENSE", "spdx_text": "MIT", "copyright": "2020 Francesco Croce", "scope_limitation": "Root text read but different author attribution; do not infer verified provenance/license for every file. No source copied."},
-  "unresolved": ["README-named overthinking.py returns404 at pinned SHA; no claim of executing that analysis."],
-  "reuse": "Independent NumPy diagnostics; reuse only project branch_diagnostics/classification_metrics. No upstream code copied or executed.",
+  "read_files": [
+    "README.md",
+    "LICENSE",
+    "early_exit_experiments.py",
+    "model_funcs.py lines1-70",
+    "architectures/SDNs/VGG_SDN.py lines1-20,105-235 (DY-1)"
+  ],
+  "license": {
+    "file": "LICENSE",
+    "spdx_text": "MIT",
+    "copyright": "2020 Francesco Croce",
+    "scope_limitation": "Root text read but different author attribution; do not infer verified provenance/license for every file. No source copied."
+  },
+  "unresolved": [
+    "README-named overthinking.py returns404 at pinned SHA; no claim of executing that analysis."
+  ],
+  "reuse": "Independent NumPy diagnostics; reuse only project branch_diagnostics/classification_metrics. No upstream code copied or executed. DY-1 independently copies only existing project VCA/CNN components; upstream low-confidence best-exit fallback replaced by mandatory full computation.",
   "protocol_difference": "Upstream early_exit_experiments.py scans thresholds on test_loader; this project does not import that protocol. Allowed development labels only, no threshold search in DY-0, no actual early-exit claim for terminal CNN head.",
   "original_example_executed": false,
   "real_training": false
