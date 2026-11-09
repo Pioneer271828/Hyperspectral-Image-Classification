@@ -12,6 +12,20 @@ from transfer.tile_sampling import SupportTileSampler
 from transfer.run_provenance import resolve_budget,run_fields,verify_run_artifacts
 
 
+def development_counts(record):
+    """Fixed per-class 10/5 contract; totals vary only with declared classes."""
+    classes=record['classes']
+    if (not isinstance(classes,list) or not 1<=len(classes)<=256 or
+            any(type(c) is not int for c in classes) or classes!=list(range(1,len(classes)+1))):
+        raise ValueError('Bounded contiguous positive classes required')
+    training,validation=10*len(classes),5*len(classes)
+    for key,expected in (('training_labels',training),('validation_labels',validation),
+                         ('total_training_selection_labels',training+validation)):
+        if type(record.get(key)) is not int or record[key]!=expected:
+            raise ValueError('Declared total differs from fixed per-class development budget')
+    return training,validation
+
+
 def validate(record,plan):
     validate_tile_plan(plan)
     if record['validation_hash']!=digest({k:v for k,v in record.items() if k!='validation_hash'}) or record['parent_plan_hash']!=plan['plan_hash']:
@@ -21,13 +35,15 @@ def validate(record,plan):
         if {k:v for k,v in role.items() if k!='role'}!=tile:raise ValueError('Role geometry altered')
         allowed=('devtrain','devval') if tile['partition']=='train' else ('test',) if tile['partition']=='test' else ('unused',)
         if role['role'] not in allowed:raise ValueError('Invalid role')
-    if record['classes']!=list(range(1,len(record['classes'])+1)):raise ValueError('Invalid classes')
+    development_counts(record)
     width=plan['shape'][1];seen=set()
     for name,role,budget in [('train_support','devtrain',10),('validation_support','devval',5)]:
         support=record[name];ids=support['indices'];labels=support['labels']
         if ids!=sorted(set(ids)) or len(ids)!=len(labels) or seen.intersection(ids):raise ValueError('Support overlap/order')
         seen.update(ids)
-        if any(labels.count(c)!=budget for c in record['classes']) or len(ids)!=budget*len(record['classes']):raise ValueError('Invalid label budget')
+        if (any(type(c) is not int or c not in record['classes'] for c in labels) or
+                any(labels.count(c)!=budget for c in record['classes']) or len(ids)!=budget*len(record['classes'])):
+            raise ValueError('Invalid label budget')
         for index in ids:
             if type(index) is not int or not 0<=index<np.prod(plan['shape']):raise ValueError('Invalid index')
             y,x=divmod(index,width)
@@ -55,6 +71,9 @@ def sparse_labels(record,plan,name):
 
 
 def evaluate_validation(model,scene,record,*,observation_policy=None,condition='full'):
+    validate(record,scene.plan)
+    _,validation_count=development_counts(record)
+    if scene.classes!=len(record['classes']):raise ValueError('Scene/record class counts differ')
     if observation_policy is None and condition!='full':raise ValueError('Perturbation condition requires frozen policy')
     expected=getattr(model,'training_config',{}).get('observation_policy_hash')
     if expected is not None and (observation_policy is None or observation_policy.policy_hash!=expected):
@@ -76,7 +95,7 @@ def evaluate_validation(model,scene,record,*,observation_policy=None,condition='
             matrix+=np.bincount(target*scene.classes+prediction,minlength=scene.classes**2).reshape(scene.classes,scene.classes)
             correct+=int((prediction==target).sum());total+=len(target)
             nll-=float(np.log(np.maximum(probs[np.arange(len(target)),target],1e-8)).sum())
-    if total!=45:raise ValueError('Validation label budget differs from45')
+    if total!=validation_count:raise ValueError('Fixed per-class validation label budget changed')
     return {'nll':nll/total,'oa':correct/total,'count':total,'confusion':matrix.tolist(),
             'support':matrix.sum(1).tolist(),'recall':(np.diag(matrix)/matrix.sum(1)).tolist()}
 
@@ -93,7 +112,7 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
     sampler=SupportTileSampler(scene.plan,record['roles'],labels,record['classes'],sampling)
     rng=np.random.default_rng(seed+4);torch.manual_seed(seed);history=[];trace=[];best=float('inf')
     model.training_config={'phase':'development','development_hash':record['validation_hash'],'statistics_hash':scene.stats['statistics_hash'],
-                           'method':method,'selection':record['selection'],'training_labels':90,'validation_labels':45,
+                           'method':method,'selection':record['selection'],'training_labels':record['training_labels'],'validation_labels':record['validation_labels'],
                            'optimizer_budget':steps,'model_seed':seed,'head_seed':seed+2,'sampler_seed':seed+4,
                            'sampler':sampler.metadata}
     records=run_fields(config,phase='development',method=method,head_seed=seed+2,sampler_seed=seed+4,

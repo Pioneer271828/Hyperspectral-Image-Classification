@@ -17,6 +17,7 @@ def require(condition, message):
 def scene_identity(scene, record):
     from transfer.development_training import validate
     validate(record, scene.plan)
+    require(type(scene.classes) is int and scene.classes==len(record['classes']), 'scene/record class counts differ')
     require(scene.stats.get('fit_role') == 'devtrain'
             and scene.stats.get('development_hash') == record['validation_hash']
             and scene.stats.get('statistics_hash') == digest({k: v for k, v in scene.stats.items() if k != 'statistics_hash'}),
@@ -154,9 +155,10 @@ def evaluate_conditions(model, scene, record, policy):
     import torch
     from evaluation.classification_metrics import metrics_from_confusion
     from loadData.spatial_tiles import tile_slice
-    from transfer.development_training import sparse_labels
+    from transfer.development_training import sparse_labels, development_counts
     from transfer.g3_training import _forward, state_hash
     policy.validate(scene, record)
+    _,validation_count=development_counts(record)
     expected = getattr(model, 'training_config', {}).get('observation_policy_hash')
     require(expected is None or expected == policy.policy_hash, 'checkpoint policy differs')
     labels = sparse_labels(record, scene.plan, 'validation_support'); before = state_hash(model)
@@ -178,8 +180,8 @@ def evaluate_conditions(model, scene, record, policy):
                     nll[i] -= np.log(np.maximum(probs[np.arange(len(truth)), truth], 1e-8)).sum()
                 wrong = (predictions[1] != truth) & (predictions[2] != truth)
                 both += np.bincount(truth[wrong], minlength=scene.classes)
-            require(all(m.sum() == 45 and m.sum(1).tolist() == [5]*scene.classes for m in matrices), 'development support differs')
-            results[condition] = {h: {**metrics_from_confusion(m, list(range(1, scene.classes+1))), 'nll': float(nll[i]/45)}
+            require(all(m.sum() == validation_count and m.sum(1).tolist() == [5]*scene.classes for m in matrices), 'development support differs')
+            results[condition] = {h: {**metrics_from_confusion(m, list(range(1, scene.classes+1))), 'nll': float(nll[i]/validation_count)}
                                   for i, (h, m) in enumerate(zip(('fused', 'graph', 'cnn'), matrices))}
             results[condition]['both_wrong_by_class'] = (both/5).tolist()
     require(before == state_hash(model), 'evaluation mutated model state')
