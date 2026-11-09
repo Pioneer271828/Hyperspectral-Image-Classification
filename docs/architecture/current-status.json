@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 311,
+  "issue": 313,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "93b89b672abf7d7d0e74e3eca8909c10c38c4a42",
+  "main_snapshot": "b317c01b0c7637147dce5b8cb909e1c0a6b48fd7",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -780,7 +780,7 @@
       "id": "E3-C2动态固定支持优化选模恢复",
       "state": "CPU八模式实际优化API通过，正式外部CLI及真实实验待",
       "evidence": "testedf349e00；CPU6/37；八模式24与7+17精确恢复；独立24合成模型/678调用/576路由/5832混淆/648召回；15旧课程工件恢复0更新、139文件不变",
-      "remaining": "E3-C3外部登记CLI已验；下一E3-C4只读连接诊断；GPU与真实多种子逐类/最终图重训/成本待，长训练暂停。",
+      "remaining": "E3-C3登记CLI、C4诊断、C5删边只读干预已验；GPU、真实多种子逐类/最终图重训/成本待，长训练暂停。",
       "report": "research/reports/E3C2_动态固定连接优化选模与恢复工程验收_20261109.md"
     },
     {
@@ -794,8 +794,15 @@
       "id": "E3-C4逐上下文有向支持与小区域诊断",
       "state": "CPU只读诊断工程通过，真实关系价值未验",
       "evidence": "tested6a40430；专项8/另19回归；独立既有6合成模型126探针/378头/4032可达性/504质量/42变化/584文件不变，新增优化0",
-      "remaining": "下一§12.3重要边与同数量随机删边只读干预；实际训练边轨迹、真实逐类/成本/GPU待；软区域质量不等于小类召回，长训练暂停",
+      "remaining": "E3-C5重要/同数量随机删边CPU工程已验；实际训练边轨迹、真实逐类/完整成本/GPU待；软区域质量不等于小类召回，长训练暂停。",
       "report": "research/reports/E3C4_有向支持与小区域只读诊断工程验收_20261109.md"
+    },
+    {
+      "id": "E3-C5冻结选中态重要与随机删边干预",
+      "state": "CPU只读干预及独立核验通过，真实关系价值未验",
+      "evidence": "testedd73b587；专项7/另27回归；既有6合成模型+新增1个24步工程fixture，8505混淆/945召回/105头/560支持/584文件不变；旧预算2全部退化同控制",
+      "remaining": "下一§12.3/§16完整前向及反向成本核算；GPU、真实多种子逐类和独立空间确认待。全部合成三头零召回保留，长训练暂停",
+      "report": "research/reports/E3C5_冻结选中态重要边与随机删边工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -962,6 +969,13 @@
       "tested_sha": "3baabc13ebee56b997a17d6465096c630a6ac049",
       "merge_sha": "93b89b672abf7d7d0e74e3eca8909c10c38c4a42",
       "scope": "E3-C3 CPU8 plus25; independent6syntheticmodels/192calls/212checkpoints/1458cells/325pins; exact six old artifacts; no real training"
+    },
+    {
+      "pr_number": 312,
+      "head_sha": "844b5b3268fffc61ba5d41abf491b4688e0b1820",
+      "tested_sha": "6a404304d7465070685a989b25cff9b0f5bca3d2",
+      "merge_sha": "b317c01b0c7637147dce5b8cb909e1c0a6b48fd7",
+      "scope": "E3-C4 CPU8 plus19; existing6 synthetic models/126 probes/378 heads/4032 reachability cells/504 masses/584 pins; no new optimization"
     }
   ]
 }
