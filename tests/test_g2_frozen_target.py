@@ -1,6 +1,8 @@
 import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 import unittest
 
 import numpy as np
@@ -71,14 +73,23 @@ class FrozenTargetTests(unittest.TestCase):
     def test_frozen_inference_and_independent_closed_set_metrics(self):
         label_bytes = self.register()
         self.assertFalse(self.labels.exists())
-        frozen = self.infer()
+        entry = [sys.executable, '-m', 'transfer.g2_frozen_target']
+        args = ['--registration', str(self.registration), '--registration-sha256', self.sha,
+                '--expected-commit', self.commit]
+        prediction = self.root/'predictions'
+        subprocess.run([*entry, 'infer', *args, '--out', str(prediction)], check=True)
+        frozen = json.loads((prediction/'receipt.json').read_text())
         self.assertFalse(frozen['target_label_access'])
         self.assertFalse(self.labels.exists())
         self.assertEqual(frozen['optimizer_updates'], 0)
         reference_checkpoint = self.root/'source'/json.loads((self.root/'source/result.json').read_text())['selected_checkpoint']
         self.assertEqual(frozen['checkpoint_sha256'], hash_file(reference_checkpoint))
         self.labels.write_bytes(label_bytes)
-        scored = self.score(hash_file(self.root/'predictions/receipt.json'))
+        score = self.root/'score'
+        subprocess.run([*entry, 'score', *args, '--inference-dir', str(prediction),
+                        '--inference-sha256', hash_file(prediction/'receipt.json'),
+                        '--label-path', str(self.labels), '--out', str(score)], check=True)
+        scored = json.loads((score/'result.json').read_text())
         self.assertEqual(scored['excluded_unmapped'], 1)
         self.assertEqual(scored['optimizer_updates'], 0)
         with np.load(self.root/'predictions/predictions.npz', allow_pickle=False) as archive:

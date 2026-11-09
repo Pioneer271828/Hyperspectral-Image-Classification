@@ -233,7 +233,7 @@ def main():
     stages = parser.add_subparsers(dest='stage', required=True)
     for stage in ('infer', 'score'):
         command = stages.add_parser(stage)
-        command.add_argument('--registration', type=Path, required=True)
+        command.add_argument('--registration', dest='registration_path', type=Path, required=True)
         command.add_argument('--registration-sha256', required=True)
         command.add_argument('--expected-commit', required=True)
         command.add_argument('--out', type=Path, required=True)
