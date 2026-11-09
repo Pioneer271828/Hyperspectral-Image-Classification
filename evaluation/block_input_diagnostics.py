@@ -104,7 +104,11 @@ def _probe(run,model,tile_id,spectrum,expected_spectrum_hash):
         b=spectrum.shape[-1]
         if value.shape[:2]!=spectrum.shape[:2] or value.shape[-1]!=b+2 or tensor_hash(value[...,:b])!=expected_spectrum_hash:
             raise ValueError('Original normalized input differs')
-        calls.append(1);return original(dataset,torch.cat((spectrum,value[...,b:]),dim=-1),*args,**kwargs)
+        calls.append(1)
+        # A fixed-bank validation forward ordinarily uses no_grad. Only this
+        # private diagnostic leaf needs a graph; no parameter .grad is written.
+        with torch.set_grad_enabled(spectrum.requires_grad):
+            return original(dataset,torch.cat((spectrum,value[...,b:]),dim=-1),*args,**kwargs)
     def graph(*args,**kwargs):
         state=build(*args,**kwargs);captured['q_hash']=tensor_hash(state.Q);captured['a0_hash']=tensor_hash(state.A0);return state
     def routing(*args,**kwargs):

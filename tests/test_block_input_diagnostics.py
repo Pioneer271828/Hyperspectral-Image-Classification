@@ -97,6 +97,8 @@ class BlockInputTests(unittest.TestCase):
 
     def test_completed_fixed_random_reload_and_input_gradient_validation(self):
         run=completed('random',True,2);plan=BlockInputPlan.freeze(run,**spec(run));first=review_block(run,plan,expected_plan_hash=plan.plan_hash)
+        self.assertEqual(first['connected'],[True,True,True])
+        self.assertGreater(np.abs(np.array(first['gradients'])).sum(),0)
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/'model.pt';sha=run.save(path)
             restored=GraphRouteRun.load(run.source,run.scene,run.record,path,plan=run.plan,bank=run.bank,expected_bank_hash=run.bank.bank_hash,
