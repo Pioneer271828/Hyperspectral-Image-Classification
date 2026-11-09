@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 265,
+  "issue": 271,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "02967d1c208c7c055aebc7ea7c89fc6b6d6e9459",
@@ -636,6 +636,14 @@
       "evidence": "tested 4e3301640961d4734dc97752a1f7b660a0762748；LXC CPU7专项/48含专项回归通过，checker468Python133JSON。两个PaviaU开发训练块12例、36头精确重载及NumPy独立复算，7文件不变，真实优化/query0。",
       "remaining": "GPU资源门槛未满足；真实多种子等预算恢复、固定验证逐类/小类和部署成本待验。90%谱能量所需秩43不能减参，CPU耗时无一致收益，保持稠密默认。下一独立项普通INT8 PTQ/QAT。",
       "report": "research/reports/LR_显式低秩分解与等预算恢复工程验收_20261109.md"
+    },
+    {
+      "id": "INT8-1局部PTQ/QAT整数算子",
+      "state": "完整CPU局部算子工程验收通过",
+      "evidence": "tested 70febbfa8b0c5aabefe05f949ce008bac9fa3bfb；12专项/53含专项回归通过，checker467Python136JSON。NumPy整数累加12组、权重编码解析与实际quantized算子、FP32/QAT 12步和5+7恢复一致；真实优化/query0。",
+      "remaining": "下一项整网白名单/校准文件身份绑定/独立checkpoint；真实多种子逐类和部署成本待验。本项只有CPU，未声称整网或GPU收益。",
+      "report": "research/reports/INT8_局部PTQ_QAT与整数算子工程验收_20261109.md",
+      "chat_report": "本聊天INT8-1局部CPU工程模块交付；随后连续推进整网接入。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",

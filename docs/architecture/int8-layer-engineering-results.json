@@ -1,0 +1,92 @@
+{
+  "status": "passed_cpu_layer_engineering",
+  "issue": 271,
+  "tested_commit": "70febbfa8b0c5aabefe05f949ce008bac9fa3bfb",
+  "branch": "codex/int8-layer-engineering",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "torch_git": "e2d141dbde55c2a4370fac5165b0561b6af4798b",
+    "engine": "x86",
+    "device": "cpu",
+    "threads": 1
+  },
+  "unit": {
+    "passed": 12,
+    "seconds": 2.419
+  },
+  "regression_log": "/home/lbx/hsi-pioneer271828/runs/int8-layer-regression02.log",
+  "checker": {
+    "status": "passed",
+    "commit": "70febbfa8b0c5aabefe05f949ce008bac9fa3bfb",
+    "branch": "codex/int8-layer02",
+    "python_files": 467,
+    "json_files": 136,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "numpy_oracle": "int64 accumulations; 4 linear/conv bias variants x zero/normal/outlier inputs; at most 1 output LSB tie tolerance",
+  "weight_oracle": "FP32 reciprocal round-to-even, exact stored codes; exact half-integer fixture",
+  "kernel_execution": "CPU profiler observed quantized::linear and quantized::conv2d; no aten float layer ops",
+  "recovery": {
+    "arms": [
+      "fp32",
+      "qat"
+    ],
+    "continuous_steps_each": 12,
+    "split_after": 5,
+    "replayed_steps_each": 7,
+    "same_synthetic_train_and_separate_validation": true,
+    "first_min_validation_mse": true,
+    "exact_cpu_state_and_history": true,
+    "extra_gradient_test_steps": 1
+  },
+  "storage_example": {
+    "layer": "Linear512x256",
+    "fp32_state_bytes": 527141,
+    "integer_state_bytes": 139661,
+    "weight_dtype": "torch.qint8",
+    "master_float_weight_retained": false
+  },
+  "gpu": "not part of CPU integer-kernel scope; not executed",
+  "real_training": false,
+  "query": false,
+  "limits": [
+    "role strings require authenticated manifest binding in next integration module",
+    "partial layers only; FP32 boundaries and bias",
+    "no real accuracy/class or speed claim",
+    "QAT uses simulated FP32 training; only converted inference has integer kernel"
+  ],
+  "retained_failure": "e973611 test oracle used FP64 division at FP32 half-integer boundary; 1/10 failed, corrected independent oracle and added exact tie/overflow tests; original log retained",
+  "diagnostics": [
+    "CPU profiler in CUDA-enabled build emitted gpuGetDeviceCount code100 while CUDA hidden; CPU operation trace and assertions passed",
+    "torch quantized state deserialization TypedStorage deprecation warning retained"
+  ],
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/int8-layer-cpu01.log": {
+      "sha256": "545ac1476eed7069a266e4728512e250bb3c30c67ea62ceb1082eb4cb6ffbd78"
+    },
+    "/home/lbx/hsi-pioneer271828/runs/int8-layer-cpu02.log": {
+      "sha256": "59c4ab2eeef91b257a05d57ad26bb6d2f5b1ad352ccf5b5065d5d964d04148e4"
+    },
+    "/home/lbx/hsi-pioneer271828/runs/int8-layer-regression02.log": {
+      "sha256": "af04106bb18065341959e14ced76c9af7e1a7cbcbf2175d3df7829a9dc47e633"
+    },
+    "/home/lbx/hsi-pioneer271828/runs/int8-layer-checker02.json": {
+      "sha256": "4f790c3d77c06c160788c076998acb3d35f48764703d0f962755b3beb654ff1b"
+    }
+  }
+}
