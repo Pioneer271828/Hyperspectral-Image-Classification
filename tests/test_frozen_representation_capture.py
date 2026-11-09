@@ -1,5 +1,6 @@
 """Synthetic model captures and structural54 boundary; no real training/query."""
 import copy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -22,7 +23,7 @@ from model.research_config import digest
 from research_runtime import code_snapshot, write_json
 from target_bn_calibration import OBS_KEYS
 from target_initialization import state_id
-from test_g4_matched_target_analysis import producer_fixture
+from test_g4_matched_target_analysis import producer_fixture, HISTORICAL_PRODUCER_COMPATIBLE, HISTORICAL_SCOPE
 from test_g4_matched_target_audit import boundary_fixture
 from test_m4_full_transfer import fixture as active_source
 from test_none_full_transfer import fixture as none_source
@@ -87,7 +88,9 @@ def synthetic_boundary(root, all_cases=False):
     (root / "frozen").mkdir(); (root / "analysis").mkdir()
     freeze = root / "frozen" / "freeze.json"; write_json(freeze, frozen)
     current = code_snapshot(); names = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", ANALYSIS_COMMIT], text=True).splitlines()
-    files = {n: current["files"][n] for n in names if n in current["files"]}
+    files = {n: hashlib.sha256(subprocess.check_output(["git", "show", ANALYSIS_COMMIT + ":" + n])
+        .replace(b"\r\n", b"\n")).hexdigest() for n in names
+        if n.endswith(".py") or n.startswith("configs/") and n.endswith(".json")}
     analysis_code = {**current, "commit": ANALYSIS_COMMIT, "files": files, "source_hash": digest(files)}
     outputs = {}
     for n in ("analysis.json", "report.md"):
@@ -102,6 +105,17 @@ def synthetic_boundary(root, all_cases=False):
 
 
 class FrozenCaptureTests(unittest.TestCase):
+    @unittest.skipIf(HISTORICAL_PRODUCER_COMPATIBLE, "Consumer still matches original producer")
+    def test_changed_consumer_rejects_historical_capture_before_model_load(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); freeze, analysis, name, _ = synthetic_boundary(root)
+            with patch("torch.load", side_effect=AssertionError("No model load")):
+                with self.assertRaisesRegex(ValueError, "Unchanged accepted engineering producer"):
+                    export_case(freeze, file_hash(freeze), analysis, file_hash(analysis), name,
+                        root / "blocked", code_snapshot(), device=DEVICE, maximum_regions=4, seed=64)
+            self.assertFalse((root / "blocked").exists())
+
+    @unittest.skipUnless(HISTORICAL_PRODUCER_COMPATIBLE, HISTORICAL_SCOPE)
     def test_full_batch_actual_synthetic_forward_outputs_and_late_failure(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -172,6 +186,7 @@ class FrozenCaptureTests(unittest.TestCase):
             self.assertFalse(set(STAGES) & model.backbone.__dict__.keys())
             capture(model, "xuzhou", obs)
 
+    @unittest.skipUnless(HISTORICAL_PRODUCER_COMPATIBLE, HISTORICAL_SCOPE)
     def test_structural54_gate_before_load_negative_benefit_allowed_and_files_readonly(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); freeze, analysis, name, paths = synthetic_boundary(root)
@@ -204,6 +219,7 @@ class FrozenCaptureTests(unittest.TestCase):
             with patch("torch.load", side_effect=AssertionError("No old/incomplete boundary load")):
                 with self.assertRaises(ValueError): call(root / "blocked")
 
+    @unittest.skipUnless(HISTORICAL_PRODUCER_COMPATIBLE, HISTORICAL_SCOPE)
     def test_actual_synthetic_cli_requires_boundary_and_no_query_training_flags(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); freeze, analysis, name, _ = synthetic_boundary(root)

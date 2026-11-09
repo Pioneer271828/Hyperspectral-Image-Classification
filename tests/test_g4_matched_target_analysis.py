@@ -1,5 +1,6 @@
 """Hand-counted synthetic54 only; no real query/model/GT consumption."""
 import copy
+import hashlib
 from fractions import Fraction
 import json
 from pathlib import Path
@@ -53,13 +54,24 @@ def improve(rows, amount, *, mode="x_residual", method=FT, target=None, seed=Non
 
 
 def producer_fixture():
-    current = code_snapshot()
+    # Historical identity must be reconstructed from historical blobs, not HEAD.
     names = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", PRODUCER], text=True).splitlines()
-    files = {n: current["files"][n] for n in names if n.endswith(".py") or n.startswith("configs/") and n.endswith(".json")}
+    files = {n: hashlib.sha256(subprocess.check_output(["git", "show", PRODUCER + ":" + n])
+        .replace(b"\r\n", b"\n")).hexdigest() for n in names
+        if n.endswith(".py") or n.startswith("configs/") and n.endswith(".json")}
     assert digest(files) == PRODUCER_SOURCE
     return {"commit": PRODUCER, "branch": "synthetic-original331-schema", "dirty": False,
             "files": files, "source_hash": digest(files)}
 
+
+def historical_producer_compatible():
+    producer = producer_fixture()
+    current = code_snapshot()
+    return all(current["files"].get(n) == h for n, h in producer["files"].items())
+
+
+HISTORICAL_PRODUCER_COMPATIBLE = historical_producer_compatible()
+HISTORICAL_SCOPE = "Historical331 consumer success requires pinned checkout; verified separately at 62209b06f58d69fc0a8ea910468211dd64ab85ec"
 
 def files_fixture(root, producer):
     """Complete original-schema boundary with text stand-ins; no trained tensors."""
@@ -147,6 +159,7 @@ class MatchedAnalysisTests(unittest.TestCase):
         self.assertEqual(functions(original), functions(current))
         self.assertEqual(set(functions(original)), {"_hash", "_stats", "validate_rows", "_value", "contrast", "analyze_rows", "report_markdown"})
 
+    @unittest.skipUnless(HISTORICAL_PRODUCER_COMPATIBLE, HISTORICAL_SCOPE)
     def test_resource_review_profile_hash_cost_and_audit_binding(self):
         from g4_matched_target_analysis import RESOURCE_REVIEW_PRODUCER, RESOURCE_REVIEW_POLICY
         with tempfile.TemporaryDirectory() as temp:
@@ -192,6 +205,16 @@ class MatchedAnalysisTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.producer = producer_fixture()
+
+    @unittest.skipIf(HISTORICAL_PRODUCER_COMPATIBLE, "Consumer still matches original producer")
+    def test_changed_consumer_rejects_historical_boundary_before_tensor_access(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); paths = files_fixture(root, self.producer)
+            with patch("torch.load", side_effect=AssertionError("No tensor decoding")), \
+                    patch("torch.nn.Module._call_impl", side_effect=AssertionError("No inference")):
+                with self.assertRaisesRegex(ValueError, "Unchanged accepted engineering producer"):
+                    invoke(paths, root / "blocked")
+            self.assertFalse((root / "blocked").exists())
 
     def test_equal_scene_weighting_reverses_pixel_pool_and_matches_legacy_summary(self):
         supports = {t: [100 if t != "whu-honghu" else 10000] * DATASETS[t][2] for t in NAMES}
@@ -282,6 +305,7 @@ class MatchedAnalysisTests(unittest.TestCase):
             with self.subTest(index=index):
                 with self.assertRaises(ValueError): analyze_rows(value)
 
+    @unittest.skipUnless(HISTORICAL_PRODUCER_COMPATIBLE, HISTORICAL_SCOPE)
     def test_full_synthetic_boundary_export_cli_and_no_tensor_deserialization(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); paths = files_fixture(root, self.producer)
