@@ -121,7 +121,7 @@ class MulticlassDevelopmentTests(unittest.TestCase):
                         for truth,pred in zip(y,a.argmax(1)):matrices[i][truth,pred]+=1
                 for i,head in enumerate(('fused','graph','cnn')):
                     row=result['conditions'][condition][head]
-                    self.assertEqual(row['confusion'],matrices[i].tolist())
+                    self.assertEqual(row['confusion_matrix'],matrices[i].tolist())
                     self.assertAlmostEqual(row['nll'],loss[i]/(5*classes),places=12)
                     self.assertEqual([r['support'] for r in row['per_class']],[5]*classes)
 
@@ -170,3 +170,4 @@ class MulticlassDevelopmentTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
