@@ -64,8 +64,8 @@ class RegisteredDiagnosticsTests(unittest.TestCase):
             self.assertFalse(model.training);calls.append(1);return original(model,*args,**kwargs)
         with patch.object(MultiDatasetVCASAHGCN,'forward',forward),patch('torch.optim.Adam.step',side_effect=AssertionError('optimized')),patch('evaluation.registered_spatial_diagnostics.review_block',side_effect=AssertionError('freeze diagnostic')):
             pin=self.frozen(c)
-        _,base,_=_load_registration(c['reg']);self.assertEqual(len(calls),sum(t['role']=='devval' for t in base.record['roles']))
-        value=json.loads(_read(pin));self.assertTrue(value['selection_validation_rechecked']);self.assertFalse(value['diagnostic_scores_computed'])
+        _,base,_=_load_registration(c['reg']);self.assertEqual(len(calls),2*sum(t['role']=='devval' for t in base.record['roles']))
+        value=json.loads(_read(pin));self.assertEqual(value['validation_recheck_states'],['selected','last']);self.assertFalse(value['diagnostic_scores_computed'])
         _,partial,_=_load_registration(c['reg']);folder=self.folder(c,'partial');folder.mkdir();p=folder/'step0.pt';pin=dict(path=str(p),sha256=partial.save(p))
         with self.assertRaises(ValueError):freeze_diagnostics(c['reg'],pin,c['requests'],out=self.folder(c,'bad'),expected_commit=c['sha'])
         self.assertFalse(self.folder(c,'bad').exists())

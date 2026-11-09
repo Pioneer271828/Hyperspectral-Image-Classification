@@ -74,7 +74,7 @@ def _output(out,files):
 
 
 def freeze_diagnostics(registration,completed,requests,*,out,expected_commit):
-    # Existing loader rechecks the previously selected validation metrics. This
+    # Existing loader rechecks selected AND last-state validation metrics. This
     # is artifact authentication, not a new diagnostic/selection decision.
     code=_code(expected_commit);request_value=json.loads(_read(requests));v,run,files=_load(registration,completed)
     files.append(deepcopy(requests));rows=_plans(run,request_value);folder=_output(out,files)
@@ -83,7 +83,7 @@ def freeze_diagnostics(registration,completed,requests,*,out,expected_commit):
     value=dict(version=1,code=code,training_commit=v['expected_commit'],registration=deepcopy(registration),completed=deepcopy(completed),
         requests=deepcopy(requests),inputs=files,contract_hash=run.contract_hash,selected_step=run.selected_step,
         blocks=rows,optimizer_updates=0,query=0,original_ground_truth_read=False,
-        selection_validation_rechecked=True,diagnostic_scores_computed=False)
+        validation_recheck_states=['selected','last'],diagnostic_scores_computed=False)
     value['freeze_hash']=digest(value);folder.mkdir(parents=True,exist_ok=False)
     return _json_new(folder/'freeze.json',value)
 
@@ -92,10 +92,10 @@ def export_diagnostics(frozen,*,out,expected_commit):
     code=_code(expected_commit);value=json.loads(_read(frozen))
     fields={'version','code','training_commit','registration','completed','requests','inputs','contract_hash','selected_step',
             'blocks','optimizer_updates','query','original_ground_truth_read','freeze_hash',
-            'selection_validation_rechecked','diagnostic_scores_computed'}
+            'validation_recheck_states','diagnostic_scores_computed'}
     if (set(value)!=fields or value['version']!=1 or value['freeze_hash']!=digest({k:v for k,v in value.items() if k!='freeze_hash'})
             or value['code']!=code or value['optimizer_updates']!=0 or value['query']!=0 or value['original_ground_truth_read'] is not False
-            or value['selection_validation_rechecked'] is not True or value['diagnostic_scores_computed'] is not False):
+            or value['validation_recheck_states']!=['selected','last'] or value['diagnostic_scores_computed'] is not False):
         raise ValueError('Frozen diagnostic schema/code differs')
     for pin in value['inputs']:_read(pin)
     v,run,files=_load(value['registration'],value['completed']);files.append(value['requests'])
