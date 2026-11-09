@@ -28,10 +28,16 @@ def _wavelengths(value):
 
 def pack_source_observations(scene, artifact_sha256, plan, partition, cube, wavelengths_nm):
     """Offline curator entry. Read and package exactly one source role's blocks."""
+    if partition not in ('train', 'val'):
+        raise ValueError('Source observation release requires a train/val partition')
+    return _pack_observations(scene, artifact_sha256, plan, partition, cube, wavelengths_nm)
+
+
+def _pack_observations(scene, artifact_sha256, plan, partition, cube, wavelengths_nm):
     validate_tile_plan(plan)
     sha(artifact_sha256)
-    if partition not in ('train', 'val') or not isinstance(scene, str) or not scene:
-        raise ValueError('Source observation release requires a scene and a train/val partition')
+    if not isinstance(scene, str) or not scene:
+        raise ValueError('Observation release requires a scene')
     wave = _wavelengths(np.asarray(wavelengths_nm, dtype=np.float32))
     if cube.shape != (*plan['shape'], wave.size):
         raise ValueError('Source image shape and wavelength count do not match the plan')
