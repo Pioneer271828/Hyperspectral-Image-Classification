@@ -84,6 +84,8 @@ class ExposureTests(unittest.TestCase):
     def test_ledger_rejects_repeats_skips_modified_prefix_and_wrong_plan(self):
         _,s,r=fixture();p=freeze(s,r);ledger=ExposureLedger(p)
         with self.assertRaises(ValueError):ledger.append(p.event(2))
+        boolean_step=p.event(1);boolean_step['step']=True
+        with self.assertRaises(ValueError):ledger.append(boolean_step)
         ledger.append(p.event(1))
         with self.assertRaises(ValueError):ledger.append(p.event(1))
         for n in range(2,6):ledger.append(p.event(n))

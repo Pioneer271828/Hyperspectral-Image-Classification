@@ -114,7 +114,8 @@ class ExposureLedger:
 
     def append(self,event):
         if self.completed==self.plan.updates:raise ValueError('Completed budget cannot receive more events')
-        if event!=self.plan.event(self.completed+1):raise ValueError('Exposure event reordered, repeated or mismatched')
+        expected=self.plan.event(self.completed+1)
+        if not isinstance(event,dict) or event!=expected or digest(event)!=digest(expected):raise ValueError('Exposure event reordered, repeated or mismatched')
         self.completed+=1
         return self.snapshot()
 
