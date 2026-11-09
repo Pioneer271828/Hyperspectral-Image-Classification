@@ -159,6 +159,30 @@ class OpenSetTests(unittest.TestCase):
         r=evaluate(s,c,h,[[0.,0.],[4.,4.],[20.,20.]],[2,7,9],['e0','e1','e2'],input_kind='features')
         self.assertEqual(r['hos'],1.);self.assertEqual(r['detection']['auroc'],1.)
 
+    def test_existing_m8_raw_logits_without_model_changes(self):
+        import torch
+        from tests.test_fusion_m8 import model
+        torch.manual_seed(512)
+        net=model().eval(); state=copy.deepcopy(net.state_dict())
+        x=torch.randn(6,7,14)
+        rng=torch.random.get_rng_state().clone()
+        with torch.no_grad():
+            raw=net('a',x,superpixel_scale=9,return_logits=True)
+            probability=net('a',x,superpixel_scale=9)
+        known=[dict(id=i+1,name=f'class-{i+1}') for i in range(3)]
+        unknown=[dict(id=4,name='held-out-semantic')]
+        for head,(z,p) in enumerate(zip(raw,probability)):
+            torch.testing.assert_close(z.softmax(-1),p,rtol=0,atol=0)
+            for method in ('msp','energy'):
+                s=OpenSetScorer.freeze(method,known,unknown,model_sha256='a'*64,
+                                      representation=f'M8/head-{head}')
+                values=z.detach().numpy(); score,pred=s.score(values,input_kind='raw_logits')
+                expected=1-z.double().softmax(-1).max(-1).values if method=='msp' else -z.double().logsumexp(-1)
+                np.testing.assert_allclose(score,expected.numpy(),rtol=1e-12,atol=1e-12)
+                np.testing.assert_array_equal(pred,z.argmax(-1).numpy()+1)
+        for k,v in net.state_dict().items(): torch.testing.assert_close(v,state[k],rtol=0,atol=0)
+        torch.testing.assert_close(torch.random.get_rng_state(),rng,rtol=0,atol=0)
+
 
 if __name__ == '__main__':
     unittest.main()
