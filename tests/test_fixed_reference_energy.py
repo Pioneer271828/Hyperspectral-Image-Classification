@@ -25,7 +25,8 @@ class EnergyTests(unittest.TestCase):
             w=(a+a.T)/2;np.fill_diagonal(w,1);degree=w.sum(1);lap=np.eye(n)-w/np.sqrt(degree[:,None]*degree[None,:])
             energies=np.diag(x.T@lap@x);got=summary(torch.tensor(x),r)
             np.testing.assert_allclose(got['energy_by_channel'],energies,atol=1e-13,rtol=1e-12)
-            if n>1:self.assertAlmostEqual(got['normalized_energy'],energies.sum()/(x*x).sum())
+            if (w-np.eye(n)).any():self.assertAlmostEqual(got['normalized_energy'],energies.sum()/(x*x).sum())
+            else:self.assertIsNone(got['normalized_energy'])
 
     def test_scale_channel_duplication_rotation_and_reference_immutability(self):
         a=torch.tensor([[0.,3.,1.],[0.,0.,1.],[2.,0.,0.]],dtype=torch.float64);r=reference(a)
