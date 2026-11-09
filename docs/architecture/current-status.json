@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 305,
+  "issue": 307,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "fb95764d938e1665efec333bd29991594276faba",
+  "main_snapshot": "9677eddb9e52b1593dd3e5343832acc4bd6e9a1a",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -773,8 +773,15 @@
       "id": "E3-C1逐块图身份与固定支持",
       "state": "CPU上下文隔离/更新/恢复工程通过，正式训练链待",
       "evidence": "testedf7ed986；CPU6/26；独立12合成模型/120含恢复更新/84上下文/1344归一化和梯度/2916混淆；90文件不变",
-      "remaining": "下一正式训练登记/选模/恢复链；GPU、真实多种子逐类保护及成本未完成，远程边待局部效果，长训练暂停",
+      "remaining": "E3-C2实际优化/选模/恢复API已验；正式外部登记CLI、GPU与真实多种子逐类/成本仍待。",
       "report": "research/reports/E3C1_逐训练块图身份与固定连接工程验收_20261109.md"
+    },
+    {
+      "id": "E3-C2动态固定支持优化选模恢复",
+      "state": "CPU八模式实际优化API通过，正式外部CLI及真实实验待",
+      "evidence": "testedf349e00；CPU6/37；八模式24与7+17精确恢复；独立24合成模型/678调用/576路由/5832混淆/648召回；15旧课程工件恢复0更新、139文件不变",
+      "remaining": "下一外部文件登记/输入认证/可恢复CLI；GPU和真实多种子逐类、最终图重训与总成本待，长训练暂停",
+      "report": "research/reports/E3C2_动态固定连接优化选模与恢复工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -920,6 +927,13 @@
       "tested_sha": "e2726c3c7b0d5522209a41ddc447356fed343682",
       "merge_sha": "fb95764d938e1665efec333bd29991594276faba",
       "scope": "CUR-O2 CPU5/40; independent12syntheticmodels/288views/216heads/53pins; real effects pending"
+    },
+    {
+      "pr_number": 306,
+      "head_sha": "9c3ebd2488fd0f775ff87970c2b12b254a9a313c",
+      "tested_sha": "f7ed986ba848fc6a564dc87e45487360f62842c3",
+      "merge_sha": "9677eddb9e52b1593dd3e5343832acc4bd6e9a1a",
+      "scope": "E3-C1 CPU6/26; independent12syntheticmodels/84contexts/1344normalization+gradients/90pins"
     }
   ]
 }
