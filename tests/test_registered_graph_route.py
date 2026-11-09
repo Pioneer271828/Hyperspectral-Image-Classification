@@ -81,6 +81,19 @@ class RegisteredRouteTests(unittest.TestCase):
                 if tile['role'] in ('devtrain','devval'):np.testing.assert_array_equal(a,scene.cube[tile_slice(tile)])
                 else:self.assertTrue(np.all(a==0))
 
+    def test_extra_labels_rejected_even_with_recomputed_record_hash(self):
+        from model.research_config import digest
+        _,scene,record,_,_=setup()
+        for nested in (False,True):
+            altered=copy.deepcopy(record)
+            if nested:altered['train_support']['query_labels']=[1,2,3]
+            else:altered['query_labels']=[1,2,3]
+            altered['validation_hash']=digest({k:v for k,v in altered.items() if k!='validation_hash'})
+            with tempfile.TemporaryDirectory() as d:
+                out=Path(d)/'forbidden'
+                with self.assertRaises(ValueError):export_development(scene,altered,out)
+                self.assertFalse(out.exists())
+
     def test_wrong_hash_and_sidecar_rejected_before_deserialization(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);_,_,_,_,reg,sha=prepared(root)

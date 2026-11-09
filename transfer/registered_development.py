@@ -48,8 +48,22 @@ def _json_new(path, value):
     return _pin(path)
 
 
+def _released_record(record):
+    # This transport accepts only the released development protocol schema.
+    # Reject extra label arrays even when a caller has recomputed its hash.
+    fields = {'schema_version','kind','parent_plan_hash','shape','classes','roles','heldout_tile_ids',
+              'training_candidates','validation_candidates','train_support','validation_support','training_labels',
+              'validation_labels','total_training_selection_labels','selection','test_unchanged','rule',
+              'oracle_disclosure','normalization_contract','runner_compatible','validation_hash'}
+    if set(record) != fields or record['schema_version'] != 1 or record['kind'] != 'oracle_spatial_development_v1':
+        raise ValueError('Only the released development record may be packaged')
+    for name in ('train_support', 'validation_support'):
+        if set(record[name]) != {'indices','labels','seed'}:
+            raise ValueError('Unregistered support payload')
+
 def export_development(scene, record, out):
     """Never index or serialize non-development observations or original GT."""
+    _released_record(record)
     identity = scene_identity(scene, record)
     out = external_directory(out); out.mkdir(parents=True, exist_ok=False); rows = []
     for tile in record['roles']:
@@ -70,6 +84,7 @@ def load_development(pin):
     if (set(v) != {'version','dataset','plan','record','bands','statistics','identity','blocks','excluded'}
             or v['version'] != 1 or v['excluded'] != 'all_non_development_observations_and_original_GT'):
         raise ValueError('Unsupported development package')
+    _released_record(v['record'])
     validate(v['record'], v['plan']); bands = BandMetadata(**v['bands'])
     permitted = [r for r in v['record']['roles'] if r['role'] in ('devtrain', 'devval')]
     if len(v['blocks']) != len(permitted): raise ValueError('Development block coverage differs')
