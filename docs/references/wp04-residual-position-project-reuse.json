@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "issue": 343,
+  "project_commit": "beffba7e03057d72ab33375f9e586af5749d2b31",
+  "plan_sections": ["master8.4 R0/R1/R2/R4/R5", "master22 WP04", "implementation19.5"],
+  "scope": "Integration of accepted residual/capacity and position-fusion operators, not a new mechanism",
+  "reused_unchanged": ["model/region_residual_decomposition.py", "position_gated_fusion.py", "m4_full_transfer.py", "none_full_transfer.py", "g4_support_target.py", "target_training.py", "joint_training.py", "target_bn_calibration.py"],
+  "prior_reviews": ["docs/references/g4-position-fusion-target-project-reuse.json", "docs/references/m8-position-gate-reference-review.json"],
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "license_scope": "Project adapters only; original GMU review retained, no new external code or license assertion",
+  "controls": ["none/capacity_control/x_residual crossed with fixed/position_gate", "scratch and corresponding accepted full-source fine-tune", "same-mode paired shared tensors, fresh target heads and domain BN", "original 12 updates, 2+10 resume, first-min fused validation NLL"],
+  "limits": ["Gate adds129 parameters and8-byte version buffer", "M4 adds8256 parameters; capacity control8320, not exact capacity equality", "Different modes use different source-pretrained weights; fine-tune comparison is not a pure target-only factorial effect", "No residual-only/x-region/learned-Q support added", "No full budget, query release, real efficacy or original GMU reproduction claim"]
+}
