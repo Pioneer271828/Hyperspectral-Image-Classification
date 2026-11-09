@@ -126,6 +126,10 @@ class CurriculumTrainingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Failed'):run.advance(24)
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(ValueError,'Failed'):run.save(Path(d)/'invalid.pt')
+            failed=Path(d)/'failed.pt';h=run.save_failure(failed)
+            packet=torch.load(failed,weights_only=True)
+            self.assertFalse(packet['resumable']);self.assertEqual(packet['progress']['completed_updates'],0)
+            self.assertEqual(h,hashlib.sha256(failed.read_bytes()).hexdigest())
         with self.assertRaisesRegex(ValueError,'Failed'):run.finish()
 
     def test_authenticated_resume_rejects_semantic_tamper_and_overwrite(self):

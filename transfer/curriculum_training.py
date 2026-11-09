@@ -94,7 +94,7 @@ class CurriculumRun:
         self.torch_rng = torch.Generator().manual_seed(torch_seed).get_state()
         self.ledger = ExposureLedger(self.plan)
         self.history, self.selected_step, self.selected_state = [], None, None
-        self.failed = False
+        self.failed = False; self.failure = None
         self._seal()
 
     @property
@@ -111,6 +111,7 @@ class CurriculumRun:
         if (digest(self.spec) != self.contract_hash or state_hash(self.source) != self.spec['source_state']
                 or self.source.export_config() != self.spec['architecture']
                 or getattr(self.source, 'training_config', {}) != self.spec['source_training_config']
+                or getattr(self.model, 'training_config', {}) != self.spec['source_training_config']
                 or self.model.export_config() != self.spec['architecture']
                 or _data(self.scene, self.record) != self.spec['data']
                 or self.plan.plan_hash != self.spec['exposure_hash']
@@ -186,8 +187,8 @@ class CurriculumRun:
                 self.selected_step = n; self.selected_state = deepcopy(self.model.state_dict())
             self._seal(); self._check()
             return deepcopy(row)
-        except Exception:
-            self.failed = True
+        except Exception as e:
+            self.failed = True; self.failure = dict(type=type(e).__name__, message=str(e), attempted_step=n)
             raise
 
     def advance(self, to_step):
@@ -209,6 +210,20 @@ class CurriculumRun:
                       rng=deepcopy(self.rng.bit_generator.state), torch_rng=self.torch_rng.clone(),
                       history=deepcopy(self.history), progress=self.ledger.snapshot(),
                       selected_step=self.selected_step, selected_state=deepcopy(self.selected_state))
+        return self._write(packet, path)
+
+    def save_failure(self, path):
+        """Preserve partial optimizer/model state for diagnosis, never for resume."""
+        if not self.failed: raise ValueError('Only a failed run has diagnostic evidence')
+        packet = dict(format='vca-curriculum-failure-v1', resumable=False, failure=deepcopy(self.failure),
+                      spec=deepcopy(self.spec), contract_hash=self.contract_hash,
+                      state=deepcopy(self.model.state_dict()), optimizer=deepcopy(self.optimizer.state_dict()),
+                      rng=deepcopy(self.rng.bit_generator.state), torch_rng=self.torch_rng.clone(),
+                      history=deepcopy(self.history), progress=self.ledger.snapshot())
+        return self._write(packet, path)
+
+    @staticmethod
+    def _write(packet, path):
         path = Path(path); path.parent.mkdir(parents=True, exist_ok=True); temp = None
         try:
             with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as f:
