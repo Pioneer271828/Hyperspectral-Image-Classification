@@ -49,7 +49,7 @@ def calibrate(model, scene, record, qat=False):
 
 def predict(model, scene, record, role='devval'):
     tile = next(t for t in scene.plan['tiles'] if record['roles'][t['id']]['role'] == role)
-    with torch.no_grad(): return _forward(model.eval(), scene, tile)
+    with torch.no_grad(): return _forward(model.eval(), scene, tile)[:3]
 
 
 class Int8ModelTests(unittest.TestCase):
@@ -160,7 +160,7 @@ class Int8ModelTests(unittest.TestCase):
         mask, valmask = train_labels > 0, val_labels > 0
         def loss(model):
             return sum(nn.functional.nll_loss(p[mask].clamp_min(1e-10).log(), train_labels[mask]-1)
-                       for p in _forward(model, scene, tile))
+                       for p in _forward(model, scene, tile)[:3])
         def val(model):
             model.eval()
             with torch.no_grad():
