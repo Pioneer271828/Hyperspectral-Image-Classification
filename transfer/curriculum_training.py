@@ -56,11 +56,32 @@ class CurriculumRun:
     The source is unchanged. Save/load authenticates bytes before deserialization.
     Logged execution is not a replacement for independent training acceptance.
     """
+    FORMAT = 'vca-curriculum-run-v1'
+    FAILURE_FORMAT = 'vca-curriculum-failure-v1'
+
+    def _validate_model(self, model): validate_source(model)
+    def _model_hash(self, model): return state_hash(model)
+    def _contract_extensions(self): return {}
+    def _check_extensions(self): pass
+    def _history_extensions(self, outputs): return {}
+    def _history_extension_keys(self): return set()
+    def _validate_history_extensions(self, row): pass
+    def _evaluate(self, model): return evaluate_validation(model, self.scene, self.record)
+    def _training_forward(self, tile, step, extra): return _forward(self.model, self.scene, tile, **extra)
+
+    def _restore_model(self, state):
+        ref = self.model.state_dict()
+        if (not isinstance(state, dict) or set(state) != set(ref) or any(not torch.is_tensor(t) or t.shape != ref[k].shape
+                or t.dtype != ref[k].dtype or not torch.isfinite(t).all() for k,t in state.items())):
+            raise ValueError('Invalid model state')
+        self.model.load_state_dict(state)
+
     def __init__(self, source, scene, record, *, plan, policy, lr, torch_seed,
                  expected_source_state, expected_plan_hash, expected_policy_hash,
                  observation_policy=None, expected_observation_hash=None):
-        validate_source(source)
-        if state_hash(source) != expected_source_state:
+        self.scene = scene
+        self._validate_model(source)
+        if self._model_hash(source) != expected_source_state:
             raise ValueError('Registered source state mismatch')
         if (list(source.heads) != [scene.dataset] or source.heads[scene.dataset].out_features != scene.classes
                 or any(isinstance(m, torch.nn.modules.batchnorm._BatchNorm) for m in source.modules())):
@@ -110,6 +131,7 @@ class CurriculumRun:
                          selection='first_min_full_devval_fused_NLL_each_update', device='cpu_fp32', scheduler=None)
         # Omit the optional field when off, preserving existing CUR-S3 contracts.
         if self.observation_policy is not None: self.spec['observation_policy_hash'] = expected_observation_hash
+        self.spec.update(self._contract_extensions())
         self.contract_hash = digest(self.spec)
         self.rng = np.random.default_rng(self.spec['sampler_seed'])
         self.torch_rng = torch.Generator().manual_seed(torch_seed).get_state()
@@ -122,14 +144,15 @@ class CurriculumRun:
     def completed(self): return self.ledger.completed
 
     def _seal(self):
-        self._state = state_hash(self.model)
+        self._state = self._model_hash(self.model)
         self._history = digest(self.history)
 
     def _check(self):
         if self.failed: raise ValueError('Failed run must be preserved and diagnosed')
-        validate_source(self.source)
-        validate_source(self.model)
-        if (digest(self.spec) != self.contract_hash or state_hash(self.source) != self.spec['source_state']
+        self._validate_model(self.source)
+        self._validate_model(self.model)
+        self._check_extensions()
+        if (digest(self.spec) != self.contract_hash or self._model_hash(self.source) != self.spec['source_state']
                 or self.source.export_config() != self.spec['architecture']
                 or getattr(self.source, 'training_config', {}) != self.spec['source_training_config']
                 or getattr(self.model, 'training_config', {}) != self.spec['source_training_config']
@@ -138,7 +161,7 @@ class CurriculumRun:
                 or self.plan.plan_hash != self.spec['exposure_hash']
                 or (None if self.observation_policy is None else self.observation_policy.policy_hash) != self.spec.get('observation_policy_hash')
                 or (None if self.policy is None else self.policy.policy_hash) != self.spec['policy_hash']
-                or state_hash(self.model) != self._state or digest(self.history) != self._history
+                or self._model_hash(self.model) != self._state or digest(self.history) != self._history
                 or self.completed != len(self.history)):
             raise ValueError('Frozen data/source/contract or live progress changed')
         if any(not p.requires_grad for p in self.model.parameters()): raise ValueError('Full-model trainability changed')
@@ -187,7 +210,7 @@ class CurriculumRun:
                 self.model.train(); self.optimizer.zero_grad(set_to_none=True)
                 extra = {} if self.observation_policy is None else dict(observation_view=self.observation_policy.view(
                     self.scene, self.record, tile, phase='training', step=n))
-                outputs = _forward(self.model, self.scene, tile, **extra)
+                outputs = self._training_forward(tile, n, extra)
                 loss = curriculum_loss(outputs, self.scene, self.record, tile, policy=self.policy,
                                        step=None if self.policy is None else n, class_balance=True)['total']
                 if not torch.isfinite(loss): raise ValueError('Nonfinite loss')
@@ -199,9 +222,9 @@ class CurriculumRun:
                         names.append(name); gradient[_group(name)] += float(p.grad.abs().sum())
                 if not names: raise ValueError('No optimizer gradients')
                 self.optimizer.step()
-                validation = evaluate_validation(self.model, self.scene, self.record)
+                validation = self._evaluate(self.model)
                 self.torch_rng = torch.get_rng_state().clone()
-            validate_source(self.model)
+            self._validate_model(self.model)
             if not _finite(validation['nll']): raise ValueError('Nonfinite validation')
             changed = dict.fromkeys(gradient, 0)
             for name, p in self.model.named_parameters(): changed[_group(name)] += int((before[name] != p.detach()).sum())
@@ -209,7 +232,8 @@ class CurriculumRun:
             weights = np.ones(len(ids)) if self.policy is None else self.policy.weights(ids, step=n)
             row = dict(**event, loss=float(loss.detach()), gradient_parameters=names, gradient_l1=gradient,
                        changed_parameters=changed, weights=weights.tolist(), validation=validation,
-                       state_hash=state_hash(self.model))
+                       state_hash=self._model_hash(self.model))
+            row.update(self._history_extensions(outputs))
             if self.observation_policy is not None: row['observation'] = self.observation_policy.training_record(n)
             self.ledger.append(event); self.history.append(row)
             if self.selected_step is None or validation['nll'] < self.history[self.selected_step-1]['validation']['nll']:
@@ -270,7 +294,7 @@ class CurriculumRun:
 
     def save(self, path):
         self._check()
-        packet = dict(format='vca-curriculum-run-v1', spec=deepcopy(self.spec), contract_hash=self.contract_hash,
+        packet = dict(format=self.FORMAT, spec=deepcopy(self.spec), contract_hash=self.contract_hash,
                       state=deepcopy(self.model.state_dict()), optimizer=deepcopy(self.optimizer.state_dict()),
                       rng=deepcopy(self.rng.bit_generator.state), torch_rng=self.torch_rng.clone(),
                       history=deepcopy(self.history), progress=self.ledger.snapshot(),
@@ -280,7 +304,7 @@ class CurriculumRun:
     def save_failure(self, path):
         """Preserve partial optimizer/model state for diagnosis, never for resume."""
         if not self.failed: raise ValueError('Only a failed run has diagnostic evidence')
-        packet = dict(format='vca-curriculum-failure-v1', resumable=False, failure=deepcopy(self.failure),
+        packet = dict(format=self.FAILURE_FORMAT, resumable=False, failure=deepcopy(self.failure),
                       spec=deepcopy(self.spec), contract_hash=self.contract_hash,
                       state=deepcopy(self.model.state_dict()), optimizer=deepcopy(self.optimizer.state_dict()),
                       rng=deepcopy(self.rng.bit_generator.state), torch_rng=self.torch_rng.clone(),
@@ -300,31 +324,35 @@ class CurriculumRun:
 
     @classmethod
     def load(cls, source, scene, record, path, *, plan, policy, expected_sha256, expected_contract_hash,
-             observation_policy=None):
+             observation_policy=None, constructor_kwargs=None):
+        if cls is CurriculumRun and constructor_kwargs is not None:
+            raise ValueError('Base curriculum does not accept an execution extension')
         raw = Path(path).read_bytes()
         if hashlib.sha256(raw).hexdigest() != expected_sha256: raise ValueError('Run file hash mismatch')
         v = torch.load(io.BytesIO(raw), map_location='cpu', weights_only=True)
         keys = {'format','spec','contract_hash','state','optimizer','rng','torch_rng','history','progress','selected_step','selected_state'}
-        if not isinstance(v, dict) or set(v) != keys or v['format'] != 'vca-curriculum-run-v1' or v['contract_hash'] != expected_contract_hash:
+        if not isinstance(v, dict) or set(v) != keys or v['format'] != cls.FORMAT or v['contract_hash'] != expected_contract_hash:
             raise ValueError('Invalid registered packet')
         s = v['spec']
         if not isinstance(s, dict) or digest(s) != expected_contract_hash: raise ValueError('Invalid contract')
         run = cls(source, scene, record, plan=plan, policy=policy, lr=s['lr'], torch_seed=s['torch_seed'],
                   expected_source_state=s['source_state'], expected_plan_hash=s['exposure_hash'], expected_policy_hash=s['policy_hash'],
-                  observation_policy=observation_policy, expected_observation_hash=s.get('observation_policy_hash'))
+                  observation_policy=observation_policy, expected_observation_hash=s.get('observation_policy_hash'),
+                  **(constructor_kwargs or {}))
         if run.spec != s: raise ValueError('Resume contract changed')
         run.ledger = ExposureLedger(run.plan, v['progress']); n = run.completed; history = v['history']
         if not isinstance(history, list) or len(history) != n: raise ValueError('Incomplete history')
         rng = np.random.default_rng(s['sampler_seed'])
         for step, row in enumerate(history, 1):
             event = run.plan.event(step); tile, anchor = run.sampler.draw(rng)
-            extra = set() if observation_policy is None else {'observation'}
+            extra = (set() if observation_policy is None else {'observation'}) | run._history_extension_keys()
             if (set(row) != set(event) | {'loss','gradient_parameters','gradient_l1','changed_parameters','weights','validation','state_hash'} | extra
                     or any(row[k] != val or type(row[k]) != type(val) for k, val in event.items())
                     or (tile['id'], anchor) != (row['tile_id'], row['anchor'])
                     or not _finite(row['loss']) or row['loss'] < 0): raise ValueError('Invalid execution history')
             if observation_policy is not None and row['observation'] != observation_policy.training_record(step):
                 raise ValueError('Wrong frozen observation execution')
+            run._validate_history_extensions(row)
             names = row['gradient_parameters']
             if not isinstance(names, list) or not names or names != [k for k in s['parameters'] if k in names]: raise ValueError('Invalid gradient parameters')
             for k in ('gradient_l1','changed_parameters'):
@@ -340,24 +368,19 @@ class CurriculumRun:
         selected = None if n == 0 else min(range(n), key=lambda i:history[i]['validation']['nll']) + 1
         if v['selected_step'] != selected or v['rng'] != rng.bit_generator.state: raise ValueError('Wrong selection/sampler state')
         run._validate_optimizer(v['optimizer'], history)
-        def restore(state):
-            ref = run.model.state_dict()
-            if (not isinstance(state, dict) or set(state) != set(ref) or any(not torch.is_tensor(t) or t.shape != ref[k].shape
-                    or t.dtype != ref[k].dtype or not torch.isfinite(t).all() for k,t in state.items())): raise ValueError('Invalid model state')
-            run.model.load_state_dict(state)
         with torch.random.fork_rng(devices=[]):
             try: torch.set_rng_state(v['torch_rng'])
             except Exception as e: raise ValueError('Invalid torch RNG') from e
             if n:
-                restore(v['selected_state'])
-                if state_hash(run.model) != history[selected-1]['state_hash'] or evaluate_validation(run.model,scene,record) != history[selected-1]['validation']:
+                run._restore_model(v['selected_state'])
+                if run._model_hash(run.model) != history[selected-1]['state_hash'] or run._evaluate(run.model) != history[selected-1]['validation']:
                     raise ValueError('Selected state/validation mismatch')
             elif v['selected_state'] is not None: raise ValueError('Selection before first update')
-            restore(v['state'])
+            run._restore_model(v['state'])
             if n:
-                if state_hash(run.model) != history[-1]['state_hash'] or evaluate_validation(run.model,scene,record) != history[-1]['validation']:
+                if run._model_hash(run.model) != history[-1]['state_hash'] or run._evaluate(run.model) != history[-1]['validation']:
                     raise ValueError('Last state/validation mismatch')
-            elif state_hash(run.model) != s['source_state'] or not torch.equal(v['torch_rng'], run.torch_rng): raise ValueError('Zero-step initialization changed')
+            elif run._model_hash(run.model) != s['source_state'] or not torch.equal(v['torch_rng'], run.torch_rng): raise ValueError('Zero-step initialization changed')
         run.optimizer.load_state_dict(v['optimizer']); run.rng.bit_generator.state = v['rng']; run.torch_rng = v['torch_rng'].clone()
         run.history = deepcopy(history); run.selected_step = selected; run.selected_state = deepcopy(v['selected_state'])
         run._seal(); run._check()
