@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "issue": 210,
+  "scope": "Existing project M7 reweighting and two core M6/M7 factors; no new algorithm or external replication",
+  "project_sources": [
+    {"commit": "331d718567b1a9726934f445665999df972392b1", "paths": ["model/graph_edge_update.py", "model/VCASAHGCN.py", "model/interaction_config.py", "target_bn_calibration.py", "none_full_transfer.py", "tests/test_interaction_modules.py"], "action": "Read actual candidate-edge prior/proposal mixture, positive support and isolated fallback; reuse original implementations without changes"},
+    {"commit": "4ede0984ba78c9e31c5a176c4f8e54c74da3e97e", "paths": ["g4_interaction_target.py", "docs/references/g4-interaction-target-project-reuse.json"], "action": "Reuse accepted target initialization/ordered BN composition and extend explicit operator binding to original edge mode/mix/embed dimensions"}
+  ],
+  "design_sources": ["research/研究内容整合与详细搭建测试计划_2026-10-28.md P1 section7", "research/模块化搭建与测试消融实施计划_2026-10-28.md section11"],
+  "external_code_copied": false,
+  "new_dependency": false,
+  "upstream_executed": false,
+  "paper_reproduction_claim": false,
+  "license_scope": "No new external source incorporated; no additional license grant asserted for existing project files",
+  "limits": ["Reweighting preserves positive candidate edges plus isolated self-loop fallback; not hard pruning or remote addition", "Joint relationships already carry CNN information without direct messages", "Target-initialized M6/M7 parameters are not source-pretrained M6/M7", "Actual graph row normalization is part of the original operator; normalization-only control remains a real experiment requirement", "No real efficacy or speed conclusion"]
+}
