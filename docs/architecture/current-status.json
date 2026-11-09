@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 277,
+  "issue": 279,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "3cf9e4988d207c932ecde183db6108e3d13c5755",
+  "main_snapshot": "34884cfdc99e524f84024a2008bfa3edeac5bac1",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -668,6 +668,14 @@
       "remaining": "真实多种子恢复/固定验证逐类与小类、GPU/部署成本仍待。两层TQ文件减17.79%但CPU无加速，浮点默认。下一DY-0离线互补与成本上界工程。",
       "report": "research/reports/TQ_整网打包恢复与三臂等预算工程验收_20261109.md",
       "chat_report": "本聊天TQ-2完整CPU工程交付，随后继续DY-0。"
+    },
+    {
+      "id": "DY-0离线互补与块级成本上界",
+      "state": "CPU诊断工程通过，单个既有短测模型无互补收益",
+      "evidence": "tested c09f27606ba381818ea91afd43ca6fb8e94e9825；8专项/45含专项回归、checker478Python142JSON。PaviaU固定45验证标签/41块，独立82头（含空数组）/243混淆格/69文件不变。两路共同正确5、共同错误40，oracle11.11%，优化query0。",
+      "remaining": "DY-1实际懒执行/跳图、轻模型训练/校准独立确认、多种子逐类/成本曲线仍待。终端CNN不是快路径，本例非充分训练负结论。",
+      "report": "research/reports/DY0_离线互补与块级成本上界工程验收_20261109.md",
+      "chat_report": "本聊天DY-0完整CPU工程交付，随后继续DY-1。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -715,6 +723,13 @@
       "tested_sha": "8f6e3c440eac3f5953227bab4914f1755eaa9c2d",
       "merge_sha": "3cf9e4988d207c932ecde183db6108e3d13c5755",
       "scope": "TQ-1 CPU layer10/71 and actual2bit weights; no accuracy/speed claim"
+    },
+    {
+      "pr_number": 278,
+      "head_sha": "747639a75ec60a3a5121fdeb2ab1584146482e97",
+      "tested_sha": "24e56fab584c6b109360c416e645d706c3df562f",
+      "merge_sha": "34884cfdc99e524f84024a2008bfa3edeac5bac1",
+      "scope": "TQ-2 CPU8/90 and independent30heads/39files, no accuracy/speed claim"
     }
   ]
 }
