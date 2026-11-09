@@ -11,6 +11,7 @@ import torch
 from torch.nn import functional as F
 
 from compression.int8_checkpoint import save_int8, load_int8
+from compression.int8_model import calibration_contract, calibrate_model
 from compression.ternary import TernaryMatrix
 from compression.ternary_model import ternarize_model, pack_model, PackedTernary, validate_model
 from compression.ternary_checkpoint import save_ternary, load_ternary
@@ -63,6 +64,13 @@ class TernaryModelTests(unittest.TestCase):
         for model in (tq,pack_model(tq),iq):
             with self.assertRaises(ValueError): ternarize_model(model,paths=PATHS,threshold_ratio=.05)
         with self.assertRaises(ValueError): pack_model(pack_model(tq))
+
+    def test_reverse_int8_wrapping_rejects_disjoint_ternary_layer(self):
+        source,scene,record=fixture()
+        tq=ternarize_model(source,paths=PATHS[:1],threshold_ratio=.05)
+        ids=[r['id'] for r in record['roles'] if r['role']=='devtrain'][:1]
+        with self.assertRaises(ValueError): calibration_contract(tq,scene,record,PATHS[1:],ids)
+        with self.assertRaises(ValueError): calibrate_model(tq)
 
     def test_two_phases_disk_reload_trainability_rng_and_hash_boundary(self):
         model,scene,record=fixture(); model.heads[scene.dataset].weight.requires_grad_(False)
