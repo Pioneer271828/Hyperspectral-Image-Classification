@@ -1,0 +1,12 @@
+{
+  "issue": 353,
+  "plan_sections": ["master16/22 WP06", "implementation19.7"],
+  "base_commit": "6e198b4181b8a047503f5efb446f0b17089bb06e",
+  "scope": "Artifact provenance and label authorization integration; no new research mechanism",
+  "reuse": ["evaluation.frozen_representation_capture", "evaluation.linear_probe", "loadData.target_label_protocol.phase_view", "g4_support_context.validate_overlay", "model.region_pixel_alignment.broadcast_regions"],
+  "paper_and_code_review": "docs/references/wp06-linear-probe-reference-review.json",
+  "capture_producer": "f090ca302192a065de852c43e07e4f3beaeea6b4",
+  "external_code_copied": false,
+  "new_dependency": false,
+  "limits": ["Historical saved single-case features only", "Same-scene transductive labels; reused selection validation", "Full54 regional summary alone cannot supply pixel features", "No real probe benefit implied"]
+}
