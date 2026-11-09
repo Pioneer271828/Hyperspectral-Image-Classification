@@ -16,6 +16,7 @@ from model.region_pixel_alignment import RegionPixelAlignment, pool_regions, bro
 from model.region_residual_decomposition import RegionResidualDecomposition
 from model.cross_branch_interaction import BidirectionalSelectiveInteraction
 from model.graph_edge_update import GraphEdgeUpdater
+from model.budgeted_graph_router import BudgetedGraphRouter
 from model.interaction_config import InteractionConfig, interaction_kwargs
 
 
@@ -315,6 +316,7 @@ class VCASAHGCNBackbone(nn.Module):
         coverage_init_seed=0,
         coverage_descriptor_version=1,
         coverage_condition="continuous",
+        graph_route=None,
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
@@ -439,6 +441,7 @@ class VCASAHGCNBackbone(nn.Module):
         # M4 initialization is RNG-neutral; default-off keeps legacy state keys.
         self.region_residual = (RegionResidualDecomposition(64, region_residual_mode)
                                 if region_residual_mode != "none" else None)
+        self.graph_router = BudgetedGraphRouter(**graph_route) if graph_route is not None else None
 
     def add_dataset(self, dataset_name):
         if dataset_name in self.dataset_names:
@@ -548,7 +551,7 @@ class VCASAHGCNBackbone(nn.Module):
         cnn_result, hgnn_result, interaction_info = self.forward_stages(
             cnn_input, region_input, Q, A, dataset_name, return_graph_info, return_diagnostics,
         )
-        if self.interaction_config.active and return_graph_info:
+        if (self.interaction_config.active or self.graph_router is not None) and return_graph_info:
             graph_info["interaction"] = interaction_info
         fused = self.fuse_features(cnn_result, hgnn_result)
         if return_graph_info:
@@ -604,6 +607,13 @@ class VCASAHGCNBackbone(nn.Module):
                 regions, A, aligned_pixels, collect_stats=collect_stats, return_diagnostics=return_diagnostics,
             )
             info.update(edge_info)
+        if self.graph_router is not None:
+            aligned_pixels = self.alignment.to_regions(pixels, Q) if self.graph_router.mode == "joint" else None
+            A, route_info = self.graph_router(A, regions, aligned_pixels)
+            if not return_diagnostics:
+                route_info.pop("route_indices")
+                route_info.pop("route_weights")
+            info.update(route_info)
         if return_diagnostics and "cnn_to_graph_gate" in info:
             info["cnn_to_graph_gate_pixels"] = broadcast_regions(Q, info["cnn_to_graph_gate"]).detach()
         cnn = self.cnn_stage2(pixels, (height, width), dataset_name)
@@ -637,6 +647,8 @@ class MultiDatasetVCASAHGCN(nn.Module):
 
     def export_config(self):
         kwargs = strip_default_coverage(self.backbone_kwargs)
+        if kwargs.get("graph_route") is None:
+            kwargs.pop("graph_route", None)
         kwargs["dataset_names"] = list(self.heads.keys())
         return {"format_version": 1, "class_counts": {name: head.out_features for name, head in self.heads.items()},
                 "backbone_kwargs": kwargs}

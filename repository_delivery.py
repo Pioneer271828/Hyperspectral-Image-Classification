@@ -22,7 +22,7 @@ def render_status(value):
         '> 历史过程见[归档快照](历史状态快照_20261105.md)；归档中的下一步不作为当前执行队列。', '',
         '更新日期：' + value['as_of'] + '。工程通过、真实效果与主分支交付分别判断。', '',
         '- 开发整合分支：`' + value['development_branch'] + '`。',
-        '- main修复候选：`' + value['main_repair_branch'] + '`；合并状态：`' + value['main_merge'] + '`。',
+        '- main修复分支：`' + value['main_repair_branch'] + '`；交付状态：`' + value['main_merge'] + '`（只指已记录批次，不代表全部研究完成）。',
         '- 自动验收运行器：`' + value['ci_runner'] + '`；未注册不等于CI已经运行。',
         '- 本次整改不启动真实训练或query计分；实验实时进度以各冻结批次回执为准。', '',
         '| 模块 | 当前状态 | 已有证据 | 剩余工作 |',
@@ -37,10 +37,25 @@ def render_status(value):
 
 
 def validate_status(value, root):
-    if (value.get('schema_version') != 1 or value.get('main_merge') != 'pending_review'
+    if (value.get('schema_version') != 1 or value.get('main_merge') not in ('pending_review', 'reviewed_batches_merged')
             or value.get('ci_runner') not in ('registration_required', 'registered')
             or value.get('real_training_started_by_this_task') is not False):
         raise ValueError('Delivery scope/status differs; register an explicit new status policy')
+    if value['main_merge'] == 'reviewed_batches_merged':
+        evidence = value.get('main_merge_evidence')
+        if not isinstance(evidence, list) or not evidence:
+            raise ValueError('Merged batches require explicit reviewed merge evidence')
+        numbers = []
+        for row in evidence:
+            if (not isinstance(row, dict) or type(row.get('pr_number')) is not int
+                    or row['pr_number'] <= 0 or not isinstance(row.get('scope'), str) or not row['scope']):
+                raise ValueError('Invalid merged PR evidence')
+            numbers.append(row['pr_number'])
+            for key in ('head_sha', 'tested_sha', 'merge_sha'):
+                if not isinstance(row.get(key), str) or not re.fullmatch('[0-9a-f]{40}', row[key]):
+                    raise ValueError('Full reviewed merge SHA required')
+        if len(numbers) != len(set(numbers)):
+            raise ValueError('Duplicate merged PR evidence')
     root = Path(root).resolve()
     modules = value['modules']
     if not modules or len({m['id'] for m in modules}) != len(modules):
@@ -75,6 +90,13 @@ def check_repository(root, expected_commit=None):
         if subprocess.run(['git', '-C', str(root), 'merge-base', '--is-ancestor', sha, head],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
             raise ValueError('Required repair/module not included: ' + name)
+    for row in value.get('main_merge_evidence', []):
+        for sha, target in [(row['head_sha'], row['merge_sha']),
+                            (row['tested_sha'], row['merge_sha']),
+                            (row['merge_sha'], value['main_snapshot'])]:
+            if subprocess.run(['git', '-C', str(root), 'merge-base', '--is-ancestor', sha, target],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+                raise ValueError('Recorded main merge ancestry not present')
     for path in value['frozen_runtime_paths']:
         if path not in ('model', 'loadData', 'configs/experiments') and not path.endswith('.py'):
             raise ValueError('Unexpected runtime guard path')
@@ -103,5 +125,7 @@ def check_repository(root, expected_commit=None):
     return {'status': 'passed', 'commit': head, 'branch': git('branch', '--show-current'),
             'python_files': python_count, 'json_files': json_count,
             'included_modules': list(value['required_ancestors']),
-            'frozen_runtime_unchanged': True, 'main_merged': False,
+            'frozen_runtime_unchanged': True,
+            'main_merged': value['main_merge'] == 'reviewed_batches_merged',
+            'main_merge_scope': 'recorded_pr_batches_only',
             'ci_runner': value['ci_runner'], 'new_real_training': False}

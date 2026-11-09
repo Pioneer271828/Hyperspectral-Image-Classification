@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 167,
+  "issue": 266,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "4d2c7dbe4a081d671b1367bc4fb3eabf5e929ccc",
-  "main_merge": "pending_review",
+  "main_snapshot": "4d0b96474978287a65a852bb6472d57a8de9a22f",
+  "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
@@ -18,7 +18,7 @@
     "m4_source_handoff": "0de46ee00946166a84c9ad50fd027bba2c56d679",
     "tool_integration": "1c40f249e2277a4356d63c8e8db35d6aa9282791"
   },
-  "frozen_runtime_reference": "0de46ee00946166a84c9ad50fd027bba2c56d679",
+  "frozen_runtime_reference": "8289e227275eabbafbb1eaea75cf4d6b0c1e8580",
   "frozen_runtime_paths": [
     "model",
     "joint_training.py",
@@ -632,6 +632,29 @@
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "e3_budgeted_graph_engineering_accepted_real_effects_pending",
-  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
+  "execution_state": "authorized_main_pr_review_complete_return_to_module_plan",
+  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。",
+  "main_merge_evidence": [
+    {
+      "tested_sha": "b985634b22ba77422bb8c91143bbc0a0337707ff",
+      "pr_number": 169,
+      "merge_sha": "537a730bc3bbaeba518e49053d5cda7a7ff2346f",
+      "scope": "VCA cache repair: LXC CPU35/GPU3 and smoke",
+      "head_sha": "b985634b22ba77422bb8c91143bbc0a0337707ff"
+    },
+    {
+      "tested_sha": "778e714bcf0e60bc6b7ebe053fb4c4408ade0c4a",
+      "pr_number": 267,
+      "merge_sha": "b1eb58940a29e7bdfdf9f32ebecaaccf66ed6228",
+      "scope": "accepted development consolidation: LXC CPU527; component GPU evidence reused, no fresh integration GPU",
+      "head_sha": "778e714bcf0e60bc6b7ebe053fb4c4408ade0c4a"
+    },
+    {
+      "pr_number": 268,
+      "head_sha": "a5c05fbdc2ef8dbf85f50e56d79d55d0ba17617e",
+      "tested_sha": "8078aa3a98fcb152f6991c0333b8146fe83bf487",
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f",
+      "scope": "48 engineering heads; scoped788 test matrix:781 current passes,5 historical success paths verified separately,2 GPU-only not rerun; original failed full run retained; not a new scientific success"
+    }
+  ]
 }
