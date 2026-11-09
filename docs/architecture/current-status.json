@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-08",
+  "as_of": "2026-11-09",
   "issue": 167,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
@@ -160,9 +160,9 @@
     },
     {
       "id": "G4完整54训练复盘导出工程",
-      "state": "独立复盘导出模块工程验收通过，真实全54复盘待训练及独立审计",
+      "state": "独立复盘导出工程已通过；后续184全54真实复盘已交付，见完整实验记录",
       "evidence": "Issue186/PR187；实际ad60ce0a863aad1991ee6c84d547c3efd995290f，rmvision CPU7/7 50.309s、GPU16/16 231.098s、完整565项564通过+1GPU专用跳过276.393s，跳过项已GPU通过；checker360Python83JSON/help/PNG视觉QA通过；全54合成JSON导出、首次最小NLL、逐类NA、不可覆盖认证哈希及访问/输出负例通过，原331生产文件未改",
-      "remaining": "Issue184全54接受和独立审计通过后运行本导出器完成真实曲线/逐类/成本复盘，再统一冻结query；工程通过不代表真实精度收益",
+      "remaining": "原等待184的条件已解除，不重复导出或重开训练；真实复盘/冻结query/负结果以184完整实验记录为准，保留原工程验收范围",
       "report": "research/reports/G4MatchedTargetReview_完整54训练复盘导出工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue186复盘导出工程模块完成报告；持久报告及g4-matched-target-review-engineering-results.json为证据，不重复交付"
     },
@@ -170,7 +170,7 @@
       "id": "G4独立支持集与K输入绑定工程",
       "state": "27支持/K输入绑定及独立零更新验收通过，真实重复实验待登记执行",
       "evidence": "Issue188/PR189；实际937861fe87ce1fe619268063dfed1193d416853e；rmvision CPU7/7 6.562s、完整572项571通过+1既有GPU专用跳过285.960s，checker363Python84JSON/help通过；LXC CPU7/7 9.649s；真实27覆盖层13.406s，独立54阶段/108标签张量/27观察图/47文件不变160.582s；输入18文件不变，更新0/query0，无GPU上下文；原331文件未改",
-      "remaining": "Issue190有限12步显式目标工程已验收；184完整接受/独立审计/真实复盘/冻结query后才登记真实支持集/K重复；空间/传感器和head-only/light-module仍必测",
+      "remaining": "184完整实验已交付，复用27输入推进真实支持512/2048与K1/5短测及后续公平重复；空间/传感器和完整参数范围对照仍必测，不重新等待184",
       "report": "research/reports/G4SupportContext_独立支持集与K输入绑定工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue188独立支持集与K输入绑定工程模块完成报告；持久报告及g4-support-context-engineering-results.json为证据，不重复交付"
     },
@@ -178,7 +178,7 @@
       "id": "G4独立支持集与K目标训练工程",
       "state": "有限12步工程验收通过，真实支持集/K训练与效果尚未执行",
       "evidence": "Issue190/PR191；实际e7424559e1bc72c655f511c213e551ced9b95be3，rmvision CPU5/5 41.286s、GPU5/5 65.231s、完整577项576通过+1既有GPU专用跳过336.113s；六角色12与2+10/完成0/3精确重载、CPU状态精确恢复、实际CLI通过。LXC真实Xuzhou support512/K1/model64六初始化与184冻结状态相同，63文件不变47.675s，更新0/forward0/query0，无GPU上下文。原331文件不变；CLI输出、CUDA环境和证据hash转录失败保留",
-      "remaining": "Issue192完整源仅头/适配器有限工程已验收；184仍按全54接受→331独立审计→186真实复盘→全冻结query/预登记结论推进，之后另登记支持/K及参数范围真实对照；空间/传感器和波长质量等仍必测",
+      "remaining": "下一优先补真实独立支持512/2048与K1/5的12步/恢复/逐类接受闭环；复用已验收188输入与192参数范围工程。184完整实验已交付。真实完整对照、空间/传感器和波长质量仍必测",
       "report": "research/reports/G4SupportTarget_独立支持集与K目标训练工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue190独立支持集与K目标训练工程模块完成报告；持久报告及g4-support-target-engineering-results.json为证据，不重复交付"
     },
@@ -224,9 +224,9 @@
     },
     {
       "id": "G4完整54冻结评价预登记分析工程",
-      "state": "预登记主要/次要判据及全54冻结结果身份工程通过，真实query分析未执行",
+      "state": "预登记分析工程已通过；后续184真实全54query分析已交付，主要及四次要收益未通过",
       "evidence": "Issue204/PR205；实际73234283581c536f6e42c49bf0b3326ce3067d60，授权LXC CPU9/9 13.732s、全613项612通过+1既有GPU专用跳过731.784s，checker384Python93JSON/help；新GPU专项0，计数/JSON组件。精确混淆分数计算主要/四次要保护，场景等权与像素池相反、1/2pp等号和单计数越界、主要失败次要全成功、三头/类别/配对/差中差及原paired_summary一致通过；合成54/162头/18组实际CLI与冻结/复盘/源/路径/禁止Tensor反序列化保护通过。真实query receipt0、NN0/优化0/原GT0，原331 Python/config不改，合成schema不冒充真实81000或PNG视觉QA",
-      "remaining": "184全54训练接受、独立审计、186真实复盘和原331全冻结ordered query后才能运行真实结果判定；本模块不提供真实收益结论。继续206既有M6完整源目标初始化/BN工程；支持/K/参数/空间/传感器、M1/E1/M6/M7/M8真实对照及其余计划范围保留",
+      "remaining": "原184等待条件已解除；完整结论见184实验记录，不重复评分。支持/K/参数/空间/传感器、M1/E1/M6/M7/M8真实对照及其余计划范围保留",
       "report": "research/reports/G4MatchedAnalysis_完整54冻结评价预登记分析工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue204完整54冻结评价预登记分析工程验收进度；报告及g4-matched-target-analysis-engineering-results.json保留完整证据，完成后直接继续206，不重复报告"
     },
@@ -336,7 +336,7 @@
     },
     {
       "id": "G4既有54批次三卡资源续跑交接工程",
-      "state": "资源工程和51接受安全边界后的真实三卡接管通过，184全批次实验仍运行",
+      "state": "资源工程与三卡接管已通过，184随后全批次完成；当前无该批训练等待",
       "evidence": "Issue198 closed/PR200 ready未合；资源侧实际tested/生产5db71e82ad3fc36f3cef7046a22c1162be756097，最终文档235266c7abf0b554d0deaf091704026c1eede52e。授权LXC CPU8项7pass+1GPU-onlyskip4.801s、GPU3专项8/8 102.296s、GPU7可见全585项583pass+2GPU-onlyskip457.483s；额外原CLI GPU3先2→新worker GPU7续1498/完成0→GPU3原严格1500/6指标54召回3精确重载合成用例1/1 100.260s。原331字节/81000预算/数值不改。实际608030三卡1/3/7接管余3例4500预算，first2共6更新；独立外部见证7930输入/51例5763文件与原进度行原样、331/5db干净、旧PID退役/3真实worker可见性/日志哈希通过29.373429s，receipt c444385c6caa03ec977342af749815ec085b772b795709158ee302b878f01e3d。主任务核三文档blob同235及见证副本SHA，精确接纳文档不合资源源码，不冒称主任务复跑资源训练。52c CPU5pass1error1skip5.062s遇受限proc1/cwd，后改核身份协调器直接子进程；rmvision失败/大回执截断拒收记录保留",
       "remaining": "仅资源工程及交接当时见证，非全54数值独立审计或跨卡训练轨迹逐位等价。原wrapper137/77555s为计划协调器交接段，新acceptance.resource_execution和资源elapsed仅覆盖新段；完整报告须分段成本。184真completed/failed/新控制器终止先暂停vca核验，再普通回合331全批次审计+资源终验→186真实复盘→原331全冻结query→204结论；198报告不关闭184、不提前query或发起下一真实实验，main不合",
       "report": "research/reports/G4ResourceHandoff_既有54批次三卡续跑工程与现场交接_20261107.md",
@@ -392,7 +392,7 @@
     },
     {
       "id": "G4完整预算轻量适配多卡队列与独立验收",
-      "state": "Issue247工程验收通过，Issue249双卡真实训练已启动",
+      "state": "Issue247工程通过；Issue249已failed并暂缓恢复，原控制器35例加排空独立1例，共36例证据，无全批接受",
       "evidence": "Issue247/PR248，tested 2cfca12ae52308189c81c6d32dcea10f0ac1b50c。CPU/GPU各4/4，双卡两合成案例3000步、独立审计和只读重入146.557秒。Issue249在物理GPU1/5，54×1500=81000步，登记b3cca8f1028004da30177704b107e959cd2fa47aa7892390522e4589fe39e735，vca每30分钟值守。",
       "remaining": "全54真实接受后复盘并按同协议冻结评价。后续确认独立支持种子、K1/5、源初态表征和M8效果。",
       "report": "research/reports/G4LightFullCampaign_多卡队列与独立验收_20261107.md",
@@ -400,7 +400,7 @@
     },
     {
       "id": "G4轻量适配全54冻结门禁",
-      "state": "门禁工程验收通过，真实训练进行中",
+      "state": "门禁工程通过；Issue249失败批次缺全54接受，真实冻结与query保持关闭",
       "evidence": "tested 480b8a96e6db3660c2a40a63aaa6980ded01fa3e，CPU6/6、CLI与checker通过。合成54全清单、实际3例审计/结果元数据接入、运行中拒绝及零输出核验。无新优化或query访问。",
       "remaining": "固定同协议query入口与预登记配对统计。真实54完整接受、复盘和独立冻结前保持query关闭。",
       "report": "research/reports/G4LightFrozenBoundary_全54冻结门禁工程验收_20261107.md",
@@ -408,7 +408,7 @@
     },
     {
       "id": "G4轻量适配同协议只读评分",
-      "state": "评分入口工程验收通过，真实训练进行中",
+      "state": "评分入口工程通过；Issue249失败批次未完成，不执行真实query",
       "evidence": "Issue249，tested 4be3db3db6b8de5983a761b33c9c5e46d98ae881。CPU专项6/6、相关回归19/19，CLI和checker通过。两种方法各一个1500步合成检查点的只读有序三头评分通过，已核对既有184全54参考行，无原始GT读取。",
       "remaining": "完成训练/验证复盘与成本导出。真实全54独立接受、复盘与冻结后执行同协议评价。",
       "report": "research/reports/G4LightOrderedQuery_同协议只读评分工程验收_20261107.md",
@@ -509,9 +509,25 @@
       "remaining": "多种子真实长窗口、其他场景配对证据和正式裁剪。保留既有HongHu逐类负结果及保护门槛，长训练暂缓。",
       "report": "research/reports/MONHongHuUpdate_逐通道梯度与实际更新短测_20261108.md",
       "chat_report": "本聊天2026-11-08 HongHu逐通道梯度与更新短测。"
+    },
+    {
+      "id": "MON HongHu 512与2048逐通道短测",
+      "state": "四次真实Adam更新及独立复算通过，两个种子无合格候选，保留全部128通道",
+      "evidence": "tested 4695896d38eab523c1b46d92b664102541e0af69。512原游标363/1173及2048原393/1203各独立一步，CPU共340.005s；3072参数通道记录/18432标量独立复算通过5.308s，15保护文件不变。原小类/逐类门槛不变，空名单跳过验证干预，验证标签0/query0。",
+      "remaining": "MON多种子长窗口、其他场景配对更新、正式裁剪/恢复及部署成本仍未完成；当前不为寻找剪枝候选启动长训练。按用户2026-11-09指令转回P4独立支持512/2048与K1/5、空间隔离、严格传感器留出，先复用工程并核清真实短测/元信息/语义映射缺口。",
+      "report": "research/reports/MONHongHuMultiSeedUpdate_512与2048逐通道短测验收_20261109.md",
+      "chat_report": "本聊天2026-11-09 HongHu双种子补测及重心回归P4。"
+    },
+    {
+      "id": "P4优先顺序与剩余计划核对",
+      "state": "计划与证据核对完成，重心转回独立支持/K、空间隔离和严格传感器留出；未新增P4训练验收",
+      "evidence": "核对主清单P4§10.1–10.4、实施计划C1§4/8b/§19、188/190/192/194及C1/G3V3/V4。已有27输入和有界工程可复用，独立支持/K真实短测未完成；空间路径存在但当前G4整景传导不能替代严格隔离；传感器家族/语义合同及物理证据仍有缺项。原249状态failed/35，排空独立receipt passed另1，共36/54，未重启。",
+      "remaining": "按顺序补支持512/2048与K1/5真实短测接受闭环、空间协议接入/覆盖与信息隔离测试、严格传感器源家族/语义/访问合同；其余机制与MON未完成项完整保留，不以找到剪枝候选作为前置。",
+      "report": "research/reports/PlanAlignment_P4优先顺序与剩余搭建核对_20261109.md",
+      "chat_report": "本聊天2026-11-09两份计划对照及重心回归P4。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "mon_honghu_paired_update_short_completed_training_deferred",
+  "execution_state": "mon_honghu_multiseed_short_accepted_return_to_p4_remaining_plan_items",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }

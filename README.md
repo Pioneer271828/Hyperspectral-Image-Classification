@@ -32,8 +32,9 @@ received these changes. The main-based VCA repair is separately reviewable on
 ## Validate remotely
 
 All Python, dependency installation, checks and training run in the authorized
-Linux training container via `ssh rmvision`. Windows is used for editing, reading
-files and Git. Reuse the documented environment; see the [remote guide](docs/guides/remote-validation.md).
+LXC via `ssh -p 1222 lbx@10.69.37.243`. As requested on 2026-11-09, use this endpoint
+without trying `rmvision`. Windows is used for editing, reading files, Git and
+SSH/SCP. Reuse the documented environment; see the [remote guide](docs/guides/remote-validation.md).
 
 In a clean remote checkout, using its existing Python environment:
 

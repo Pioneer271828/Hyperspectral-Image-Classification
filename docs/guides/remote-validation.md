@@ -2,9 +2,9 @@
 
 当前功能基准、完整 SHA、克隆方式与 PR 交付关系见[当前基线指南](current-baseline.md)和[交付台账](../architecture/delivery-status.json)。下文的最初基线环境/验收命令保留原范围，不能把默认 main 或旧模块指纹入口当作后续开发版本。
 
-当前用户授权的备用环境为 `lbx@10.69.37.243:1222` 的 LXC，Python `/home/lbx/hsi-pioneer271828/envs/hsi/bin/python`，代码在 `/home/lbx/hsi-pioneer271828/checkouts/`，数据和运行产物分别在同一专属根目录下的 `datasets/` 与 `runs/`。不在文档中保存密码。每次仍核实可达性、容器、工作树和实际版本；不更改其他项目进程。`ssh rmvision` 恢复后也先核实实际环境，再选择可用的已授权容器。
+2026-11-09用户指定后续使用 `ssh -p 1222 lbx@10.69.37.243` 连接授权 LXC，不再尝试 `rmvision`。Python `/home/lbx/hsi-pioneer271828/envs/hsi/bin/python`，代码在 `/home/lbx/hsi-pioneer271828/checkouts/`，数据和运行产物分别在同一专属根目录下的 `datasets/` 与 `runs/`。认证信息只用于交互登录，不写文件、日志或报告。每次仍核实可达性、容器、工作树和实际版本；不更改其他项目进程。
 
-Windows 仅执行编辑、文件检查、Git 和 SSH/SCP；下面的 Python、pip 和测试命令均在 `ssh rmvision` 登录后的训练容器执行。首次确认 `hostname`、`pwd`、`/.dockerenv`、GPU 和运行环境，复用代码前检查 `git status --short --branch`。
+Windows 仅执行编辑、文件检查、Git 和 SSH/SCP；Python、pip 和测试命令均在上述 LXC 执行。首次确认 `hostname`、`pwd`、`systemd-detect-virt`、GPU 和运行环境，复用代码前检查 `git status --short --branch`。下文 `/home/rmvision/` 路径和版本为历史验收记录，当前执行使用本段明确的 LXC 路径。
 
 ## 代码同步
 
