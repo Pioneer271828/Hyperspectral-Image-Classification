@@ -21,6 +21,11 @@ def cascade(full,light,requests,*,mode='full',criterion=None,threshold=None,min_
         if not torch.equal(value,source[prefixes[prefix]+'.'+suffix]):raise ValueError('Light weights differ from frozen source')
     for v in light.state_dict().values():
         if v.device.type!='cpu' or not torch.isfinite(v).all() or (v.is_floating_point() and v.dtype!=torch.float32):raise ValueError('CPU FP32 light model required')
+    return _execute(full,light,requests,mode=mode,criterion=criterion,threshold=threshold,min_coverage=min_coverage)
+
+
+def _execute(full,light,requests,*,mode='full',criterion=None,threshold=None,min_coverage=1.0):
+    """Shared execution after the caller verifies its exact model-pair contract."""
     if mode not in ('full','fast','adaptive'):raise ValueError('Unknown cascade mode')
     if type(min_coverage) not in (int,float) or not math.isfinite(min_coverage) or not 0<=min_coverage<=1:raise ValueError('Explicit coverage floor required')
     if mode=='adaptive':
