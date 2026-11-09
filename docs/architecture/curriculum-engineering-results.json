@@ -1,0 +1,518 @@
+{
+  "status": "passed_cpu_observation_curriculum_engineering",
+  "issue": 283,
+  "tested_commit": "ed9fe90461ef43d62cbcab66c6ed7316bba39e9b",
+  "branch": "codex/observation-curriculum",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "ed9fe90461ef43d62cbcab66c6ed7316bba39e9b",
+    "branch": "codex/observation-curriculum",
+    "python_files": 484,
+    "json_files": 145,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/curriculum-tests02/cpu.log": {
+      "sha256": "826ef06f3fe8fa93e4ddd447d17fd0c30d4b33c0ff3959217d047e390b712ae3",
+      "passed": 8,
+      "seconds": 4.235
+    },
+    "/home/lbx/hsi-pioneer271828/runs/curriculum-tests02/regression.log": {
+      "sha256": "abeace8ae8b99f3bd284ad1ce78edfbb5b0c491756f220449b79bec469e0e4af",
+      "passed": 41,
+      "seconds": 10.051
+    }
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/receipt.json",
+    "sha256": "efa3a9f06da8f424e7cee1c8484352b7ebae7fc7e973f6af12c54d9790f055c3",
+    "policies": 12,
+    "record_comparisons": 144,
+    "prefix_comparisons": 156
+  },
+  "schedule_rows": [
+    {
+      "seed": 64,
+      "order": "fixed",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/fixed-64.json",
+      "sha256": "5bcba244533281126f54794e8ef0c0bc26073145e3ae86b485670a77d32b5c2a",
+      "policy_hash": "e0deb70bc07f506c7c9a7cf86a821805f41d9b14d5e76d9db1b262b387c68852",
+      "severity_sequence": [
+        0,
+        1,
+        2,
+        0,
+        1,
+        2,
+        0,
+        1,
+        2,
+        0,
+        1,
+        2
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 64,
+      "order": "random",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/random-64.json",
+      "sha256": "11bc39f229023b81b0fba5a66efcc23c51dbc72fac58f1358fedf322b26076be",
+      "policy_hash": "f6d7ac66156a58306ded325a7d0f65e72d81c70ae7e3f8b9a70daff7e28c10ce",
+      "severity_sequence": [
+        0,
+        2,
+        1,
+        0,
+        1,
+        2,
+        2,
+        0,
+        2,
+        1,
+        1,
+        0
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 64,
+      "order": "easy_to_hard",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/easy_to_hard-64.json",
+      "sha256": "65259c38ada8f8b11ace582dac9ee60b0669f2b541bced82a1555936b9c4dc4c",
+      "policy_hash": "24dacde367e8cd7c7d8fd2d27134718cf7c02c913f2807b4cefe194a8837d563",
+      "severity_sequence": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 64,
+      "order": "hard_to_easy",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/hard_to_easy-64.json",
+      "sha256": "d7ebcb9c379951cb4edafd44601973136ad796a861fe8e9840c26bc1e4ebc87a",
+      "policy_hash": "a91b3d0c0a233938afeff772d13be3bae09d3b64b1bd92a330f6fe6eaccaaa44",
+      "severity_sequence": [
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 512,
+      "order": "fixed",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/fixed-512.json",
+      "sha256": "81cb11b77d6e40e0e20a5e12bdf28f573ea86647168111984f3af45fd4c07b19",
+      "policy_hash": "b864f943c97f9fe7c878ae1db2b1e273bdb6c6a8dbd0b44e0d2e8b21eeb78d8f",
+      "severity_sequence": [
+        0,
+        1,
+        2,
+        0,
+        1,
+        2,
+        0,
+        1,
+        2,
+        0,
+        1,
+        2
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 512,
+      "order": "random",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/random-512.json",
+      "sha256": "63689b46d7877240536fa889e9f17db9ac9660e61a61050918b83545763f2a73",
+      "policy_hash": "408fca3232f610ceaaf54652d1c0b936ca002405235e2d0b53f6a7b9bef9cfb4",
+      "severity_sequence": [
+        1,
+        0,
+        0,
+        2,
+        2,
+        1,
+        1,
+        2,
+        0,
+        2,
+        1,
+        0
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 512,
+      "order": "easy_to_hard",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/easy_to_hard-512.json",
+      "sha256": "10eab9a5e38d0b8f78ac8943f6eeb62a221cc0b2f9b34d886c1565e398e87b8d",
+      "policy_hash": "190990d810a7001f253f1ded652c3a8100fc6e25df6a66c00be33b257f7465cb",
+      "severity_sequence": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 512,
+      "order": "hard_to_easy",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/hard_to_easy-512.json",
+      "sha256": "759f6c8d03e06e2796d4b915ea3cf5d76342b7994a091edd6bdea6fc1b680965",
+      "policy_hash": "d3f24521047540a96202e12ae69541b93381c01f38d4c3129545107b5f8dc163",
+      "severity_sequence": [
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 2048,
+      "order": "fixed",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/fixed-2048.json",
+      "sha256": "b59fccb52520aadb2920d3a2e07eea3e74e7ffb8264e43cd423d8424a2ed2693",
+      "policy_hash": "82e8fbe8f84ad39fad6a3a68f5a1c26cd5c375949758acc713fae5113352bbf4",
+      "severity_sequence": [
+        0,
+        1,
+        2,
+        0,
+        1,
+        2,
+        0,
+        1,
+        2,
+        0,
+        1,
+        2
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 2048,
+      "order": "random",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/random-2048.json",
+      "sha256": "172b51ff8c387b41a606770a7cab13064e27c97af04939f32a46bf84d8d8eafa",
+      "policy_hash": "2575803b46f23064932c8e01c5b5208e1efac64377c3ad6afe106702d610a50b",
+      "severity_sequence": [
+        1,
+        1,
+        2,
+        0,
+        2,
+        0,
+        1,
+        1,
+        2,
+        0,
+        2,
+        0
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 2048,
+      "order": "easy_to_hard",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/easy_to_hard-2048.json",
+      "sha256": "3baeb8baecfd4c36e41e4dd67a76ff8bb02026d3eb4bbf005ff3f5d07b364545",
+      "policy_hash": "3f6145a175ef1dbf927999af39073bd442db4b27e3004a4f59eb43f034f8aee3",
+      "severity_sequence": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    },
+    {
+      "seed": 2048,
+      "order": "hard_to_easy",
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-independent02/hard_to_easy-2048.json",
+      "sha256": "e5ad02173a12d202f234a025ceb345d9bda44bc6845d6d50986a5ed44624fe98",
+      "policy_hash": "7e734f3c3406e4c9ac13f7e552e2dcecf1415c28fcf55a61ffca1904eb3ff735",
+      "severity_sequence": [
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "exposure": {
+        "updates": 12,
+        "by_config": {
+          "7f517f97e00a688b0b402e4005866127e5c928bf44a94ca53477ac34e24b5ef1": 4,
+          "92aeadb04c1b568419775e1341c78c13f57036d0ed40501ec0ed0c57db5121b3": 4,
+          "dca93c8cee8cbe531413da2b538bccffea91a72c517c98138584e866d443cf6c": 4
+        },
+        "by_severity": {
+          "0": 4,
+          "1": 4,
+          "2": 4
+        },
+        "total_retained_band_exposures": 52,
+        "record_multiset_hash": "8d93e2835380873383d951ebbd4b3ee4673f6a8e5d899b5d65e659b89834a55c"
+      },
+      "validation_hash": "342087996ef8377961cc399c45f465b99b06ea908836ce622e1cedcaf5065c2d"
+    }
+  ],
+  "synthetic_optimizer_calls_per_targeted_invocation": 80,
+  "synthetic_recovery": "4 orders each12 actual network updates compared to5+7 on disk; model/optimizer/full-validation history and selection exact. Disabled adapter2+2 exact. Fixed one train tile and same support across all arms.",
+  "failures": [
+    {
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-tests01/audit.log",
+      "sha256": "75f61ae814affc8b13942753f9bd59582ee92e693b5e9a044eb601850cfb3f69",
+      "reason": "Initial f0ce policy JSON tuple/list structural equality failed; canonical JSON source plus roundtrip regression added; initial8/41 tests passed but missed full structure assertion"
+    }
+  ],
+  "real_optimizer_updates": 0,
+  "gt_accessed": false,
+  "query_accessed": false,
+  "limitations": [
+    "GPU not tested",
+    "No real accuracy/cost or forgetting result",
+    "Equal marginal counts do not establish matched joint condition-by-tile/class exposure for arbitrary multi-tile schedules",
+    "Progress hash is scheduling state; production recovery must bind optimizer/model/RNG too",
+    "Author source/license remain unverified; independent implementation"
+  ]
+}
