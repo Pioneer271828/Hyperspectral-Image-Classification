@@ -1,0 +1,70 @@
+{
+  "status": "passed",
+  "tested_sha": "3a3638d10a33fbbd11dc11702b2cdd2c20e57bc2",
+  "branch": "codex/dy-budget-curves",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "torch_threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 10,
+      "seconds": 0.128,
+      "command": "python -m unittest tests.test_dynamic_curve -v"
+    },
+    "related": {
+      "passed": 43,
+      "seconds": 2.487,
+      "command": "python -m unittest tests.test_dynamic_curve tests.test_gate_calibration tests.test_route_controls tests.test_adaptive_diagnostics tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "3a3638d10a33fbbd11dc11702b2cdd2c20e57bc2",
+    "branch": "codex/dy-budget-curves",
+    "python_files": 498,
+    "json_files": 152,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/dy-budget-curves-independent01/receipt.json",
+    "sha256": "55f1e7dd35fbe9db2666d44c4b567c41691c1f4ba9d4484a05e18e8193ca6495",
+    "synthetic_protocols": 3,
+    "points": 33,
+    "confusion_cells": 8019,
+    "areas": 36,
+    "existing_cost_rows": 8,
+    "protected_files": 40,
+    "seconds": 0.12594946194440126
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/dy-budget-curves-tests01/audit.log": "2e735496448802a45b793061e660d539343c4d1f3be3f418fac9c1f8cdf6ca0a",
+    "/home/lbx/hsi-pioneer271828/runs/dy-budget-curves-tests01/checker.log": "b87a988f87a30c2ea7d05cf82fb60d1ae576230f17fbbcce0f6b8b99e3945b26",
+    "/home/lbx/hsi-pioneer271828/runs/dy-budget-curves-tests01/cpu.log": "38c61e79ab8338ae59aa6837394b4493fec854832d30bc1bd046b9d1a659af8b",
+    "/home/lbx/hsi-pioneer271828/runs/dy-budget-curves-tests01/regression.log": "eb6275f2af1b91b7972090975d3ceace46a01dc1ef94e638aa49e7eb518b027d"
+  },
+  "optimizer_updates": 0,
+  "query": 0,
+  "limitations": [
+    "Synthetic probability/timing oracles only; prior real CPU timings validated separately without attaching invented accuracy.",
+    "Caller authenticates measurement provenance and preregistration chronology.",
+    "No real accuracy curve/GPU/energy/memory/statistical noninferiority; fixed-path model experiment pending."
+  ]
+}
