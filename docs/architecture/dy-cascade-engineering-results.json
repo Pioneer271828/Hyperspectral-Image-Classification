@@ -1,0 +1,251 @@
+{
+  "status": "passed_cpu_lazy_cascade_engineering",
+  "issue": 281,
+  "tested_commit": "f042520df090b1bfda7a5684bdb615dd52951007",
+  "branch": "codex/dy-lazy-cascade",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "f042520df090b1bfda7a5684bdb615dd52951007",
+    "branch": "codex/dy-lazy-cascade",
+    "python_files": 482,
+    "json_files": 143,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/dy-cascade-tests01/cpu.log": {
+      "sha256": "c7fe8b379a493dd177751089ce4df66d7df5f492f9b27016e8d3ed74dd06df4c",
+      "passed": 9,
+      "seconds": 0.67
+    },
+    "/home/lbx/hsi-pioneer271828/runs/dy-cascade-tests01/regression02.log": {
+      "sha256": "4bd57425f787ffb1af309530af346db6a24043e3aa88882d19ae8b7401f70447",
+      "passed": 51,
+      "seconds": 8.518
+    }
+  },
+  "failures": [
+    {
+      "path": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-tests01/regression.log",
+      "sha256": "e63a03fbec165e73332c71a9ceb6ca01b26e5bc0a6bcf01b030d47e00ac4c8f6",
+      "reason": "Old test_ternary_model imports test_int8_model; first command omitted tests from PYTHONPATH; corrected to .:tests, no source change"
+    }
+  ],
+  "real_inference": {
+    "status": "passed_readonly_lazy_execution",
+    "commit": "f042520df090b1bfda7a5684bdb615dd52951007",
+    "protected_files": {
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/acceptance.json": "413b23ab9350201bbd2cf10de675ff355a06a2f7d2207774ec487da709d6509c",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/registration.json": "fc61d64f204a78595856cd84394809911cce89eb83e19a097ecb3fb1980d4ad2",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/state.pt": "6fff4651587b3dba42bcb40c4c7e43b8e3f0f215e7088b7745203e3c7ab4e647",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/result.json": "671c11a5fb12104f11d5935c2e2cd9fc2cec01eb26e7ad6d98be90c05edf607f",
+      "/home/lbx/hsi-pioneer271828/datasets/snapshots/joint-honghu-20261103-issue97/dataset/PaviaU/PaviaU.mat": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-plan.json": "3f15f0650f500959e603bccd2614226c37089eafc8f06637b010bd69347363d8",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-statistics.json": "5996f5ad84917f7ad88cd2d62c8cd9f7e9b7a81f8a003df4fe9fd672ef2e4162",
+      "/home/lbx/hsi-pioneer271828/runs/e4b-online-tta-pavia01/receipt.json": "2435a74dc65e27b496db58b998498fb84cb91792facccdef7313ef445c6b410a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/receipt.json": "bc880739cc14817102abee2895d4de1a68e2e8077dbf399ce0dcf11d9d67170a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/registration.json": "51d21d9bc436f266c4cfe11ea3efbd58d6faef32d8394617e28a304e98e5cbdc",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile0.npz": "76ac4d37fb21b8f3d99e5ad84f926ac54e922fd71521e2a4d5c49621035a375c",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile0.npz": "fd3570bc8e82efe498cddd5a2adddc799bb62ec1313651610193d300745d4016",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile0.npz": "4a4c82e9cc9227a0e4cf92e4ad219afe658fdfb4358f44f68551f8ba954919ab",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile0.npz": "359a91b8b3a6be6ed63949f734cd0bd36e89bc434c2c53594f17206c4e708128",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile1.npz": "fd7e9f2bc598b327b9c61ec1b387c4b423a09b537d597c16ea3417078dd6abf0",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile1.npz": "360a675ea86387a10c32e204c547a4058d251d3f4daec7ad5db4aadd7dacc619",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile1.npz": "ee9c0a3c39ecd4bbbfd9137e9f42092bf74fe32c18152ad2f1a13d0f2bcf0ab8",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile1.npz": "39167152d30eb4bd16fd21533c832ebd595bf8abc21f0578b65702dcf839919a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first.pt": "63b3ae865a4d90e4bcfdcfda1ae10ffc1201d6e4563e09c3eec04b85409bec1f",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second.pt": "5acb822a3eea2fc2cc06a93114c49194f40a3cf2a9d172880d26f1685c7ea39c",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both.pt": "9f8e353bed5a437ef4427966d18f95bc8b8ee906783322c641adc6ef4c9204fe",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt.json": "4eb1c638946e3ed78cb69c3d06c274b295ce9e3fcc84be79ddd59700678d2f4d",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-independent01/receipt.json": "6abae12384985cf80ea74f9d24f2ec9df065253fc5674198568e5de7fe68bbe3"
+    },
+    "registration_sha256": "7014ce153fa50a8de14ea57b0d605e73fa810b8b7df16d9eb3258fde3eccefa2",
+    "source_state": "0248e0f892333bf968a4677ab485b5f03302c1fca1109e9997206cc10dcee3b7",
+    "light_state": "388f2b9ace798bd8e86e678f6089ee7b375ecabc419ab84496aa54e7ce10b321",
+    "checkpoint": {
+      "path": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/light.pt",
+      "sha256": "de0edfe92c9007286b7a193f08839195861f0b67d01eb8034284c2a81cf992d0",
+      "bytes": 196438
+    },
+    "parameters": {
+      "full": 70016,
+      "light": 43694
+    },
+    "rows": [
+      {
+        "name": "full",
+        "counts": {
+          "light_calls": 0,
+          "full_calls": 2,
+          "accepted_tiles": 0,
+          "total_tiles": 2
+        },
+        "graph_calls": 2,
+        "routes": [
+          "full",
+          "full"
+        ],
+        "scores": [
+          null,
+          null
+        ],
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/full.npz",
+        "sha256": "eaa847ea1410d545248e42348c5073caf4c27fb782dc6e758192caca491a1ed4",
+        "cpu_seconds": [
+          0.0606757621280849,
+          0.06071046181023121,
+          0.05656054196879268,
+          0.05548045597970486,
+          0.05569967394694686,
+          0.057241217233240604,
+          0.05735188024118543
+        ],
+        "median_seconds": 0.057241217233240604,
+        "p95_seconds": 0.06070005190558732
+      },
+      {
+        "name": "fast",
+        "counts": {
+          "light_calls": 2,
+          "full_calls": 0,
+          "accepted_tiles": 2,
+          "total_tiles": 2
+        },
+        "graph_calls": 0,
+        "routes": [
+          "fast",
+          "fast"
+        ],
+        "scores": [
+          null,
+          null
+        ],
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/fast.npz",
+        "sha256": "8f43a2c9deaaa8d20a0df2dbc493b3ef46ad0009e84ac5b18f27ecdf4c7c6717",
+        "cpu_seconds": [
+          0.04478142410516739,
+          0.04395893728360534,
+          0.043077593203634024,
+          0.04145722929388285,
+          0.04505515098571777,
+          0.043154200073331594,
+          0.04274777835235
+        ],
+        "median_seconds": 0.043154200073331594,
+        "p95_seconds": 0.04497303292155266
+      },
+      {
+        "name": "mixed_unknown",
+        "counts": {
+          "light_calls": 1,
+          "full_calls": 1,
+          "accepted_tiles": 1,
+          "total_tiles": 2
+        },
+        "graph_calls": 1,
+        "routes": [
+          "fast",
+          "full"
+        ],
+        "scores": [
+          0.1235734224319458,
+          null
+        ],
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/mixed_unknown.npz",
+        "sha256": "727336acb315132173d00521ab7be95b8318babe91b252858d5386490383b51c",
+        "cpu_seconds": [
+          0.049806335009634495,
+          0.050686710979789495,
+          0.05009007500484586,
+          0.049766269978135824,
+          0.04974687425419688,
+          0.04934905702248216,
+          0.04974975809454918
+        ],
+        "median_seconds": 0.049766269978135824,
+        "p95_seconds": 0.050507720187306406
+      },
+      {
+        "name": "adaptive_all_fallback",
+        "counts": {
+          "light_calls": 2,
+          "full_calls": 2,
+          "accepted_tiles": 0,
+          "total_tiles": 2
+        },
+        "graph_calls": 2,
+        "routes": [
+          "full",
+          "full"
+        ],
+        "scores": [
+          0.1235734224319458,
+          0.12356071174144745
+        ],
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/adaptive_all_fallback.npz",
+        "sha256": "eaa847ea1410d545248e42348c5073caf4c27fb782dc6e758192caca491a1ed4",
+        "cpu_seconds": [
+          0.0955342510715127,
+          0.0944516439922154,
+          0.09374479064717889,
+          0.09740663785487413,
+          0.0976260113529861,
+          0.09731603786349297,
+          0.09750321321189404
+        ],
+        "median_seconds": 0.09731603786349297,
+        "p95_seconds": 0.09758917191065848
+      }
+    ],
+    "exact_cascade_arrays": 8,
+    "exact_independent_light_arrays": 2,
+    "real_optimizer_updates": 0,
+    "gt_accessed": false,
+    "query_accessed": false,
+    "limitations": [
+      "Two existing original train blocks; no labels or accuracy claim",
+      "Explicit test thresholds, not calibrated",
+      "CPU only, no controlled production speed claim",
+      "Costs include binding validation; independent fallback recomputes front end"
+    ]
+  },
+  "producer": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/receipt.json",
+    "sha256": "a518141d098ad129cdafe22afd8575b687bd975ef031267119ca024b89a2bee1"
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/dy-cascade-independent01/receipt.json",
+    "sha256": "17b8cc7e1f5d3e3bfad7911965e8d9e98b26581740a15ac03e4726752ef1e1b2",
+    "exact_arrays": 10,
+    "protected_file_count": 31
+  },
+  "real_optimizer_updates": 0,
+  "gt_accessed": false,
+  "query_accessed": false,
+  "limitations": [
+    "Two existing original train blocks; no labels or accuracy claim",
+    "Explicit test thresholds, not calibrated",
+    "CPU only, no controlled production speed claim",
+    "Costs include binding validation; independent fallback recomputes front end"
+  ]
+}
