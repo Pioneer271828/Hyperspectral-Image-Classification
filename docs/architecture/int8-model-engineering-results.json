@@ -1,0 +1,378 @@
+{
+  "status": "passed_cpu_whole_model_engineering",
+  "issue": 273,
+  "tested_commit": "1e0da0069dca59fe90da9edb1626b6df8ef90267",
+  "branch": "codex/int8-model-engineering",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1,
+    "engine": "x86"
+  },
+  "unit": {
+    "passed": 8,
+    "seconds": 3.775
+  },
+  "regression": {
+    "passed": 72,
+    "seconds": 7.915,
+    "includes_unit": true
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "1e0da0069dca59fe90da9edb1626b6df8ef90267",
+    "branch": "codex/int8-model04",
+    "python_files": 470,
+    "json_files": 137,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-cpu01.log": "826f4a017f4d10e4af5cfa88b52bddfb9aff52f92fc095960344a7eb8a27643d",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-cpu03.log": "888c8352c3d45b14a69b10262132546a8db223555446e4cffa09363d18afe33d",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-cpu04.log": "7b973ddb9a2edd926f0dfc5495c11e4f13fd81b08f3df6da73588df77adb9fa0",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-regression04.log": "cb642b9d578def5be27dd8fa104c553361dac36670029151603155759e9a649f",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia01.log": "80eabb225170d5782a55723184820a3b18ba0c3c7b40b42c32597cd4dbadd57c",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02.log": "bb13aa584d9cc708693d7b67b71df5120a6f7c07b09a3e1b845c1ca98d73585c"
+  },
+  "real_calibration": {
+    "status": "passed_cpu_real_training_partition_calibration_only",
+    "commit": "1e0da0069dca59fe90da9edb1626b6df8ef90267",
+    "registration_sha256": "51d21d9bc436f266c4cfe11ea3efbd58d6faef32d8394617e28a304e98e5cbdc",
+    "original_files": {
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/acceptance.json": "413b23ab9350201bbd2cf10de675ff355a06a2f7d2207774ec487da709d6509c",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/registration.json": "fc61d64f204a78595856cd84394809911cce89eb83e19a097ecb3fb1980d4ad2",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/state.pt": "6fff4651587b3dba42bcb40c4c7e43b8e3f0f215e7088b7745203e3c7ab4e647",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/result.json": "671c11a5fb12104f11d5935c2e2cd9fc2cec01eb26e7ad6d98be90c05edf607f",
+      "/home/lbx/hsi-pioneer271828/datasets/snapshots/joint-honghu-20261103-issue97/dataset/PaviaU/PaviaU.mat": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-plan.json": "3f15f0650f500959e603bccd2614226c37089eafc8f06637b010bd69347363d8",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-statistics.json": "5996f5ad84917f7ad88cd2d62c8cd9f7e9b7a81f8a003df4fe9fd672ef2e4162",
+      "/home/lbx/hsi-pioneer271828/runs/e4b-online-tta-pavia01/receipt.json": "2435a74dc65e27b496db58b998498fb84cb91792facccdef7313ef445c6b410a"
+    },
+    "rows": [
+      {
+        "name": "dense",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile0.npz",
+        "sha256": "76ac4d37fb21b8f3d99e5ad84f926ac54e922fd71521e2a4d5c49621035a375c",
+        "max_probability_error": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.02924053417518735,
+        "cpu_samples_seconds": [
+          0.029831876046955585,
+          0.028960382100194693,
+          0.028723188675940037,
+          0.028927004896104336,
+          0.02919620368629694,
+          0.02928486466407776,
+          0.029426089953631163,
+          0.02894521877169609,
+          0.02934933267533779,
+          0.030021521262824535
+        ],
+        "checkpoint_bytes": 306125,
+        "sidecar_bytes": 1258
+      },
+      {
+        "name": "first",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile0.npz",
+        "sha256": "fd3570bc8e82efe498cddd5a2adddc799bb62ec1313651610193d300745d4016",
+        "max_probability_error": [
+          8.866190910339355e-06,
+          0.0,
+          1.3306736946105957e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.029255904257297516,
+        "cpu_samples_seconds": [
+          0.02924345387145877,
+          0.028890398796647787,
+          0.02888471819460392,
+          0.029268354643136263,
+          0.02865654742345214,
+          0.029084548819810152,
+          0.029486439656466246,
+          0.02995290933176875,
+          0.029924380593001842,
+          0.029850643128156662
+        ],
+        "checkpoint_bytes": 294027,
+        "sidecar_bytes": 0
+      },
+      {
+        "name": "second",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile0.npz",
+        "sha256": "4a4c82e9cc9227a0e4cf92e4ad219afe658fdfb4358f44f68551f8ba954919ab",
+        "max_probability_error": [
+          5.638599395751953e-05,
+          0.0,
+          6.408989429473877e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.030548024689778686,
+        "cpu_samples_seconds": [
+          0.036805317271500826,
+          0.03626117901876569,
+          0.030736299231648445,
+          0.030242040753364563,
+          0.030201432295143604,
+          0.030177526641637087,
+          0.030864856205880642,
+          0.030359750147908926,
+          0.03009515395388007,
+          0.034889868926256895
+        ],
+        "checkpoint_bytes": 293003,
+        "sidecar_bytes": 0
+      },
+      {
+        "name": "both",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile0.npz",
+        "sha256": "359a91b8b3a6be6ed63949f734cd0bd36e89bc434c2c53594f17206c4e708128",
+        "max_probability_error": [
+          5.075335502624512e-05,
+          0.0,
+          5.940347909927368e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.03011481952853501,
+        "cpu_samples_seconds": [
+          0.02973541710525751,
+          0.029773777816444635,
+          0.02991076186299324,
+          0.030046944972127676,
+          0.033235706854611635,
+          0.030126398894935846,
+          0.030599060002714396,
+          0.03010324016213417,
+          0.0309890890493989,
+          0.030402537900954485
+        ],
+        "checkpoint_bytes": 272377,
+        "sidecar_bytes": 0
+      },
+      {
+        "name": "dense",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile1.npz",
+        "sha256": "fd7e9f2bc598b327b9c61ec1b387c4b423a09b537d597c16ea3417078dd6abf0",
+        "max_probability_error": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.029300339054316282,
+        "cpu_samples_seconds": [
+          0.0292354803532362,
+          0.02913204627111554,
+          0.028913611080497503,
+          0.029257338028401136,
+          0.029990182258188725,
+          0.029558178037405014,
+          0.029487196821719408,
+          0.029462482780218124,
+          0.029343340080231428,
+          0.02914666896685958
+        ],
+        "checkpoint_bytes": 306125,
+        "sidecar_bytes": 1258
+      },
+      {
+        "name": "first",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile1.npz",
+        "sha256": "360a675ea86387a10c32e204c547a4058d251d3f4daec7ad5db4aadd7dacc619",
+        "max_probability_error": [
+          9.43988561630249e-06,
+          0.0,
+          1.1943280696868896e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.029475260758772492,
+        "cpu_samples_seconds": [
+          0.030069975182414055,
+          0.03018133295699954,
+          0.030255307909101248,
+          0.030188169796019793,
+          0.029561889823526144,
+          0.02938863169401884,
+          0.029338901862502098,
+          0.028842448256909847,
+          0.028989227022975683,
+          0.029018674977123737
+        ],
+        "checkpoint_bytes": 294027,
+        "sidecar_bytes": 0
+      },
+      {
+        "name": "second",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile1.npz",
+        "sha256": "ee9c0a3c39ecd4bbbfd9137e9f42092bf74fe32c18152ad2f1a13d0f2bcf0ab8",
+        "max_probability_error": [
+          5.0574541091918945e-05,
+          0.0,
+          6.131082773208618e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.029773910529911518,
+        "cpu_samples_seconds": [
+          0.03040097514167428,
+          0.029801102820783854,
+          0.02948440471664071,
+          0.029752393253147602,
+          0.029105496127158403,
+          0.029303339775651693,
+          0.029795427806675434,
+          0.030136555898934603,
+          0.029335103929042816,
+          0.03187460592016578
+        ],
+        "checkpoint_bytes": 293003,
+        "sidecar_bytes": 0
+      },
+      {
+        "name": "both",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile1.npz",
+        "sha256": "39167152d30eb4bd16fd21533c832ebd595bf8abc21f0578b65702dcf839919a",
+        "max_probability_error": [
+          5.186349153518677e-05,
+          0.0,
+          5.409121513366699e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.030929487897083163,
+        "cpu_samples_seconds": [
+          0.03164272382855415,
+          0.030857720877975225,
+          0.03127492219209671,
+          0.03098291391506791,
+          0.030876061879098415,
+          0.029929072130471468,
+          0.03004026971757412,
+          0.030588440131396055,
+          0.031078882981091738,
+          0.031232169829308987
+        ],
+        "checkpoint_bytes": 272377,
+        "sidecar_bytes": 0
+      }
+    ],
+    "checkpoints": {
+      "first": {
+        "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first.pt",
+        "sha256": "63b3ae865a4d90e4bcfdcfda1ae10ffc1201d6e4563e09c3eec04b85409bec1f"
+      },
+      "second": {
+        "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second.pt",
+        "sha256": "5acb822a3eea2fc2cc06a93114c49194f40a3cf2a9d172880d26f1685c7ea39c"
+      },
+      "both": {
+        "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both.pt",
+        "sha256": "9f8e353bed5a437ef4427966d18f95bc8b8ee906783322c641adc6ef4c9204fe"
+      },
+      "dense": {
+        "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt",
+        "sha256": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54"
+      }
+    },
+    "exact_head_reloads": 24,
+    "nontraining_poison_plans": 3,
+    "optimizer_updates": 0,
+    "query_accessed": false,
+    "raw_gt_accessed": false,
+    "environment": {
+      "python": "3.10.20",
+      "torch": "2.7.1+cu128",
+      "engine": "x86"
+    },
+    "limitations": [
+      "Two original spatial training tiles only; no accuracy or class recall evaluation.",
+      "PTQ only on real data; QAT training only in synthetic engineering tests.",
+      "CPU timings are local observations, not deployment or GPU speedup."
+    ]
+  },
+  "real_receipt_sha256": "bc880739cc14817102abee2895d4de1a68e2e8077dbf399ce0dcf11d9d67170a",
+  "independent_receipt": "/home/lbx/hsi-pioneer271828/runs/int8-model-independent01/receipt.json",
+  "independent_sha256": "6abae12384985cf80ea74f9d24f2ec9df065253fc5674198568e5de7fe68bbe3",
+  "synthetic_recovery": {
+    "arms": [
+      "fp32",
+      "qat"
+    ],
+    "steps_each": 12,
+    "replay_steps_each": 7,
+    "optimizer_calls": 38,
+    "selection": "first-min fused NLL",
+    "exact_model_optimizer_history": true
+  },
+  "gpu": "not tested; CPU-only integer deployment scope",
+  "real_optimizer_updates": 0,
+  "query": false,
+  "retained_failures": [
+    "5477d253 fixture unpacked spatial forward diagnostic dict as a prediction; 7 tests had 1 failure/3 errors; corrected to existing three-head interface.",
+    "Read-only pavia01 probe attempted NaN poisoning on integer image dtype; preserved incomplete output; pavia02 uses dtype maximum outside train, keeping calibration bytes unchanged."
+  ],
+  "limits": [
+    "Two original spatial training tiles only; no accuracy or class recall evaluation.",
+    "PTQ only on real data; QAT training only in synthetic engineering tests.",
+    "CPU timings are local observations, not deployment or GPU speedup.",
+    "Actual calibration covers original spatial train tiles, not a nested development split.",
+    "No real validation/class recall/accuracy or GPU deployment conclusion."
+  ]
+}
