@@ -1,5 +1,5 @@
 {
-  "module": "CUR-O1 equal-exposure observation order",
+  "module": "CUR-O1 observation order; CUR-S1 class-protected support weighting",
   "paper": "https://arxiv.org/html/2104.10461",
   "version": "2104.10461v2, 22 Apr 2021, sections II-B/III/IV",
   "authors": "Arian Bakhtiarnia, Qi Zhang, Alexandros Iosifidis",
@@ -9,8 +9,8 @@
   "fixed_sha": null,
   "license": null,
   "access": "2026-11-09 repository redirects to serviceinfo.au.dk/da/home/message/7381; project API inaccessible through available web reader. Source and license remain unverified.",
-  "reuse": "No upstream code copied or executed. Independent fixed-multiset permutation of existing project ObservationPolicy records; no teacher, no sample filtering, no extra labels.",
-  "difference": "This is one-pass observation-severity ordering with exactly matched marginal exposures, not reproduction of upstream growing sample pool. Local order RNG does not change spatial/class sampler; joint condition-by-tile/class exposure must be separately checked.",
+  "reuse": "No upstream code copied or executed. CUR-O independently permutes fixed observation records; CUR-S independently scores only released devtrain support with frozen teacher fused NLL, then uses positive per-class normalized weights. No growing pool or validation/test-based ranking.",
+  "difference": "CUR-O fixed marginal exposure and CUR-S soft within-class weights are separate mechanisms. CUR-S retains all support and current-block class mass, freezes teacher cost/identity, and leaves class-first sampler/full-validation selection unchanged. Teacher memorization/domain bias and finite-budget participation remain limitations; not upstream reproduction.",
   "upstream_executed": false,
   "real_training": false
 }

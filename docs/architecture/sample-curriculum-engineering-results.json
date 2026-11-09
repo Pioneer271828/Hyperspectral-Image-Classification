@@ -1,0 +1,177 @@
+{
+  "issue": 285,
+  "status": "passed_cpu_engineering_only",
+  "tested_sha": "1b8ed4164d8ff3b5015f531456a58f5b54cf5331",
+  "branch": "codex/sample-curriculum",
+  "checkout": "/home/lbx/hsi-pioneer271828/checkouts/sample-curriculum04",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "device": "CPU",
+  "threads": 1,
+  "tests": {
+    "cpu": {
+      "passed": 7,
+      "seconds": 5.317,
+      "log": "/home/lbx/hsi-pioneer271828/runs/sample-curriculum-tests04/cpu.log",
+      "sha256": "6da0bbea4d3085557d1c5930c1ddba29e64f2c0d8a60fa4ed366cbc2dda6ccbc"
+    },
+    "regression": {
+      "passed": 36,
+      "seconds": 9.697,
+      "log": "/home/lbx/hsi-pioneer271828/runs/sample-curriculum-tests04/regression.log",
+      "sha256": "40aff6b7a8ce5d17e7f8804469c30f2da6bd5335db1a9b8a12bfebe0f7fe8dd1"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "1b8ed4164d8ff3b5015f531456a58f5b54cf5331",
+    "branch": "codex/sample-curriculum",
+    "python_files": 486,
+    "json_files": 146,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent_receipt": "/home/lbx/hsi-pioneer271828/runs/sample-curriculum-independent02/receipt.json",
+  "independent_sha256": "54f9e11363da4eb8032bd4f47d1ad8472506fdb3bbe34d63b34f99dc851dde7c",
+  "independent_result": {
+    "status": "passed",
+    "tested_sha": "1b8ed4164d8ff3b5015f531456a58f5b54cf5331",
+    "policy_files": 15,
+    "weight_values_independently_recomputed": 16200,
+    "teacher_train_labels": 90,
+    "teacher_forward_tiles": 6,
+    "teacher_seconds": 0.06922007305547595,
+    "teacher_state_unchanged": true,
+    "analytic_loss_and_gradient_elements": 6,
+    "paired_12_step_draws": [
+      [
+        8,
+        5
+      ],
+      [
+        6,
+        8
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        8,
+        5
+      ],
+      [
+        3,
+        9
+      ],
+      [
+        8,
+        5
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        3,
+        8
+      ],
+      [
+        3,
+        7
+      ],
+      [
+        6,
+        6
+      ],
+      [
+        5,
+        5
+      ]
+    ],
+    "actual_class_block_participation": {
+      "1": 12,
+      "2": 11,
+      "3": 12,
+      "4": 11,
+      "5": 9,
+      "6": 11,
+      "7": 12,
+      "8": 11,
+      "9": 9
+    },
+    "actual_class_label_exposure": {
+      "1": 20,
+      "2": 20,
+      "3": 21,
+      "4": 23,
+      "5": 16,
+      "6": 24,
+      "7": 23,
+      "8": 23,
+      "9": 18
+    },
+    "finite_budget_guarantee": false,
+    "real_optimizer_updates": 0,
+    "query": 0,
+    "elapsed_seconds": 0.533308130223304,
+    "artifacts": {
+      "2048-hard_to_easy.json": "99d8d42c7e2a5f1ac8fa8bfca21143fdaa67771e6d726a870008f0cf950fc2d8",
+      "2048-random.json": "7c87cbd1fb9df9bb17412aaca01eec5116866323d0f1d8f65f95c38ae455312a",
+      "2048-fixed.json": "fb0b8fdb798d60bc00c7f2ebc2511082033d9668cee7e60601a2bcc459eafce0",
+      "scores.json": "97dba2f44c2e2cf1a75417e6e192e1997f2e838d4956a0ad53ccc3896bb28de1",
+      "2048-easy_to_hard.json": "62ed99690332cd72f5a487833f076eddadc9c7519e9e347ced0816eb96720d6f",
+      "64-random.json": "b673c3870e2a7eb06ca2b15e9dae5239d7cb278523c9fa7f94a2810da752c6ca",
+      "2048-balanced.json": "37f93dab0db8bbce4abed45086e5bf3d548ab69f33406a4da3c472d916c785a4",
+      "64-easy_to_hard.json": "031ead2f17d62cb64a77b335fae13711076585caa53f3c3d6adfd46d40b50a8e",
+      "64-balanced.json": "e7889f157e04415c32376146688b0dc2bbb8b6577ea665503273db39c35a251f",
+      "512-easy_to_hard.json": "fac5548b1e112d0a8885023e30b484d00bb5977b76ba9763d5777340a221455e",
+      "64-hard_to_easy.json": "73667319ceccc167e7ea7aacfdce062ad54f692ded8e1bd31bf04d58ea50c092",
+      "64-fixed.json": "3b7a0f99c4397e3107fd28220f66c83c5d263c9f0b48e201a6bdb5dfcb25fb38",
+      "512-random.json": "1b925f500d17600c5a3ba4363da67b8a986fd8eb41f7f774fd172069a8cef274",
+      "512-balanced.json": "fbbca8ffebd0d918589b01fde9a9048256788a7637c7b564d4ef721d4b37ea34",
+      "512-fixed.json": "9aa0ddcaeb72e8d4158fee074f21cca9412099f5e6ad973f48a385da8c259322",
+      "512-hard_to_easy.json": "2d5ab9d328d7006fcecd0b7915bb15e8f8982ddd1819d59d617eda14f9487e4d"
+    }
+  },
+  "synthetic_optimizer_calls_per_specialized_suite": 95,
+  "real_optimizer_updates": 0,
+  "query": 0,
+  "gpu_tests": 0,
+  "failures_preserved": [
+    "sample-curriculum-tests01: support schema missed original seed; 6 errors in7",
+    "sample-curriculum-tests02: 7 passed before FP32-floor guard added",
+    "tests03: four arms7/36 passed; added separate fixed-ID pacing control; all rerun in tests04"
+  ],
+  "limitations": [
+    "no real multi-seed accuracy or minority recall claim",
+    "teacher loss may reflect memorization/domain bias; cross scoring pending",
+    "positive class mass does not guarantee finite-budget class arrival",
+    "same updates do not imply same time; teacher cost must be included",
+    "production trainer/CLI and GPU not validated"
+  ],
+  "arms": [
+    "balanced",
+    "fixed",
+    "random",
+    "easy_to_hard",
+    "hard_to_easy"
+  ]
+}
