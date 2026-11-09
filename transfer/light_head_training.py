@@ -40,6 +40,7 @@ class LightHeadRun:
         self.sampler=SupportTileSampler(scene.plan,record['roles'],sparse_labels(record,scene.plan,'train_support'),record['classes'],'class_first')
         self.spec=dict(schema_version=1,source_state=state_hash(source),prefix_state=self.prefix_state,initial_head_state=state_hash(self.head),
             identity=identity,architecture=source.export_config(),updates=updates,seed=seed,lr=lr,class_balance=class_balance,
+            optimizer_config=deepcopy(self.optimizer.state_dict()['param_groups']),
             sampler_hash=self.sampler.metadata['sampler_hash'],method='independent_frozen_prefix_head_only',
             loss='original_single_CNN_probability_loss',selection='first_min_full_devval_CNN_NLL_each_update')
         self.contract_hash=digest(self.spec);self.rng=np.random.default_rng(seed);self.completed=0;self.history=[];self.selected_step=None;self.selected_head=None;self.failed=False
@@ -55,7 +56,7 @@ class LightHeadRun:
             raise ValueError('Finite trainable CPU FP32 head required')
         group=self.optimizer.param_groups[0]
         if (len(self.optimizer.param_groups)!=1 or [id(p) for p in group['params']]!=[id(p) for p in self.head.parameters()]
-                or group['lr']!=self.spec['lr'] or group['betas']!=(.9,.999) or group['eps']!=1e-8 or group['weight_decay']!=0. or group['amsgrad']):
+                or self.optimizer.state_dict()['param_groups']!=self.spec['optimizer_config']):
             raise ValueError('Registered head-only Adam changed')
 
     def _features(self,tile):
@@ -131,6 +132,7 @@ class LightHeadRun:
         if not isinstance(packet,dict) or set(packet)!=keys or packet['format']!='vca-light-head-run-v1' or packet['contract_hash']!=expected_contract_hash:
             raise ValueError('Invalid registered run packet')
         spec=packet['spec']
+        if not isinstance(spec,dict) or any(k not in spec for k in ('updates','seed','lr','class_balance')):raise ValueError('Invalid training specification')
         run=cls(source,scene,record,**{k:spec[k] for k in ('updates','seed','lr','class_balance')})
         if spec!=run.spec or digest(spec)!=expected_contract_hash:raise ValueError('Run source/architecture/training contract mismatch')
         n=packet['completed'];history=packet['history']

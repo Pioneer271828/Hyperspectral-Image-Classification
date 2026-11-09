@@ -110,7 +110,17 @@ class LightHeadTests(unittest.TestCase):
         run=LightHeadRun(full,s,r,updates=2,seed=64,lr=.0001,class_balance=True)
         source=state_hash(full);prefix=state_hash(run.path);run.advance(2)
         self.assertEqual(source,state_hash(full));self.assertEqual(prefix,state_hash(run.path))
-        _,_,_,other=run_fixture();other.optimizer.param_groups[0]['lr']=.1
-        with self.assertRaises(ValueError):other.step()
+        for key,value in (('lr',.1),('maximize',True)):
+            _,_,_,other=run_fixture();other.optimizer.param_groups[0][key]=value
+            with self.assertRaises(ValueError):other.step()
+
+    def test_failed_step_blocks_retry_and_checkpoint_without_changing_source(self):
+        full,s,r,run=run_fixture();before=state_hash(full)
+        with patch.object(run,'_features',side_effect=RuntimeError('injected feature failure')):
+            with self.assertRaises(RuntimeError):run.step()
+        self.assertTrue(run.failed);self.assertEqual(run.completed,0);self.assertEqual(before,state_hash(full))
+        with self.assertRaises(ValueError):run.advance(1)
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):run.save(Path(tmp)/'failed.pt')
 
 if __name__=='__main__':unittest.main()
