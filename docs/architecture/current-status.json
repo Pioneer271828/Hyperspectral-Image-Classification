@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 291,
+  "issue": 293,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "50cfffd8b169b52406344416dac2861bebd145c3",
+  "main_snapshot": "862373ab805496136edf36423dd3642a35f48a10",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -724,6 +724,14 @@
       "remaining": "独立校准确认/真实训练后逐类小类/联合蒸馏/GPU及总成本待验；当前calibrated=false，旧复制态门槛不变。下一DY低自由度校准与独立确认工程；真实长训练暂停。",
       "report": "research/reports/DY1C_训练后轻模型冻结发布与级联绑定工程验收_20261109.md",
       "chat_report": "本聊天DY-1C完整CPU工程交付后继续下一计划项。"
+    },
+    {
+      "id": "DY-1D阈值冻结与独立逐类确认",
+      "state": "CPU合成协议工程通过，真实校准未做",
+      "evidence": "tested83dbb0ccf3e0fc69c24d252c9a6a4b85dc155123；10专项/51含专项关联回归，checker494Python150JSON。独立9协议/17496混淆格/144路线；6合成确认通过、3小类退化保留完整；专项独立优化0，真实query0。",
+      "remaining": "真实合法独立校准确认划分/模型历史认证、统计非劣、错误概率校准、随机同成本与预算曲线、GPU/端到端部署仍待。当前45旧选步验证不能当独立确认。下一DY-2随机控制与成本曲线工程。",
+      "report": "research/reports/DY1D_阈值冻结与独立逐类确认工程验收_20261109.md",
+      "chat_report": "本聊天DY-1D完整CPU工程报告后连续推进。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -820,6 +828,13 @@
       "tested_sha": "7cce2f804e7c941dae6a789a0284009dc131a322",
       "merge_sha": "50cfffd8b169b52406344416dac2861bebd145c3",
       "scope": "DY-1B CPU8/45; three sampler-seed synthetic exact head controls/recovery; no real benefit claim"
+    },
+    {
+      "pr_number": 292,
+      "head_sha": "0c15a5a52d8bba04a25fd50aafda0bf0914f6e6b",
+      "tested_sha": "8f7acee7dff06f95c78c8c22bf3d80ba98dc9eba",
+      "merge_sha": "862373ab805496136edf36423dd3642a35f48a10",
+      "scope": "DY-1C CPU9/41; independent selected artifacts/routes/35 pins; no calibrated deployment claim"
     }
   ]
 }

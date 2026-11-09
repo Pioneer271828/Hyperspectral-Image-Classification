@@ -53,11 +53,8 @@ def _execute(full,light,requests,*,mode='full',criterion=None,threshold=None,min
                 p=light(row['dataset'],row['x'],wavelengths=row['wavelengths']);counts['light_calls']+=1
                 if mode=='fast':accepted=True
                 else:
-                    if criterion=='max_probability':score=float(p.max(1).values.min());accepted=score>=threshold
-                    elif criterion=='margin':
-                        top=p.topk(2,dim=1).values;score=float((top[:,0]-top[:,1]).min());accepted=score>=threshold
-                    else:
-                        logs=torch.zeros_like(p);nz=p>0;logs[nz]=p[nz].log();score=float((-(p*logs).sum(1)).max());accepted=score<=threshold
+                    score=gate_score(p,criterion)
+                    accepted=score<=threshold if criterion=='entropy' else score>=threshold
             if not accepted:
                 p=full(row['dataset'],row['x'],wavelengths=row['wavelengths'],superpixel_scale=row['scale'])[0];counts['full_calls']+=1
             else:counts['accepted_tiles']+=1
@@ -66,3 +63,13 @@ def _execute(full,light,requests,*,mode='full',criterion=None,threshold=None,min
     return dict(outputs=result,counts=counts,mode=mode,calibrated=False,
                 cost_scope='Independent light plus full recomputation on fallback; end-to-end measurement required.')
 
+
+
+def gate_score(p,criterion):
+    """Whole-block FP32 score shared by execution and calibration replay."""
+    if criterion=='max_probability':return float(p.max(1).values.min())
+    if criterion=='margin':
+        top=p.topk(2,dim=1).values;return float((top[:,0]-top[:,1]).min())
+    if criterion=='entropy':
+        logs=torch.zeros_like(p);nz=p>0;logs[nz]=p[nz].log();return float((-(p*logs).sum(1)).max())
+    raise ValueError('Unknown gate criterion')
