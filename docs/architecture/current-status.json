@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 295,
+  "issue": 297,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "62dbc9d348be3951b7eb354a536132c76c04d57f",
+  "main_snapshot": "be2a33aa86ed332e3f30cb252011cedbb2e8c04a",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -740,6 +740,13 @@
       "remaining": "实测同成本固定路径/全预算曲线/面积、真实独立逐类与置信区间/GPU/内存能量待验。相同回退数不是相同耗时。下一DY-2逐类成本曲线；长训练暂停。",
       "report": "research/reports/DY2A_分层随机回退与CPU配对成本工程验收_20261109.md",
       "chat_report": "本聊天DY-2A完整CPU工程报告后继续下一项。"
+    },
+    {
+      "id": "DY-2B冻结预算逐类质量与成本曲线",
+      "state": "CPU报告工程验收通过，真实曲线未验",
+      "evidence": "tested3a3638d；CPU10/43，独立3合成协议33点8019混淆36面积，8既有实际成本复算及40文件不变；不作策略选择/外推",
+      "remaining": "真实独立确认、配对不确定性、同成本固定模型/GPU/完整成本仍待。下一事前精度保护与配对不确定性工程；长训练暂停。",
+      "report": "research/reports/DY2B_冻结预算逐类质量与成本曲线工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -850,6 +857,13 @@
       "tested_sha": "83dbb0ccf3e0fc69c24d252c9a6a4b85dc155123",
       "merge_sha": "62dbc9d348be3951b7eb354a536132c76c04d57f",
       "scope": "DY-1D CPU10/51; independent9 synthetic protocols/17496cells/144routes, real calibration not performed"
+    },
+    {
+      "pr_number": 296,
+      "head_sha": "cb79301a600c1aa137e0af6af3808efacb8fad6e",
+      "tested_sha": "ec0383e37f14f190ab4f53313f93c78dafa49477",
+      "merge_sha": "be2a33aa86ed332e3f30cb252011cedbb2e8c04a",
+      "scope": "DY-2A CPU8/43, independent9plans/54arrays/39pins; synthetic actual CPU costs, no real benefit claim"
     }
   ]
 }
