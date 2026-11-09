@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 297,
+  "issue": 299,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "be2a33aa86ed332e3f30cb252011cedbb2e8c04a",
+  "main_snapshot": "ea8fa2b8718945975bd58b27d1b57b60413ddfc3",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -747,6 +747,13 @@
       "evidence": "tested3a3638d；CPU10/43，独立3合成协议33点8019混淆36面积，8既有实际成本复算及40文件不变；不作策略选择/外推",
       "remaining": "真实独立确认、配对不确定性、同成本固定模型/GPU/完整成本仍待。下一事前精度保护与配对不确定性工程；长训练暂停。",
       "report": "research/reports/DY2B_冻结预算逐类质量与成本曲线工程验收_20261109.md"
+    },
+    {
+      "id": "DY-2C配对空间簇不确定性",
+      "state": "CPU近似区间工程通过，真实统计非劣未验",
+      "evidence": "tested4ef796a；CPU8/35；独立3合成协议231000重复值/231界限/41文件不变，簇少/尾部不足正确不确定",
+      "remaining": "真实独立空间确认、采样假设审查、模型种子不确定性及实际精度成本结论待；下一CUR正式优化/曝光/恢复接入，长训练暂停。",
+      "report": "research/reports/DY2C_配对空间簇不确定性工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -864,6 +871,13 @@
       "tested_sha": "ec0383e37f14f190ab4f53313f93c78dafa49477",
       "merge_sha": "be2a33aa86ed332e3f30cb252011cedbb2e8c04a",
       "scope": "DY-2A CPU8/43, independent9plans/54arrays/39pins; synthetic actual CPU costs, no real benefit claim"
+    },
+    {
+      "pr_number": 298,
+      "head_sha": "923a11ab75f1730cded10d1aefe2a81dc504e879",
+      "tested_sha": "3a3638d10a33fbbd11dc11702b2cdd2c20e57bc2",
+      "merge_sha": "ea8fa2b8718945975bd58b27d1b57b60413ddfc3",
+      "scope": "DY-2B CPU10/43; synthetic33points/8019cells/36areas and separate8actualcostrows; real curve pending"
     }
   ]
 }

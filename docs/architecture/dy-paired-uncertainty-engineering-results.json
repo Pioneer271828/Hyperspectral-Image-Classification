@@ -1,0 +1,70 @@
+{
+  "status": "passed",
+  "tested_sha": "4ef796a75dedd52127d57a4c7e15915870048e84",
+  "branch": "codex/dy-paired-uncertainty",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 8,
+      "seconds": 0.181,
+      "command": "python -m unittest tests.test_paired_cluster_uncertainty -v"
+    },
+    "related": {
+      "passed": 35,
+      "seconds": 0.521,
+      "command": "python -m unittest tests.test_paired_cluster_uncertainty tests.test_dynamic_curve tests.test_gate_calibration tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "4ef796a75dedd52127d57a4c7e15915870048e84",
+    "branch": "codex/dy-paired-uncertainty",
+    "python_files": 500,
+    "json_files": 154,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/dy-paired-uncertainty-independent01/receipt.json",
+    "sha256": "3f17f2d0067c030a260b4e690920609bfb6aac6ca0237438440a31a6ee286583",
+    "protocols": 3,
+    "units_per_protocol": 30,
+    "replicates_per_protocol": 1000,
+    "metric_replicates": 231000,
+    "bounds": 231,
+    "protected_files": 41,
+    "seconds": 0.8730843192897737
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/dy-paired-uncertainty-tests01/audit.log": "fb20c99696e01010b8cc7d04b6060d8d05241e12cf4b59ded42e2ddd4f466ff4",
+    "/home/lbx/hsi-pioneer271828/runs/dy-paired-uncertainty-tests01/checker.log": "200b66dea13a28c58aaa4ebf072d85f77d8b3e64f3d5586bb8de8e88778a63e3",
+    "/home/lbx/hsi-pioneer271828/runs/dy-paired-uncertainty-tests01/cpu.log": "02e97ac9cae83bb60ac98e5b96656ca3985d499705decafd1ee2d261a4d4e136",
+    "/home/lbx/hsi-pioneer271828/runs/dy-paired-uncertainty-tests01/regression.log": "d09a5a930308fa55447e2c42495e552bf16591f2d4a61d9eea53b0e58314eba0"
+  },
+  "optimizer_updates": 0,
+  "query": 0,
+  "limitations": [
+    "Conditional approximate percentile diagnostics, not BCa or finite-sample coverage proof.",
+    "Three synthetic protocols are deliberately inconclusive: too few clusters, missing independence evidence and inadequate tail resolution.",
+    "No real statistical noninferiority/GPU/deployment claim; identity hashes do not prove independent sampling."
+  ]
+}

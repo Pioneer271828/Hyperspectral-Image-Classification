@@ -1,0 +1,16 @@
+{
+  "module": "DY-2C paired spatial-cluster uncertainty engineering",
+  "paper": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7958418/",
+  "version": "Efron and Narasimhan 2020 JCGS 29(3):608-619, author manuscript, sections1-3",
+  "read_scope": "Percentile quantiles, iid resampling assumptions, BCa corrections and Monte Carlo accuracy limitations. This implementation is a conditional percentile diagnostic, NOT BCa or second-order accurate.",
+  "official_link": "https://cran.r-project.org/web/packages/bcaboot/index.html",
+  "upstream": "https://github.com/bnaras/bcaboot",
+  "fixed_sha": "78c283fb95b969b105c893ee83573cdcd65cb9fb",
+  "files_read": ["DESCRIPTION", "R/bca_nonpar.R lines1-120"],
+  "license": "DESCRIPTION declares GPL (>=2); root LICENSE absent (404), individual-file licensing not independently certified. No code copied.",
+  "historical_filename_failure": "R/bcajack.R404 at fixed SHA; directory inspection found consolidated R/bca_nonpar.R instead.",
+  "reuse": "Independent project implementation; scene-stratified clusters shared across paired models and conditions, fixed margins and all metrics preserved. Does not transplant package grouping as spatial independence proof.",
+  "upstream_executed": false,
+  "dependency_installed": false,
+  "limits": "No finite-sample coverage or real HSI statistical conclusion; caller must establish independent sampling and fixed policy before confirmation. Degenerate/missing-class/insufficient-tail cases do not pass."
+}
