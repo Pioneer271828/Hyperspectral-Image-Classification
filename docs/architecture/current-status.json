@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 289,
+  "issue": 291,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "af1541b624418292423139ba349d132e4654e8f3",
+  "main_snapshot": "50cfffd8b169b52406344416dac2861bebd145c3",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -716,6 +716,14 @@
       "remaining": "正式轻模型发布/级联绑定、校准确认、真实逐类和小类/完整微调控制/联合蒸馏/GPU与成本待验。下一DY-1C训练后轻头冻结发布；长训练暂停。",
       "report": "research/reports/DY1B_冻结前缀轻出口头训练与恢复工程验收_20261109.md",
       "chat_report": "本聊天DY-1B完整CPU工程报告后继续DY-1C。"
+    },
+    {
+      "id": "DY-1C训练后轻模型冻结与来源绑定",
+      "state": "CPU发布重载与懒执行接入通过",
+      "evidence": "tested8f7acee7dff06f95c78c8c22bf3d80ba98dc9eba；CPU9专项/41含专项回归、checker492Python149JSON。独立三包12合成路由数组/135验证标签/243混淆格、旧真实train8路由数组精确与35文件不变，独立更新0。",
+      "remaining": "独立校准确认/真实训练后逐类小类/联合蒸馏/GPU及总成本待验；当前calibrated=false，旧复制态门槛不变。下一DY低自由度校准与独立确认工程；真实长训练暂停。",
+      "report": "research/reports/DY1C_训练后轻模型冻结发布与级联绑定工程验收_20261109.md",
+      "chat_report": "本聊天DY-1C完整CPU工程交付后继续下一计划项。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -805,6 +813,13 @@
       "tested_sha": "2ffd5c1a7d7d750caaeea3931da7f9b4b37d0153",
       "merge_sha": "af1541b624418292423139ba349d132e4654e8f3",
       "scope": "CUR-S2 CPU6/42, independent9plans/111events/120prefixes; no real benefit claim"
+    },
+    {
+      "pr_number": 290,
+      "head_sha": "fc92b8332e8f8ec5b116df9b1b6dd36b95006370",
+      "tested_sha": "7cce2f804e7c941dae6a789a0284009dc131a322",
+      "merge_sha": "50cfffd8b169b52406344416dac2861bebd145c3",
+      "scope": "DY-1B CPU8/45; three sampler-seed synthetic exact head controls/recovery; no real benefit claim"
     }
   ]
 }
