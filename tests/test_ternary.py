@@ -84,6 +84,17 @@ class TernaryTests(unittest.TestCase):
         opt=torch.optim.SGD(layer.parameters(), lr=.001); opt.step()
         self.assertTrue(torch.isfinite(layer(torch.ones(1, 3))).all())
 
+    def test_large_finite_initial_scale_and_arithmetic_overflow_rejection(self):
+        source=nn.Linear(3,2,bias=False)
+        with torch.no_grad(): source.weight.fill_(2e38)
+        layer=TernaryMatrix(source,threshold_ratio=.5)
+        self.assertTrue(torch.isfinite(layer.positive))
+        self.assertTrue(torch.isfinite(layer(torch.full((1,3),.01))).all())
+        with self.assertRaises(ValueError): layer(torch.ones(1,3))
+        for invalid in (float('inf'),float('nan')):
+            with torch.no_grad(): source.weight[0,0]=invalid
+            with self.assertRaises(ValueError): TernaryMatrix(source,threshold_ratio=.1)
+
     def test_actual_two_bit_layout_padding_and_independent_oracle(self):
         for count in range(1, 18):
             values=np.resize(np.array([-2., 0., 3., 1., -1.], dtype=np.float32), count)

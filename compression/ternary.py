@@ -80,8 +80,9 @@ class TernaryMatrix(nn.Module):
         self.register_buffer('threshold_ratio', torch.tensor(float(threshold_ratio)))
         fallback = layer.weight.detach().abs().max().clamp_min(torch.finfo(torch.float32).tiny)
         if not bool(layer.weight.detach().abs().max()): fallback = torch.tensor(1.)
-        self.positive = nn.Parameter(layer.weight.detach()[pos].mean() if pos.any() else fallback.clone())
-        self.negative = nn.Parameter(-layer.weight.detach()[neg].mean() if neg.any() else fallback.clone())
+        # FP64 reduction avoids overflow while averaging finite large FP32 weights.
+        self.positive = nn.Parameter(layer.weight.detach()[pos].double().mean().float() if pos.any() else fallback.clone())
+        self.negative = nn.Parameter(-layer.weight.detach()[neg].double().mean().float() if neg.any() else fallback.clone())
 
     def quantized_weight(self):
         finite(self.threshold_ratio)
@@ -95,6 +96,9 @@ class TernaryMatrix(nn.Module):
         if bias is not None: finite(bias)
         if self.kind == 'linear':
             if x.ndim < 2 or x.shape[-1] != weight.shape[1]: raise ValueError('linear shape mismatch')
-            return F.linear(x, weight, bias)
-        if x.ndim != 4 or x.shape[1] != weight.shape[1]: raise ValueError('convolution shape mismatch')
-        return F.conv2d(x, weight, bias)
+            result = F.linear(x, weight, bias)
+        else:
+            if x.ndim != 4 or x.shape[1] != weight.shape[1]: raise ValueError('convolution shape mismatch')
+            result = F.conv2d(x, weight, bias)
+        finite(result)
+        return result
