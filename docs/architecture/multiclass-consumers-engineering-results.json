@@ -1,0 +1,232 @@
+{
+  "status": "passed",
+  "issue": 333,
+  "pr": 334,
+  "tested_sha": "4d18bfb1ab1077456f8842462cf070ef5c2a1fb6",
+  "branch": "codex/multiclass-consumers",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "CPU",
+    "threads": 1
+  },
+  "tests": [
+    {
+      "command": "python -m unittest tests.test_multiclass_consumers -v",
+      "passed": 5,
+      "seconds": 21.14,
+      "log": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-engineering01/tests01.log",
+      "sha256": "42e4c1363fe92a5d20103eaddbed5832cf0dbfed920342d09ea4d4a18d1502f7"
+    },
+    {
+      "command": "python -m unittest tests.test_light_head_training tests.test_trained_light tests.test_m4_ablation tests.test_graph_edge_intervention tests.test_tile_cascade tests.test_repository_delivery -v",
+      "passed": 48,
+      "seconds": 14.731,
+      "log": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-engineering01/regression01.log",
+      "sha256": "68882d979905770063a402286a22d5f269836da75e01f486dde60e2dcc24ea2a"
+    }
+  ],
+  "checker": {
+    "status": "passed",
+    "commit": "4d18bfb1ab1077456f8842462cf070ef5c2a1fb6",
+    "branch": "codex/multiclass-consumers",
+    "python_files": 535,
+    "json_files": 173,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/receipt.json",
+    "sha256": "4f9cb4f161c7f0d5c3adf137ecc04ed1b5b440d020b448d8da607eb7f29a45c0",
+    "receipt": {
+      "status": "passed",
+      "tested_sha": "4d18bfb1ab1077456f8842462cf070ef5c2a1fb6",
+      "new_light_models": 9,
+      "new_light_updates": 108,
+      "old_light_models": 3,
+      "reused_graph_models": 16,
+      "confusion_cells": 56556,
+      "class_recalls": 3276,
+      "head_metrics": 267,
+      "reports": [
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-3-64.json",
+          "sha256": "d6ee08ded38a69c29d5cd247d84b953c4494d3005ac4e235f4dbad75022a00f2"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-3-512.json",
+          "sha256": "b48f3f1cb87be5c3d390bbe81767fb76a1e27065d8a5252ef63ebac5a49c4395"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-3-2048.json",
+          "sha256": "f95ad0857f1ecc8a39a1aa55c7a54761b3157bd174c74942c6721cf4c0c52b7a"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-9-64.json",
+          "sha256": "81585bd13d7c2913ad1937936860bb07c4d1ecde14217373548ad0262b98664a"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-9-512.json",
+          "sha256": "e23368a53bb2b282858ee853310fc894f6fb205e948b3cf6c81d12dd45b9013e"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-9-2048.json",
+          "sha256": "dbb9b19159c851e2afee57b53f3141ede98867e81f19accc30b0e97a53a8ca4d"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-22-64.json",
+          "sha256": "772d796f97a058d1658ac52d910d0b23b321c45f6bbee14a4777ddbd58861d2b"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-22-512.json",
+          "sha256": "f24631d647e6c5d55d0214db964b8c19abe5fac59f41319459a5aacda78a7c82"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/light-22-2048.json",
+          "sha256": "e764d81749b41d4d1eff841a0a6f07c3681375b7e7e31debade8ca2726cb73c6"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-3-512-False.json",
+          "sha256": "dd266d909987a7783aa67f433d6c5c58fe349bcc20252071cd588fa4e7ac2350"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-3-512-True.json",
+          "sha256": "1b4b276fc492de9be6e7a9f9473cc6626226ac2d5c6b8446254f92ee51a0adb1"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-3-2048-False.json",
+          "sha256": "63baf0a34c5804df43589d0f1f2f31733a5746cb111fe11e58633503ac6fdbb9"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-3-2048-True.json",
+          "sha256": "1001dd09ed5ec0bab2e0b92000dfba1008c0a76fd3b3ded518dc6d1b258ae639"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-9-64-False.json",
+          "sha256": "3961f367e2009c9a9712ccf982018e669cc31c819a28b43651f7867cfda10efa"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-9-64-True.json",
+          "sha256": "9f33ac8fa59a47720f05cd26858f9db90c3dc23d3525dfab9040a19f424560ce"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-9-512-False.json",
+          "sha256": "d1a5f5ac12276608fe29ed54c1843df33c7752790762cbc90900749cf637500f"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-9-512-True.json",
+          "sha256": "5ef0df1842ed8acb97a8cff702bf700dc6d08c145678f9beac364363a895b958"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-9-2048-False.json",
+          "sha256": "3c3a92e1c116740c0974fb4b60f0040739703bd9dd0831c68254335980344a71"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-9-2048-True.json",
+          "sha256": "cd3a583a898407d9c6681b05397bdeda682a7e59c89cc75258840dca7d840877"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-22-64-False.json",
+          "sha256": "d542a2f5a9ba3d317707fdd7ef45e628c1ae4d7bf921ab2d4e2b512146b3785c"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-22-64-True.json",
+          "sha256": "94563e43b46edb945c14b29ae3691367ecf5fbc5941d5cfc5b67f240e6d770ee"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-22-512-False.json",
+          "sha256": "60bcaf0b59d901a736586ae24078ed60d83554fac1044e1f8bd287a8c59e3877"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-22-512-True.json",
+          "sha256": "21a774cf73fc010f5e32cad6f277abf326a050ccd718fe01630df5f1b579c6b7"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-22-2048-False.json",
+          "sha256": "6997246088f4133909b5f5e99f86cb5ad00546d6f288b5d26a27717858f363ca"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-independent02/graph-22-2048-True.json",
+          "sha256": "552a8f941204a6a86d95138f99dd21c24225b37c626c141d108cfee985c947af"
+        }
+      ],
+      "protected_files": {
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/2048-step5.pt": "85e30789b1edb44751140bffd4aa75bea43d5872f154df8c4cece15e114c4412",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/64-final.pt": "3e466ee926dcabd6c4881961630744afc396176288ac03b5edb1a272ada2bb83",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/512-final.pt": "53afbc11dba8dd2ecef3e182eeadd08838e91460682ab18e928b54025ef53031",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/512-step5.pt": "f789276d20f3b1a4172f0754cbebeb9453e7c159c380a712c5dc85b4ee257600",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/receipt.json": "88413ca3a87c8fbdbfe2e1760d4d620b941cdcd4334af8d278417b616fbaf540",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/64-step5.pt": "169fcbdd9a37ad345c3d3fd56a903806e8609223c03052928643a2e9abf32718",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/2048-final.pt": "01df450601fa7c4f96d32063c9e0348b4c311c1acfc83dbed583d547d2c40a32",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-2048-True.pt": "3b640e3a867520362bcce34082ebefa8979d78e321a5915fc1d06208db6635fd",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-2048-False.json": "a855dd5e98d6f23596a14075a42196e062ba366f4b2bf2e8605235183942919c",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-64-False.json": "1b20b6b9f6d86a4e4442f5300322cae204344337b24b76f8958c7e303fbc03d8",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-512-False.json": "a25272b06d3983ef7d49c0684bad48417c68f30b85c10c42a94cf54248e4c800",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-512-False.pt": "33b5c2f08545bd03ddc03a77bb2c284de77ef9b6d8b6bb9cab4ccf9422cd1da1",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-512-True.json": "61d65d798e4e354ad28264fd6626f006be6d3206c6a585aa3de9c218244d51d6",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/receipt.json": "92d2dd0a09ecd5d9bd599fe2753f233a8236df2cf07f653c5eca68c4cbfed5af",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-2048-False.json": "f02f9fe627c3961140f3fcd81cb9cb1d6a543be8542ec8e7117f96cb0fb5a347",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-2048-False.pt": "8cf3bb61dea3430edb00b632158682c861bd193ec3a1e11fc471016a915c5fac",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-64-True.pt": "67cad0ac08bffcfbe8805e13dc11e1c75af98085f36902a4c960f7f486c09b4f",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-512-True.pt": "edb202f96cc27070333d8ee5a8b8cdc8273a0a7f1efe5881193513c3831ff59a",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-512-False.json": "8c3ee8d1cd56c2ecb9e2d918f18dbfa270e1ec350d94c314a56f5ad540c096e9",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-64-True.pt": "9e558828064b886701412d852f78f852a42d31a452d0a43ce8bdca7d61189336",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-64-True.json": "40151067e050dd23d77da94b9590c2aed13165400793f8e6b79b38ad9e944ebc",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-512-False.pt": "ee8fcbbbc2151620a9b3832157b179ee2133e4168c1fb3882dbd31992f34aab7",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-512-True.pt": "5e0c90d398ae9dd1f056bfedeb2c1e2712b4b329a656945b3dc4c91933293efe",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-2048-True.json": "d0ffc833fba598b3f6375ba187a719dc25cb82f63b72994caec5e2935b772c1a",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-2048-False.pt": "fcb32e4c6dbad8c375159d0e9745c0d700fbd282e94188aa51771479211508c1",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-64-True.json": "7fc6af326234e3f70c61df5272f7125f368a19fa71e5cb40738d11727e510f21",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-512-True.json": "1233cd03d1deff24b97a67407c051edad5b774378676878433dcf5d191925b66",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-64-False.json": "c377a5a24cc5a7dad85cd47bf95cb618e27acea6fab0454c0d1dbaf7f64efc36",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-2048-False.json": "a4266ac82feab9944b9bbd806cb58bf3a397b67bd9e038d78a51e01ecf145ac7",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-64-False.pt": "feb1c8f9dda7c5a4804381ee3a9e165a26d17aaf2e8d003f3ce033973b1a4cab",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-512-False.json": "bb1bb2da03b3e596925abf428ee22ccfea340823cb45e20af4ba845e287c7233",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-2048-False.pt": "3243b36ad20e5396ccfdf1045ec622ac79595db6770f05c9e2919d58dafc18a2",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-512-True.pt": "1efd15fc37d9c00323d9d94b404c946b69457156fe6ef0c97a825bbd3348e445",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-512-True.json": "64d756c118d5c38f12b442f4497c0c774bfda643b7f86ea4d7184589236fea99",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/3-2048-True.pt": "b3b2e364aaab253faaeeb0454ddad2ece524c64dece7708c1381df38a8593ad5",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-64-False.pt": "807076092c329ed53a4f29c8d232bfb81fad3eefbc01e9330664627cec4eddf9",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-2048-True.pt": "544f5ed490295d646e27e0f8945a29bc9187377f005452f56f7cc31c9984f002",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-512-False.pt": "b5e49b190b1af792dd202efe9c42cbb3f44b2a97a07c3e82b118a199209b9423",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/22-2048-True.json": "db890383e79770631db36f1f1131ff507d63db5968725b3328460d593dde5f34",
+        "/home/lbx/hsi-pioneer271828/runs/multiclass-development-independent01/9-2048-True.json": "1f3e9fea33edf6119aafda443059aec685ef583cdb82febd94ff6bc3dfd1a40b"
+      },
+      "protected_files_unchanged": 40,
+      "query": 0,
+      "real_training": 0,
+      "old_optimizer_updates": 0,
+      "elapsed_seconds": 13.053167490754277,
+      "limits": [
+        "synthetic3/9/22; fixedmodel512 support2027/3031 sampler64/512/2048; not actual HongHu accuracy",
+        "reused route budget2 deletion controls degenerate; no importance superiority claim",
+        "CPU only; full-model control updates only same CNN head, not all-parameter adaptation"
+      ]
+    }
+  },
+  "failures": [
+    {
+      "log": "/home/lbx/hsi-pioneer271828/runs/multiclass-consumers-engineering01/audit01.log",
+      "sha256": "e8299c4126c708d889e05781f93410d90bebfa5b07d8a90886223629b0267439",
+      "reason": "audit hook correctly rejected by router interception guard; external audit02 wraps private forward instead; production unchanged",
+      "synthetic_updates_before_failure": 108
+    }
+  ],
+  "real_training": 0,
+  "query": 0,
+  "gpu_tests": 0
+}

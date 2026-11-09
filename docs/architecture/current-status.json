@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 331,
+  "issue": 333,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "b50d532e96862f43d4c5782e24704f705e6546e2",
+  "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -871,14 +871,22 @@
       "id": "P4/E3多类别开发训练",
       "state": "固定每类10/5、多类别训练与旧九类恢复CPU工程通过",
       "evidence": "Issue331/PR332；tested50f757476689af69bbd158efc3c50156852309af，CPU6+44；独立16新合成模型384更新+24旧模型0更新/120头/16110混淆1242召回212文件不变；2曝光不足保留拒绝",
-      "remaining": "GPU/真实HongHu空间可行性与真实效果未验；轻头/M4及删边消费者下一项补齐，长训练暂停",
+      "remaining": "轻头/M4/删边多类别消费者CPU接入已验；GPU、真实HongHu空间可行性及真实效果仍待，长训练暂停",
       "report": "research/reports/P4E3_多类别开发训练与恢复工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天模块完整报告，随验收交付"
+    },
+    {
+      "id": "P4/DY多类别轻头与逐类诊断",
+      "state": "CPU轻头等预算恢复发布和三头/删边消费者通过",
+      "evidence": "Issue333/PR334；tested4d18bfb1ab1077456f8842462cf070ef5c2a1fb6，CPU5+48；独立9新轻头108合成更新、3旧轻头和16旧图模型0更新，267头56556混淆3276召回40文件不变；审计01插桩拒绝保留",
+      "remaining": "GPU/真实HongHu空间/真实小类与总体收益未验；CUR外部登记与恢复CLI仅为待办，用户要求本模块后停下汇报，不启动",
+      "report": "research/reports/P4DY_多类别轻头恢复与逐类诊断工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天完整模块报告，随工程验收交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "continuous_module_construction_real_long_training_paused",
-  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。",
+  "execution_state": "paused_by_user_after_issue333_progress_review",
+  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。",
   "main_merge_evidence": [
     {
       "tested_sha": "b985634b22ba77422bb8c91143bbc0a0337707ff",
@@ -1110,6 +1118,13 @@
       "tested_sha": "b1be089f0ab30aa95ce8016e22d97a8627339b71",
       "merge_sha": "b50d532e96862f43d4c5782e24704f705e6546e2",
       "scope": "E4c-3 CPU7+31;3initialized native models9CLI/31104features972logits/27reports/45pins; history and real-scene identity unverified"
+    },
+    {
+      "pr_number": 332,
+      "head_sha": "44c5b3e30fc36be5431f4c184dfdc05c2f49e54b",
+      "tested_sha": "50f757476689af69bbd158efc3c50156852309af",
+      "merge_sha": "ffb88163a3952cd04760471e8843904f0c97aedc",
+      "scope": "P4/E3 CPU6+44;16new synthetic models384updates24old0updates120heads16110cells1242recalls212pins;2ineligible exposure cases retained"
     }
   ]
 }
