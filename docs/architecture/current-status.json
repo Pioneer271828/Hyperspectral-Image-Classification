@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 287,
+  "issue": 289,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "69178739747d99e7c2d0553d60c34f46240b3750",
+  "main_snapshot": "af1541b624418292423139ba349d132e4654e8f3",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -708,6 +708,14 @@
       "remaining": "真实多种子最低曝光/加权预算/正式训练CLI/GPU与真实小类效果仍待。12步64/512虽各类参与仍15支持未访问；不变更预算凑门槛。下一DY独立轻模型训练恢复接入工程，长训练暂停。",
       "report": "research/reports/CURS2_有限预算曝光与恢复台账工程验收_20261109.md",
       "chat_report": "本聊天CUR-S2完整CPU工程交付后继续DY训练接入。"
+    },
+    {
+      "id": "DY-1B冻结前缀轻出口头训练恢复",
+      "state": "CPU工程验收通过，真实训练与部署未验",
+      "evidence": "tested7cce2f804e7c941dae6a789a0284009dc131a322；CPU8专项/45含专项回归、checker490Python148JSON。三采样种子独立93合成更新/135验证标签/243混淆格与完整CNN头控制精确；真实train4数组精确、31文件不变。",
+      "remaining": "正式轻模型发布/级联绑定、校准确认、真实逐类和小类/完整微调控制/联合蒸馏/GPU与成本待验。下一DY-1C训练后轻头冻结发布；长训练暂停。",
+      "report": "research/reports/DY1B_冻结前缀轻出口头训练与恢复工程验收_20261109.md",
+      "chat_report": "本聊天DY-1B完整CPU工程报告后继续DY-1C。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -790,6 +798,13 @@
       "tested_sha": "1b8ed4164d8ff3b5015f531456a58f5b54cf5331",
       "merge_sha": "69178739747d99e7c2d0553d60c34f46240b3750",
       "scope": "CUR-S1 CPU7/36, five-arm synthetic recovery, independent15policies/16200weights; no real benefit claim"
+    },
+    {
+      "pr_number": 288,
+      "head_sha": "490fa094213116d22ba4138fa0c0e5471f3be9e2",
+      "tested_sha": "2ffd5c1a7d7d750caaeea3931da7f9b4b37d0153",
+      "merge_sha": "af1541b624418292423139ba349d132e4654e8f3",
+      "scope": "CUR-S2 CPU6/42, independent9plans/111events/120prefixes; no real benefit claim"
     }
   ]
 }
