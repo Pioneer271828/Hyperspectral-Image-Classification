@@ -26,7 +26,8 @@ def _paths(paths):
 
 
 def _dense(model):
-    if type(model) is not MultiDatasetVCASAHGCN or hasattr(model, '_int8_plan'):
+    if (type(model) is not MultiDatasetVCASAHGCN or hasattr(model, '_int8_plan')
+            or hasattr(model, '_tq_plan')):
         raise ValueError('unquantized MultiDatasetVCASAHGCN required')
     for value in model.state_dict().values():
         if (not torch.is_tensor(value) or value.device.type != 'cpu'

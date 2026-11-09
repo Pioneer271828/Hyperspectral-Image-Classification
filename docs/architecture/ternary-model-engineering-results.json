@@ -1,0 +1,461 @@
+{
+  "status": "passed_cpu_ternary_model_engineering",
+  "issue": 277,
+  "tested_commit": "24e56fab584c6b109360c416e645d706c3df562f",
+  "branch": "codex/ternary-model-engineering",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "24e56fab584c6b109360c416e645d706c3df562f",
+    "branch": "codex/ternary-model02",
+    "python_files": 476,
+    "json_files": 140,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/ternary-model-cpu01.log": {
+      "sha256": "b0dc0d0b9384e98fc30c5d521a069e6de1e8688e2a1a4a9afd119f6c673d91cf",
+      "passed": 7,
+      "seconds": 3.65
+    },
+    "/home/lbx/hsi-pioneer271828/runs/ternary-model-regression01.log": {
+      "sha256": "04b7cd9eb5569581b8a01d36ac9c0185d6b1e22f7e7677d08260a435989a0bff",
+      "passed": 89,
+      "seconds": 10.966
+    },
+    "/home/lbx/hsi-pioneer271828/runs/ternary-model-cpu02.log": {
+      "sha256": "ac1709a164515dbebf3703a072bbb22eceaf836fc1092a7862f721a4feac0f53",
+      "passed": 8,
+      "seconds": 3.622
+    },
+    "/home/lbx/hsi-pioneer271828/runs/ternary-model-regression02.log": {
+      "sha256": "654bf618870111cb0b718c898566152e585f6b27185edeeb9e63032a871e2d4c",
+      "passed": 90,
+      "seconds": 11.064
+    }
+  },
+  "initial_passed_commit": "f5e8a1bccc98aeee1ca4201628574858a6d2f982",
+  "review_revision": "Added reverse INT8-on-TQ rejection and eighth negative test; old seven tests passed but lacked this coverage.",
+  "synthetic_optimizer_calls_per_targeted_invocation": 57,
+  "real_inference": {
+    "status": "passed_real_train_tile_inference_only",
+    "commit": "24e56fab584c6b109360c416e645d706c3df562f",
+    "registration_sha256": "2daa10e143cb98548cc37fa8227f6f872a19bdf525dd501cf1fdddc587049570",
+    "rows": [
+      {
+        "name": "fp32",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/fp32-tile0.npz",
+        "sha256": "76ac4d37fb21b8f3d99e5ad84f926ac54e922fd71521e2a4d5c49621035a375c",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt",
+          "sha256": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54"
+        },
+        "bytes": 307383,
+        "max_probability_error": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.028441817732527852,
+        "cpu_samples_seconds": [
+          0.02794655691832304,
+          0.02784805092960596,
+          0.029766687657684088,
+          0.030804927926510572,
+          0.02924291742965579,
+          0.028582861181348562,
+          0.028071437031030655,
+          0.029548564925789833,
+          0.028300774283707142,
+          0.027657123748213053
+        ]
+      },
+      {
+        "name": "int8",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/int8-tile0.npz",
+        "sha256": "359a91b8b3a6be6ed63949f734cd0bd36e89bc434c2c53594f17206c4e708128",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both.pt",
+          "sha256": "9f8e353bed5a437ef4427966d18f95bc8b8ee906783322c641adc6ef4c9204fe"
+        },
+        "bytes": 272377,
+        "max_probability_error": [
+          5.075335502624512e-05,
+          0.0,
+          5.940347909927368e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.028913324000313878,
+        "cpu_samples_seconds": [
+          0.028473282232880592,
+          0.030968732200562954,
+          0.027863888069987297,
+          0.027609298937022686,
+          0.029127649031579494,
+          0.02869899896904826,
+          0.030427848920226097,
+          0.02869655005633831,
+          0.029240638948976994,
+          0.02933942899107933
+        ]
+      },
+      {
+        "name": "tq_first",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_first-tile0.npz",
+        "sha256": "a65dea78fc66ff2f03847c93d994668361596227fd1eaed84441e5a44356e974",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_first.pt",
+          "sha256": "be1d13dfbb499754a3df8875c3146b20317bb915c64ddc8cec4fd41a22bc1a00"
+        },
+        "bytes": 283162,
+        "max_probability_error": [
+          0.00019562244415283203,
+          0.0,
+          0.0002758726477622986
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.027702255873009562,
+        "cpu_samples_seconds": [
+          0.030785896815359592,
+          0.022364069242030382,
+          0.027437665034085512,
+          0.028467559721320868,
+          0.022800680715590715,
+          0.030098470859229565,
+          0.02902769297361374,
+          0.026632888708263636,
+          0.02796549489721656,
+          0.027439016848802567
+        ]
+      },
+      {
+        "name": "tq_second",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_second-tile0.npz",
+        "sha256": "f52e7db48a82d24aadb7d922ed278e8bcfc9690b8a7ed6a86ac81ee5704d63b2",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_second.pt",
+          "sha256": "8ce576b7ae78eb3a8220b6f2eeeddae0f31084742ab736bd7289751e20267459"
+        },
+        "bytes": 283162,
+        "max_probability_error": [
+          0.0007907375693321228,
+          0.0,
+          0.0012146607041358948
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.028981435112655163,
+        "cpu_samples_seconds": [
+          0.0279803229495883,
+          0.030497705098241568,
+          0.028591137379407883,
+          0.02898284699767828,
+          0.028980023227632046,
+          0.028661357704550028,
+          0.03312723012641072,
+          0.029402642976492643,
+          0.027789362240582705,
+          0.030009320005774498
+        ]
+      },
+      {
+        "name": "tq_both",
+        "tile_id": 0,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_both-tile0.npz",
+        "sha256": "31e5b08db6ebe594e1761fc6ee6bcc41250705a4b11dbfe51d04bb3026e57fb0",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_both.pt",
+          "sha256": "eabcddfde993b3d2843d6afe133609c4f0931e5315e4c9c26140afb31c03dc79"
+        },
+        "bytes": 252695,
+        "max_probability_error": [
+          0.0008637309074401855,
+          0.0,
+          0.0011734738945960999
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.028765721479430795,
+        "cpu_samples_seconds": [
+          0.029153488110750914,
+          0.028511103708297014,
+          0.027796783950179815,
+          0.02139051491394639,
+          0.03182237083092332,
+          0.028134579304605722,
+          0.029020339250564575,
+          0.028214782010763884,
+          0.03135149413719773,
+          0.029299370013177395
+        ]
+      },
+      {
+        "name": "fp32",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/fp32-tile1.npz",
+        "sha256": "fd7e9f2bc598b327b9c61ec1b387c4b423a09b537d597c16ea3417078dd6abf0",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt",
+          "sha256": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54"
+        },
+        "bytes": 307383,
+        "max_probability_error": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.026536700082942843,
+        "cpu_samples_seconds": [
+          0.027871421072632074,
+          0.02601413894444704,
+          0.02813819283619523,
+          0.027686987072229385,
+          0.0262641329318285,
+          0.019583038054406643,
+          0.026336382143199444,
+          0.020855777896940708,
+          0.026737018022686243,
+          0.02705981070175767
+        ]
+      },
+      {
+        "name": "int8",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/int8-tile1.npz",
+        "sha256": "39167152d30eb4bd16fd21533c832ebd595bf8abc21f0578b65702dcf839919a",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both.pt",
+          "sha256": "9f8e353bed5a437ef4427966d18f95bc8b8ee906783322c641adc6ef4c9204fe"
+        },
+        "bytes": 272377,
+        "max_probability_error": [
+          5.186349153518677e-05,
+          0.0,
+          5.409121513366699e-05
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.0273026826325804,
+        "cpu_samples_seconds": [
+          0.027274064254015684,
+          0.023497851099818945,
+          0.028721637092530727,
+          0.028031861409544945,
+          0.02687086584046483,
+          0.020589611027389765,
+          0.027331301011145115,
+          0.02878352114930749,
+          0.02727270033210516,
+          0.030228592921048403
+        ]
+      },
+      {
+        "name": "tq_first",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_first-tile1.npz",
+        "sha256": "6f02529b4155505f72a6f5677b54ef1af265641b189222d2db55380c0456b0dd",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_first.pt",
+          "sha256": "be1d13dfbb499754a3df8875c3146b20317bb915c64ddc8cec4fd41a22bc1a00"
+        },
+        "bytes": 283162,
+        "max_probability_error": [
+          0.0002038031816482544,
+          0.0,
+          0.0002750679850578308
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.027116287499666214,
+        "cpu_samples_seconds": [
+          0.022942737210541964,
+          0.027235204819589853,
+          0.027468609157949686,
+          0.02192081417888403,
+          0.028593439143151045,
+          0.026997370179742575,
+          0.02166312700137496,
+          0.02678332617506385,
+          0.029133824165910482,
+          0.028932551853358746
+        ]
+      },
+      {
+        "name": "tq_second",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_second-tile1.npz",
+        "sha256": "4627b8da93dd658d74076211d46faab7a9dea93e510f915bdb5599cc3f1c64ef",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_second.pt",
+          "sha256": "8ce576b7ae78eb3a8220b6f2eeeddae0f31084742ab736bd7289751e20267459"
+        },
+        "bytes": 283162,
+        "max_probability_error": [
+          0.0007971450686454773,
+          0.0,
+          0.0012231096625328064
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.028752424055710435,
+        "cpu_samples_seconds": [
+          0.028742230031639338,
+          0.021734504029154778,
+          0.026560097932815552,
+          0.020300921984016895,
+          0.028762618079781532,
+          0.028957927133888006,
+          0.029389962553977966,
+          0.029009710997343063,
+          0.029951345175504684,
+          0.028238907922059298
+        ]
+      },
+      {
+        "name": "tq_both",
+        "tile_id": 1,
+        "prediction": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_both-tile1.npz",
+        "sha256": "38b91b08cad7d0509b5c15c9a581661d791b3f0c220014dd8e7e6fe67e4fbb7a",
+        "checkpoint": {
+          "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/tq_both.pt",
+          "sha256": "eabcddfde993b3d2843d6afe133609c4f0931e5315e4c9c26140afb31c03dc79"
+        },
+        "bytes": 252695,
+        "max_probability_error": [
+          0.000870823860168457,
+          0.0,
+          0.0011769607663154602
+        ],
+        "top1_disagreement": [
+          0,
+          0,
+          0
+        ],
+        "cpu_median_seconds": 0.029188328189775348,
+        "cpu_samples_seconds": [
+          0.027976299170404673,
+          0.02925014914944768,
+          0.02918972633779049,
+          0.029186930041760206,
+          0.02912836568430066,
+          0.029398877173662186,
+          0.02911352226510644,
+          0.029303708113729954,
+          0.02842723671346903,
+          0.03063271613791585
+        ]
+      }
+    ],
+    "exact_tq_heads_reloaded": 18,
+    "exact_tq_simulation_to_packed_heads": 18,
+    "protected_files": {
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/acceptance.json": "413b23ab9350201bbd2cf10de675ff355a06a2f7d2207774ec487da709d6509c",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/registration.json": "fc61d64f204a78595856cd84394809911cce89eb83e19a097ecb3fb1980d4ad2",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/state.pt": "6fff4651587b3dba42bcb40c4c7e43b8e3f0f215e7088b7745203e3c7ab4e647",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/result.json": "671c11a5fb12104f11d5935c2e2cd9fc2cec01eb26e7ad6d98be90c05edf607f",
+      "/home/lbx/hsi-pioneer271828/datasets/snapshots/joint-honghu-20261103-issue97/dataset/PaviaU/PaviaU.mat": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-plan.json": "3f15f0650f500959e603bccd2614226c37089eafc8f06637b010bd69347363d8",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-statistics.json": "5996f5ad84917f7ad88cd2d62c8cd9f7e9b7a81f8a003df4fe9fd672ef2e4162",
+      "/home/lbx/hsi-pioneer271828/runs/e4b-online-tta-pavia01/receipt.json": "2435a74dc65e27b496db58b998498fb84cb91792facccdef7313ef445c6b410a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/receipt.json": "bc880739cc14817102abee2895d4de1a68e2e8077dbf399ce0dcf11d9d67170a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/registration.json": "51d21d9bc436f266c4cfe11ea3efbd58d6faef32d8394617e28a304e98e5cbdc",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile0.npz": "76ac4d37fb21b8f3d99e5ad84f926ac54e922fd71521e2a4d5c49621035a375c",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile0.npz": "fd3570bc8e82efe498cddd5a2adddc799bb62ec1313651610193d300745d4016",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile0.npz": "4a4c82e9cc9227a0e4cf92e4ad219afe658fdfb4358f44f68551f8ba954919ab",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile0.npz": "359a91b8b3a6be6ed63949f734cd0bd36e89bc434c2c53594f17206c4e708128",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile1.npz": "fd7e9f2bc598b327b9c61ec1b387c4b423a09b537d597c16ea3417078dd6abf0",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile1.npz": "360a675ea86387a10c32e204c547a4058d251d3f4daec7ad5db4aadd7dacc619",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile1.npz": "ee9c0a3c39ecd4bbbfd9137e9f42092bf74fe32c18152ad2f1a13d0f2bcf0ab8",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile1.npz": "39167152d30eb4bd16fd21533c832ebd595bf8abc21f0578b65702dcf839919a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first.pt": "63b3ae865a4d90e4bcfdcfda1ae10ffc1201d6e4563e09c3eec04b85409bec1f",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second.pt": "5acb822a3eea2fc2cc06a93114c49194f40a3cf2a9d172880d26f1685c7ea39c",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both.pt": "9f8e353bed5a437ef4427966d18f95bc8b8ee906783322c641adc6ef4c9204fe",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt.json": "4eb1c638946e3ed78cb69c3d06c274b295ce9e3fcc84be79ddd59700678d2f4d",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-independent01/receipt.json": "6abae12384985cf80ea74f9d24f2ec9df065253fc5674198568e5de7fe68bbe3"
+    },
+    "real_optimizer_updates": 0,
+    "gt_accessed": false,
+    "query_accessed": false,
+    "limitations": [
+      "Two original spatial train tiles only; no accuracy/class-recall evaluation.",
+      "TQ decoding plus FP32 convolution included in timing; not a low-bit compute kernel.",
+      "No real QAT/TQ recovery training or GPU deployment test."
+    ]
+  },
+  "producer": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-pavia01/receipt.json",
+    "sha256": "e48b4d5c7c27ce0f0167df7e608754b2bc5bcdc456d4ee59a899af9efcbd4791"
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/ternary-model-independent01/receipt.json",
+    "sha256": "08b9b2ea03be925a993ab3dd7b128a4f4e3b274ff31211d22331a10a73c2fe89",
+    "exact_heads": 30,
+    "numpy_comparison_fields": 60,
+    "protected_file_count": 39
+  },
+  "real_optimizer_updates": 0,
+  "gt_accessed": false,
+  "query_accessed": false,
+  "limitations": [
+    "Two original spatial train tiles only; no accuracy/class-recall evaluation.",
+    "TQ decoding plus FP32 convolution included in timing; not a low-bit compute kernel.",
+    "No real QAT/TQ recovery training or GPU deployment test."
+  ]
+}
