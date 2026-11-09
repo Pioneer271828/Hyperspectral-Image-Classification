@@ -65,10 +65,14 @@ def reload(a,path,sha,contract):
 
 class MulticlassDevelopmentTests(unittest.TestCase):
     def test_three_class_counts_dynamic_fixed_exact_recovery_and_zero(self):
-        for classes in (3,9,22):
+        for classes,seed in ((c,s) for c in (3,9,22) for s in (64,512,2048)):
             for fixed in (False,True):
-                with self.subTest(classes=classes,fixed=fixed),tempfile.TemporaryDirectory() as tmp:
-                    a=fixture(classes,fixed=fixed);run=make(a);source=route_state_hash(a[0]);rng=torch.get_rng_state().clone()
+                with self.subTest(classes=classes,seed=seed,fixed=fixed),tempfile.TemporaryDirectory() as tmp:
+                    a=fixture(classes,seed=seed,fixed=fixed)
+                    if not a[3].exposure()['meets_minimum']:
+                        with self.assertRaisesRegex(ValueError,'exposure'):make(a)
+                        continue
+                    run=make(a);source=route_state_hash(a[0]);rng=torch.get_rng_state().clone()
                     run.advance(7);path=Path(tmp)/'partial.pt';sha=run.save(path);run.advance(24)
                     restored=reload(a,path,sha,run.contract_hash);restored.advance(24)
                     self.assertEqual(run.history,restored.history);self.assertEqual(run.finish(),restored.finish())
@@ -170,4 +174,5 @@ class MulticlassDevelopmentTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
 
