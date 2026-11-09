@@ -64,6 +64,9 @@ class SelectedSignalsTests(unittest.TestCase):
             key=next(k for k,v in changed.selected_state.items() if v.is_floating_point());changed.selected_state[key].add_(1)
             with self.assertRaises(ValueError):review_selected_signals(changed,plan,expected_plan_hash=plan.plan_hash)
         with self.assertRaises(ValueError):review_selected_signals(run,plan,expected_plan_hash='bad')
+        with patch('tests.test_graph_edge_intervention.GraphRouteRun.advance',return_value=None):partial=completed('weight',False,3)
+        with patch.object(partial,'_predict',side_effect=AssertionError('no partial model forward')):
+            with self.assertRaises(ValueError):SelectedSignalPlan.freeze(partial,**spec(partial))
 
     def test_perturbed_native_routing_is_reported_and_errors_cleanup(self):
         run=self.fixture_run;args=spec(run);plan=SelectedSignalPlan.freeze(run,**args)
