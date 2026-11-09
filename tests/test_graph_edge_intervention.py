@@ -41,7 +41,7 @@ def repin(value):
 
 class EdgeInterventionTests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.run=completed()
+    def setUpClass(cls):cls.fixture_run=completed()
 
     def test_hand_weight_ranking_ties_counts_self_and_row_normalization(self):
         a=weighted();m=deletion_masks(a,per_row=1,random_seeds=[64,512,2048],tile_id=7)
@@ -71,7 +71,7 @@ class EdgeInterventionTests(unittest.TestCase):
         with self.assertRaises(ValueError):delete_support(torch.eye(3),[])
 
     def test_complete_network_zero_deletion_exact_and_readonly(self):
-        run=self.run;state=route_state_hash(run.model);source=route_state_hash(run.source);history=copy.deepcopy(run.history)
+        run=self.fixture_run;state=route_state_hash(run.model);source=route_state_hash(run.source);history=copy.deepcopy(run.history)
         slots=copy.deepcopy(run.optimizer.state_dict());rng=torch.get_rng_state().clone();nrng=np.random.get_state()
         grads={k:None if p.grad is None else p.grad.clone() for k,p in run.model.named_parameters()}
         with patch('torch.optim.Adam.step',side_effect=AssertionError('optimization forbidden')):
@@ -89,7 +89,7 @@ class EdgeInterventionTests(unittest.TestCase):
             else:self.assertTrue(torch.equal(grads[key],p.grad))
 
     def test_nonzero_network_controls_change_graph_only_and_match_per_row_counts(self):
-        run=self.run;plan=EdgeDeletionPlan.freeze(run,per_row=1,random_seeds=[64,512,2048])
+        run=self.fixture_run;plan=EdgeDeletionPlan.freeze(run,per_row=1,random_seeds=[64,512,2048])
         result=review_deletions(run,plan,expected_plan_hash=plan.plan_hash);baseline=result['controls']['none']
         different=False
         for name,control in result['controls'].items():
@@ -104,7 +104,7 @@ class EdgeInterventionTests(unittest.TestCase):
         self.assertTrue(different);self.assertTrue(any(not x for x in result['identical_important_random'].values()))
 
     def test_authenticated_plan_rejects_state_context_support_and_query_changes(self):
-        run=self.run;plan=EdgeDeletionPlan.freeze(run,per_row=1,random_seeds=[64])
+        run=self.fixture_run;plan=EdgeDeletionPlan.freeze(run,per_row=1,random_seeds=[64])
         with self.assertRaises(ValueError):review_deletions(run,plan,expected_plan_hash='0'*64)
         for key in ('contract_hash','selected_state_hash','selected_step'):
             value=plan.to_dict();value[key]='wrong';bad=repin(value)
@@ -117,7 +117,7 @@ class EdgeInterventionTests(unittest.TestCase):
             with self.assertRaises(ValueError):review_deletions(run,bad,expected_plan_hash=bad.plan_hash)
 
     def test_exception_cleanup_and_reject_unfinished_model(self):
-        run=self.run;model=_selected(run);tid=next(r['id'] for r in run.record['roles'] if r['role']=='devval')
+        run=self.fixture_run;model=_selected(run);tid=next(r['id'] for r in run.record['roles'] if r['role']=='devval')
         rng=torch.get_rng_state().clone();state=route_state_hash(model)
         def fail(*args):torch.rand(3);raise RuntimeError('injected')
         with patch.object(run,'_predict',side_effect=fail):
