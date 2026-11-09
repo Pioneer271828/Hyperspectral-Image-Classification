@@ -1,0 +1,517 @@
+{
+  "status": "passed",
+  "issue": 313,
+  "pr": 314,
+  "module": "E3-C5",
+  "tested_sha": "d73b5873fbd368f9b133c253b3d29c760d332b38",
+  "branch": "codex/graph-edge-intervention",
+  "environment": {
+    "container": "authorized LXC",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "CPU",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": 7,
+    "specialized_seconds": 5.933,
+    "related": 27,
+    "related_seconds": 43.27,
+    "total": 34,
+    "gpu": 0,
+    "full_repository": false,
+    "fixture_updates": 48
+  },
+  "checker": {
+    "python_files": 514,
+    "json_files": 161,
+    "frozen_runtime_unchanged": true
+  },
+  "logs": {
+    "tests01.log": {
+      "path": "/home/lbx/hsi-pioneer271828/runs/graph-edge-intervention-engineering01/tests01.log",
+      "sha256": "0c090e6f60bc20aa20af5aaab36dd80f06c1317d0b66c52c7b0a8af2670e180d"
+    },
+    "independent01.log": {
+      "path": "/home/lbx/hsi-pioneer271828/runs/graph-edge-intervention-engineering01/independent01.log",
+      "sha256": "68f8a16d517f31caff6b43559dff8ffa1ba3cf42810484c2f78544cc4a66505f"
+    },
+    "related01.log": {
+      "path": "/home/lbx/hsi-pioneer271828/runs/graph-edge-intervention-engineering01/related01.log",
+      "sha256": "ecc318bc6196b44e6b8057b9e9879e84f9fdc05f2d9db5e9e6dfc91949aefc31"
+    },
+    "checker01.log": {
+      "path": "/home/lbx/hsi-pioneer271828/runs/graph-edge-intervention-engineering01/checker01.log",
+      "sha256": "6e59d3ab0072cc028642bae9512bf75d3a282ee6055cc97c9562a7f86512077f"
+    }
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/graph-edge-intervention-independent01/receipt.json",
+    "sha256": "e7be226477438ea6e3d5229f62cb72c43ab96e690426431bedac8bf0dc99ba5b",
+    "existing_synthetic_models": 6,
+    "new_synthetic_models": 1,
+    "new_synthetic_updates": 24,
+    "readonly_review_updates": 0,
+    "confusion_cells": 8505,
+    "recalls": 945,
+    "probability_heads": 105,
+    "support_cells": 560,
+    "protected_files_unchanged": 584,
+    "seconds": 6.787112418096513
+  },
+  "readings": [
+    {
+      "case": "64-False",
+      "selected_step": 20,
+      "oa": {
+        "none": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "important": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:64": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:512": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:2048": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ]
+      },
+      "minimum_recall": {
+        "none": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "important": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:512": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:2048": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "identical_important_random": {
+        "random:64": true,
+        "random:512": true,
+        "random:2048": true
+      }
+    },
+    {
+      "case": "64-True",
+      "selected_step": 20,
+      "oa": {
+        "none": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "important": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:64": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:512": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:2048": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ]
+      },
+      "minimum_recall": {
+        "none": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "important": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:512": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:2048": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "identical_important_random": {
+        "random:64": true,
+        "random:512": true,
+        "random:2048": true
+      }
+    },
+    {
+      "case": "512-False",
+      "selected_step": 7,
+      "oa": {
+        "none": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "important": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:64": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:512": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:2048": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ]
+      },
+      "minimum_recall": {
+        "none": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "important": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:512": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:2048": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "identical_important_random": {
+        "random:64": true,
+        "random:512": true,
+        "random:2048": true
+      }
+    },
+    {
+      "case": "512-True",
+      "selected_step": 7,
+      "oa": {
+        "none": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "important": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:64": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:512": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:2048": [
+          0.1111111111111111,
+          0.1111111111111111,
+          0.17777777777777778
+        ]
+      },
+      "minimum_recall": {
+        "none": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "important": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:512": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:2048": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "identical_important_random": {
+        "random:64": true,
+        "random:512": true,
+        "random:2048": true
+      }
+    },
+    {
+      "case": "2048-False",
+      "selected_step": 15,
+      "oa": {
+        "none": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "important": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:64": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:512": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:2048": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ]
+      },
+      "minimum_recall": {
+        "none": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "important": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:512": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:2048": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "identical_important_random": {
+        "random:64": true,
+        "random:512": true,
+        "random:2048": true
+      }
+    },
+    {
+      "case": "2048-True",
+      "selected_step": 15,
+      "oa": {
+        "none": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "important": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:64": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:512": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ],
+        "random:2048": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.17777777777777778
+        ]
+      },
+      "minimum_recall": {
+        "none": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "important": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:512": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:2048": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "identical_important_random": {
+        "random:64": true,
+        "random:512": true,
+        "random:2048": true
+      }
+    },
+    {
+      "case": "budget3",
+      "selected_step": 20,
+      "oa": {
+        "none": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "important": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:64": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:512": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ],
+        "random:2048": [
+          0.13333333333333333,
+          0.1111111111111111,
+          0.2
+        ]
+      },
+      "minimum_recall": {
+        "none": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "important": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:64": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:512": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "random:2048": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "identical_important_random": {
+        "random:64": false,
+        "random:512": false,
+        "random:2048": false
+      }
+    }
+  ],
+  "failures": [],
+  "pretest_fix": "unittest fixture named fixture_run to avoid overriding TestCase.run; caught by review before execution",
+  "limits": [
+    "CPU nine-class 90/45 synthetic engineering only",
+    "six budget2 controls degenerate: all removable edges deleted",
+    "same row counts do not match deleted weight mass or distance",
+    "weight ranking is not causal importance",
+    "validation reused from selection, not independent query",
+    "no real training, GPU, deployed speed, or scientific relationship conclusion"
+  ],
+  "query": 0,
+  "real_training": 0
+}
