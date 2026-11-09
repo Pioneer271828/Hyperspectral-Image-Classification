@@ -594,12 +594,20 @@
       "id": "P4 G2仅源端三头验证",
       "state": "源验证计分与角色访问记录工程验收通过",
       "evidence": "tested c8fa0e45d6e791d539aeb8b4454083344861adb0，LXC CPU专项24/24、回归35/35、checker。三头解析NLL/混淆独立核对、源验证角色拒绝、权重逐位不变；优化/query0。",
-      "remaining": "源训练与候选快照选步/祖先封存接入、发布档案本地绑定和真实闭集实验待完成。",
+      "remaining": "源训练、选步和访问证据已接入CPU工程闭环；真实数据准入与完整验证待完成。",
       "report": "research/reports/P4G2_仅源端三头验证工程验收_20261109.md",
       "chat_report": "本聊天2026-11-09 G2仅源端三头验证工程验收。"
+    },
+    {
+      "id": "P4 G2源训练选步与独立审计",
+      "state": "两源CPU合成闭环和独立验收通过",
+      "evidence": "tested a3abde4892f8f00767e9e87140b78b6e081ad7a5，LXC 27专项/35回归及checker。合成两源4次更新，选第4步；两候选12头指标/24召回复算，18输入/产物不变，真实优化与query均0。",
+      "remaining": "PaviaU发布档案HTTPS403；HongHu 270波段中心仅172落入PaviaU近似范围，辐射量与冻结统计映射待核。GPU、续训与真实闭集效果待验收。",
+      "report": "research/reports/P4G2_源训练选步与独立审计工程验收_20261109.md",
+      "chat_report": "本聊天2026-11-09 G2源训练选步与独立审计工程验收。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "p4_g2_source_validation_accepted_source_training_runner_pending",
+  "execution_state": "p4_g2_source_cpu_runner_accepted_target_grid_binding_unresolved",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
