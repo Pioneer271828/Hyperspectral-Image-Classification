@@ -33,6 +33,9 @@ def _authenticate(capture_path, capture_sha256, freeze_path, analysis_path):
     # matches it, and no model is loaded or executed by this consumer.
     frozen, _, _, case, record, _, pins = authenticate(freeze_path, receipt['freeze_sha256'],
         analysis_path, receipt['analysis_sha256'], receipt['case'], producer)
+    selected = next(m for m in frozen['models'] if m['name']==case['name'])
+    if type(selected.get('selected_step')) is not int or not 1 <= selected['selected_step'] <= 1500:
+        raise ValueError('Explicit frozen selected step required')
     if receipt['protected_files'] != pins: raise ValueError('Capture does not bind complete accepted inputs')
     if receipt['evidence']['observation'] != {k:record['prepared_fields'][k] for k in OBS_KEYS}:
         raise ValueError('Captured observation differs from accepted case')
@@ -56,7 +59,6 @@ def _authenticate(capture_path, capture_sha256, freeze_path, analysis_path):
         overlay[role+'_indices'] = torch.tensor(releases[phase]['indices'],dtype=torch.long)
         overlay[role+'_labels'] = torch.tensor(releases[phase]['labels'],dtype=torch.long)-1
     validate_overlay(overlay,target,10,family['shape'])
-    selected = next(m for m in frozen['models'] if m['name']==case['name'])
     return path, receipt, record, family, releases, overlay, selected, pins
 
 

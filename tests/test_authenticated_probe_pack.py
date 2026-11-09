@@ -16,6 +16,12 @@ from tests.test_frozen_representation_capture import synthetic_boundary
 
 def fixture(root):
     freeze,analysis,name,paths=synthetic_boundary(root)
+    # Older structural fixture omitted selected_step; these are synthetic schema
+    # values, not evidence that its initialized model trained for 1500 updates.
+    frozen=json.loads(freeze.read_text())
+    for row in frozen['models']:row['selected_step']=1500
+    write_json(freeze,frozen)
+    accepted=json.loads(analysis.read_text());accepted['freeze_sha256']=file_hash(freeze);write_json(analysis,accepted)
     names=subprocess.check_output(['git','ls-tree','-r','--name-only',CAPTURE_COMMIT],text=True).splitlines()
     files={n:hashlib.sha256(subprocess.check_output(['git','show',CAPTURE_COMMIT+':'+n]).replace(b'\r\n',b'\n')).hexdigest()
            for n in names if n.endswith('.py') or n.startswith('configs/') and n.endswith('.json')}
