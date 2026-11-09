@@ -1,0 +1,33 @@
+{
+  "issue": 265,
+  "implementation": "Independent matrix SVD adapter using installed torch; no external source copied or upstream training executed",
+  "paper": {
+    "title": "Speeding up Convolutional Neural Networks with Low Rank Expansions",
+    "authors": "Jaderberg, Vedaldi, Zisserman",
+    "year": 2014,
+    "url": "https://www.robots.ox.ac.uk/~vgg/publications/2014/Jaderberg14b/jaderberg14b.pdf",
+    "read_scope": "Original paper sections 2 and 2.2 in Issue265 preparation; matrix 1x1 adaptation, not reproduction of spatial expansion experiments"
+  },
+  "repositories": [
+    {
+      "url": "https://github.com/tensorly/torch",
+      "commit": "25c915d554476d62dfc80c91de8e50fcd3d13542",
+      "officiality": "Maintainer tool library, not SLR author implementation",
+      "license": "BSD-3-Clause",
+      "read_files": ["LICENSE", "tltorch/factorized_layers/factorized_linear.py"],
+      "source_copied": false,
+      "installed_or_executed": false
+    },
+    {
+      "url": "https://github.com/sridarah/slr",
+      "commit": "2c18ec9b356b83425933d2d0843c186621fc08fc",
+      "officiality": "Author code identified by README",
+      "license": null,
+      "limitation": "No identifiable license in reviewed tree; reference only",
+      "source_copied": false,
+      "installed_or_executed": false
+    }
+  ],
+  "project_tests": "7 CPU unit tests and 48 inclusive related regression tests at 4e3301640961d4734dc97752a1f7b660a0762748; GPU pending",
+  "prior_inventory": "docs/references/research-code-inventory.json"
+}

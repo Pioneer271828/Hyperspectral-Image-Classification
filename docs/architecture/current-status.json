@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 266,
+  "issue": 265,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "4d0b96474978287a65a852bb6472d57a8de9a22f",
+  "main_snapshot": "02967d1c208c7c055aebc7ea7c89fc6b6d6e9459",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -95,8 +95,8 @@
     {
       "id": "压缩与动态推理",
       "state": "未完成完整研究闭环",
-      "evidence": "已有可逆掩码；其余为研究计划",
-      "remaining": "结构裁剪、PTQ/QAT、低秩/三值、早退出/回退/路由及实测成本",
+      "evidence": "可逆掩码、紧凑恢复、动态出口/路由及E3工程已有分项证据；LR显式矩阵分解CPU工程通过，详见后续模块条目",
+      "remaining": "各机制真实多种子/逐类及成本闭环，LR GPU恢复，普通INT8 PTQ/QAT与后续三值",
       "report": "research/全量研究模块必测清单_20261104.md"
     },
     {
@@ -629,10 +629,17 @@
       "remaining": "完整训练CLI登记、多种子等预算真实训练/逐类保护/速度收益待验；当前耗时不一致改善，远程边扩展待局部效果依据。",
       "report": "research/reports/E3_候选内预算硬连接与整网恢复工程验收_20261109.md",
       "chat_report": "本聊天2026-11-09 E3完整工程报告。"
+    },
+    {
+      "id": "LR显式矩阵分解",
+      "state": "CPU工程通过，GPU与真实恢复待验",
+      "evidence": "tested 4e3301640961d4734dc97752a1f7b660a0762748；LXC CPU7专项/48含专项回归通过，checker468Python133JSON。两个PaviaU开发训练块12例、36头精确重载及NumPy独立复算，7文件不变，真实优化/query0。",
+      "remaining": "GPU资源门槛未满足；真实多种子等预算恢复、固定验证逐类/小类和部署成本待验。90%谱能量所需秩43不能减参，CPU耗时无一致收益，保持稠密默认。下一独立项普通INT8 PTQ/QAT。",
+      "report": "research/reports/LR_显式低秩分解与等预算恢复工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "authorized_main_pr_review_complete_return_to_module_plan",
+  "execution_state": "continuous_module_construction_real_long_training_paused",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。",
   "main_merge_evidence": [
     {
