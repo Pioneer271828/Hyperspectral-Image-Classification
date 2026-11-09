@@ -15,11 +15,11 @@ from loadData.dataset_registry import DATASETS, file_hash
 from research.reproduction.m4g4b.none_source_report import head_record
 from research_runtime import external_directory, require_frozen_code, write_json
 
-POLICY = "g4_matched_full54_trainval_review_v1"
+POLICY = "g4_matched_full54_trainval_review_resource_v2"
 HEADS = ("fused", "graph", "cnn")
 
 
-def validate_audit(launch, accepted, audit, consumer, launch_sha256, acceptance_sha256):
+def validate_audit(launch, accepted, audit, consumer, launch_sha256, acceptance_sha256, resource_audit=None):
     """The independently checked rows must match every accepted evidence field."""
     unchanged_producer(launch["code"], audit["code"])
     unchanged_producer(audit["code"], consumer)
@@ -33,12 +33,42 @@ def validate_audit(launch, accepted, audit, consumer, launch_sha256, acceptance_
             or len({r["name"] for r in rows}) != 54
             or {r["name"] for r in rows} != {c["name"] for c in launch["cases"]}):
         raise ValueError("Complete pinned independent54 audit required before review")
+    execution = accepted.get("resource_execution")
+    if execution is not None:
+        if (resource_audit is None or resource_audit.get("policy") != "g4_issue184_resource_final_independent_v1"
+                or resource_audit.get("status") != "passed"
+                or resource_audit.get("consumer", {}).get("commit") != "5dcc6964a25858f6793995126ec4606dfb8ad533"
+                or resource_audit.get("amendment_sha256") != execution["sha256"]
+                or resource_audit.get("resource_receipt_sha256") != execution["receipt_sha256"]
+                or resource_audit.get("launch_sha256") != launch_sha256
+                or resource_audit.get("acceptance_sha256") != acceptance_sha256
+                or resource_audit.get("models") != 54 or resource_audit.get("preserved_rows") != 51
+                or resource_audit.get("preserved_completed_files") != 5763
+                or resource_audit.get("totals") != {"updates": 81000, "head_metrics": 324,
+                    "class_recalls": 4320, "exact_reload_repeats": 162}
+                or resource_audit.get("new_optimizer_updates") != 0
+                or resource_audit.get("query_labels_accessed") is not False
+                or resource_audit.get("test_scoring") is not False
+                or accepted.get("elapsed_scope") != "resource_controller_segment_only"):
+            raise ValueError("Pinned independent51+3 resource audit required before resource-aware review")
+    elif resource_audit is not None:
+        raise ValueError("Unexpected resource audit for legacy acceptance")
     by_name = {r["name"]: r for r in accepted["models"]}
+    resource_rows = 0
     for row in rows:
+        extras = {k: v for k, v in by_name[row["name"]].items()
+                  if k in ("elapsed_scope", "resource_amendment_sha256")}
+        if extras:
+            if execution is None or extras != {"elapsed_scope": "resource_case_wall_with_waits",
+                    "resource_amendment_sha256": execution["sha256"]}:
+                raise ValueError("Unbound resource case cost metadata")
+            resource_rows += 1
         expected = {k: v for k, v in by_name[row["name"]].items()
-                    if k not in ("elapsed_seconds", "completed_resume_updates")}
+                    if k not in ("elapsed_seconds", "completed_resume_updates", "elapsed_scope", "resource_amendment_sha256")}
         if row != expected:
             raise ValueError("Independent54 review evidence differs from acceptance")
+    if execution is not None and resource_rows != 3:
+        raise ValueError("Exactly three resource case cost records required")
 
 
 def metric_record(metric, count):
@@ -119,6 +149,7 @@ def derive_case(case, accepted, history, trace):
         "selected_train_minus_val_fused_oa": selected_heads["train"]["fused"]["oa"] - selected_heads["val"]["fused"]["oa"],
         "changed_parameter_elements": changes, "positive_gradient_steps": positive,
         "lr_change_steps": lr_changes, "case_training_resume_wait_and_acceptance_seconds": accepted["elapsed_seconds"],
+        "case_elapsed_scope": accepted.get("elapsed_scope", "legacy_case_wall_with_waits"),
         "heads": selected_heads, "curve": curve}
 
 
@@ -181,7 +212,8 @@ def group_summary(rows):
     return groups
 
 
-def export_review(root, launch_sha256, acceptance_sha256, audit_path, audit_sha256, out, code):
+def export_review(root, launch_sha256, acceptance_sha256, audit_path, audit_sha256, out, code,
+                  *, resource_audit_path=None, resource_audit_sha256=None):
     started = time.monotonic()
     root, audit_path = external_directory(root), Path(audit_path).resolve(strict=True)
     if root == audit_path.parent or root in audit_path.parents or file_hash(audit_path) != audit_sha256:
@@ -191,7 +223,19 @@ def export_review(root, launch_sha256, acceptance_sha256, audit_path, audit_sha2
     if out.exists():
         raise ValueError("Fresh review output required")
     audit = read(audit_path)
-    validate_audit(launch, accepted, audit, code, launch_sha256, acceptance_sha256)
+    resource_audit = None
+    if resource_audit_path is not None:
+        resource_audit_path = Path(resource_audit_path).resolve(strict=True)
+        new_output(out, launch, (audit_path.parent, resource_audit_path.parent))
+        if file_hash(resource_audit_path) != resource_audit_sha256:
+            raise ValueError("Pinned independent resource audit hash differs")
+        resource_audit = read(resource_audit_path)
+        if resource_audit.get("full_audit_sha256") != audit_sha256:
+            raise ValueError("Resource audit full54 binding differs")
+        pins[str(resource_audit_path)] = resource_audit_sha256
+    elif resource_audit_sha256 is not None:
+        raise ValueError("Resource audit path/hash must be provided together")
+    validate_audit(launch, accepted, audit, code, launch_sha256, acceptance_sha256, resource_audit)
     if any(not math.isfinite(v) or v < 0 for v in (accepted["elapsed_seconds"], audit["elapsed_seconds"])):
         raise ValueError("Finite nonnegative controller/audit costs required")
     # Extra files must never replace hashes authenticated by full_acceptance.
@@ -219,13 +263,17 @@ def export_review(root, launch_sha256, acceptance_sha256, audit_path, audit_sha2
         "audit_sha256": audit_sha256, "input_files_verified_unchanged": len(pins),
         "optimizer_updates_reviewed": 81000, "new_optimizer_updates": 0,
         "query_labels_accessed": False, "test_scoring": False, "target_query_benefit_claim": False,
-        "controller_seconds_excluding_initial_freeze": accepted["elapsed_seconds"],
+        "acceptance_elapsed_seconds": accepted["elapsed_seconds"],
+        "acceptance_elapsed_scope": accepted.get("elapsed_scope", "legacy_controller_excluding_initial_freeze"),
+        "resource_audit_sha256": resource_audit_sha256,
+        "resource_audit": str(resource_audit_path) if resource_audit_path is not None else None,
         "sum_case_training_resume_wait_and_acceptance_seconds": sum(r["case_training_resume_wait_and_acceptance_seconds"] for r in rows),
         "independent_audit_seconds": audit["elapsed_seconds"], "report_elapsed_seconds": time.monotonic() - started,
         "limitations": ["Recorded train/validation curves; no independent probability recomputation for nonselected events.",
             "Parameter changes and selected-state metrics were independently checked by the pinned prior audit.",
             "Budget-end selection and late validation improvement do not prove sufficient convergence.",
             "Wall times include resource waiting/resume/acceptance and do not establish controlled GPU speed.",
+            "Acceptance resource segment is not the total batch wall time; parallel case wall times cannot be summed as elapsed batch time.",
             "Parent launch-to-exit wall time is separate; source27054 and short-target216 updates are separate budgets.",
             "Three model seeds with one support set are not support repeats or statistical significance."]}
     summary["exported_files"] = {p.name: file_hash(p) for p in out.iterdir() if p.is_file()}
