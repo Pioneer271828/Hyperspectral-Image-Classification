@@ -20,7 +20,8 @@ def _scores(value):
     keys={'schema_version','identity','support','classes','teacher_state','score_kind','losses','forward_tiles','seconds','score_hash'}
     if not isinstance(value,dict) or set(value)!=keys or value['schema_version']!=1:raise ValueError('Invalid teacher record')
     if value['score_hash']!=digest({k:v for k,v in value.items() if k!='score_hash'}):raise ValueError('Teacher hash mismatch')
-    if not isinstance(value['support'],dict) or set(value['support'])!={'indices','labels'}:raise ValueError('Invalid support record')
+    if (not isinstance(value['support'],dict) or set(value['support'])!={'indices','labels','seed'}
+            or type(value['support']['seed']) is not int or not 0<=value['support']['seed']<2**32):raise ValueError('Invalid support record')
     ids=value['support']['indices'];labels=value['support']['labels'];classes=value['classes'];losses=value['losses']
     if any(not isinstance(v,list) for v in (ids,labels,classes,losses)):raise ValueError('List-valued support/scores required')
     if (not ids or ids!=sorted(set(ids)) or any(type(i) is not int or i<0 for i in ids)

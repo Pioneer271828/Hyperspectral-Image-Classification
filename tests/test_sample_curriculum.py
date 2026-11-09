@@ -78,7 +78,7 @@ class SampleCurriculumTests(unittest.TestCase):
         self.assertEqual(policy(scores,'random',512).to_dict(),policy(scores,'random',512).to_dict())
 
     def test_singleton_hard_minority_retains_equal_class_gradient(self):
-        _,_,_,s=setup();s['support']={'indices':[0,1,2,3],'labels':[1,1,1,2]};s['classes']=[1,2];s['losses']=[.1,.2,10,20]
+        _,_,_,s=setup();s['support']={'indices':[0,1,2,3],'labels':[1,1,1,2],'seed':64};s['classes']=[1,2];s['losses']=[.1,.2,10,20]
         s['score_hash']=digest({k:v for k,v in s.items() if k!='score_hash'});p=policy(s)
         # Only a difficult majority pixel and the rare class occur in this block.
         weights=p.weights([2,3],step=1);np.testing.assert_array_equal(weights,[1.,1.])
