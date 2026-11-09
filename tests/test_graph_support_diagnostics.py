@@ -33,6 +33,22 @@ class SupportDiagnosticsTests(unittest.TestCase):
         self.assertEqual(result['small_row_connections'],8);self.assertEqual(result['small_nonself_row_connections'],4)
         self.assertEqual(result['nonself_isolated_nodes'],[4]);self.assertEqual(result['self_loop_fraction'],.5)
 
+    def test_hand_nonzero_support_changes_and_empty_nonself_reference(self):
+        q=graph(3,[(i,i) for i in range(3)])
+        def snapshot(edges,step):
+            v=dict(contract_hash='toy',context={'tile':0},state_kind='last',probe_route_step=0,optimization_step=step,
+                   summary=support_summary(graph(3,edges),q,small_mass_cutoff=1.))
+            v['snapshot_hash']=digest(v);return v
+        loops=[(i,i) for i in range(3)]
+        before=snapshot(loops+[(0,1),(1,0)],0);after=snapshot(loops+[(1,2)],1)
+        change=support_change(after,before)
+        self.assertEqual((change['all']['added'],change['all']['removed'],change['all']['retained']),(1,2,3))
+        self.assertEqual(change['all']['jaccard_distance'],.5)
+        self.assertEqual(change['nonself']['jaccard_distance'],1.)
+        self.assertEqual(change['nonself']['retained_fraction'],0.)
+        self.assertIsNone(support_change(after,snapshot(loops,0))['nonself']['retained_fraction'])
+        self.assertEqual(support_change(snapshot(loops,1),snapshot(loops,0))['nonself']['jaccard_distance'],0.)
+
     def test_deep_directed_chain_uses_no_recursion_or_dense_graph(self):
         n=1500;a=graph(n,[(i,i) for i in range(n)]+[(i,i+1) for i in range(n-1)])
         q=graph(n,[(i,i) for i in range(n)])
