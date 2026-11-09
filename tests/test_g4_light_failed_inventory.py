@@ -48,8 +48,10 @@ class FailedInventoryTests(unittest.TestCase):
         folder.mkdir()
         gpu = self.reg["gpu_ids"][ROLES.index(role) % 2]
         settings = {"registration_sha256": self.regsha, "target": role[0], "model_seed": role[1],
-                    "method": role[2], "m4_mode": role[3], "physical_gpu": gpu,
+                    "method": role[2], "config": {"model": {"region_residual_mode": role[3]}}, "physical_gpu": gpu,
                     "optimizer_steps": 1500, "test_scoring": False}
+        if role[3] != "none":
+            settings["m4_mode"] = role[3]
         identity = {"settings": settings}
         history = [{"step": step, "epoch": step - 1, "val_loss": 1., "selection_score": -1.} for step in EVENTS]
         trace = [{"step": i, "dataset": role[0], "loss": {"total": 1.}, "gradient_norms": {"head": 1.},
@@ -103,6 +105,21 @@ class FailedInventoryTests(unittest.TestCase):
         out = self.run_inventory([(p, sha256(p))])
         self.assertEqual(out["levels"]["external_receipt_revalidated"], 1)
         self.assertEqual(out["historically_accepted_updates_revalidated"], 3000)
+
+    def test_external_receipt_requires_explicit_pin(self):
+        with self.assertRaisesRegex(ValueError, "Pinned external"):
+            self.run_inventory([(self.rpath, None)])
+
+    def test_conflicting_architecture_alias_rejected(self):
+        folder = self.root / "cases" / self.receipt["name"]
+        result = json.loads((folder / "result.json").read_text())
+        result["settings"]["m4_mode"] = "capacity_control"
+        result["identity"]["settings"] = result["settings"]
+        self.write(folder / "result.json", result)
+        self.write(folder / "identity.json", result["identity"])
+        self.repin()
+        with self.assertRaisesRegex(ValueError, "identity"):
+            self.run_inventory()
 
     def test_artifact_tampering_rejected(self):
         (self.root / "cases" / self.receipt["name"] / "primary.pt").write_bytes(b"changed")

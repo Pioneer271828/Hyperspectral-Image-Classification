@@ -98,7 +98,9 @@ def validate_case(evidence, root, row, role, registration, regpath, regsha):
     settings = result["settings"]
     require(result["identity"] == identity and identity["settings"] == settings
             and settings["registration_sha256"] == regsha
-            and (settings["target"], settings["model_seed"], settings["method"], settings["m4_mode"]) == role
+            and (settings["target"], settings["model_seed"], settings["method"],
+                 settings["config"]["model"]["region_residual_mode"]) == role
+            and ("m4_mode" not in settings or settings["m4_mode"] == role[3])
             and settings["physical_gpu"] == gpu and settings["optimizer_steps"] == 1500
             and settings["test_scoring"] is False and result["test_scoring"] is False
             and result["start_code"]["commit"] == registration["producer_commit"]
@@ -151,7 +153,8 @@ def inventory(registration_path, registration_sha256, producer_commit, extra_rec
     status = evidence.read(root / "status.json")
     owner = evidence.read(root / "registration-owner.json")
     require(owner == {"policy": reg["policy"], "registration_sha256": registration_sha256}, "Owner differs")
-    require(status["status"] == "failed" and status["registration_sha256"] == registration_sha256
+    require(status["policy"] == "g4_light_full_multigpu_acceptance_v1"
+            and status["status"] == "failed" and status["registration_sha256"] == registration_sha256
             and status["gpu_ids"] == reg["gpu_ids"] and status["planned_cases"] == 54
             and status["planned_optimizer_updates"] == 81000 and bool(status["errors"]),
             "Only an identified failed campaign can be inventoried")
@@ -160,7 +163,9 @@ def inventory(registration_path, registration_sha256, producer_commit, extra_rec
     require(all(p.name in roles for p in (root / "cases").iterdir()), "Unknown campaign case")
     receipts = [(p, None, "coordinator_receipt_revalidated") for p in sorted((root / "audits").glob("*.json"))]
     require(len(receipts) == status["completed_cases"], "Coordinator receipt count differs from status")
-    receipts += [(Path(p), sha, "external_receipt_revalidated") for p, sha in extra_receipts]
+    for p, sha in extra_receipts:
+        require(isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{64}", sha), "Pinned external receipt required")
+        receipts.append((Path(p), sha, "external_receipt_revalidated"))
     rows = {}
     for path, expected, level in receipts:
         row = evidence.read(path, expected)
