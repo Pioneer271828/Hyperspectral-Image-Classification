@@ -1,0 +1,203 @@
+{
+  "status": "passed",
+  "issue": 357,
+  "tested_commit": "2cba7cfc198efd231d676c12d24ba1bd7882b9b5",
+  "scope": "7 existing synthetic trained models reused without updates; no real HSI classifier claim",
+  "models": 7,
+  "blocks": 14,
+  "independent_probability_score_checks": 168,
+  "jacobian_entries": 84,
+  "maximum_finite_difference_discrepancy": 5.014570311332565e-05,
+  "topology_change_directions": 0,
+  "graph_value_change_directions": 56,
+  "production_model_forwards": 84,
+  "independent_reference_forwards": 56,
+  "new_optimizer_updates": 0,
+  "query_labels_accessed": false,
+  "protected_files": {
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/low_weight.pt": "0f8d26b978f5f646854d061c01aedf9597fcd6ffb4a2c77339277fb562ddc928",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/summary.json": "9cc2f2d201bb5683fd74a4a5b85f6400bb23ac8d18ee6cce1efc52c2593dc400",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/random-2048.pt": "e838ef321cd1b3f16bf96ba2b357ca04b81ba5fb3609e07abd254f6867c3ad52",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/donor.pt": "fe0e8096bc451ba6b8fe2196164acfa68955ab83d25e0942ff32eee991f95216",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/random-512.pt": "37f0a9971b7811a2fce19cf17891e213de045323fac0116fa3c91aaaad2eca6a",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/receipt.json": "14c26a5784938a4a9741b66675d31380109bb53d72d358969595aee9a09fa5fe",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/important.pt": "3842ab13faa4571f33658eaa512db26d6d85c980d77144746f67ff0cb41098f5",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/random-64.pt": "e838ef321cd1b3f16bf96ba2b357ca04b81ba5fb3609e07abd254f6867c3ad52",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/plan.json": "771c139f3b38de35749781a09b7f0ac910d5448e4c12e34216ec8b2429d25f72",
+    "/home/lbx/hsi-pioneer271828/runs/wp06-matched-retraining-evidence01/none.pt": "2006dc2cf57284dc7876684a34b42740dcca426702519eb9202591033ead2f87"
+  },
+  "summary": [
+    {
+      "model": "donor",
+      "tile": 3,
+      "role": "devtrain",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.12314864993095398,
+        0.1161079853773117,
+        0.10389149188995361
+      ]
+    },
+    {
+      "model": "donor",
+      "tile": 2,
+      "role": "devval",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.11209666728973389,
+        0.09572652727365494,
+        0.10520633310079575
+      ]
+    },
+    {
+      "model": "none",
+      "tile": 3,
+      "role": "devtrain",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.12314864993095398,
+        0.1161079853773117,
+        0.10389149188995361
+      ]
+    },
+    {
+      "model": "none",
+      "tile": 2,
+      "role": "devval",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.11209666728973389,
+        0.09572652727365494,
+        0.10520633310079575
+      ]
+    },
+    {
+      "model": "important",
+      "tile": 3,
+      "role": "devtrain",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.12316270172595978,
+        0.11597603559494019,
+        0.10387953370809555
+      ]
+    },
+    {
+      "model": "important",
+      "tile": 2,
+      "role": "devval",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.1121065616607666,
+        0.09569142758846283,
+        0.10519576817750931
+      ]
+    },
+    {
+      "model": "low_weight",
+      "tile": 3,
+      "role": "devtrain",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.12317667156457901,
+        0.1159992441534996,
+        0.10388664156198502
+      ]
+    },
+    {
+      "model": "low_weight",
+      "tile": 2,
+      "role": "devval",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.11210469156503677,
+        0.095717653632164,
+        0.10520155727863312
+      ]
+    },
+    {
+      "model": "random:64",
+      "tile": 3,
+      "role": "devtrain",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.12317344546318054,
+        0.11599989235401154,
+        0.10388773679733276
+      ]
+    },
+    {
+      "model": "random:64",
+      "tile": 2,
+      "role": "devval",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.11209745705127716,
+        0.09571725130081177,
+        0.10519824922084808
+      ]
+    },
+    {
+      "model": "random:512",
+      "tile": 3,
+      "role": "devtrain",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.12316872924566269,
+        0.11598920822143555,
+        0.10389411449432373
+      ]
+    },
+    {
+      "model": "random:512",
+      "tile": 2,
+      "role": "devval",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.112098827958107,
+        0.09571989625692368,
+        0.1052018254995346
+      ]
+    },
+    {
+      "model": "random:2048",
+      "tile": 3,
+      "role": "devtrain",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.12317344546318054,
+        0.11599989235401154,
+        0.10388773679733276
+      ]
+    },
+    {
+      "model": "random:2048",
+      "tile": 2,
+      "role": "devval",
+      "selected_step": 20,
+      "baseline_scores": [
+        0.11209745705127716,
+        0.09571725130081177,
+        0.10519824922084808
+      ]
+    }
+  ],
+  "wall_seconds": 7.873714225832373,
+  "audit_script_sha256": "964051cd56613bfdc6fc28d2774107eac56d397e0036f772a184b185cfc41ee5",
+  "outputs": {
+    "low_weight-3.json": "7f045449c5bbcf3d6a011f7f423ace03074af96827fcca56df1f6c6fad2b76d1",
+    "important-3.json": "a8331c0abcd7c954fded8b73a6c3f0a6115261cdb6314ef41961c5c09767db51",
+    "low_weight-2.json": "987b35160e9abf9f0dff2b8964eff61b7d69a3f6a63fb09e54bcc5d823e9aa70",
+    "important-2.json": "77d8f0df5108271437507098ba2f260691443581204d5c891e2c6a77656dec52",
+    "random-512-2.json": "beb741510e3862c9d64090a219257c32c8bce08c82687f2dd4bcf0d10e38a31a",
+    "random-2048-2.json": "16e0bc944714c2c708b1192281d5a0c9c7c0dfda659a54e6623a5e4a0b1eb10c",
+    "donor-2.json": "e90b6c86827ff540a78ec0e7411db1fc7a971bee3fd88b788636c1d2bbb177d2",
+    "none-2.json": "d9c27fa6baef58d6c7b9f04fab8ac90dc6f8042f0096f938597444f1e84d74cf",
+    "random-64-2.json": "16e0bc944714c2c708b1192281d5a0c9c7c0dfda659a54e6623a5e4a0b1eb10c",
+    "donor-3.json": "d8d44f9b591898b27e955b46c92996baddabd603dd5dbbb7e7af4db902dbe954",
+    "none-3.json": "ac46187c2bcaa5328492d3b17ce64d363d699aef5a71d1f7d7db96c51e375b1c",
+    "random-64-3.json": "61d1924f70886252acc7a48aed83ce8c7c7c0972a286d76b9e5f570148ecb319",
+    "random-512-3.json": "d16ffa6e453333ae1075d4ccee74ea7cff83b7fd0e49426fa9a5a993ef650e4d",
+    "random-2048-3.json": "61d1924f70886252acc7a48aed83ce8c7c7c0972a286d76b9e5f570148ecb319"
+  }
+}
