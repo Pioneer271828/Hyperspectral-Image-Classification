@@ -176,9 +176,9 @@
     },
     {
       "id": "G4独立支持集与K目标训练工程",
-      "state": "有限12步工程验收通过，真实支持集/K训练与效果尚未执行",
+      "state": "Issue190工程与后续24例真实有界短测已通过",
       "evidence": "Issue190/PR191；实际e7424559e1bc72c655f511c213e551ced9b95be3，rmvision CPU5/5 41.286s、GPU5/5 65.231s、完整577项576通过+1既有GPU专用跳过336.113s；六角色12与2+10/完成0/3精确重载、CPU状态精确恢复、实际CLI通过。LXC真实Xuzhou support512/K1/model64六初始化与184冻结状态相同，63文件不变47.675s，更新0/forward0/query0，无GPU上下文。原331文件不变；CLI输出、CUDA环境和证据hash转录失败保留",
-      "remaining": "下一优先补真实独立支持512/2048与K1/5的12步/恢复/逐类接受闭环；复用已验收188输入与192参数范围工程。184完整实验已交付。真实完整对照、空间/传感器和波长质量仍必测",
+      "remaining": "完整预算独立支持/K效果、其他架构及参数范围对照仍待；真实有界证据见P4短测记录",
       "report": "research/reports/G4SupportTarget_独立支持集与K目标训练工程验收_20261106.md",
       "chat_report": "本聊天2026-11-06 Issue190独立支持集与K目标训练工程模块完成报告；持久报告及g4-support-target-engineering-results.json为证据，不重复交付"
     },
@@ -525,9 +525,25 @@
       "remaining": "按顺序补支持512/2048与K1/5真实短测接受闭环、空间协议接入/覆盖与信息隔离测试、严格传感器源家族/语义/访问合同；其余机制与MON未完成项完整保留，不以找到剪枝候选作为前置。",
       "report": "research/reports/PlanAlignment_P4优先顺序与剩余搭建核对_20261109.md",
       "chat_report": "本聊天2026-11-09两份计划对照及重心回归P4。"
+    },
+    {
+      "id": "P4独立支持集与K真实短测",
+      "state": "24例288更新及独立验收通过",
+      "evidence": "LXC物理GPU2/3，tested e7424559e1bc72c655f511c213e551ced9b95be3。三景×两支持种子×K1/K5×两方法，24例2+10/完成0，72精确重载、144头指标/1920逐类召回复算，query0。全选12，HongHu融合验证18–20类零召回。",
+      "remaining": "真实完整预算效果与其他结构、参数范围仍待；短测不替代独立空间或严格传感器泛化",
+      "report": "research/reports/P4SupportK_真实配对短测与恢复验收_20261109.md",
+      "chat_report": "本聊天2026-11-09 P4独立支持集与K真实短测验收。"
+    },
+    {
+      "id": "P4三景空间预检与固定角色标签准备",
+      "state": "影像隔离与角色准备已验收，PaviaU四组足额，Xuzhou/HongHu固定验证区缺类",
+      "evidence": "tested ab8e4a48ccb6e40add0700cf34e96a428219cdd3，CPU29回归。475训练块统计/输入、三景Q/A/三头/梯度反事实一致。角色准备4/12足额及独立复核，Xuzhou类3、HongHu类15/18固定验证区缺类。测试块标签未取值/计数/发布，优化0。",
+      "remaining": "先接入PaviaU四个足额组的空间训练与恢复；Xuzhou/HongHu后续单独登记开发协议并保留原固定几何结果。严格传感器家族/语义/访问合同仍待",
+      "report": "research/reports/P4Spatial_三景影像隔离与已释放标签预检_20261109.md",
+      "chat_report": "本聊天2026-11-09 P4三景空间预检和角色准备。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "mon_honghu_multiseed_short_accepted_return_to_p4_remaining_plan_items",
+  "execution_state": "p4_support_short_accepted_spatial_role_release_partial_next_runtime",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
