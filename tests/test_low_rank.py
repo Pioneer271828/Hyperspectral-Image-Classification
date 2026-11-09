@@ -9,7 +9,7 @@ from unittest.mock import patch
 import torch
 from torch import nn
 from compression.low_rank import LowRankMatrix, factorize_model, spectrum
-from compression.low_rank_checkpoint import save_low_rank, load_low_rank
+from compression.low_rank_checkpoint import save_low_rank, load_low_rank, sha256
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.checkpoint_io import save_model_checkpoint, load_model_checkpoint
 
@@ -135,6 +135,11 @@ class LowRankTests(unittest.TestCase):
                 load_model_checkpoint(path, device=DEVICE, config={})
             with self.assertRaises(ValueError): factorize_model(candidate, {PATH: 1})
             self.assertEqual(len(list(Path(tmp).iterdir())), 1)
+            packet = torch.load(path, weights_only=True)
+            packet['dtype'] = 'float64'
+            damaged = Path(tmp)/'wrong-dtype.pt'; torch.save(packet, damaged)
+            with self.assertRaisesRegex(ValueError, 'dtype'):
+                load_low_rank(damaged, sha256(damaged))
 
     def test_dense_svd_random_equal_budget_selection_and_split_resume(self):
         source, data = fixture()
@@ -153,7 +158,19 @@ class LowRankTests(unittest.TestCase):
                 with torch.no_grad(): val = float(nn.functional.nll_loss(predict(model, data)[0].log(), labels))
                 history.append(val)
                 if val < best: best, selected = val, step+1
-                if step == 4: saved = (copy.deepcopy(model), copy.deepcopy(opt.state_dict()))
+                if step == 4:
+                    # Exercise the actual disk model and optimizer boundary, not deepcopy replay.
+                    with tempfile.TemporaryDirectory() as tmp:
+                        path = Path(tmp)/'split.pt'
+                        if name == 'dense':
+                            save_model_checkpoint(model, path)
+                            restored = load_model_checkpoint(path, device=DEVICE)
+                        else:
+                            pin = save_low_rank(model, path)
+                            restored = load_low_rank(path, pin, device=DEVICE)
+                        opt_path = Path(tmp)/'optimizer.pt'
+                        torch.save(opt.state_dict(), opt_path)
+                        saved = (restored, torch.load(opt_path, weights_only=True, map_location=DEVICE))
             self.assertEqual(selected, min(range(12), key=history.__getitem__)+1)
             resumed, opt_state = saved
             opt2 = torch.optim.Adam(resumed.parameters(), lr=.001); opt2.load_state_dict(opt_state)
@@ -167,6 +184,7 @@ class LowRankTests(unittest.TestCase):
                                             atol=0 if DEVICE=='cpu' else 1e-6)
             if name != 'dense':
                 self.assertFalse(torch.equal(initial[PATH+'.left'], model.state_dict()[PATH+'.left']))
+                self.assertFalse(torch.equal(initial[PATH+'.right'], model.state_dict()[PATH+'.right']))
                 counts[name] = sum(p.numel() for p in model.parameters())
         self.assertEqual(counts['svd'], counts['random'])
 

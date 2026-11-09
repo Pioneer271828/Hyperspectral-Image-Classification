@@ -1,6 +1,7 @@
 """Separate one-file compressed model format; legacy checkpoints stay unchanged."""
 import copy
 import hashlib
+import io
 import os
 from pathlib import Path
 import tempfile
@@ -54,15 +55,21 @@ def save_low_rank(model, path):
 
 
 def load_low_rank(path, expected_sha256, *, device='cpu'):
-    if sha256(path) != expected_sha256:
+    payload = Path(path).read_bytes()
+    if hashlib.sha256(payload).hexdigest() != expected_sha256:
         raise ValueError('checkpoint hash mismatch')
-    packet = torch.load(path, map_location='cpu', weights_only=True)
+    packet = torch.load(io.BytesIO(payload), map_location='cpu', weights_only=True)
     if (not isinstance(packet, dict) or set(packet) !=
             {'format', 'architecture', 'plan', 'state', 'dtype', 'trainable', 'training_config'}
             or packet['format'] != 'vca-matrix-low-rank-v1'):
         raise ValueError('not a low-rank checkpoint')
     if packet['dtype'] not in ('float64', 'float32', 'float16', 'bfloat16'):
         raise ValueError('unsupported dtype')
+    dtype = getattr(torch, packet['dtype'])
+    if not isinstance(packet['state'], dict) or any(
+            not torch.is_tensor(v) or (v.is_floating_point() and v.dtype != dtype)
+            for v in packet['state'].values()):
+        raise ValueError('state dtype differs from declared dtype')
     cfg = packet['architecture']
     # Reconstructing a model must not consume the caller's training RNG stream.
     with torch.random.fork_rng(devices=[]):

@@ -162,12 +162,12 @@ class TargetTrainingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             opts=source_settings('xuzhou');data={n:v for n,v in source_items().items() if n in opts['source_tasks']}
             for label,runtime in [('old',SourceRuntime()),('hooks',ExplicitSource())]:
-                run_training(opts,data,Path(tmp)/label,PROVENANCE,SOURCE,runtime_adapter=runtime)
+                run_training(opts,data,Path(tmp)/label,PROVENANCE,SOURCE,device=DEVICE,runtime_adapter=runtime)
             for key in ('model','optimizer','scheduler','rng','trace','history','best_model','best_probabilities'):
                 self.assertEqual(_tree_fingerprint(checkpoints(Path(tmp)/'old')[key]),_tree_fingerprint(checkpoints(Path(tmp)/'hooks')[key]))
             runtime=ExplicitSource();runtime.checkpoint_metadata=lambda model:{'joint_runtime':{}}
             with self.assertRaisesRegex(ValueError,'metadata collides'):
-                run_training(opts,data,Path(tmp)/'collision',PROVENANCE,SOURCE,runtime_adapter=runtime)
+                run_training(opts,data,Path(tmp)/'collision',PROVENANCE,SOURCE,device=DEVICE,runtime_adapter=runtime)
 
 
 if __name__=='__main__':unittest.main()
