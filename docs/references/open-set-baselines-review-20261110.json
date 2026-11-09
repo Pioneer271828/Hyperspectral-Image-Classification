@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-10",
+  "issue": 325,
+  "plan": ["master section13.2", "execution section17 E4c"],
+  "papers_read": [
+    {"url":"https://arxiv.org/pdf/1610.02136", "version":"v3", "sections":"2-3 MSP and detection metrics", "official_link":"paper page1 footnote github.com/hendrycks/error-detection", "sha":"276d605bfa9a9bd7701bd88937c537c3fcab94cf", "files_read":["LICENSE", "README.md", "Vision/MNIST_Softmax_Stats.ipynb softmax score cells"], "license":"MIT root; no notebook-specific exception observed"},
+    {"url":"https://arxiv.org/pdf/2010.03759", "version":"v4", "sections":"2-3.1 Eq4 energy score, not fine-tuning", "official_link":"paper footnote wetliu/energy_ood redirects weitliu/energy_ood", "sha":"77f3c09b788bb5a7bfde6fd3671228320ea0949c", "files_read":["LICENSE", "README.md", "CIFAR/test.py get_ood_scores"], "license":"Apache-2.0 root; README credits Outlier Exposure; not treating bundled weights/data/third-party files as independently cleared"},
+    {"url":"https://arxiv.org/pdf/1703.05175", "version":"v2", "sections":"2.2 Eq1 mean prototype and Eq2 squared distance; not open-set proof", "official_link":"jakesnell/prototypical-networks author repository and paper citation", "sha":"c9bb4d258267c11cb6e23f0a19242d24ca98ad8a", "files_read":["LICENSE", "protonets/models/few_shot.py", "protonets/models/utils.py"], "license":"MIT Copyright2017JakeSnell root; inspected components"}
+  ],
+  "reuse":"Independent NumPy implementation of published scalar formulas; no copied/vendored source, weights, trainer or dependency",
+  "upstream_execution": false,
+  "new_training": false,
+  "limits":["array-level declared provenance not authenticated label release", "closed-set transfer stability and legal real open-set semantics remain prerequisites", "raw-logit model binding separate; no inverse-softmax energy", "known-only calibration empirical coverage is not population guarantee", "unknown-positive FPR95 explicitly distinct from ID-positive conventions", "0 unlabeled excluded, never unknown"]
+}
