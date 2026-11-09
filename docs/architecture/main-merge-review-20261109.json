@@ -597,290 +597,338 @@
     {
       "number": 264,
       "head_sha": "25215059e8565806f5086f369226eee4f529ce0c",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 262,
       "head_sha": "4695896d38eab523c1b46d92b664102541e0af69",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 261,
       "head_sha": "0fe08dcb2aa9a31c24e4cfec924af13b83814518",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 260,
       "head_sha": "d02095224b4292e06fa3d5176873187c21b92371",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 259,
       "head_sha": "0332153c44839589a3708207032294e227baaf3f",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 258,
       "head_sha": "b3abd105403764701e560b4220652209bf89de59",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 257,
       "head_sha": "c390ff4e78fe300df52d1c17e88c210b3f75e12c",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 255,
       "head_sha": "62209b06f58d69fc0a8ea910468211dd64ab85ec",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 254,
       "head_sha": "83cc6b998a532ebc17b8a5e3fd54375144b19c9c",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 253,
       "head_sha": "cd2d4fe49026b7c0006ed06491e03225033309a4",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 252,
       "head_sha": "01f4944df9cc80632981e0b0ddf0f5eb248b35e5",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 248,
       "head_sha": "a9d53f79b3cf2caf3a4796616607696b9b6dd532",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 246,
       "head_sha": "f1bb584a3430088438500a3473aedda40e253447",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 244,
       "head_sha": "73132913c798a3822d05a779bd05906c3377f0a3",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 242,
       "head_sha": "517365cc4df9c2550fb717b1ca002203969cf5aa",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 240,
       "head_sha": "d0674c38d7a84f8a289b67e1f17493cb189a2448",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 238,
       "head_sha": "a7ed15ccfc8b1ab69aa7ec1a99cccc4fa71ae302",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 237,
       "head_sha": "6fda229f5af86ee832df3b1266716dcec3795fde",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 236,
       "head_sha": "6072b96385b7d56922b36ab0dfd989c17223f772",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 235,
       "head_sha": "5dcc6964a25858f6793995126ec4606dfb8ad533",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 233,
       "head_sha": "d0cbfdffe9d5108cf4238b366e101f0369249972",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 231,
       "head_sha": "0b802b296cedc95bc393bc1cd968cf4be55c52dd",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 229,
       "head_sha": "02fa171942f8e8780b04c403c2b1822a2010511c",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 227,
       "head_sha": "b8f7a8446c7b337de49efb6a018c243b9ddb2ddf",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 225,
       "head_sha": "84e1ef8882c53d252ec0d1a43cc645e183b0796f",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 223,
       "head_sha": "c359bfefcb4728ec510da303c0b6c422d34b3c18",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 221,
       "head_sha": "190fd75995447a8a09c641ed9b7a8e1628a4f20c",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 219,
       "head_sha": "80afc7920ac12deee067e21c318f3f2b0ca5590a",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 217,
       "head_sha": "a8cd2c875aeb28b4ef3b0906ec2cc4e60cd4bf94",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 215,
       "head_sha": "add8c0dd8c09559aec456cb54385071a8bc411d9",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 213,
       "head_sha": "4a306fb3ca92ce8cccb05ca97125eaf56b2b4d76",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 211,
       "head_sha": "f734bfbbbba388fa6fba0c3b3ef9bb446f25a488",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 209,
       "head_sha": "26a8d100ab241e4476082d883fc55158914a77a7",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 207,
       "head_sha": "f33c68e4071671dcced05e50ebbe93b4cabc13dd",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 205,
       "head_sha": "8826e719e2e089358bca93d2b5fc23162fff27e6",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 203,
       "head_sha": "713e73d7e416ec1578bcd5fa0e8249f7d2ffefc9",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 201,
       "head_sha": "f6fa8dd0a90a05fb337d9ade25ca8f8d98b2e806",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 200,
       "head_sha": "235266c7abf0b554d0deaf091704026c1eede52e",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 197,
       "head_sha": "1f7c0a56c14c49b9a8298d2dba06e01b30a6823b",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 195,
       "head_sha": "d8b31dd2d51a1e66f17770932e911ca54a7daa6e",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 193,
       "head_sha": "f2a0512951cd8fe33851ad4543eee3e02aaae383",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 191,
       "head_sha": "934e3d24cc4366fd48e6c5539449b89f09bfb458",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 189,
       "head_sha": "ac13d95e499178322b875b6a92ed7138da0d43fe",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 187,
       "head_sha": "eb803121fda5f85f60365366be4a00d59f331e85",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 185,
       "head_sha": "54bc1c12a73d785b8d6f9d6a070bac972533c488",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 183,
       "head_sha": "e24925d3ba470348ab750d9bafe0c0c752951887",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 181,
       "head_sha": "f240a7e116f16cb0a431813999e86cc4a04e75d7",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     },
     {
       "number": 179,
       "head_sha": "aaf4870e95477be217e8ff478b79b69fba32fd90",
-      "disposition": "accepted_engineering_pending_sha_pinned_merge",
-      "integration_pr": 268
+      "disposition": "closed_as_incorporated",
+      "integration_pr": 268,
+      "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f"
     }
   ],
   "conflicts": [
@@ -1027,5 +1075,23 @@
     "status": "passed_scoped_regression_matrix",
     "final_tested_sha": "8078aa3a98fcb152f6991c0333b8146fe83bf487",
     "matrix": "docs/architecture/main-merge-regression-matrix-20261109.json"
+  },
+  "verified_inventory": {
+    "total_before_final_receipt_pr": 139,
+    "merged": [
+      2,
+      71,
+      169,
+      177,
+      267,
+      268
+    ],
+    "closed_as_incorporated": 132,
+    "open": [
+      251
+    ],
+    "main_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f",
+    "all_48_heads_ancestor_verified": true,
+    "main_tree_matches_reviewed_head": true
   }
 }
