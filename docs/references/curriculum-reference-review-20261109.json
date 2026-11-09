@@ -1,0 +1,16 @@
+{
+  "module": "CUR-O1 equal-exposure observation order",
+  "paper": "https://arxiv.org/html/2104.10461",
+  "version": "2104.10461v2, 22 Apr 2021, sections II-B/III/IV",
+  "authors": "Arian Bakhtiarnia, Qi Zhang, Alexandros Iosifidis",
+  "read_findings": "Sorting and pacing differ; frozen-backbone early exits use teacher cross-entropy ranking; compare vanilla, random, curriculum and anti-curriculum with matched initialization. CIFAR evidence is not HSI observation-curriculum evidence.",
+  "author_code": "https://gitlab.au.dk/maleci/MultiExitCurriculumLearning",
+  "officiality": "Explicitly linked by original paper footnote1",
+  "fixed_sha": null,
+  "license": null,
+  "access": "2026-11-09 repository redirects to serviceinfo.au.dk/da/home/message/7381; project API inaccessible through available web reader. Source and license remain unverified.",
+  "reuse": "No upstream code copied or executed. Independent fixed-multiset permutation of existing project ObservationPolicy records; no teacher, no sample filtering, no extra labels.",
+  "difference": "This is one-pass observation-severity ordering with exactly matched marginal exposures, not reproduction of upstream growing sample pool. Local order RNG does not change spatial/class sampler; joint condition-by-tile/class exposure must be separately checked.",
+  "upstream_executed": false,
+  "real_training": false
+}
