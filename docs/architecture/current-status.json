@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 323,
+  "issue": 325,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "57cd1edf89fa88ffdba8c6dccd6236bc32a0449a",
+  "main_snapshot": "0eedccd370f5fa77707e0357fb8d9a17c1c7d99b",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -842,6 +842,14 @@
       "remaining": "GPU与真实数据、物理区域对应及过平滑因果结论未测；长训练暂停",
       "report": "research/reports/E0B4_固定参考图能量与有效维度诊断工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天模块完成报告，随本次验收交付"
+    },
+    {
+      "id": "E4c-1",
+      "state": "开放集评分与源验证阈值CPU工程通过",
+      "evidence": "Issue325/PR326；tested b8a1eda40b40095d69279c8ed31361d3635d19a6，CPU10+27通过；独立84数组例6804分数1344混淆420类别45864排序对，3初始化M8模型756头分数行，优化/query0；已知macro与未知ROC口径固定",
+      "remaining": "真实闭集稳定性、合法语义与外部文件认证、真实开放集收益/GPU未验；长训练暂停",
+      "report": "research/reports/E4c1_开放集评分与源验证阈值工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天模块交付，随本次验收报告"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -1050,6 +1058,13 @@
       "tested_sha": "446d3732da23eb43091345f80e6147d7750d0cc8",
       "merge_sha": "57cd1edf89fa88ffdba8c6dccd6236bc32a0449a",
       "scope": "E0-B3 CPU6 plus28; 6existing synthetic models42blocks/142884cells/15876recalls/681pins; no real training"
+    },
+    {
+      "pr_number": 324,
+      "head_sha": "dbf630ba32fcba39ddd5a38a58ebcfdf5bff0627",
+      "tested_sha": "68ef38eb9322c9a869a560802a9e0cdde57119a1",
+      "merge_sha": "0eedccd370f5fa77707e0357fb8d9a17c1c7d99b",
+      "scope": "E0-B4 CPU7+27;24old synthetic models48blocks/12480energies/168ranks/212pins; no real mechanism claim"
     }
   ]
 }

@@ -1,0 +1,66 @@
+{
+  "status": "passed",
+  "scope": "E4c-1 CPU array scoring/calibration engineering",
+  "branch": "codex/open-set-baselines",
+  "tested_sha": "b8a1eda40b40095d69279c8ed31361d3635d19a6",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "scipy": "1.15.3",
+  "device": "CPU",
+  "threads": 1,
+  "gpu_tests": 0,
+  "tests": [
+    {
+      "command": "python -m unittest tests.test_open_set -v",
+      "passed": 10,
+      "seconds": 2.937
+    },
+    {
+      "command": "python -m unittest tests.test_fusion_m8 tests.test_evaluation_e0a tests.test_repository_delivery -v",
+      "passed": 27,
+      "seconds": 1.339
+    }
+  ],
+  "checker": {
+    "python_files": 527,
+    "json_files": 169,
+    "frozen_runtime_unchanged": true
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/open-set-baselines-independent01/receipt.json",
+    "sha256": "3d3324fc4b2a91cf7ecabf2b38854fec09d150e95f223fa023fb3b6bc426fb14",
+    "summary": {
+      "status": "passed",
+      "tested_sha": "b8a1eda40b40095d69279c8ed31361d3635d19a6",
+      "array_cases": 84,
+      "score_values": 6804,
+      "confusion_cells": 1344,
+      "class_entries": 420,
+      "roc_pairs": 45864,
+      "m8_models": 3,
+      "m8_head_score_rows": 756,
+      "optimizer_updates": 0,
+      "real_training": 0,
+      "query": 0,
+      "cases_sha256": "f8321ff8733911f1f5bada9294f425acbc589c5cc7d5c92403c9fb7eb04a85d6",
+      "elapsed_seconds": 0.31592659186571836,
+      "limits": [
+        "synthetic array protocol and 3 initialized M8 models only",
+        "no trained unknown class model or real open-set evaluation",
+        "declared provenance not authenticated data release"
+      ]
+    }
+  },
+  "logs": {
+    "independent01.log": "1dc1f9b4427414c9a1f2078d18722e018c5080d7d1d77062e58ec0002cc4aaf7",
+    "tests02.log": "9141761b22c292dd4605f2a86f6e5bec03a0ff9af10634b814b30565d5200bba",
+    "regression02.log": "88fe80f49d6468bb080e03048e37701bac8b03e091b631671569e1b6bea74771",
+    "tests01.log": "0149ae82e7aa0442dcdbcfd3d8ce4c3b3daa3f5d2cce5fc260c7efc0ddbfcb08"
+  },
+  "retained_history": [
+    "b06be3a99e3759590abd93ca0aedf98d606050df arrays9/9 0.080s; b8a adds existing M8 raw-logit integration test; no failed test"
+  ],
+  "optimizer_updates_in_independent_audit": 0,
+  "query": 0,
+  "real_training": 0
+}
