@@ -613,9 +613,17 @@
       "remaining": "真实G2待发布档案本地绑定、波段与辐射量证据及真实闭集试验；现有近似波长不满足精确对应。",
       "report": "research/reports/P4G2_目标冻结推理与计分完整验收_20261109.md",
       "chat_report": "本聊天2026-11-09 G2目标冻结推理与计分完整工程验收。"
+    },
+    {
+      "id": "P4 E4b在线测试时适配",
+      "state": "四对照与两重置协议完整CPU工程验收通过",
+      "evidence": "tested c826803bf02862e704d1ae32cd24dd62fd45778c，5专项/47回归和checker。PaviaU已见开发观测8组24帧，12 SGD/6统计更新，72头数组独立检查、58直接前向逐位匹配，44文件不变，原标签/query0。",
+      "remaining": "待冻结真实跨传感器对照、逐类/最差下降/遗忘与GPU；G2真实文件和波段准入缺口另保留。",
+      "report": "research/reports/P4E4b_在线测试时适配完整工程验收_20261109.md",
+      "chat_report": "本聊天2026-11-09 E4b在线测试时适配完整工程验收。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "p4_g2_target_frozen_pipeline_engineering_accepted_real_provenance_pending",
+  "execution_state": "p4_e4b_online_tta_engineering_accepted_real_cross_sensor_pending",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
