@@ -1,0 +1,10 @@
+{
+  "issue":359,
+  "plan":["master section13", "execution section19.10 WP09"],
+  "scope":"Protocol admission and input preparation, not a new research mechanism or scorer",
+  "reuse":"Existing E4c semantic validator, deferred label boundary, immutable file pins, producer packet schema and source-only minmax convention",
+  "prior_reference_review":"docs/references/open-set-baselines-review-20261110.json",
+  "external_source_copied":false,
+  "upstream_executed":false,
+  "limitations":["Full contextual source/calibration annotations must be separately budgeted", "Training history and real sensor/semantic provenance remain unverified", "No query labels or automatic block mining"]
+}
