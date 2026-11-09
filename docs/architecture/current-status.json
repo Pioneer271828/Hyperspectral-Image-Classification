@@ -538,12 +538,20 @@
       "id": "P4三景空间预检与固定角色标签准备",
       "state": "影像隔离与角色准备已验收，PaviaU四组足额，Xuzhou/HongHu固定验证区缺类",
       "evidence": "tested ab8e4a48ccb6e40add0700cf34e96a428219cdd3，CPU29回归。475训练块统计/输入、三景Q/A/三头/梯度反事实一致。角色准备4/12足额及独立复核，Xuzhou类3、HongHu类15/18固定验证区缺类。测试块标签未取值/计数/发布，优化0。",
-      "remaining": "先接入PaviaU四个足额组的空间训练与恢复；Xuzhou/HongHu后续单独登记开发协议并保留原固定几何结果。严格传感器家族/语义/访问合同仍待",
+      "remaining": "PaviaU四组空间接入与恢复已通过；Xuzhou/HongHu固定验证缺类，后续单独登记开发协议并保留原固定几何结果",
       "report": "research/reports/P4Spatial_三景影像隔离与已释放标签预检_20261109.md",
       "chat_report": "本聊天2026-11-09 P4三景空间预检和角色准备。"
+    },
+    {
+      "id": "P4 PaviaU四组空间共享初始化与恢复",
+      "state": "四个支持/K组、两种方法的真实空间短测已验收",
+      "evidence": "tested 89253cbb5fab42762b0129e8522b13b9ff3dbebf，LXC CPU31回归/checker。29共享张量精确复制，6图参数/25DomainBN状态/三头配对同初态。8对连续12与测试块置零2+10逐位一致，192更新/完成恢复0、216逐类召回、14输入不变。8例融合验证OA11.11%、各8类零召回，GT/query0。",
+      "remaining": "完整空间效果与测试仍待，Xuzhou/HongHu固定验证缺类保留。已进入G2预审，既有源权重为独立域头，语义映射、Xuzhou家族与祖先/选模访问证明待补。",
+      "report": "research/reports/P4PaviaSpatial_共享初始化与空间恢复验收_20261109.md",
+      "chat_report": "本聊天2026-11-09 PaviaU空间接入验收与严格传感器留出预审。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "p4_support_short_accepted_spatial_role_release_partial_next_runtime",
+  "execution_state": "p4_pavia_spatial_short_accepted_g2_provenance_preflight_blocked",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
