@@ -23,6 +23,7 @@ from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, require_frozen_code, tensor_hash
 from target_initialization import METHODS, state_id
 from target_training import observation, save_tensor_mapping
+from m4_transfer import MODES, _before as residual_before, _evidence as residual_evidence
 
 POLICY = "g4_m8_position_fusion_target_ordered_engineering_v1"
 KEY = "target_position_fusion_policy"
@@ -32,7 +33,7 @@ def settings(base, condition):
     declared = configuration(condition)
     config = ResearchConfig.from_dict(base["config"])
     if (base["profile"] != "engineering" or base["optimizer_steps"] != 12 or KEY in base
-            or config.model.region_residual_mode != "none" or config.model.coverage_mode != "none"
+            or config.model.region_residual_mode not in MODES or config.model.coverage_mode != "none"
             or config.interaction.active or config.model.alph != .8
             or config.loss.cnn_loss_weight != 1. or config.loss.graph_branch_loss_weight != 1.
             or config.loss.balanced is not True):
@@ -45,6 +46,9 @@ def settings(base, condition):
         "gate_parameter_count": declared["added_trainable_parameters"],
         "query_labels_accessed": False, "observation_augmentation": False,
         "selection": "unchanged_first_min_fused_full_observation_validation_nll"}
+    if config.model.region_residual_mode != "none":
+        value[KEY].update(combination_version=1, residual_mode=config.model.region_residual_mode,
+                         source="accepted_full_m4_source_position_fusion_target")
     return value
 
 
@@ -52,7 +56,7 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
     calibration_metadata_key = CALIBRATION_KEY
 
     def validate(self, options):
-        base = support_settings(options["target"], options["method"], "none", model_seed=options["model_seed"],
+        base = support_settings(options["target"], options["method"], options["config"]["model"]["region_residual_mode"], model_seed=options["model_seed"],
             support_seed=options["support_seed"], per_class=options["support_per_class"],
             binding=options["support_context_binding"], source_spec=self.source_spec, device=options["config"]["device"])
         expected = settings(base, options[KEY]["condition"])
@@ -66,7 +70,7 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
             raise ValueError("Position-fusion target class counts differ")
         model, self.position_binding = initialize(target, self.settings["method"], self.settings[KEY]["condition"],
             model_seed=self.settings["model_seed"], head_seed=self.settings["head_seed"],
-            source_spec=self.source_spec, device=config.device)
+            source_spec=self.source_spec, device=config.device, mode=config.model.region_residual_mode)
         self.initialization = copy.deepcopy(self.position_binding["base_binding"]["base_initialization"])
         return model
 
@@ -75,10 +79,14 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
         if config.to_dict() != self.settings["config"]:
             raise ValueError("Actual position fusion training configuration differs")
         before = {n: p.detach().clone() for n, p in model.named_parameters() if n.startswith(PREFIX)}
+        residual = residual_before(model)
         captured = []
         def check_before_step(*_):
+            for n, p in model.named_parameters():
+                if n in residual and (p.grad is None or not torch.isfinite(p.grad).all()):
+                    raise ValueError("Missing/nonfinite residual gradient before optimizer update")
             groups = {}
-            for part in ("gate_weight", "gate_bias"):
+            for part in (("gate_weight", "gate_bias") if before else ()):
                 params = [p for n, p in model.named_parameters() if n == PREFIX + part]
                 if len(params) != 1 or params[0].grad is None or not torch.isfinite(params[0].grad).all():
                     raise ValueError("Missing/nonfinite position fusion gradient before optimizer update")
@@ -86,15 +94,17 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
                                 "parameters": params[0].numel()}
             captured.append(groups)
         # Keep the original selected-row/loss/Adam path. A zero gradient is legal.
-        hook = optimizer.register_step_pre_hook(check_before_step) if before else None
+        hook = optimizer.register_step_pre_hook(check_before_step) if before or residual else None
         try:
             row = super().train_step_at(cursor, model, optimizer, name, item, config)
         finally:
             if hook is not None:
                 hook.remove()
-        if before and len(captured) != 1:
+        if (before or residual) and len(captured) != 1:
             raise ValueError("Exactly one bounded position fusion optimizer step required")
-        groups = captured[0] if captured else {}
+        groups = captured[0] if before else {}
+        if residual:
+            residual_evidence(row, model, residual)
         for part, stats in groups.items():
             stats["changed_elements"] = sum(int(torch.count_nonzero(p.detach() - before[n]))
                 for n, p in model.named_parameters() if n == PREFIX + part)
@@ -165,9 +175,9 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
         return model
 
 
-def prepare(manifest, manifest_sha256, out, *, condition, **kwargs):
+def prepare(manifest, manifest_sha256, out, *, condition, mode="none", **kwargs):
     configuration(condition)
-    base, items, provenance, code, _, guard = support_prepare(manifest, manifest_sha256, out, mode="none", **kwargs)
+    base, items, provenance, code, _, guard = support_prepare(manifest, manifest_sha256, out, mode=mode, **kwargs)
     options = settings(base, condition)
     runtime = PositionFusionTargetRuntime(options, items, out, source_spec=kwargs.get("source_spec"))
     return options, items, {**provenance, "position_fusion_runtime": POLICY, "position_fusion_policy_sha256": digest(options[KEY])}, code, runtime, guard
@@ -180,6 +190,7 @@ def main(argv=None):
     parser.add_argument("--target", required=True, choices=NAMES)
     parser.add_argument("--method", required=True, choices=METHODS[:2])
     parser.add_argument("--condition", required=True, choices=CONDITIONS)
+    parser.add_argument("--mode", choices=MODES, default="none")
     for field in ("model-seed", "support-seed"):
         parser.add_argument("--" + field, required=True, type=int, choices=(64, 512, 2048))
     parser.add_argument("--per-class", required=True, type=int, choices=(1, 5, 10))
@@ -195,7 +206,7 @@ def main(argv=None):
     pins = {} if not args.source_spec else {str(Path(args.source_spec).resolve(strict=True)): args.source_spec_sha256}
     check_files(pins)
     options, items, provenance, source, runtime, guard = prepare(args.manifest, args.manifest_sha256, args.out,
-        target=args.target, method=args.method, condition=args.condition, model_seed=args.model_seed,
+        target=args.target, method=args.method, condition=args.condition, mode=args.mode, model_seed=args.model_seed,
         support_seed=args.support_seed, per_class=args.per_class, source_spec=read(args.source_spec) if args.source_spec else None,
         source_files=pins, device=args.device)
     with redirect_stdout(sys.stderr):
