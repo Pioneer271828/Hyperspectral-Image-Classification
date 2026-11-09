@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 285,
+  "issue": 287,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "f54cb1e266b1573c2bf6f62238aff1059fe8a7a8",
+  "main_snapshot": "69178739747d99e7c2d0553d60c34f46240b3750",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -700,6 +700,14 @@
       "remaining": "GPU/真实逐类小类/跨域教师偏差/成本、支持交叉评分、有限预算最低曝光与正式训练CLI仍待；下一事前曝光门槛与参与台账，不额外加步或改采样，暂不做CUR-O×CUR-S。",
       "report": "research/reports/CURS_训练支持评分与类别保护课程工程验收_20261109.md",
       "chat_report": "本聊天CUR-S1完整CPU工程报告后继续曝光验收。"
+    },
+    {
+      "id": "CUR-S2有限预算曝光与恢复台账",
+      "state": "CPU工程验收通过，真实曝光与效果未验",
+      "evidence": "tested2ffd5c1a7d7d750caaeea3931da7f9b4b37d0153；CPU6专项/42含专项回归、checker488Python147JSON。合成原网络24与5+19精确；独立9计划/111事件/120前缀/10800像素计数通过，5个曝光不足预算正确拒绝，无重抽/补步，真实优化query0。",
+      "remaining": "真实多种子最低曝光/加权预算/正式训练CLI/GPU与真实小类效果仍待。12步64/512虽各类参与仍15支持未访问；不变更预算凑门槛。下一DY独立轻模型训练恢复接入工程，长训练暂停。",
+      "report": "research/reports/CURS2_有限预算曝光与恢复台账工程验收_20261109.md",
+      "chat_report": "本聊天CUR-S2完整CPU工程交付后继续DY训练接入。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -775,6 +783,13 @@
       "tested_sha": "ed9fe90461ef43d62cbcab66c6ed7316bba39e9b",
       "merge_sha": "f54cb1e266b1573c2bf6f62238aff1059fe8a7a8",
       "scope": "CUR-O1 CPU8/41 and independent12 policies; real benefits not established"
+    },
+    {
+      "pr_number": 286,
+      "head_sha": "3513d0049bb8b3f480604f2e7fd9ac6a5dbb3493",
+      "tested_sha": "1b8ed4164d8ff3b5015f531456a58f5b54cf5331",
+      "merge_sha": "69178739747d99e7c2d0553d60c34f46240b3750",
+      "scope": "CUR-S1 CPU7/36, five-arm synthetic recovery, independent15policies/16200weights; no real benefit claim"
     }
   ]
 }
