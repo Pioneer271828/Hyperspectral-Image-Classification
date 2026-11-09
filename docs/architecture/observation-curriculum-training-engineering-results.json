@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "tested_sha": "e2726c3c7b0d5522209a41ddc447356fed343682",
+  "branch": "codex/observation-curriculum-training",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 5,
+      "seconds": 24.638,
+      "command": "python -m unittest tests.test_observation_curriculum_training -v"
+    },
+    "related": {
+      "passed": 40,
+      "seconds": 61.151,
+      "command": "python -m unittest tests.test_observation_curriculum_training tests.test_curriculum_training tests.test_observation_curriculum tests.test_sample_curriculum tests.test_curriculum_exposure tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "e2726c3c7b0d5522209a41ddc447356fed343682",
+    "branch": "codex/observation-curriculum-training",
+    "python_files": 503,
+    "json_files": 156,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/receipt.json",
+    "sha256": "d95029ea0b510e0415ccd16e48cfd4574697c3e7f3407103c011fbcdea538d82",
+    "sampler_seeds": [
+      64,
+      512,
+      2048
+    ],
+    "model_initialization_seed": 512,
+    "synthetic_models": 12,
+    "updates_per_model": 24,
+    "optimizer_calls": 339,
+    "recovery_checks": 3,
+    "old_artifact_compatibility": 3,
+    "completed_restore_updates": 0,
+    "actual_band_views_checked": 288,
+    "condition_heads": 216,
+    "confusion_cells": 17496,
+    "per_class_recalls": 1944,
+    "protected_files": 53,
+    "seconds": 33.76719905389473
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-tests01/audit.log": "dc89dca2dd63fb2a2e4337cdb5c5b52bdd2c837ce575630ccbc64541265d1da6",
+    "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-tests01/checker.log": "478d0760c5190ec8ef21af7f4215ee51d4a558e66f6d744da16ba8a51df2fc0b",
+    "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-tests01/cpu.log": "b1aa4eabcc12d8180795b1435130d7e2dd032360adf5a52dead10f021a17f88b",
+    "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-tests01/regression.log": "cfc965c097e452354251aa5920e3094ecb504305c130e99b1a4ea9ddb3478d82"
+  },
+  "real_training": 0,
+  "query": 0,
+  "limitations": [
+    "CPU FP32 single-task development integration; no GPU or real training/benefit claim.",
+    "Equal record multisets and sampler sequences have unequal condition-by-class/tile exposure, explicitly reported.",
+    "Three sampler seeds share model initialization512; selected-state six-condition review cannot reselect.",
+    "Three accepted CUR-S3 artifacts restored with zero optimizer updates; old source contracts without observation metadata remain compatible."
+  ]
+}

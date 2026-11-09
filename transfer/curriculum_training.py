@@ -1,5 +1,6 @@
 """Opt-in CPU curriculum optimization bound to frozen development exposure."""
 from copy import deepcopy
+from collections import Counter
 import hashlib
 import io
 import math
@@ -14,7 +15,8 @@ from model.research_config import digest
 from transfer.curriculum_exposure import ExposurePlan, ExposureLedger
 from transfer.development_training import sparse_labels, evaluate_validation
 from transfer.g3_training import _forward, state_hash
-from transfer.observation_policy import scene_identity
+from transfer.observation_policy import scene_identity, ObservationPolicy, evaluate_conditions
+from transfer.observation_curriculum import CurriculumPolicy
 from transfer.sample_curriculum import SampleCurriculum, curriculum_loss
 from transfer.tile_sampling import SupportTileSampler
 
@@ -49,12 +51,14 @@ class CurriculumRun:
     """Explicit single-task, uncoupled, GroupNorm full-model development runner.
 
     Fixed Adam and original class-balanced three probability losses; no scheduler,
-    observation curriculum, model rebuilding, or automatic budget extension.
+    model rebuilding, or automatic budget extension. Sample and optional observation
+    curricula are separate experiments, never enabled together by this runner.
     The source is unchanged. Save/load authenticates bytes before deserialization.
     Logged execution is not a replacement for independent training acceptance.
     """
     def __init__(self, source, scene, record, *, plan, policy, lr, torch_seed,
-                 expected_source_state, expected_plan_hash, expected_policy_hash):
+                 expected_source_state, expected_plan_hash, expected_policy_hash,
+                 observation_policy=None, expected_observation_hash=None):
         validate_source(source)
         if state_hash(source) != expected_source_state:
             raise ValueError('Registered source state mismatch')
@@ -66,6 +70,21 @@ class CurriculumRun:
         if not isinstance(plan, ExposurePlan): raise ValueError('Frozen exposure plan required')
         self.plan = ExposurePlan(scene, record, plan.to_dict(), expected_plan_hash=expected_plan_hash)
         self.plan.require_eligible()
+        if getattr(source, 'training_config', {}).get('observation_policy_hash') is not None:
+            raise ValueError('Source carrying another observation training contract requires separate migration')
+        self.observation_policy = None
+        if observation_policy is None:
+            if expected_observation_hash is not None: raise ValueError('Disabled observation hash must be null')
+        else:
+            if policy is not None: raise ValueError('Sample and observation curricula require separate experiments')
+            if not isinstance(observation_policy, ObservationPolicy) or observation_policy.policy_hash != expected_observation_hash:
+                raise ValueError('Registered observation policy required')
+            value = observation_policy.to_dict()
+            cls = CurriculumPolicy if 'curriculum' in value else ObservationPolicy
+            self.observation_policy = cls(value)
+            self.observation_policy.validate(scene, record, self.plan.updates)
+            if value['selection_condition'] != 'full' or self.observation_policy.training_application != 'real_subset':
+                raise ValueError('Real subsets and unchanged full validation selection required')
         if policy is None:
             if expected_policy_hash is not None: raise ValueError('Disabled policy hash must be null')
         else:
@@ -89,6 +108,8 @@ class CurriculumRun:
                          parameters=list(dict(self.model.named_parameters())), sampler=self.sampler.metadata,
                          loss='original_three_probability_losses_class_balanced_default_coefficients',
                          selection='first_min_full_devval_fused_NLL_each_update', device='cpu_fp32', scheduler=None)
+        # Omit the optional field when off, preserving existing CUR-S3 contracts.
+        if self.observation_policy is not None: self.spec['observation_policy_hash'] = expected_observation_hash
         self.contract_hash = digest(self.spec)
         self.rng = np.random.default_rng(self.spec['sampler_seed'])
         self.torch_rng = torch.Generator().manual_seed(torch_seed).get_state()
@@ -115,6 +136,7 @@ class CurriculumRun:
                 or self.model.export_config() != self.spec['architecture']
                 or _data(self.scene, self.record) != self.spec['data']
                 or self.plan.plan_hash != self.spec['exposure_hash']
+                or (None if self.observation_policy is None else self.observation_policy.policy_hash) != self.spec.get('observation_policy_hash')
                 or (None if self.policy is None else self.policy.policy_hash) != self.spec['policy_hash']
                 or state_hash(self.model) != self._state or digest(self.history) != self._history
                 or self.completed != len(self.history)):
@@ -125,6 +147,10 @@ class CurriculumRun:
                 or self.optimizer.state_dict()['param_groups'] != self.spec['optimizer_config']):
             raise ValueError('Registered full-model optimizer changed')
         self._validate_optimizer(self.optimizer.state_dict(), self.history)
+        if self.observation_policy is not None:
+            value = self.observation_policy.to_dict()
+            if digest({k:v for k,v in value.items() if k != 'policy_hash'}) != self.spec['observation_policy_hash']:
+                raise ValueError('Frozen observation payload changed')
 
     def _validate_optimizer(self, opt, history):
         if not isinstance(opt, dict) or set(opt) != {'state', 'param_groups'} or opt['param_groups'] != self.spec['optimizer_config']:
@@ -159,7 +185,9 @@ class CurriculumRun:
             with torch.random.fork_rng(devices=[]):
                 torch.set_rng_state(self.torch_rng)
                 self.model.train(); self.optimizer.zero_grad(set_to_none=True)
-                outputs = _forward(self.model, self.scene, tile)
+                extra = {} if self.observation_policy is None else dict(observation_view=self.observation_policy.view(
+                    self.scene, self.record, tile, phase='training', step=n))
+                outputs = _forward(self.model, self.scene, tile, **extra)
                 loss = curriculum_loss(outputs, self.scene, self.record, tile, policy=self.policy,
                                        step=None if self.policy is None else n, class_balance=True)['total']
                 if not torch.isfinite(loss): raise ValueError('Nonfinite loss')
@@ -182,6 +210,7 @@ class CurriculumRun:
             row = dict(**event, loss=float(loss.detach()), gradient_parameters=names, gradient_l1=gradient,
                        changed_parameters=changed, weights=weights.tolist(), validation=validation,
                        state_hash=state_hash(self.model))
+            if self.observation_policy is not None: row['observation'] = self.observation_policy.training_record(n)
             self.ledger.append(event); self.history.append(row)
             if self.selected_step is None or validation['nll'] < self.history[self.selected_step-1]['validation']['nll']:
                 self.selected_step = n; self.selected_state = deepcopy(self.model.state_dict())
@@ -199,9 +228,45 @@ class CurriculumRun:
 
     def finish(self):
         self._check(); self.ledger.finish()
-        return dict(status='completed_execution_evidence', updates=self.completed, selected_step=self.selected_step,
+        result = dict(status='completed_execution_evidence', updates=self.completed, selected_step=self.selected_step,
                     exposure=self.ledger.snapshot(), optimizer_steps_verified=True, independent_acceptance=False,
                     selected_state_hash=self.history[self.selected_step-1]['state_hash'], query=0)
+        if self.observation_policy is not None: result['observations'] = self.observation_exposure()
+        return result
+
+    def observation_exposure(self):
+        """Actual condition-by-tile/support/class exposure, not a compute-cost proxy."""
+        self._check()
+        if self.observation_policy is None: raise ValueError('No registered observation schedule')
+        rows = self.observation_policy.to_dict()['training']; labels = dict(zip(self.record['train_support']['indices'],self.record['train_support']['labels']))
+        keys = sorted({digest(r['config']) for r in rows})
+        configs = {k:dict(updates=0, retained_bands=0, tiles=Counter(), support_visits=Counter(), class_blocks=Counter(), class_label_visits=Counter()) for k in keys}
+        records = []
+        for row in self.history:
+            n = row['step']; frozen = rows[n-1]
+            if row['observation'] != self.observation_policy.training_record(n): raise ValueError('Observed execution record differs')
+            item = configs[digest(frozen['config'])]; item['updates'] += 1; item['retained_bands'] += row['observation']['selected_band_count']
+            item['tiles'][str(row['tile_id'])] += 1
+            item['support_visits'].update(str(i) for i in row['support_ids'])
+            item['class_label_visits'].update(str(labels[i]) for i in row['support_ids'])
+            item['class_blocks'].update(str(c) for c in {labels[i] for i in row['support_ids']})
+            records.append(row['observation']['record_hash'])
+        return dict(completed=self.completed, policy_hash=self.observation_policy.policy_hash,
+                    record_multiset_hash=digest(sorted(records)), by_config=configs,
+                    interpretation='equal marginal records do not imply equal condition-by-tile/class/support exposure or compute cost')
+
+    def review_observation_conditions(self):
+        """Read-only review of the selected state, after completion; never reselect."""
+        self.finish()
+        if self.observation_policy is None: raise ValueError('No registered validation conditions')
+        selected = deepcopy(self.model); selected.load_state_dict(self.selected_state); selected.eval()
+        before = state_hash(selected)
+        with torch.random.fork_rng(devices=[]):
+            result = evaluate_conditions(selected, self.scene, self.record, self.observation_policy)
+        if state_hash(selected) != before: raise ValueError('Condition review mutated selected state')
+        self._check()
+        return dict(contract_hash=self.contract_hash, selected_step=self.selected_step,
+                    selected_state_hash=before, policy_selection=False, review=result)
 
     def save(self, path):
         self._check()
@@ -234,7 +299,8 @@ class CurriculumRun:
         return hashlib.sha256(path.read_bytes()).hexdigest()
 
     @classmethod
-    def load(cls, source, scene, record, path, *, plan, policy, expected_sha256, expected_contract_hash):
+    def load(cls, source, scene, record, path, *, plan, policy, expected_sha256, expected_contract_hash,
+             observation_policy=None):
         raw = Path(path).read_bytes()
         if hashlib.sha256(raw).hexdigest() != expected_sha256: raise ValueError('Run file hash mismatch')
         v = torch.load(io.BytesIO(raw), map_location='cpu', weights_only=True)
@@ -244,17 +310,21 @@ class CurriculumRun:
         s = v['spec']
         if not isinstance(s, dict) or digest(s) != expected_contract_hash: raise ValueError('Invalid contract')
         run = cls(source, scene, record, plan=plan, policy=policy, lr=s['lr'], torch_seed=s['torch_seed'],
-                  expected_source_state=s['source_state'], expected_plan_hash=s['exposure_hash'], expected_policy_hash=s['policy_hash'])
+                  expected_source_state=s['source_state'], expected_plan_hash=s['exposure_hash'], expected_policy_hash=s['policy_hash'],
+                  observation_policy=observation_policy, expected_observation_hash=s.get('observation_policy_hash'))
         if run.spec != s: raise ValueError('Resume contract changed')
         run.ledger = ExposureLedger(run.plan, v['progress']); n = run.completed; history = v['history']
         if not isinstance(history, list) or len(history) != n: raise ValueError('Incomplete history')
         rng = np.random.default_rng(s['sampler_seed'])
         for step, row in enumerate(history, 1):
             event = run.plan.event(step); tile, anchor = run.sampler.draw(rng)
-            if (set(row) != set(event) | {'loss','gradient_parameters','gradient_l1','changed_parameters','weights','validation','state_hash'}
+            extra = set() if observation_policy is None else {'observation'}
+            if (set(row) != set(event) | {'loss','gradient_parameters','gradient_l1','changed_parameters','weights','validation','state_hash'} | extra
                     or any(row[k] != val or type(row[k]) != type(val) for k, val in event.items())
                     or (tile['id'], anchor) != (row['tile_id'], row['anchor'])
                     or not _finite(row['loss']) or row['loss'] < 0): raise ValueError('Invalid execution history')
+            if observation_policy is not None and row['observation'] != observation_policy.training_record(step):
+                raise ValueError('Wrong frozen observation execution')
             names = row['gradient_parameters']
             if not isinstance(names, list) or not names or names != [k for k in s['parameters'] if k in names]: raise ValueError('Invalid gradient parameters')
             for k in ('gradient_l1','changed_parameters'):
