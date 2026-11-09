@@ -1,0 +1,19 @@
+{
+  "protocol": "m1_joint_paired_full_v1",
+  "presets": ["full", "alternate75"],
+  "training_seeds": [64, 512, 2048],
+  "sampling_seed_offset": 8128,
+  "updates_per_case": 1503,
+  "evaluation_seed": 9026,
+  "conditions": {
+    "full": {"mode": "none"},
+    "random75": {"mode": "random_subset", "keep_fraction": 0.75},
+    "random50": {"mode": "random_subset", "keep_fraction": 0.5},
+    "stride2": {"mode": "uniform_stride", "stride": 2, "offset": 0}
+  },
+  "evaluation_calibration": "label_free_condition_matched_scene_population",
+  "selection": "unchanged_full_observation_validation",
+  "graph": "fixed_full_spectrum_derived",
+  "new_optimizer_updates": 9018,
+  "reuse_historical_training": false
+}

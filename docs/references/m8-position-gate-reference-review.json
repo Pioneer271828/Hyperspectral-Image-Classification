@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "issue": 230,
+  "plan_sections": [
+    "master2.3 gate/confidence/physical reliability distinction",
+    "master existing fixed final64/.8 fusion contract",
+    "implementation12/18.3F/18.4 B0,R,F,R+F"
+  ],
+  "paper": {
+    "title": "Gated Multimodal Units for Information Fusion",
+    "authors": [
+      "John Arevalo",
+      "Thamar Solorio",
+      "Manuel Montes-y-Gomez",
+      "Fabio A Gonzalez"
+    ],
+    "arxiv": "1702.01992v1",
+    "doi": "10.48550/arXiv.1702.01992",
+    "url": "https://arxiv.org/abs/1702.01992v1",
+    "pdf": "https://arxiv.org/pdf/1702.01992v1",
+    "read_scope": "Introduction/related methods;3.1 equations and Figure2; training context/results5; conclusion6 and footnote5 author-code link. Not all17pages/appendices/reference entries read.",
+    "demonstrated": "Synthetic multimodal fusion and movie genre classification, not HSI or project gains"
+  },
+  "upstream": {
+    "classification": "author_code_explicit_paper_footnote5",
+    "url": "https://github.com/johnarevalo/gmu-mmimdb",
+    "commit": "95226b0d265743e7a9330549bc35b95fcb60e1dd",
+    "read_files": [
+      "README.md",
+      "LICENSE",
+      "model.py GatedBimodal/GatedClassifier"
+    ],
+    "license": {
+      "spdx": "MIT",
+      "path": "LICENSE",
+      "copyright": "2020 John Arevalo",
+      "git_blob": "1eda536f416828fe16535351c8e9c2e8130ceb19",
+      "scope": "Root license inspected at fixed SHA; selected model.py has no separate copyright/license notice; tracked tree has no nested LICENSE/COPYING or gitmodules. Not a license audit of external Theano/Fuel/Blocks or linked datasets/weights."
+    },
+    "model_git_blob": "6f9f68eda5f714a25899196697e28d0e781a2118",
+    "readme_git_blob": "567ec87fbda9d50c2971224a52221d2b4463004e",
+    "permalink": "https://github.com/johnarevalo/gmu-mmimdb/blob/95226b0d265743e7a9330549bc35b95fcb60e1dd/model.py"
+  },
+  "reuse": {
+    "source_copied": false,
+    "approach": "Independent PyTorch implementation of sigmoid convex-mixture idea; attribution retained",
+    "differences": [
+      "Original projected modalities+tanh and per-channel gate; project retains existingC2/QG2 and one scalar per position",
+      "Project adds scalar bias initialized logit(.8), no new modality projections/normalization",
+      "Disabled calls unchanged project fixed_fusion; no public model/config/loss/checkpoint edits"
+    ],
+    "upstream_executed": false,
+    "dependencies_installed": false,
+    "external_data_weights_downloaded": false
+  },
+  "allowed_new_paths": [
+    "position_gated_fusion.py",
+    "tests/test_position_gated_fusion.py",
+    "docs/references/m8-position-gate-reference-review.json"
+  ],
+  "implementation_plan_path_exception": "Top-level additive companion because frozen guard covers entire model directory; initial7cb checker rejected new model path after CPU6pass1.047s, no GPU/full run; relocation preserves model tree and guard. Later explicit adapter separate acceptance",
+  "limits": [
+    "No original GMU reproduction/HSI efficacy/physical reliability claim",
+    "C64 gate129params; extra operations cost not yet measured",
+    "Kernel/head-loss synthetic engineering only; real numerical experiments and completeB0,R,F,R+F remain after184audit/review/frozenquery/204analysis",
+    "Gate initialization close to fixed numerically, not bitwise equivalence for enabled path",
+    "No public checkpoint loader migration or target runtime acceptance"
+  ]
+}

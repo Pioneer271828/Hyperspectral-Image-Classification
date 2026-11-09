@@ -1,0 +1,1689 @@
+{
+  "status": "passed",
+  "summary": {
+    "dual_legacy_hypergraph": {
+      "macro_oa_percent": {
+        "values": [
+          95.7332792113476,
+          96.26365553687198,
+          95.66527941454193
+        ],
+        "mean": 95.88740472092051,
+        "sample_sd": 0.32761181369040787
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "datasets": {
+        "paviaU": {
+          "oa": {
+            "values": [
+              0.9912166172106824,
+              0.9916439169139466,
+              0.9817922848664689
+            ],
+            "mean": 0.988217606330366,
+            "sample_sd": 0.005568591670693324
+          },
+          "aa": {
+            "values": [
+              0.987437495575297,
+              0.9879012300298464,
+              0.9733461892823494
+            ],
+            "mean": 0.9828949716291643,
+            "sample_sd": 0.008272738098188338
+          },
+          "kappa": {
+            "values": [
+              0.9883548711937841,
+              0.9889173428794106,
+              0.9758429576827692
+            ],
+            "mean": 0.9843717239186546,
+            "sample_sd": 0.007391480482898356
+          },
+          "nll": {
+            "values": [
+              0.05798201635479927,
+              0.05325103923678398,
+              0.07089442014694214
+            ],
+            "mean": 0.06070915857950846,
+            "sample_sd": 0.009132371051407032
+          }
+        },
+        "xuzhou": {
+          "oa": {
+            "values": [
+              0.9821483850995769,
+              0.9832834588793726,
+              0.9813671005498474
+            ],
+            "mean": 0.9822663148429323,
+            "sample_sd": 0.0009636067040349247
+          },
+          "aa": {
+            "values": [
+              0.9857782728846358,
+              0.9835346257729797,
+              0.9875698846718274
+            ],
+            "mean": 0.9856275944431476,
+            "sample_sd": 0.002021844848085377
+          },
+          "kappa": {
+            "values": [
+              0.9774124715033488,
+              0.9788245419677003,
+              0.9764368891084971
+            ],
+            "mean": 0.9775579675265154,
+            "sample_sd": 0.0012004575642575834
+          },
+          "nll": {
+            "values": [
+              0.05735310539603233,
+              0.05725666508078575,
+              0.06660807132720947
+            ],
+            "mean": 0.060405947268009186,
+            "sample_sd": 0.005371413437623704
+          }
+        },
+        "whu-honghu": {
+          "oa": {
+            "values": [
+              0.8986333740301682,
+              0.9129822903128405,
+              0.9067989970199415
+            ],
+            "mean": 0.9061382204543168,
+            "sample_sd": 0.0071972438387235315
+          },
+          "aa": {
+            "values": [
+              0.9012453330484711,
+              0.9178234199235661,
+              0.9080473482686746
+            ],
+            "mean": 0.9090387004135706,
+            "sample_sd": 0.008333386191455523
+          },
+          "kappa": {
+            "values": [
+              0.873870877738002,
+              0.8916528154277583,
+              0.8838272460675644
+            ],
+            "mean": 0.8831169797444415,
+            "sample_sd": 0.008912221142224647
+          },
+          "nll": {
+            "values": [
+              0.39402109384536743,
+              0.33717116713523865,
+              0.3580256402492523
+            ],
+            "mean": 0.36307263374328613,
+            "sample_sd": 0.028759044650915794
+          }
+        }
+      }
+    },
+    "dual_fused_hypergraph": {
+      "macro_oa_percent": {
+        "values": [
+          96.52982419301948,
+          96.5915597744326,
+          96.28669462924165
+        ],
+        "mean": 96.46935953223124,
+        "sample_sd": 0.1611758995360392
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 64597,
+        "trainable": 64597
+      },
+      "datasets": {
+        "paviaU": {
+          "oa": {
+            "values": [
+              0.9939940652818992,
+              0.9888902077151336,
+              0.9871810089020772
+            ],
+            "mean": 0.9900217606330367,
+            "sample_sd": 0.003544678167784695
+          },
+          "aa": {
+            "values": [
+              0.9922081115433685,
+              0.9822329542514865,
+              0.9811703343591203
+            ],
+            "mean": 0.985203800051325,
+            "sample_sd": 0.006089135806261166
+          },
+          "kappa": {
+            "values": [
+              0.9920376285182007,
+              0.9852358061927686,
+              0.9829855664901914
+            ],
+            "mean": 0.9867530004003869,
+            "sample_sd": 0.004712893531309029
+          },
+          "nll": {
+            "values": [
+              0.04226378723978996,
+              0.0542619489133358,
+              0.054088376462459564
+            ],
+            "mean": 0.05020470420519511,
+            "sample_sd": 0.006877583408256148
+          }
+        },
+        "xuzhou": {
+          "oa": {
+            "values": [
+              0.9846543921458791,
+              0.9875878945118446,
+              0.9843153441337323
+            ],
+            "mean": 0.9855192102638187,
+            "sample_sd": 0.0017995358504786841
+          },
+          "aa": {
+            "values": [
+              0.9868433029345738,
+              0.9908349788183083,
+              0.9868241547005453
+            ],
+            "mean": 0.9881674788178091,
+            "sample_sd": 0.0023101426045190115
+          },
+          "kappa": {
+            "values": [
+              0.9805668725430581,
+              0.9842768436787654,
+              0.9801479285303295
+            ],
+            "mean": 0.9816638815840509,
+            "sample_sd": 0.002272566105256593
+          },
+          "nll": {
+            "values": [
+              0.05005916208028793,
+              0.044327426701784134,
+              0.0528215616941452
+            ],
+            "mean": 0.049069383492072426,
+            "sample_sd": 0.004332704531511538
+          }
+        },
+        "whu-honghu": {
+          "oa": {
+            "values": [
+              0.9172462683628058,
+              0.9212686910059995,
+              0.9171044858414399
+            ],
+            "mean": 0.9185398150700816,
+            "sample_sd": 0.0023643389088843854
+          },
+          "aa": {
+            "values": [
+              0.9103539881628077,
+              0.9233751643500124,
+              0.9158398768881116
+            ],
+            "mean": 0.9165230098003105,
+            "sample_sd": 0.006537412351714875
+          },
+          "kappa": {
+            "values": [
+              0.8964407873737825,
+              0.9016462180852807,
+              0.8964756724027468
+            ],
+            "mean": 0.89818755928727,
+            "sample_sd": 0.002995337168350814
+          },
+          "nll": {
+            "values": [
+              0.3619072437286377,
+              0.2983205318450928,
+              0.32524484395980835
+            ],
+            "mean": 0.32849087317784625,
+            "sample_sd": 0.031917393554353794
+          }
+        }
+      }
+    },
+    "cnn_fused_only": {
+      "macro_oa_percent": {
+        "values": [
+          95.94487039176184,
+          96.44163637629487,
+          96.00708582924783
+        ],
+        "mean": 96.13119753243484,
+        "sample_sd": 0.2706416394390442
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "primary_head": 2600
+        },
+        "total": 47253,
+        "trainable": 47253
+      },
+      "datasets": {
+        "paviaU": {
+          "oa": {
+            "values": [
+              0.9922136498516321,
+              0.9887715133531157,
+              0.9906231454005935
+            ],
+            "mean": 0.9905361028684472,
+            "sample_sd": 0.0017227182649540798
+          },
+          "aa": {
+            "values": [
+              0.9889897469035862,
+              0.9828479549193799,
+              0.9838642145298776
+            ],
+            "mean": 0.9852339721176145,
+            "sample_sd": 0.0032920478552395617
+          },
+          "kappa": {
+            "values": [
+              0.9896721273421542,
+              0.9850795161064848,
+              0.9875584124939382
+            ],
+            "mean": 0.9874366853141924,
+            "sample_sd": 0.002298724128775725
+          },
+          "nll": {
+            "values": [
+              0.04987112432718277,
+              0.04700227081775665,
+              0.044164933264255524
+            ],
+            "mean": 0.047012776136398315,
+            "sample_sd": 0.0028531100369504707
+          }
+        },
+        "xuzhou": {
+          "oa": {
+            "values": [
+              0.9849049928505094,
+              0.9847133570175568,
+              0.9810575349735395
+            ],
+            "mean": 0.9835586282805352,
+            "sample_sd": 0.0021681286564320537
+          },
+          "aa": {
+            "values": [
+              0.9848826255866112,
+              0.983298174190397,
+              0.9817161513785777
+            ],
+            "mean": 0.9832989837185288,
+            "sample_sd": 0.0015832372592372904
+          },
+          "kappa": {
+            "values": [
+              0.9808694323724324,
+              0.9806205149760728,
+              0.9760127249197351
+            ],
+            "mean": 0.9791675574227469,
+            "sample_sd": 0.002734998365465096
+          },
+          "nll": {
+            "values": [
+              0.046414412558078766,
+              0.051239799708127975,
+              0.06204714626073837
+            ],
+            "mean": 0.05323378617564837,
+            "sample_sd": 0.0080048471115355
+          }
+        },
+        "whu-honghu": {
+          "oa": {
+            "values": [
+              0.9012274690507135,
+              0.9197642209181731,
+              0.9085318945033017
+            ],
+            "mean": 0.9098411948240628,
+            "sample_sd": 0.009337477868589605
+          },
+          "aa": {
+            "values": [
+              0.8925897424021593,
+              0.9234721478510095,
+              0.9049409650231258
+            ],
+            "mean": 0.9070009517587648,
+            "sample_sd": 0.015543918443881848
+          },
+          "kappa": {
+            "values": [
+              0.8767847673208112,
+              0.9000425787249824,
+              0.8860142024043449
+            ],
+            "mean": 0.8876138494833796,
+            "sample_sd": 0.01171113149576489
+          },
+          "nll": {
+            "values": [
+              0.38463640213012695,
+              0.28243428468704224,
+              0.3330655097961426
+            ],
+            "mean": 0.33337873220443726,
+            "sample_sd": 0.05110177867423319
+          }
+        }
+      }
+    },
+    "graph_fused_hypergraph": {
+      "macro_oa_percent": {
+        "values": [
+          94.85698166290119,
+          94.99753872661984,
+          94.56773404593206
+        ],
+        "mean": 94.80741814515103,
+        "sample_sd": 0.21914703421244222
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 44117,
+        "trainable": 44117
+      },
+      "datasets": {
+        "paviaU": {
+          "oa": {
+            "values": [
+              0.9491988130563799,
+              0.9520712166172107,
+              0.9503145400593472
+            ],
+            "mean": 0.9505281899109792,
+            "sample_sd": 0.0014480712166172049
+          },
+          "aa": {
+            "values": [
+              0.9151585460368116,
+              0.9143263381294595,
+              0.9136870291136309
+            ],
+            "mean": 0.9143906377599674,
+            "sample_sd": 0.0007378626875404271
+          },
+          "kappa": {
+            "values": [
+              0.9327758511859678,
+              0.9364225662313763,
+              0.9341407590502074
+            ],
+            "mean": 0.9344463921558505,
+            "sample_sd": 0.0018424688198314025
+          },
+          "nll": {
+            "values": [
+              0.17504552006721497,
+              0.1785169392824173,
+              0.17974109947681427
+            ],
+            "mean": 0.17776785294214884,
+            "sample_sd": 0.002435767693530281
+          }
+        },
+        "xuzhou": {
+          "oa": {
+            "values": [
+              0.9616728334094963,
+              0.9616728334094963,
+              0.9585329539926589
+            ],
+            "mean": 0.9606262069372171,
+            "sample_sd": 0.0018128102265340118
+          },
+          "aa": {
+            "values": [
+              0.964845113787778,
+              0.9653724021834762,
+              0.9659869385830626
+            ],
+            "mean": 0.965401484851439,
+            "sample_sd": 0.0005714676867186268
+          },
+          "kappa": {
+            "values": [
+              0.9516275193589177,
+              0.9516287320203314,
+              0.9477616665700961
+            ],
+            "mean": 0.950339305983115,
+            "sample_sd": 0.0022323012958152515
+          },
+          "nll": {
+            "values": [
+              0.12396350502967834,
+              0.12702716886997223,
+              0.1317395567893982
+            ],
+            "mean": 0.12757674356301626,
+            "sample_sd": 0.003917048570018805
+          }
+        },
+        "whu-honghu": {
+          "oa": {
+            "values": [
+              0.9348378034211597,
+              0.9361821117718877,
+              0.9281845273259554
+            ],
+            "mean": 0.9330681475063343,
+            "sample_sd": 0.004282417633196504
+          },
+          "aa": {
+            "values": [
+              0.9178736604828824,
+              0.9255634834814171,
+              0.9234275764743409
+            ],
+            "mean": 0.9222882401462135,
+            "sample_sd": 0.003969497435273325
+          },
+          "kappa": {
+            "values": [
+              0.9181982027344883,
+              0.9198374025929111,
+              0.9099154971106771
+            ],
+            "mean": 0.9159837008126921,
+            "sample_sd": 0.005318746672932021
+          },
+          "nll": {
+            "values": [
+              0.339529424905777,
+              0.32346099615097046,
+              0.33109286427497864
+            ],
+            "mean": 0.3313610951105754,
+            "sample_sd": 0.008037571865802938
+          }
+        }
+      }
+    },
+    "dual_legacy_ordinary": {
+      "macro_oa_percent": {
+        "values": [
+          95.66307146796356,
+          96.36972241085113,
+          95.81431025355235
+        ],
+        "mean": 95.94903471078901,
+        "sample_sd": 0.3720912499700249
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "datasets": {
+        "paviaU": {
+          "oa": {
+            "values": [
+              0.992973293768546,
+              0.9917388724035608,
+              0.9854243323442137
+            ],
+            "mean": 0.9900454995054401,
+            "sample_sd": 0.004049362724624915
+          },
+          "aa": {
+            "values": [
+              0.9896986617867408,
+              0.9881339684722009,
+              0.9797859653162406
+            ],
+            "mean": 0.9858728651917273,
+            "sample_sd": 0.00532914898110314
+          },
+          "kappa": {
+            "values": [
+              0.9906871695037017,
+              0.98903821606073,
+              0.9806667285965209
+            ],
+            "mean": 0.9867973713869841,
+            "sample_sd": 0.005372927287100261
+          },
+          "nll": {
+            "values": [
+              0.055625684559345245,
+              0.051337357610464096,
+              0.06081634759902954
+            ],
+            "mean": 0.055926463256279625,
+            "sample_sd": 0.004746647624295292
+          }
+        },
+        "xuzhou": {
+          "oa": {
+            "values": [
+              0.9800551321550186,
+              0.9824137270221266,
+              0.9796276368353554
+            ],
+            "mean": 0.9806988320041669,
+            "sample_sd": 0.0015004455185213636
+          },
+          "aa": {
+            "values": [
+              0.9835470562152516,
+              0.9834502423373048,
+              0.9836889999343159
+            ],
+            "mean": 0.9835620994956242,
+            "sample_sd": 0.00012008756282771798
+          },
+          "kappa": {
+            "values": [
+              0.9747700241304293,
+              0.9777397661155368,
+              0.9742314542900429
+            ],
+            "mean": 0.9755804148453363,
+            "sample_sd": 0.0018893418958279512
+          },
+          "nll": {
+            "values": [
+              0.0598122775554657,
+              0.059495359659194946,
+              0.06902378052473068
+            ],
+            "mean": 0.06277713924646378,
+            "sample_sd": 0.0054120702769601195
+          }
+        },
+        "whu-honghu": {
+          "oa": {
+            "values": [
+              0.8968637181153427,
+              0.9169390728998464,
+              0.9093773384270017
+            ],
+            "mean": 0.9077267098140637,
+            "sample_sd": 0.010138954509431024
+          },
+          "aa": {
+            "values": [
+              0.898048192996556,
+              0.9187340560557847,
+              0.9112756191354479
+            ],
+            "mean": 0.909352622729263,
+            "sample_sd": 0.010476147622572955
+          },
+          "kappa": {
+            "values": [
+              0.8716662697219297,
+              0.8963963683108934,
+              0.8869912360619526
+            ],
+            "mean": 0.8850179580315919,
+            "sample_sd": 0.012482580410067227
+          },
+          "nll": {
+            "values": [
+              0.3898186981678009,
+              0.31482216715812683,
+              0.35044100880622864
+            ],
+            "mean": 0.3516939580440521,
+            "sample_sd": 0.03751396176379766
+          }
+        }
+      }
+    },
+    "dual_legacy_identity": {
+      "macro_oa_percent": {
+        "values": [
+          95.83216602341771,
+          96.16730701862424,
+          95.60097558777748
+        ],
+        "mean": 95.86681620993981,
+        "sample_sd": 0.2847512931678215
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "datasets": {
+        "paviaU": {
+          "oa": {
+            "values": [
+              0.9905756676557863,
+              0.9880830860534124,
+              0.9828842729970326
+            ],
+            "mean": 0.9871810089020773,
+            "sample_sd": 0.003924244556522578
+          },
+          "aa": {
+            "values": [
+              0.9856255766742138,
+              0.983306968605623,
+              0.976372870720417
+            ],
+            "mean": 0.9817684720000847,
+            "sample_sd": 0.004814392040621184
+          },
+          "kappa": {
+            "values": [
+              0.9875063977358826,
+              0.9841825447735166,
+              0.9773013166818096
+            ],
+            "mean": 0.9829967530637364,
+            "sample_sd": 0.005204853150117433
+          },
+          "nll": {
+            "values": [
+              0.06272082775831223,
+              0.060883473604917526,
+              0.06888067722320557
+            ],
+            "mean": 0.06416165952881177,
+            "sample_sd": 0.004188772322680057
+          }
+        },
+        "xuzhou": {
+          "oa": {
+            "values": [
+              0.9811164998452172,
+              0.9842268968262158,
+              0.9792885888232086
+            ],
+            "mean": 0.9815439951648806,
+            "sample_sd": 0.002496755027909584
+          },
+          "aa": {
+            "values": [
+              0.9843116559493598,
+              0.9849351397025965,
+              0.9855271284818221
+            ],
+            "mean": 0.9849246413779262,
+            "sample_sd": 0.000607804269817407
+          },
+          "kappa": {
+            "values": [
+              0.9761030880464563,
+              0.9800120015740419,
+              0.9738087629556108
+            ],
+            "mean": 0.9766412841920363,
+            "sample_sd": 0.003136444429228199
+          },
+          "nll": {
+            "values": [
+              0.05603603646159172,
+              0.056741803884506226,
+              0.07128475606441498
+            ],
+            "mean": 0.06135419880350431,
+            "sample_sd": 0.008607351657041849
+          }
+        },
+        "whu-honghu": {
+          "oa": {
+            "values": [
+              0.9032728132015281,
+              0.9127092276790989,
+              0.9058564058130834
+            ],
+            "mean": 0.9072794822312368,
+            "sample_sd": 0.004876508937452625
+          },
+          "aa": {
+            "values": [
+              0.9030559822928769,
+              0.9148077791928899,
+              0.9073035634075883
+            ],
+            "mean": 0.9083891082977851,
+            "sample_sd": 0.0059506292420435
+          },
+          "kappa": {
+            "values": [
+              0.8794331234707277,
+              0.8912802634031723,
+              0.8826554866719749
+            ],
+            "mean": 0.8844562911819583,
+            "sample_sd": 0.006125426826525133
+          },
+          "nll": {
+            "values": [
+              0.3863174021244049,
+              0.33078014850616455,
+              0.36073964834213257
+            ],
+            "mean": 0.359279066324234,
+            "sample_sd": 0.027797420918809074
+          }
+        }
+      }
+    }
+  },
+  "contrasts": {
+    "dual_minus_cnn": {
+      "a": "dual_fused_hypergraph",
+      "b": "cnn_fused_only",
+      "paired_delta_pp": [
+        0.5849538012576403,
+        0.14992339813773015,
+        0.2796087999938237
+      ],
+      "mean_delta_pp": 0.33816199979639805,
+      "sample_sd_delta_pp": 0.22334775757774697,
+      "positive_seeds": 3,
+      "aa_guard_passed": true,
+      "support_gate_passed": true
+    },
+    "dual_minus_graph": {
+      "a": "dual_fused_hypergraph",
+      "b": "graph_fused_hypergraph",
+      "paired_delta_pp": [
+        1.672842530118288,
+        1.5940210478127597,
+        1.7189605833095953
+      ],
+      "mean_delta_pp": 1.6619413870802144,
+      "sample_sd_delta_pp": 0.06317909521506043,
+      "positive_seeds": 3,
+      "aa_guard_passed": false,
+      "support_gate_passed": false
+    },
+    "auxiliary_supervision": {
+      "a": "dual_legacy_hypergraph",
+      "b": "dual_fused_hypergraph",
+      "paired_delta_pp": [
+        -0.7965449816718859,
+        -0.3279042375606167,
+        -0.6214152146997236
+      ],
+      "mean_delta_pp": -0.5819548113107421,
+      "sample_sd_delta_pp": 0.23679923846373935,
+      "positive_seeds": 0,
+      "aa_guard_passed": false,
+      "support_gate_passed": false
+    },
+    "hypergraph_minus_ordinary": {
+      "a": "dual_legacy_hypergraph",
+      "b": "dual_legacy_ordinary",
+      "paired_delta_pp": [
+        0.07020774338403157,
+        -0.10606687397914527,
+        -0.1490308390104218
+      ],
+      "mean_delta_pp": -0.061629989868511835,
+      "sample_sd_delta_pp": 0.11617816707401946,
+      "positive_seeds": 1,
+      "aa_guard_passed": true,
+      "support_gate_passed": false
+    },
+    "hypergraph_minus_identity": {
+      "a": "dual_legacy_hypergraph",
+      "b": "dual_legacy_identity",
+      "paired_delta_pp": [
+        -0.09888681207011984,
+        0.09634851824773705,
+        0.06430382676444424
+      ],
+      "mean_delta_pp": 0.020588510980687147,
+      "sample_sd_delta_pp": 0.10470186329113668,
+      "positive_seeds": 2,
+      "aa_guard_passed": true,
+      "support_gate_passed": true
+    }
+  },
+  "metric_cases": 324,
+  "complementarity_cases": 81,
+  "trained_updates": 27054,
+  "new_updates_in_evaluation": 0,
+  "all_from_scratch": true,
+  "test_readout_performed": true,
+  "test_based_selection": false,
+  "training_files_unchanged": 2016,
+  "inputs_unchanged": 13,
+  "elapsed_seconds": 86.72940821805969,
+  "scope": "fixed previously inspected split; paired joint benchmark; no test-based selection",
+  "source": {
+    "commit": "7f4688076bf19b814f210676d64d1d08a2e3610c",
+    "branch": "codex/issue-111-bg-ablation-full",
+    "dirty": false,
+    "source_hash": "4640b514ec609aab6f8ac494b4e7212f324d19e6d7a66d0c5dd7617fef063213"
+  },
+  "source_file_count": 221,
+  "campaign_wall_seconds": 3693.3270912249573,
+  "campaign": "/home/lbx/hsi-pioneer271828/runs/bg-abl2-issue111-20261103-full01",
+  "analysis": "/home/lbx/hsi-pioneer271828/runs/bg-abl2-issue111-20261103-analysis01",
+  "reviews": [
+    {
+      "variant": "dual_legacy_hypergraph",
+      "seed": 64,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 512,
+        "whu-honghu": 473,
+        "paviaU": 518
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295073,
+        "cnn_head": 1278916,
+        "graph_head": 1278930,
+        "cnn": 29623979,
+        "denoise": 19433064,
+        "adapter": 15728655,
+        "primary_head": 1278920
+      },
+      "loss_first30_mean": 7.4611546993255615,
+      "loss_last30_mean": 0.4786734312772751,
+      "validation_first": 0.1430060009782513,
+      "validation_last": 0.9613311886787415,
+      "last50_epoch_validation_change": 0.008388976256052616,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9689047575784203,
+      "selected_validation_macro_oa": 0.9613311886787415
+    },
+    {
+      "variant": "dual_legacy_hypergraph",
+      "seed": 512,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 493,
+        "paviaU": 472,
+        "whu-honghu": 538
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25294986,
+        "cnn_head": 1333849,
+        "graph_head": 1333845,
+        "cnn": 29624249,
+        "denoise": 19433358,
+        "adapter": 15728665,
+        "primary_head": 1333846
+      },
+      "loss_first30_mean": 7.560410499572754,
+      "loss_last30_mean": 0.2841014124453068,
+      "validation_first": 0.03925581524769465,
+      "validation_last": 0.9655794103940328,
+      "last50_epoch_validation_change": 0.008198996384938595,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9754509023010676,
+      "selected_validation_macro_oa": 0.9655794103940328
+    },
+    {
+      "variant": "dual_legacy_hypergraph",
+      "seed": 2048,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "whu-honghu": 503,
+        "paviaU": 510,
+        "xuzhou": 490
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295032,
+        "cnn_head": 1304273,
+        "graph_head": 1304275,
+        "cnn": 29624043,
+        "denoise": 19433287,
+        "adapter": 15728291,
+        "primary_head": 1304269
+      },
+      "loss_first30_mean": 7.734788131713867,
+      "loss_last30_mean": 0.5014138323565324,
+      "validation_first": 0.13452556480964026,
+      "validation_last": 0.9535683989524841,
+      "last50_epoch_validation_change": 0.008199016253153446,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9719781267267688,
+      "selected_validation_macro_oa": 0.9535683989524841
+    },
+    {
+      "variant": "dual_fused_hypergraph",
+      "seed": 64,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 512,
+        "whu-honghu": 473,
+        "paviaU": 518
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 64597,
+        "trainable": 64597
+      },
+      "changed_elements_sum": {
+        "graph": 25294242,
+        "cnn": 29624242,
+        "denoise": 19433482,
+        "adapter": 15728849,
+        "primary_head": 1278910
+      },
+      "loss_first30_mean": 2.504566208521525,
+      "loss_last30_mean": 0.12112795881306132,
+      "validation_first": 0.14420442562550306,
+      "validation_last": 0.965630034605662,
+      "last50_epoch_validation_change": 0.006093959013620975,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.976362040452995,
+      "selected_validation_macro_oa": 0.965630034605662
+    },
+    {
+      "variant": "dual_fused_hypergraph",
+      "seed": 512,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 493,
+        "paviaU": 472,
+        "whu-honghu": 538
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 64597,
+        "trainable": 64597
+      },
+      "changed_elements_sum": {
+        "graph": 25293532,
+        "cnn": 29624531,
+        "denoise": 19434062,
+        "adapter": 15728811,
+        "primary_head": 1333830
+      },
+      "loss_first30_mean": 2.4886619329452513,
+      "loss_last30_mean": 0.057042978890240195,
+      "validation_first": 0.03925581524769465,
+      "validation_last": 0.9647934039433798,
+      "last50_epoch_validation_change": 0.006607552369435665,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9775981152187004,
+      "selected_validation_macro_oa": 0.9647934039433798
+    },
+    {
+      "variant": "dual_fused_hypergraph",
+      "seed": 2048,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "whu-honghu": 503,
+        "paviaU": 510,
+        "xuzhou": 490
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 64597,
+        "trainable": 64597
+      },
+      "changed_elements_sum": {
+        "graph": 25293862,
+        "cnn": 29624308,
+        "denoise": 19433835,
+        "adapter": 15728403,
+        "primary_head": 1304260
+      },
+      "loss_first30_mean": 2.553932229677836,
+      "loss_last30_mean": 0.11952827870845795,
+      "validation_first": 0.1367512121796608,
+      "validation_last": 0.9624659419059753,
+      "last50_epoch_validation_change": 0.003937681516011593,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9771686726351739,
+      "selected_validation_macro_oa": 0.9624659419059753
+    },
+    {
+      "variant": "cnn_fused_only",
+      "seed": 64,
+      "updates": 1503,
+      "selected_step": 1473,
+      "selected_epoch": 490,
+      "per_dataset_updates": {
+        "xuzhou": 512,
+        "whu-honghu": 473,
+        "paviaU": 518
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "primary_head": 2600
+        },
+        "total": 47253,
+        "trainable": 47253
+      },
+      "changed_elements_sum": {
+        "denoise": 19433710,
+        "adapter": 15728832,
+        "primary_head": 1278915,
+        "cnn": 29623765
+      },
+      "loss_first30_mean": 2.5173420588175457,
+      "loss_last30_mean": 0.10582862157995503,
+      "validation_first": 0.15219470796485743,
+      "validation_last": 0.9631450573603312,
+      "last50_epoch_validation_change": 0.0033222238222757605,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9759512153225115,
+      "selected_validation_macro_oa": 0.9635893106460571
+    },
+    {
+      "variant": "cnn_fused_only",
+      "seed": 512,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 493,
+        "paviaU": 472,
+        "whu-honghu": 538
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "primary_head": 2600
+        },
+        "total": 47253,
+        "trainable": 47253
+      },
+      "changed_elements_sum": {
+        "denoise": 19433828,
+        "adapter": 15728823,
+        "primary_head": 1333842,
+        "cnn": 29623754
+      },
+      "loss_first30_mean": 2.51056174437205,
+      "loss_last30_mean": 0.04180671209469437,
+      "validation_first": 0.03925581524769465,
+      "validation_last": 0.9645203749338785,
+      "last50_epoch_validation_change": 0.0079078276952107,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9815339689083569,
+      "selected_validation_macro_oa": 0.9645203749338785
+    },
+    {
+      "variant": "cnn_fused_only",
+      "seed": 2048,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "whu-honghu": 503,
+        "paviaU": 510,
+        "xuzhou": 490
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "primary_head": 2600
+        },
+        "total": 47253,
+        "trainable": 47253
+      },
+      "changed_elements_sum": {
+        "denoise": 19433497,
+        "adapter": 15728409,
+        "primary_head": 1304272,
+        "cnn": 29623834
+      },
+      "loss_first30_mean": 2.5846579869588218,
+      "loss_last30_mean": 0.10594200696796179,
+      "validation_first": 0.17955209563175836,
+      "validation_last": 0.9619010885556539,
+      "last50_epoch_validation_change": 0.003766477108001709,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9771686726351739,
+      "selected_validation_macro_oa": 0.9619010885556539
+    },
+    {
+      "variant": "graph_fused_hypergraph",
+      "seed": 64,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 512,
+        "whu-honghu": 473,
+        "paviaU": 518
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 44117,
+        "trainable": 44117
+      },
+      "changed_elements_sum": {
+        "denoise": 19432043,
+        "graph": 25294706,
+        "adapter": 15728811,
+        "primary_head": 1278923
+      },
+      "loss_first30_mean": 2.4819466272989907,
+      "loss_last30_mean": 0.19183117002248765,
+      "validation_first": 0.09332628175616264,
+      "validation_last": 0.9437787731488546,
+      "last50_epoch_validation_change": 0.00629701217015588,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9595932901540815,
+      "selected_validation_macro_oa": 0.9437787731488546
+    },
+    {
+      "variant": "graph_fused_hypergraph",
+      "seed": 512,
+      "updates": 1503,
+      "selected_step": 1443,
+      "selected_epoch": 480,
+      "per_dataset_updates": {
+        "xuzhou": 493,
+        "paviaU": 472,
+        "whu-honghu": 538
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 44117,
+        "trainable": 44117
+      },
+      "changed_elements_sum": {
+        "denoise": 19432757,
+        "graph": 25294685,
+        "adapter": 15728790,
+        "primary_head": 1333851
+      },
+      "loss_first30_mean": 2.4345585187276204,
+      "loss_last30_mean": 0.14667431736985842,
+      "validation_first": 0.043087234099706016,
+      "validation_last": 0.9438293774922689,
+      "last50_epoch_validation_change": 0.001864473025004143,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9611070396350222,
+      "selected_validation_macro_oa": 0.9450278083483378
+    },
+    {
+      "variant": "graph_fused_hypergraph",
+      "seed": 2048,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "whu-honghu": 503,
+        "paviaU": 510,
+        "xuzhou": 490
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "graph": 17344,
+          "primary_head": 2600
+        },
+        "total": 44117,
+        "trainable": 44117
+      },
+      "changed_elements_sum": {
+        "denoise": 19432549,
+        "graph": 25294840,
+        "adapter": 15728358,
+        "primary_head": 1304283
+      },
+      "loss_first30_mean": 2.4512638688087462,
+      "loss_last30_mean": 0.20853158036867778,
+      "validation_first": 0.13458456099033356,
+      "validation_last": 0.9416549801826477,
+      "last50_epoch_validation_change": 0.0021375219027200965,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.957407450618286,
+      "selected_validation_macro_oa": 0.9416549801826477
+    },
+    {
+      "variant": "dual_legacy_ordinary",
+      "seed": 64,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 512,
+        "whu-honghu": 473,
+        "paviaU": 518
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295232,
+        "cnn_head": 1278914,
+        "graph_head": 1278933,
+        "cnn": 29624095,
+        "denoise": 19433150,
+        "adapter": 15728676,
+        "primary_head": 1278919
+      },
+      "loss_first30_mean": 7.4778088887532554,
+      "loss_last30_mean": 0.4706343042353789,
+      "validation_first": 0.1460501408825318,
+      "validation_last": 0.9597072800000509,
+      "last50_epoch_validation_change": 0.005992134412129757,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.969849531262179,
+      "selected_validation_macro_oa": 0.9597072800000509
+    },
+    {
+      "variant": "dual_legacy_ordinary",
+      "seed": 512,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 493,
+        "paviaU": 472,
+        "whu-honghu": 538
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295063,
+        "cnn_head": 1333844,
+        "graph_head": 1333853,
+        "cnn": 29624282,
+        "denoise": 19433595,
+        "adapter": 15728639,
+        "primary_head": 1333844
+      },
+      "loss_first30_mean": 7.559814564387003,
+      "loss_last30_mean": 0.2747120916843414,
+      "validation_first": 0.03925581524769465,
+      "validation_last": 0.966879685719808,
+      "last50_epoch_validation_change": 0.006144543488820431,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.978303840805386,
+      "selected_validation_macro_oa": 0.966879685719808
+    },
+    {
+      "variant": "dual_legacy_ordinary",
+      "seed": 2048,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "whu-honghu": 503,
+        "paviaU": 510,
+        "xuzhou": 490
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295155,
+        "cnn_head": 1304262,
+        "graph_head": 1304279,
+        "cnn": 29624064,
+        "denoise": 19433598,
+        "adapter": 15728300,
+        "primary_head": 1304272
+      },
+      "loss_first30_mean": 7.737275743484497,
+      "loss_last30_mean": 0.46349320908387504,
+      "validation_first": 0.13212871303160986,
+      "validation_last": 0.9572973648707072,
+      "last50_epoch_validation_change": 0.006829400857289558,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9722880452617589,
+      "selected_validation_macro_oa": 0.9572973648707072
+    },
+    {
+      "variant": "dual_legacy_identity",
+      "seed": 64,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 512,
+        "whu-honghu": 473,
+        "paviaU": 518
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295074,
+        "cnn_head": 1278912,
+        "graph_head": 1278930,
+        "cnn": 29623981,
+        "denoise": 19433159,
+        "adapter": 15728633,
+        "primary_head": 1278917
+      },
+      "loss_first30_mean": 7.454481999079387,
+      "loss_last30_mean": 0.4546223543584347,
+      "validation_first": 0.14458435773849487,
+      "validation_last": 0.9636262059211731,
+      "last50_epoch_validation_change": 0.009055038293202755,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9718772201312754,
+      "selected_validation_macro_oa": 0.9636262059211731
+    },
+    {
+      "variant": "dual_legacy_identity",
+      "seed": 512,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "xuzhou": 493,
+        "paviaU": 472,
+        "whu-honghu": 538
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295028,
+        "cnn_head": 1333841,
+        "graph_head": 1333847,
+        "cnn": 29624424,
+        "denoise": 19433686,
+        "adapter": 15728612,
+        "primary_head": 1333847
+      },
+      "loss_first30_mean": 7.55850305557251,
+      "loss_last30_mean": 0.25935562153657277,
+      "validation_first": 0.03925581524769465,
+      "validation_last": 0.9593199491500854,
+      "last50_epoch_validation_change": 0.005802154541015625,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.976395675984826,
+      "selected_validation_macro_oa": 0.9593199491500854
+    },
+    {
+      "variant": "dual_legacy_identity",
+      "seed": 2048,
+      "updates": 1503,
+      "selected_step": 1503,
+      "selected_epoch": 500,
+      "per_dataset_updates": {
+        "whu-honghu": 503,
+        "paviaU": 510,
+        "xuzhou": 490
+      },
+      "parameters": {
+        "groups": {
+          "adapter": 10465,
+          "denoise": 13708,
+          "cnn": 20480,
+          "graph": 17344,
+          "primary_head": 2600,
+          "graph_head": 2600,
+          "cnn_head": 2600
+        },
+        "total": 69797,
+        "trainable": 69797
+      },
+      "changed_elements_sum": {
+        "graph": 25295203,
+        "cnn_head": 1304261,
+        "graph_head": 1304277,
+        "cnn": 29624080,
+        "denoise": 19433528,
+        "adapter": 15728227,
+        "primary_head": 1304276
+      },
+      "loss_first30_mean": 7.740356906255086,
+      "loss_last30_mean": 0.4856122282644113,
+      "validation_first": 0.1216852938135465,
+      "validation_last": 0.9520463347434998,
+      "last50_epoch_validation_change": 0.005066732565561893,
+      "completed_resume_files_unchanged": 112,
+      "test_scoring": false,
+      "scope": "completed full training train/validation review; no batch retuning",
+      "selected_train_macro_oa": 0.9736622615290439,
+      "selected_validation_macro_oa": 0.9520463347434998
+    }
+  ],
+  "qa": {
+    "status": "passed",
+    "metric_cases_recomputed": 324,
+    "complementarity_cases_recomputed": 81,
+    "contrasts_recomputed": 5,
+    "training_files_unchanged": 2016,
+    "inputs_unchanged": 13,
+    "all_from_scratch": true,
+    "optimizer_updates": 27054,
+    "test_based_selection": false
+  },
+  "pr": 112,
+  "issue": 111
+}

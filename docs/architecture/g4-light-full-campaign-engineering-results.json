@@ -1,0 +1,34 @@
+{
+  "issue": 247,
+  "status": "engineering_passed",
+  "code": {
+    "commit": "2cfca12ae52308189c81c6d32dcea10f0ac1b50c",
+    "branch": "codex/g4-light-multigpu-campaign",
+    "dirty": false,
+    "source_hash": "8594702ecc2ffecd23b4846c9e773d4776cf41f508769a385483e546d0e19342"
+  },
+  "queue_recovery_passed": true,
+  "cpu_audit_passed": true,
+  "gpu_audit_passed": true,
+  "cpu_tests": 4,
+  "gpu_tests": 4,
+  "cpu_seconds": 83.384,
+  "gpu_seconds": 77.643,
+  "real_training_updates": 0,
+  "query_labels_accessed": false,
+  "synthetic_multigpu_cases": 2,
+  "synthetic_multigpu_updates": 3000,
+  "synthetic_multigpu_gpus": [
+    0,
+    1
+  ],
+  "synthetic_multigpu_seconds": 146.55671201925725,
+  "synthetic_acceptance_sha256": "ef355c5d3420362be7ccc980934b5f423e0a5887771ed04bfeab73a4e169e088",
+  "log_sha256": {
+    "issue247-cpu01.log": "788a41dcc7bb824fbb1bd4c0c9ca5c6597db77517c73e4b7c71e09a54aed0c94",
+    "issue247-gpu01.log": "9e0f10c6d6a0083f9a0d8cc10114c120fd29ef354af5366374748af065d2c42d",
+    "issue247-multigpu01.log": "472bce77fff0bba99bde258413b2ad18c309a59c95623eae068d49153e2fc85b"
+  },
+  "engineering_acceptance_sha256": "7c95ae22e456152cae4fc9a0f0bef0bab3989f140ec17e73b7ebd83f25906a79",
+  "evidence_archive_sha256": "dce2bf7119e0601cf1cbf0861de1fa176590b0b7742217fa7a5dd4f1b6c01359"
+}

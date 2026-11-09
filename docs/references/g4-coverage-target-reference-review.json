@@ -1,0 +1,20 @@
+{
+  "checked_on": "2026-11-06",
+  "issue": 199,
+  "scope": "E1 target initialization and metadata-bound population calibration component; not full target training or effects",
+  "reuse_decision": "Reuse accepted project E1 descriptor/modulator; adapt project-local population-BN function in a separate opt-in module. No external source, trainer, data protocol, weights or dependencies incorporated.",
+  "project_reference": "docs/references/e1-reference-review.json",
+  "paper": "https://arxiv.org/html/1709.07871v2",
+  "sections_read": ["2.1", "2.2"],
+  "demonstrated_scope": "Feature-wise affine conditioning on visual reasoning tasks; does not establish HSI coverage transfer benefits.",
+  "author_repository": "https://github.com/ethanjperez/film",
+  "commit": "fe43ddf8a22b339dcca2efa07091ce9d498955cf",
+  "source_read": "vr/models/filmed_net.py:FiLM.forward",
+  "license_path": "LICENSE",
+  "license_spdx": "CC-BY-NC-4.0",
+  "license_scope": "Actual root license read at fixed commit; author repository forks CLEVR code. No source copied, and this record does not relicense the repository or nested borrowed content.",
+  "source_copied": false,
+  "upstream_code_executed": false,
+  "dofa_boundary": "Related wavelength-conditioning literature only; not provenance for the project coverage geometry or a replacement foundation model.",
+  "real_experiment": "Not started;184 acceptance/audit/review/frozen-query sequence precedes new real E1 controls. Approximate wavelength and missing FWHM/SRF constraints retained."
+}

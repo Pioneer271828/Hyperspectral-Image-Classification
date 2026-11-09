@@ -1,0 +1,66 @@
+{
+  "status": "engineering_passed",
+  "issue": 198,
+  "pr": 200,
+  "tested_commit": "5db71e82ad3fc36f3cef7046a22c1162be756097",
+  "cpu_passed": true,
+  "gpu_passed": true,
+  "full_passed": true,
+  "cpu": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/issue198-resource-cpu04.log",
+    "sha256": "16b46c24707d05657fde427e69ffaa0a937d0d5355c36c8633ddd6e7a148d3f0",
+    "tests": 8,
+    "passed": 7,
+    "skipped": 1,
+    "seconds": 4.801
+  },
+  "gpu": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/issue198-resource-gpu02.log",
+    "sha256": "adead015d88d9d851dabdb4b4121593263bd309e362142e8b099606629c2986e",
+    "tests": 8,
+    "passed": 8,
+    "skipped": 0,
+    "seconds": 102.296
+  },
+  "full": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/issue198-resource-full01.log",
+    "sha256": "b6a364c58cc4a94b97ada9e940cf97d7222fa6438d20cebc84df7d3cde627a14",
+    "tests": 585,
+    "passed": 583,
+    "skipped": 2,
+    "seconds": 457.483
+  },
+  "all_original_python_and_config_bytes_unchanged": true,
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "cuda": "12.8"
+  },
+  "actual_gpu_test": "Original frozen CLI2 then new resource worker1498 plus readonly0 and original strict1500/6metrics/54recalls/3exactreload audit; synthetic only",
+  "parallel_test": "Three mocked card queues, unique stage ownership, exact10498 remaining updates for47accepted+2stepfixture; no model retries on resource-only deferral",
+  "real_new_training_updates_at_engineering_acceptance": 0,
+  "query_labels_accessed": false,
+  "failures_retained": [
+    {
+      "tested_commit": "52c5224e73e44bfa8b92fcc657e4f473d1d7bd4b",
+      "path": "/home/lbx/hsi-pioneer271828/runs/issue198-resource-cpu01.log",
+      "sha256": "c9dec03193dd41448829fc92ad2427f036112baf2ef1f14025b3c840191d42fa",
+      "tests": 7,
+      "passed": 5,
+      "errors": 1,
+      "skipped": 1,
+      "seconds": 5.062,
+      "reason": "Global proc enumeration encountered protected proc1/cwd. Replaced by verified coordinator direct-child enumeration, no real controller signaled."
+    },
+    {
+      "reason": "rmvision SCP and SSH closed at101.43.25.120:2200; neither used as validation or successful bundle transfer. Authorized LXC substituted."
+    }
+  ],
+  "cost_scope": "Controller per-case segment times exclude pre-handoff work for an existing checkpoint; retain legacy wrapper wall log separately.",
+  "independent_full54_audit_required": true,
+  "independent_resource_audit_required": true,
+  "original_engineering_receipt": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/g4-resource-issue198-engineering01/receipt.json",
+    "sha256": "583d117835664b8973af0a6d86c5128958a38a152f37c3fc30a6883bdcce1c4d"
+  }
+}

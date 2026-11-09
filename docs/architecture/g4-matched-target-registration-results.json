@@ -1,0 +1,63 @@
+{
+  "wrapper_pid": 273455,
+  "started_utc": "2026-11-06T03:15:09.053869+00:00",
+  "cwd": "/home/lbx/hsi-pioneer271828/checkouts/g4-matched-target-issue184-production01",
+  "registration": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-registration02/registration.json",
+  "registration_sha256": "0957aa3c5177be4faa38d6c68576a1db8e12679ab0d3de0bca67a19db2245017",
+  "analysis_plan": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-registration02/analysis-plan.md",
+    "sha256": "0bd71779546fd5ee0cbaab57b7b3639a1c378bcf9d1379f8afb1a80231a92dee"
+  },
+  "command": [
+    "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+    "-u",
+    "research/reproduction/m4g4b/matched_target_campaign.py",
+    "--expected-commit",
+    "331d718567b1a9726934f445665999df972392b1",
+    "--registration",
+    "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-registration02/registration.json",
+    "--registration-sha256",
+    "0957aa3c5177be4faa38d6c68576a1db8e12679ab0d3de0bca67a19db2245017"
+  ],
+  "gpu": 1,
+  "free_mib": 21748,
+  "utilization_percent": 41,
+  "log": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-full01.log",
+  "estimated_seconds": 86400,
+  "production_commit": "331d718567b1a9726934f445665999df972392b1",
+  "production_branch": "codex/g4-matched-target-issue184-production01",
+  "registration_values": {
+    "policy": "g4_matched_full_training_registration_v2",
+    "experiment_issue": 184,
+    "study_file_sha256": "1fc4d5588d1a864dcfdcabf9aaa6fcdf0dc50cf12a2ec5c7d2d12d9292a1c04c",
+    "planned_optimizer_updates": 81000,
+    "producer_commit": "331d718567b1a9726934f445665999df972392b1",
+    "gpu": 1,
+    "estimated_seconds": 86400,
+    "engineering_acceptance": {
+      "path": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue182-engineering01/receipt.json",
+      "sha256": "80a18ffb42d9b7de0c4b1acc20c48e4e37ce04ef398e0c16137c16e5fb766715"
+    },
+    "preflight": {
+      "root": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue182-preflight01",
+      "receipt_sha256": "2dacef05240b2d41854c4e70f97e7e3887a3b64bb2e1c3872ffead9bb97d82a5",
+      "protected_sha256": "0a03659a0a3726da00f4c095544244ef7b5b5a51c959d7f8f552149681affbbd"
+    },
+    "out_dir": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-full01",
+    "query_labels_during_training": false,
+    "test_scoring_during_training": false,
+    "analysis_plan": {
+      "path": "/home/lbx/hsi-pioneer271828/runs/g4-matched-target-issue184-registration02/analysis-plan.md",
+      "sha256": "0bd71779546fd5ee0cbaab57b7b3639a1c378bcf9d1379f8afb1a80231a92dee"
+    }
+  },
+  "preregistration_commit": "b2912ce2d22f40d52f1cd353c16400a4f32c3c4b",
+  "experiment_issue": 184,
+  "experiment_pr": 185,
+  "engineering_issue": 182,
+  "engineering_accepted": true,
+  "real_full_training_completed": false,
+  "query_labels_accessed": false,
+  "training_result_claimed": false,
+  "failed_registration01_preserved": true
+}

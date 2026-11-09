@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "module": "M2",
+  "issue": 11,
+  "pr": 12,
+  "baseline_commit": "82d56ebaf6da3a5c391f1e1b78cd5323655bdf19",
+  "tested_commit": "bb5a9cee98a781d52a544ea2bc678cf512e65576",
+  "branch": "codex/issue-11-m2-vca",
+  "source_hash": "eb85c8bc40e2cbde508f191720e68d06bb4091c3b0288acaf6b01dfba13ea15a",
+  "remote_code_directory": "/workspace/hsi-m2",
+  "status": "passed",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "unit_tests": 61,
+  "new_m2_unit_tests": 14,
+  "checks": [
+    {
+      "name": "unit",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0,
+      "seconds": 9.313
+    },
+    {
+      "name": "smoke",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cpu"
+      ],
+      "exit_code": 0,
+      "seconds": 2.189
+    },
+    {
+      "name": "smoke_cuda",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cuda"
+      ],
+      "exit_code": 0,
+      "seconds": 4.67
+    }
+  ],
+  "legacy_exact_cases": 9,
+  "cuda_cache_lifecycle": {
+    "cpu_cuda_cpu_transfer": "passed",
+    "warm_eval_gradient": "passed",
+    "eval_optimizer_step": "passed",
+    "nested_checkpoint_load": "passed",
+    "autocast_float16_bfloat16": "passed"
+  },
+  "real_checks": [
+    {
+      "dataset": "paviaU",
+      "image_sha256": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+      "shape": [
+        610,
+        340,
+        103
+      ],
+      "wavelength_quality": "estimated_not_verified",
+      "modes": [
+        {
+          "mode": "wavelength",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 24,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        },
+        {
+          "mode": "index",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 64,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        },
+        {
+          "mode": "uniform",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 64,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        }
+      ]
+    },
+    {
+      "dataset": "xuzhou",
+      "image_sha256": "3733fd46e7bb17b9db037700c36e245feb915326749abf5d8fc6ce0d6234e3c3",
+      "shape": [
+        500,
+        260,
+        436
+      ],
+      "wavelength_quality": "estimated_not_verified",
+      "modes": [
+        {
+          "mode": "wavelength",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 64,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        },
+        {
+          "mode": "index",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 64,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        },
+        {
+          "mode": "uniform",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 64,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        }
+      ]
+    },
+    {
+      "dataset": "whu-honghu",
+      "image_sha256": "394eebb36e70931711b02d127f73c641ad67a83a5bbfc5294b695b2f7336dfce",
+      "shape": [
+        940,
+        475,
+        270
+      ],
+      "wavelength_quality": "estimated_not_verified",
+      "modes": [
+        {
+          "mode": "wavelength",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 29,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        },
+        {
+          "mode": "index",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 64,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        },
+        {
+          "mode": "uniform",
+          "output_shape": [
+            12,
+            12,
+            64
+          ],
+          "valid_anchors": 64,
+          "optimizer_steps": 1,
+          "cached_vs_fresh_max_diff": 0
+        }
+      ]
+    }
+  ],
+  "real_check_peak_allocated_bytes": 30474752,
+  "real_check_peak_reserved_bytes": 46137344,
+  "artifacts": "/home/train/hsi-pioneer271828/runs/m2-validation-02",
+  "failed_attempt": {
+    "commit": "9c02bbfd77624f77c5fe32719680d757cd01c1a5",
+    "artifacts": "/home/train/hsi-pioneer271828/runs/m2-validation-01",
+    "failure": "No-coverage fixture at 1000nm coincided with anchor 2/7. Corrected fixture to 1010nm; no model formula change."
+  },
+  "cache_reproduction": {
+    "before": {
+      "train_eval_output_max_diff": 0.029607601463794708,
+      "loaded_state_output_max_diff": 0.03640151023864746,
+      "warm_eval_query_gradient": false,
+      "warm_eval_anchor_gradient": false
+    },
+    "after": {
+      "train_eval_output_max_diff": 0,
+      "loaded_state_output_max_diff": 0,
+      "warm_eval_query_gradient": true,
+      "warm_eval_anchor_gradient": true
+    }
+  },
+  "limits": [
+    "Small-patch adapter validation only; no accuracy, convergence or cross-sensor claim.",
+    "Metadata quality remains not verified; FWHM missing.",
+    "External writes bypassing tensor versions require explicit cache clear."
+  ]
+}

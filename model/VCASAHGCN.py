@@ -1,4 +1,5 @@
 import inspect
+from dataclasses import replace
 import numpy as np
 import torch
 import torch.nn as nn
@@ -6,8 +7,13 @@ import torch.nn.functional as F
 
 from model.SAHGCN import HGNN_conv
 from model.learnable_superpixel_graph import LearnableSuperpixelGraph
+from model.graph_state import GraphState
+from model.branch_fusion import fixed_fusion, validate_alph
 from model.variable_channel_adapter import VariableChannelAdapter
+from model.coverage_config import coverage_options, strip_default_coverage
+from model.observation_coverage import CoverageConfig, CoverageModulation, describe, validate_binding
 from model.region_pixel_alignment import RegionPixelAlignment, pool_regions, broadcast_regions
+from model.region_residual_decomposition import RegionResidualDecomposition
 from model.cross_branch_interaction import BidirectionalSelectiveInteraction
 from model.graph_edge_update import GraphEdgeUpdater
 from model.interaction_config import InteractionConfig, interaction_kwargs
@@ -43,7 +49,10 @@ class DomainSpecificBatchNorm1d(nn.Module):
 
     def add_dataset(self, dataset_name):
         if dataset_name not in self.norms:
-            self.norms[dataset_name] = nn.BatchNorm1d(next(iter(self.norms.values())).num_features)
+            reference = next(iter(self.norms.values()))
+            norm = nn.BatchNorm1d(reference.num_features).to(reference.weight)
+            norm.train(self.training)
+            self.norms[dataset_name] = norm
 
     def forward(self, x, dataset_name=None):
         if dataset_name is None:
@@ -61,7 +70,10 @@ class DomainSpecificBatchNorm2d(nn.Module):
 
     def add_dataset(self, dataset_name):
         if dataset_name not in self.norms:
-            self.norms[dataset_name] = nn.BatchNorm2d(next(iter(self.norms.values())).num_features)
+            reference = next(iter(self.norms.values()))
+            norm = nn.BatchNorm2d(reference.num_features).to(reference.weight)
+            norm.train(self.training)
+            self.norms[dataset_name] = norm
 
     def forward(self, x, dataset_name=None):
         if dataset_name is None:
@@ -178,23 +190,46 @@ class SharedHGCN(nn.Module):
         self.batch_normalzation2.add_dataset(dataset_name)
 
     def clear_graph_cache(self):
+        """Discard transient dense-to-sparse conversions (never checkpointed)."""
         self._sparse_graph_cache = {}
+
+    def train(self, mode=True):
+        self.clear_graph_cache()
+        return super().train(mode)
+
+    def _apply(self, fn, recurse=True):
+        self.clear_graph_cache()
+        return super()._apply(fn, recurse=recurse)
+
+    def _load_from_state_dict(self, *args, **kwargs):
+        self.clear_graph_cache()
+        return super()._load_from_state_dict(*args, **kwargs)
 
     def _sparse_graph(self, A, dataset_name=None):
         if A.is_sparse:
+            self.clear_graph_cache()
             return A.coalesce()
-        cache_key = (
-            dataset_name or "default",
-            str(A.device),
-            str(A.dtype),
-            tuple(A.shape),
-            int(A.data_ptr()),
-        )
-        cached = self._sparse_graph_cache.get(cache_key)
-        if cached is not None:
-            return cached
+        cache_key = None
+        if (not self.training and not torch.is_grad_enabled()
+                and not torch.is_autocast_enabled(A.device.type)):
+            try:
+                cache_key = (dataset_name or "default", str(A.device), A.dtype,
+                             tuple(A.shape), A._version)
+            except RuntimeError:
+                # Inference tensors have no version counter: always reconvert.
+                pass
+        cached = self._sparse_graph_cache.get(cache_key) if cache_key is not None else None
+        if cached is not None and cached[0] is A:
+            return cached[1]
+        self.clear_graph_cache()
+        # Preserve the legacy conversion dtype and graph math. A fresh conversion
+        # under autograd keeps adjacency derivatives connected to this forward.
         sparse_A = A.to(torch.float32).to_sparse().coalesce()
-        self._sparse_graph_cache[cache_key] = sparse_A
+        if cache_key is not None:
+            # Own one input reference so allocator/identity reuse cannot alias a
+            # different graph; replacing the entry also bounds retained storage.
+            # External storage/.data writes require explicit clear_graph_cache().
+            self._sparse_graph_cache[cache_key] = (A, sparse_A)
         return sparse_A
 
     def _graph_conv(self, conv, x, A_sparse):
@@ -269,14 +304,38 @@ class VCASAHGCNBackbone(nn.Module):
         graph_update_mode="none",
         graph_update_dim=32,
         graph_update_mix=0.5,
+        graph_assignment_mode="learned",
+        graph_adjacency_mode="learned",
+        region_residual_mode="none",
+        coverage_mode="none",
+        coverage_hidden=16,
+        coverage_strength=0.1,
+        coverage_sigma=0.08,
+        coverage_window=0.16,
+        coverage_init_seed=0,
+        coverage_descriptor_version=1,
+        coverage_condition="continuous",
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
+        validate_alph(alph)
         self.alph = alph
         self.norm_type = norm_type
         if graph_mode not in ["static", "learned"]:
             raise ValueError("graph_mode must be one of: static, learned")
         self.graph_mode = graph_mode
+        if graph_assignment_mode not in ("learned", "fixed_grid") or graph_adjacency_mode not in ("learned", "fixed_local"):
+            raise ValueError("Unknown graph assignment/adjacency mode")
+        if graph_mode == "static" and (graph_assignment_mode != "learned" or graph_adjacency_mode != "learned"):
+            raise ValueError("Graph builder controls require graph_mode=learned")
+        self.graph_assignment_mode = graph_assignment_mode
+        self.graph_adjacency_mode = graph_adjacency_mode
+        if region_residual_mode not in RegionResidualDecomposition.MODES:
+            raise ValueError("Unknown region_residual_mode")
+        self.region_residual_mode = region_residual_mode
+        self.coverage_settings = coverage_options(locals())
+        if coverage_condition=='continuous':self.coverage_settings.pop('coverage_condition')
+        self.coverage_mode = coverage_mode
         self.interaction_config = InteractionConfig(**interaction_kwargs(locals()))
         self.dataset_names = _safe_dataset_names(dataset_names)
         self.adapter = VariableChannelAdapter(
@@ -293,6 +352,12 @@ class VCASAHGCNBackbone(nn.Module):
             checkpoint_chunks=adapter_checkpoint_chunks,
         )
         self.channel = self.adapter.out_channels + extra_channels
+        self.coverage_modulation = (CoverageModulation(latent_channels, adapter_value_dim,
+            mode=coverage_mode, hidden=coverage_hidden, strength=coverage_strength,
+            init_seed=coverage_init_seed, descriptor_version=coverage_descriptor_version,condition=coverage_condition)
+            if coverage_mode != 'none' else None)
+        self.coverage_config = (CoverageConfig(wavelength_min, wavelength_max, coverage_sigma, coverage_window)
+                                if coverage_mode != 'none' else None)
 
         layers_count = 2
         self.CNN_denoise = nn.ModuleList()
@@ -371,6 +436,9 @@ class VCASAHGCNBackbone(nn.Module):
             self.edge_updater = GraphEdgeUpdater(
                 channels=128, mode=graph_update_mode, embed_dim=graph_update_dim, mix=graph_update_mix,
             ) if graph_update_mode != "none" else None
+        # M4 initialization is RNG-neutral; default-off keeps legacy state keys.
+        self.region_residual = (RegionResidualDecomposition(64, region_residual_mode)
+                                if region_residual_mode != "none" else None)
 
     def add_dataset(self, dataset_name):
         if dataset_name in self.dataset_names:
@@ -406,12 +474,45 @@ class VCASAHGCNBackbone(nn.Module):
         superpixel_scale=100,
         return_graph_info=False,
         return_diagnostics=False,
+        graph_state=None,
+        wavelength_unit="auto",
+        fwhm_unit="auto",
+        coverage_metadata=None,
+        coverage_reference_nm=None,
     ):
         if return_diagnostics and not return_graph_info:
             raise ValueError("return_diagnostics requires return_graph_info=True")
+        if graph_state is not None:
+            if Q is not None or A is not None:
+                raise ValueError("Pass graph_state or Q/A, not both")
+            if not isinstance(graph_state, GraphState):
+                raise ValueError("graph_state must be GraphState")
         height, width, _ = x.shape
         spectral_x, extra_x = self._split_spectral_extra(x, wavelengths)
-        latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm)
+        metadata_units = {} if wavelength_unit == fwhm_unit == "auto" else {
+            "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}
+        coverage_info = None
+        if self.coverage_modulation is None:
+            latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm, **metadata_units)
+        else:
+            validate_binding(coverage_metadata, wavelengths, fwhm, spectral_x.shape[-1],
+                             spectral_x.device, spectral_x.dtype, wavelength_unit, fwhm_unit)
+            latent_x, observed = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm,
+                                              return_attention=True, **metadata_units)
+            physical_mode = self.adapter.attention_mode == 'wavelength'
+            coverage = describe(coverage_metadata if physical_mode else None, observed['anchors'],
+                self.coverage_config, normalized_reference_nm=coverage_reference_nm if physical_mode else None)
+            coverage = replace(coverage, usable=coverage.usable & observed['anchor_valid'].bool())
+            latent_x = self.coverage_modulation(latent_x, coverage,
+                **({'anchor_valid':observed['anchor_valid'].bool()} if self.coverage_modulation.condition=='binary' else {}))
+            if return_graph_info:
+                reason = coverage.diagnostics['fallback_reason'] if physical_mode else 'adapter_mode_'+self.adapter.attention_mode
+                coverage_info = {'mode':self.coverage_mode,'fallback_reason':reason,
+                    'metadata_hash':getattr(coverage_metadata,'fingerprint',None),
+                    'usable_anchors':int(coverage.usable.sum()), 'latent_channels':self.adapter.latent_channels,
+                    'settings':dict(self.coverage_settings),'description':dict(coverage.diagnostics)}
+                if return_diagnostics:coverage_info.update(features=coverage.features.detach().clone(),
+                                                          usable=coverage.usable.detach().clone())
         x = torch.cat((latent_x, extra_x), dim=2)
 
         noise = torch.unsqueeze(x.permute([2, 0, 1]), 0)
@@ -420,40 +521,80 @@ class VCASAHGCNBackbone(nn.Module):
         clean_x = torch.squeeze(noise, 0).permute([1, 2, 0])
 
         graph_info = {}
-        if self.graph_mode == "learned":
-            Q, A, graph_info = self.learnable_graph(clean_x, superpixel_scale)
+        if graph_state is not None:
+            Q, A, graph_info = graph_state.validate(clean_x).to_legacy()
+        elif self.graph_mode == "learned":
+            state = self.learnable_graph.build_graph(
+                clean_x, superpixel_scale, assignment_mode=self.graph_assignment_mode,
+                adjacency_mode=self.graph_adjacency_mode,
+            )
+            Q, A, graph_info = state.to_legacy()
         elif Q is None or A is None:
             raise ValueError("static graph mode requires Q and A")
+        if coverage_info is not None:graph_info['coverage'] = coverage_info
 
-        if self.interaction_config.active:
-            cnn_result, hgnn_result, interaction_info = self._interactive_features(
-                clean_x, Q, A, dataset_name, return_graph_info, return_diagnostics,
-            )
-            if return_graph_info:
-                graph_info["interaction"] = interaction_info
+        cnn_input = clean_x
+        if self.region_residual is None:
+            region_input = pool_regions(Q, clean_x.reshape(height * width, 64))
         else:
-            cnn_result = torch.unsqueeze(clean_x.permute([2, 0, 1]), 0)
-            for block in self.CNN_Branch:
-                cnn_result = block(cnn_result, dataset_name)
-            cnn_result = torch.squeeze(cnn_result, 0).permute([1, 2, 0]).reshape([height * width, -1])
-            hgnn_result = self.HGNN_Branch(clean_x, Q, A, dataset_name=dataset_name)
-        fused = self.alph * cnn_result + (1.0 - self.alph) * hgnn_result
+            decomposition = self.region_residual(
+                clean_x.reshape(height * width, 64), Q,
+                return_diagnostics=return_diagnostics)
+            # Z is pooled from original clean_x, never from residual CNN input.
+            region_input = decomposition.region_features
+            cnn_input = decomposition.cnn_input.reshape(height, width, 64)
+            if return_diagnostics:
+                graph_info["region_residual"] = decomposition.diagnostics
+        cnn_result, hgnn_result, interaction_info = self.forward_stages(
+            cnn_input, region_input, Q, A, dataset_name, return_graph_info, return_diagnostics,
+        )
+        if self.interaction_config.active and return_graph_info:
+            graph_info["interaction"] = interaction_info
+        fused = self.fuse_features(cnn_result, hgnn_result)
         if return_graph_info:
             return fused, hgnn_result, cnn_result, graph_info
         return fused, hgnn_result, cnn_result
 
-    def _interactive_features(self, x, Q, A, dataset_name, collect_stats, return_diagnostics):
-        height, width, channels = x.shape
-        cnn = self.CNN_Branch[0](x.permute(2, 0, 1).unsqueeze(0), dataset_name)
-        pixels = cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 128)
-        regions = self.HGNN_Branch.forward_stage1(pool_regions(Q, x.reshape(-1, channels)), A, dataset_name)
+    def fuse_features(self, cnn_features, graph_features):
+        return fixed_fusion(cnn_features, graph_features, self.alph)
+
+    def cnn_stage1(self, cnn_input, dataset_name=None):
+        height, width, _ = cnn_input.shape
+        cnn = self.CNN_Branch[0](cnn_input.permute(2, 0, 1).unsqueeze(0), dataset_name)
+        return cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 128)
+
+    def cnn_stage2(self, pixels, image_shape, dataset_name=None):
+        height, width = image_shape
+        cnn = pixels.reshape(height, width, 128).permute(2, 0, 1).unsqueeze(0)
+        cnn = self.CNN_Branch[1](cnn, dataset_name)
+        return cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 64)
+
+    def graph_stage1(self, region_input, adjacency, dataset_name=None):
+        return self.HGNN_Branch.forward_stage1(region_input, adjacency, dataset_name)
+
+    def graph_stage2(self, regions, adjacency, dataset_name=None):
+        return self.HGNN_Branch.forward_stage2(regions, adjacency, dataset_name)
+
+    def forward_stages(self, cnn_input, region_input, Q, A, dataset_name=None,
+                       collect_stats=False, return_diagnostics=False):
+        """One schedule: stage1 -> optional messages/edges -> stage2.
+
+        CNN input [H,W,64] and region input [M,64] are independent arguments,
+        so future CNN-only transforms can be applied before this dispatcher.
+        Q maps the same H*W pixels to M regions; A is the initial region graph.
+        """
+        if (cnn_input.ndim != 3 or cnn_input.shape[-1] != 64 or min(cnn_input.shape[:2]) <= 0
+                or region_input.ndim != 2 or region_input.shape[1] != 64):
+            raise ValueError("Stage inputs must be nonempty [H,W,64] and [M,64]")
+        height, width, _ = cnn_input.shape
+        if Q.shape != (height * width, region_input.shape[0]) or A.shape != (region_input.shape[0], region_input.shape[0]):
+            raise ValueError("Stage Q/A shapes do not match pixels/regions")
+        pixels = self.cnn_stage1(cnn_input, dataset_name)
+        regions = self.graph_stage1(region_input, A, dataset_name)
         info = {}
         if self.interaction is not None:
-            # Both messages use the same pre-interaction snapshot (no update-order bias).
-            region_at_pixels = self.alignment.to_pixels(regions, Q) if self.interaction.graph_to_cnn is not None else None
-            pixels_at_regions = self.alignment.to_regions(pixels, Q) if self.interaction.cnn_to_graph is not None else None
-            pixels, regions, message_info = self.interaction(
-                pixels, regions, region_at_pixels, pixels_at_regions,
+            pixels, regions, message_info = self.interaction.forward_aligned(
+                pixels, regions, Q, self.alignment,
                 collect_stats=collect_stats, return_diagnostics=return_diagnostics,
             )
             info.update(message_info)
@@ -465,10 +606,8 @@ class VCASAHGCNBackbone(nn.Module):
             info.update(edge_info)
         if return_diagnostics and "cnn_to_graph_gate" in info:
             info["cnn_to_graph_gate_pixels"] = broadcast_regions(Q, info["cnn_to_graph_gate"]).detach()
-        cnn = pixels.reshape(height, width, 128).permute(2, 0, 1).unsqueeze(0)
-        cnn = self.CNN_Branch[1](cnn, dataset_name)
-        cnn = cnn.squeeze(0).permute(1, 2, 0).reshape(height * width, 64)
-        regions = self.HGNN_Branch.forward_stage2(regions, A, dataset_name)
+        cnn = self.cnn_stage2(pixels, (height, width), dataset_name)
+        regions = self.graph_stage2(regions, A, dataset_name)
         return cnn, broadcast_regions(Q, regions), info
 
 
@@ -497,19 +636,40 @@ class MultiDatasetVCASAHGCN(nn.Module):
             self.cnn_heads[dataset_name] = nn.Linear(64, class_count)
 
     def export_config(self):
-        kwargs = dict(self.backbone_kwargs)
+        kwargs = strip_default_coverage(self.backbone_kwargs)
         kwargs["dataset_names"] = list(self.heads.keys())
         return {"format_version": 1, "class_counts": {name: head.out_features for name, head in self.heads.items()},
                 "backbone_kwargs": kwargs}
 
     def add_dataset_head(self, dataset_name, class_count):
+        """Register a fresh task; existing optimizers need explicit enrollment."""
         if dataset_name in self.heads:
             raise ValueError("{} already has a dataset head".format(dataset_name))
         class_count = int(class_count)
+        families = (self.heads, self.hgnn_heads, self.cnn_heads)
+        new_heads = []
+        for family in families:
+            reference = next(family.parameters(), None)
+            if reference is None:
+                reference = next(self.backbone.parameters())
+            head = nn.Linear(64, class_count).to(reference)
+            head.train(self.training)
+            new_heads.append(head)
         self.backbone.add_dataset(dataset_name)
-        self.heads[dataset_name] = nn.Linear(64, class_count)
-        self.hgnn_heads[dataset_name] = nn.Linear(64, class_count)
-        self.cnn_heads[dataset_name] = nn.Linear(64, class_count)
+        for family, head in zip(families, new_heads):
+            family[dataset_name] = head
+
+    def predict_features(self, dataset_name, fused, graph_features, cnn_features, return_logits=False):
+        heads = ((self.heads[dataset_name], fused), (self.hgnn_heads[dataset_name], graph_features),
+                 (self.cnn_heads[dataset_name], cnn_features))
+        if return_logits:
+            return tuple(head(features) for head, features in heads)
+        # Keep the original per-head linear -> softmax evaluation order.
+        return tuple(F.softmax(head(features), -1) for head, features in heads)
+
+    def fuse_and_predict(self, cnn_features, graph_features, dataset_name, return_logits=False):
+        fused = self.backbone.fuse_features(cnn_features, graph_features)
+        return self.predict_features(dataset_name, fused, graph_features, cnn_features, return_logits)
 
     def forward(
         self,
@@ -522,6 +682,12 @@ class MultiDatasetVCASAHGCN(nn.Module):
         superpixel_scale=100,
         return_graph_info=False,
         return_diagnostics=False,
+        graph_state=None,
+        return_logits=False,
+        wavelength_unit="auto",
+        fwhm_unit="auto",
+        coverage_metadata=None,
+        coverage_reference_nm=None,
     ):
         features = self.backbone.forward_features(
             x,
@@ -533,14 +699,17 @@ class MultiDatasetVCASAHGCN(nn.Module):
             superpixel_scale=superpixel_scale,
             return_graph_info=return_graph_info,
             return_diagnostics=return_diagnostics,
+            graph_state=graph_state,
+            **({} if wavelength_unit == fwhm_unit == "auto" else {
+                "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}),
+            **({} if self.backbone.coverage_modulation is None else {
+                'coverage_metadata':coverage_metadata,'coverage_reference_nm':coverage_reference_nm}),
         )
         if return_graph_info:
             fused, hgnn_result, cnn_result, graph_info = features
         else:
             fused, hgnn_result, cnn_result = features
-        y = F.softmax(self.heads[dataset_name](fused), -1)
-        y_hgnn = F.softmax(self.hgnn_heads[dataset_name](hgnn_result), -1)
-        y_cnn = F.softmax(self.cnn_heads[dataset_name](cnn_result), -1)
+        y, y_hgnn, y_cnn = self.predict_features(dataset_name, fused, hgnn_result, cnn_result, return_logits)
         if return_graph_info:
             return y, y_hgnn, y_cnn, graph_info
         return y, y_hgnn, y_cnn
@@ -601,17 +770,22 @@ class VCASAHGCN(nn.Module):
             **adapter_kwargs,
         )
 
-    def forward(self, x, return_graph_info=False, return_diagnostics=False):
+    def forward(self, x, return_graph_info=False, return_diagnostics=False, graph_state=None, return_logits=False,
+                *, coverage_metadata=None, coverage_reference_nm=None):
         wavelengths = self.wavelengths if hasattr(self, "wavelengths") else None
         fwhm = self.fwhm if hasattr(self, "fwhm") else None
         return self.model(
             "default",
             x,
-            self.Q,
-            self.A,
+            self.Q if graph_state is None else None,
+            self.A if graph_state is None else None,
             wavelengths=wavelengths,
             fwhm=fwhm,
             superpixel_scale=self.superpixel_scale,
             return_graph_info=return_graph_info,
             return_diagnostics=return_diagnostics,
+            graph_state=graph_state,
+            return_logits=return_logits,
+            **({} if self.model.backbone.coverage_modulation is None else {
+                'coverage_metadata':coverage_metadata,'coverage_reference_nm':coverage_reference_nm}),
         )

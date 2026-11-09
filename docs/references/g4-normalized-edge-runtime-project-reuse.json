@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "issue": 224,
+  "plan_sections": ["master7.1/7.2", "implementation11/18/19 only-normalization control"],
+  "sources": [
+    {"commit": "5f85e2220ce3ce357d99e6faaccca51676ce8502", "path": "g4_normalized_edge_target.py", "scope": "Unchanged mandatory-version prior normalizer, four-condition matching M6 initialization and original ordered BN"},
+    {"commit": "1a6a7a0613f3833108193ecc2085583d628aea05", "path": "g4_interaction_target_runtime.py", "scope": "Bounded12 M6 runtime, direction gradient pre-step guards, complete nested original BN receipt; new opt-in consumer only"},
+    {"commit": "f7dfcc54a93e348179f3071e77a5e637e7e9611d", "path": "tests/test_g4_edge_target_runtime.py", "scope": "Existing authenticated multi-candidate fixture, bounded two-role recovery and source/context/query guards"}
+  ],
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "license_scope": "Internal existing project code reuse only; no new external mechanism or license grant claimed",
+  "original_files_changed": false,
+  "limits": [
+    "Additional prior-normalization trainable parameters0; matching gatedM6 still58498",
+    "Enabled checkpoints require normalization-aware loader; old generic loader refusal retained",
+    "Only bounded12 engineering, no full/campaign/query release",
+    "CPU exact recovery versus nativeGPU functional/ordered reload are distinct",
+    "Real NN/BN/updates/query0 pending184 complete acceptance/audit/review/original frozenquery/204analysis",
+    "Existing1e-12 tiny-row damping retained; no row-sum or numerical protocol repair"
+  ]
+}

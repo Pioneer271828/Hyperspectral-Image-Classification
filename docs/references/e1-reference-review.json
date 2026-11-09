@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-11-02",
+  "issue": 85,
+  "base_commit": "88d982aa33c7200a60d22b8730c569b7a74f8741",
+  "project_design_sources": ["research/研究内容整合与详细搭建测试计划_2026-10-28.md#93-从现有二值掩码到连续覆盖描述", "research/模块化搭建与测试消融实施计划_2026-10-28.md#14-e1观测覆盖度模块第二项独立新增机制"],
+  "reuse_decision": "Independent implementation of the published affine equation and project-specific coverage geometry; no external source, trainer, dataset protocol, weights or dependencies incorporated.",
+  "entries": [
+    {
+      "id": "FiLM",
+      "paper": "https://arxiv.org/html/1709.07871v2",
+      "sections_read": ["2.1", "2.2", "4.3"],
+      "relevance": "Conditional channel-wise affine modulation; experiments concern visual reasoning, not evidence for this HSI coverage descriptor.",
+      "repository": "https://github.com/ethanjperez/film",
+      "kind": "author_code",
+      "commit": "fe43ddf8a22b339dcca2efa07091ce9d498955cf",
+      "source_read": ["vr/models/filmed_net.py:FiLM"],
+      "license_path": "LICENSE",
+      "license_spdx": "CC-BY-NC-4.0",
+      "license_scope": "Actual root LICENSE inspected; repository is also a fork of CLEVR code. No external source copied, so no claim of relicensing or unrestricted reuse of that fork.",
+      "github_license_metadata": "NOASSERTION; actual license text takes precedence in this record",
+      "source_copied": false,
+      "code_executed": false,
+      "adaptation": "Independent shared per-anchor MLP and bounded residual affine for HWC/PC/NCHW, local RNG, zero output initialization, descriptor/schema checks and protected unsupported channels. No CLEVR training code used."
+    },
+    {
+      "id": "DOFA",
+      "paper": "https://arxiv.org/html/2403.15356v1",
+      "sections_read": ["Introduction", "Dynamic weight generation / wavelength conditioning"],
+      "relevance": "Related wavelength-conditioned Earth-observation embedding; a different dynamic hypernetwork mechanism. Does not supply our nearest-distance/count/gap descriptor.",
+      "repository": "https://github.com/zhu-xlab/DOFA",
+      "kind": "author_code",
+      "commit": "0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9",
+      "source_read": ["wave_dynamic_layer.py"],
+      "license_path": "LICENSE",
+      "license_spdx": "MIT",
+      "license_scope": "Root LICENSE inspected, copyright (c) 2024 Zhitong Xiong. No borrowed subprojects or source incorporated.",
+      "source_copied": false,
+      "code_executed": false,
+      "adaptation": "Reference only; no foundation-model replacement, pretraining or weight download."
+    }
+  ],
+  "verification": "Paper primary text, pinned source and actual licenses read; upstream experiments not reproduced. Local tests must separately verify geometry, bypass, gradients, serialization and real-data composition. No accuracy claim.",
+  "access_failures": ["AAAI publisher page returned BotStopper; read the original arXiv v2 text instead.", "DOFA main did not exist; resolved actual default master and pinned its commit."]
+}

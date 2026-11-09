@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "base_config": "configs/experiments/screen_m6_none.json",
+  "modes": ["full", "legacy_support_zero", "real_subset"],
+  "seeds": [64, 512, 2048],
+  "updates_per_run": 5000,
+  "validation_every": 100,
+  "full_target_updates": 45000,
+  "validation_observation_seed": 3407,
+  "observation_seed_offset": 6,
+  "training_cycle": ["full", "random_75", "random_50", "random_25", "gap", "stride"],
+  "method": "target_scratch_full",
+  "sampling": "class_first",
+  "backbone_lr": 0.00005,
+  "head_lr": 0.0005,
+  "weight_decay": 0.001,
+  "selection": "minimum_validation_nll_then_earliest_step",
+  "selection_condition": "full",
+  "development_hash": "1cf6c1394c1f5e6e82c0bf9c1d6c08004b6b477edefcaa73b73fdfe22ecfc984",
+  "test_evaluation": false,
+  "source_pretraining_updates": 0,
+  "candidate_rule": "Real subset mean full OA/AA >= full training, >=2/3 paired full OA differences nonnegative; mean OA over five non-full conditions > BOTH controls with positive paired robustness OA in >=2/3 roots for each. Otherwise retain full baseline. Development candidate only."
+}

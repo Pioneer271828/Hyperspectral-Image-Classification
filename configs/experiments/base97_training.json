@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "protocol": "base97_honghu_joint_training_v1",
+  "baseline_config": "configs/experiments/base97_joint.json",
+  "preparation_commit": "592e24153bdd2e2ea4dcde498da5b1a2f50ad9a1",
+  "prepared_manifest_sha256": "414084cb22aef1c1866bb6512fa1f99c4397425de625c6fc2608ce0fb3eb1b6b",
+  "split_root_seed": 64,
+  "training_seeds": [64, 512, 2048],
+  "steps_per_epoch": 3,
+  "profiles": {
+    "engineering": {"epochs": 3, "val_interval": 1},
+    "full": {"epochs": 500, "val_interval": 10}
+  },
+  "scheduler": {"factor": 0.5, "patience": 20, "threshold": 0.0001},
+  "test_scoring": false
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "issue": 220,
+  "plan_sections": ["master12.5/16", "implementation13/16.1 E0-R"],
+  "reuse": [
+    {"commit": "331d718567b1a9726934f445665999df972392b1", "paths": ["model/VCASAHGCN.py", "m4_ordered_source.py", "target_bn_calibration.py", "g4_matched_target_evaluation.py"], "scope": "Observe exact original stages under ordered validation, existing all54 boundary, original unlabeled archive protocol"},
+    {"commit": "73234283581c536f6e42c49bf0b3326ce3067d60", "path": "g4_matched_target_analysis.py", "scope": "Completed analysis policy and original plan/producer identities; negative benefit is permitted"},
+    {"commit": "528865a631eb7c1d2620113ae8e623cbe5948fbb", "path": "evaluation/representation_redundancy.py", "scope": "Pure equal-region statistics; paper review inherited from representation-redundancy-review.json"}
+  ],
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "license_claim": "No new external code or license grant asserted",
+  "limits": ["Full-scene transductive support, not independent train/validation blocks", "One case is not all54 scientific diagnostic completion", "Temporary original-method observers require an isolated process/model", "Registered state, flags, inputs and Torch RNG protected; arbitrary ephemeral non-Tensor caches not promised unchanged", "Real calls only after184 acceptance/audit/review/query/204 analysis; no channel choice or width change"]
+}
