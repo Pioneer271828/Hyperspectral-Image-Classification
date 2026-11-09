@@ -1,0 +1,1832 @@
+{
+  "status": "passed",
+  "issue": 295,
+  "branch": "codex/dy-routing-controls",
+  "tested_sha": "ec0383e37f14f190ab4f53313f93c78dafa49477",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "CPU",
+    "threads": 1,
+    "cpu_model": "Intel(R) Xeon(R) Gold 5318Y CPU @ 2.10GHz"
+  },
+  "tests": {
+    "cpu": {
+      "tests": 8,
+      "seconds": 2.037,
+      "passed": true,
+      "log": "/home/lbx/hsi-pioneer271828/runs/dy-routing-controls-tests01/cpu.log",
+      "sha256": "710d4d4272caca0bdccea076828b937204969070e21cce49eb752b25b3cbf2e9"
+    },
+    "regression": {
+      "tests": 43,
+      "seconds": 5.216,
+      "passed": true,
+      "log": "/home/lbx/hsi-pioneer271828/runs/dy-routing-controls-tests01/regression.log",
+      "sha256": "c471623577940604f1187a74c2f13caad94ff6a27493445454aba2c85362ad6d"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "ec0383e37f14f190ab4f53313f93c78dafa49477",
+    "branch": "codex/dy-routing-controls",
+    "python_files": 496,
+    "json_files": 151,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent_receipt": "/home/lbx/hsi-pioneer271828/runs/dy-routing-controls-independent01/receipt.json",
+  "independent_sha256": "c19bf5855f75809576e2f9c436404925b36cecdd00928791296a52f1557a052f",
+  "independent": {
+    "status": "passed",
+    "tested_sha": "ec0383e37f14f190ab4f53313f93c78dafa49477",
+    "plans": [
+      {
+        "model_sampler_seed": 64,
+        "random_seed": 64,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "d245e052f34c4029033ab836a6d7f9e42463e7d526326872b7e0414bc9bf329d",
+          "training_contract": "21f3357be013daa2a95328eb9e8df1e18b0944f7a674a6d340c784d83c262af4",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 64,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "4"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "0",
+                "1"
+              ]
+            }
+          ],
+          "selected": [
+            "0",
+            "1",
+            "4"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "3194bb48175e62d6ae896ca1efe518c524993ca0865057f06e6088af22ce3054",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 64,
+        "random_seed": 512,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "d245e052f34c4029033ab836a6d7f9e42463e7d526326872b7e0414bc9bf329d",
+          "training_contract": "21f3357be013daa2a95328eb9e8df1e18b0944f7a674a6d340c784d83c262af4",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 512,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "3"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "0",
+                "2"
+              ]
+            }
+          ],
+          "selected": [
+            "0",
+            "2",
+            "3"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "14a1557cbf6cbd7a8b1053be5240e2bc6c2d2f46be91660207cb227c8276d98c",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 64,
+        "random_seed": 2048,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "d245e052f34c4029033ab836a6d7f9e42463e7d526326872b7e0414bc9bf329d",
+          "training_contract": "21f3357be013daa2a95328eb9e8df1e18b0944f7a674a6d340c784d83c262af4",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 2048,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "4"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "1",
+                "2"
+              ]
+            }
+          ],
+          "selected": [
+            "1",
+            "2",
+            "4"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "151a6e81d312e13acfbb3328d700816e33c4554c35fd25f8ce13c31bde1c8aa3",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 512,
+        "random_seed": 64,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "056df986fcd178e0f787c26b337bd557bfb0095b2013650bad706dbd558f334f",
+          "training_contract": "120dafe23d56121dae523f3e7770d09eaff7251a48f695e912b82f40e5fa389c",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 64,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "4"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "0",
+                "1"
+              ]
+            }
+          ],
+          "selected": [
+            "0",
+            "1",
+            "4"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "4fca2f6acf86e623c952d7fdad4b0bbc6a54e17e432b8d75d3877382a68bae76",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 512,
+        "random_seed": 512,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "056df986fcd178e0f787c26b337bd557bfb0095b2013650bad706dbd558f334f",
+          "training_contract": "120dafe23d56121dae523f3e7770d09eaff7251a48f695e912b82f40e5fa389c",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 512,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "3"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "0",
+                "2"
+              ]
+            }
+          ],
+          "selected": [
+            "0",
+            "2",
+            "3"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "3069a2ad5136b980c8225efb5eaad162d4e7fa9e317cda378688e0447f2584e3",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 512,
+        "random_seed": 2048,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "056df986fcd178e0f787c26b337bd557bfb0095b2013650bad706dbd558f334f",
+          "training_contract": "120dafe23d56121dae523f3e7770d09eaff7251a48f695e912b82f40e5fa389c",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 2048,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "4"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "1",
+                "2"
+              ]
+            }
+          ],
+          "selected": [
+            "1",
+            "2",
+            "4"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "491b94bd0989ff9ad22f512471f5d3fb799a342d2db660cb1c804b9b44075336",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 2048,
+        "random_seed": 64,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "2b88606af88e4869380fca0b4480103df288d962e54e8882c37a7f3c819ccfdb",
+          "training_contract": "a4f81a2947ce84be743565ee86d1862556424193d93620f035e3c1a24e0304e8",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 64,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "4"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "0",
+                "1"
+              ]
+            }
+          ],
+          "selected": [
+            "0",
+            "1",
+            "4"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "6bd81461bb6743c8301cf899c346a0fd2024413d3f3d6c260c75373c8aa196f6",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 2048,
+        "random_seed": 512,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "2b88606af88e4869380fca0b4480103df288d962e54e8882c37a7f3c819ccfdb",
+          "training_contract": "a4f81a2947ce84be743565ee86d1862556424193d93620f035e3c1a24e0304e8",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 512,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "3"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "0",
+                "2"
+              ]
+            }
+          ],
+          "selected": [
+            "0",
+            "2",
+            "3"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "83930dc7ad1d5aa1b93f5bbb92022736ceb2dd2ae85cb19affb82fa8020db28e",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      },
+      {
+        "model_sampler_seed": 2048,
+        "random_seed": 2048,
+        "plan": {
+          "format": "dy-stratified-random-v1",
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "2b88606af88e4869380fca0b4480103df288d962e54e8882c37a7f3c819ccfdb",
+          "training_contract": "a4f81a2947ce84be743565ee86d1862556424193d93620f035e3c1a24e0304e8",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "seed": 2048,
+          "min_coverage": 0.8,
+          "reference": [
+            {
+              "id": "0",
+              "route": "fast"
+            },
+            {
+              "id": "1",
+              "route": "full"
+            },
+            {
+              "id": "2",
+              "route": "fast"
+            },
+            {
+              "id": "3",
+              "route": "fast"
+            },
+            {
+              "id": "4",
+              "route": "full"
+            },
+            {
+              "id": "5",
+              "route": "full"
+            }
+          ],
+          "strata": [
+            {
+              "key": [
+                "xuzhou",
+                9,
+                11,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "3",
+                "4",
+                "5"
+              ],
+              "eligible": [
+                "3",
+                "4"
+              ],
+              "fast_count": 1,
+              "selected": [
+                "4"
+              ]
+            },
+            {
+              "key": [
+                "xuzhou",
+                18,
+                18,
+                10,
+                8,
+                50
+              ],
+              "ids": [
+                "0",
+                "1",
+                "2"
+              ],
+              "eligible": [
+                "0",
+                "1",
+                "2"
+              ],
+              "fast_count": 2,
+              "selected": [
+                "1",
+                "2"
+              ]
+            }
+          ],
+          "selected": [
+            "1",
+            "2",
+            "4"
+          ],
+          "matching": "per_stratum_fast_counts_not_measured_cost"
+        },
+        "plan_hash": "028ea49c23de90c3c331bdf7169b5a3249bcd410e7a1bc39ff96f54bf28d4ee3",
+        "counts": {
+          "light_calls": 5,
+          "full_calls": 3,
+          "accepted_tiles": 3,
+          "total_tiles": 6
+        },
+        "graph_calls": 3
+      }
+    ],
+    "exact_output_arrays": 54,
+    "random_plans": 9,
+    "protected_files": {
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/acceptance.json": "413b23ab9350201bbd2cf10de675ff355a06a2f7d2207774ec487da709d6509c",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/registration.json": "fc61d64f204a78595856cd84394809911cce89eb83e19a097ecb3fb1980d4ad2",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/state.pt": "6fff4651587b3dba42bcb40c4c7e43b8e3f0f215e7088b7745203e3c7ab4e647",
+      "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/result.json": "671c11a5fb12104f11d5935c2e2cd9fc2cec01eb26e7ad6d98be90c05edf607f",
+      "/home/lbx/hsi-pioneer271828/datasets/snapshots/joint-honghu-20261103-issue97/dataset/PaviaU/PaviaU.mat": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-plan.json": "3f15f0650f500959e603bccd2614226c37089eafc8f06637b010bd69347363d8",
+      "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-statistics.json": "5996f5ad84917f7ad88cd2d62c8cd9f7e9b7a81f8a003df4fe9fd672ef2e4162",
+      "/home/lbx/hsi-pioneer271828/runs/e4b-online-tta-pavia01/receipt.json": "2435a74dc65e27b496db58b998498fb84cb91792facccdef7313ef445c6b410a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/receipt.json": "bc880739cc14817102abee2895d4de1a68e2e8077dbf399ce0dcf11d9d67170a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/registration.json": "51d21d9bc436f266c4cfe11ea3efbd58d6faef32d8394617e28a304e98e5cbdc",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile0.npz": "76ac4d37fb21b8f3d99e5ad84f926ac54e922fd71521e2a4d5c49621035a375c",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile0.npz": "fd3570bc8e82efe498cddd5a2adddc799bb62ec1313651610193d300745d4016",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile0.npz": "4a4c82e9cc9227a0e4cf92e4ad219afe658fdfb4358f44f68551f8ba954919ab",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile0.npz": "359a91b8b3a6be6ed63949f734cd0bd36e89bc434c2c53594f17206c4e708128",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile1.npz": "fd7e9f2bc598b327b9c61ec1b387c4b423a09b537d597c16ea3417078dd6abf0",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile1.npz": "360a675ea86387a10c32e204c547a4058d251d3f4daec7ad5db4aadd7dacc619",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile1.npz": "ee9c0a3c39ecd4bbbfd9137e9f42092bf74fe32c18152ad2f1a13d0f2bcf0ab8",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile1.npz": "39167152d30eb4bd16fd21533c832ebd595bf8abc21f0578b65702dcf839919a",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first.pt": "63b3ae865a4d90e4bcfdcfda1ae10ffc1201d6e4563e09c3eec04b85409bec1f",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second.pt": "5acb822a3eea2fc2cc06a93114c49194f40a3cf2a9d172880d26f1685c7ea39c",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both.pt": "9f8e353bed5a437ef4427966d18f95bc8b8ee906783322c641adc6ef4c9204fe",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt.json": "4eb1c638946e3ed78cb69c3d06c274b295ce9e3fcc84be79ddd59700678d2f4d",
+      "/home/lbx/hsi-pioneer271828/runs/int8-model-independent01/receipt.json": "6abae12384985cf80ea74f9d24f2ec9df065253fc5674198568e5de7fe68bbe3",
+      "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/receipt.json": "a518141d098ad129cdafe22afd8575b687bd975ef031267119ca024b89a2bee1",
+      "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/registration.json": "7014ce153fa50a8de14ea57b0d605e73fa810b8b7df16d9eb3258fde3eccefa2",
+      "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/light.pt": "de0edfe92c9007286b7a193f08839195861f0b67d01eb8034284c2a81cf992d0",
+      "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/full.npz": "eaa847ea1410d545248e42348c5073caf4c27fb782dc6e758192caca491a1ed4",
+      "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/fast.npz": "8f43a2c9deaaa8d20a0df2dbc493b3ef46ad0009e84ac5b18f27ecdf4c7c6717",
+      "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/mixed_unknown.npz": "727336acb315132173d00521ab7be95b8318babe91b252858d5386490383b51c",
+      "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/adaptive_all_fallback.npz": "eaa847ea1410d545248e42348c5073caf4c27fb782dc6e758192caca491a1ed4",
+      "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/receipt.json": "88413ca3a87c8fbdbfe2e1760d4d620b941cdcd4334af8d278417b616fbaf540",
+      "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/64-final.pt": "3e466ee926dcabd6c4881961630744afc396176288ac03b5edb1a272ada2bb83",
+      "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/512-final.pt": "53afbc11dba8dd2ecef3e182eeadd08838e91460682ab18e928b54025ef53031",
+      "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/2048-final.pt": "01df450601fa7c4f96d32063c9e0348b4c311c1acfc83dbed583d547d2c40a32",
+      "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/receipt.json": "9406de6cc498eb996b39990b0f07c2050d5088f8e0a575615aea018d0363f7b2",
+      "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/light-64.pt": "493af4ab17b3217ea6cae579963373c7e9c7499ec0ec603a3eae8fa35f524a53",
+      "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/light-512.pt": "f26d7a0892a2a5d41ead4da27a4980abb8a4d30dc0b06b364309111af77561ce",
+      "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/light-2048.pt": "c8159a2b4245f59967f6d699baf2af6aa5c3dc4299f5b167cbc2469698152571"
+    },
+    "protected_files_unchanged": 39,
+    "benchmarks": [
+      {
+        "name": "known_fast_unknown_full",
+        "result": {
+          "status": "passed",
+          "scope": "resident_cpu_batch_public_api_validation_and_compute",
+          "affinity": [
+            0
+          ],
+          "threads": 1,
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "d245e052f34c4029033ab836a6d7f9e42463e7d526326872b7e0414bc9bf329d",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "random_plan": {
+            "format": "dy-stratified-random-v1",
+            "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+            "light_state": "d245e052f34c4029033ab836a6d7f9e42463e7d526326872b7e0414bc9bf329d",
+            "training_contract": "21f3357be013daa2a95328eb9e8df1e18b0944f7a674a6d340c784d83c262af4",
+            "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+            "seed": 64,
+            "min_coverage": 0.8,
+            "reference": [
+              {
+                "id": "0",
+                "route": "fast"
+              },
+              {
+                "id": "1",
+                "route": "fast"
+              },
+              {
+                "id": "2",
+                "route": "fast"
+              },
+              {
+                "id": "3",
+                "route": "fast"
+              },
+              {
+                "id": "4",
+                "route": "fast"
+              },
+              {
+                "id": "5",
+                "route": "full"
+              }
+            ],
+            "strata": [
+              {
+                "key": [
+                  "xuzhou",
+                  9,
+                  11,
+                  10,
+                  8,
+                  50
+                ],
+                "ids": [
+                  "3",
+                  "4",
+                  "5"
+                ],
+                "eligible": [
+                  "3",
+                  "4"
+                ],
+                "fast_count": 2,
+                "selected": [
+                  "3",
+                  "4"
+                ]
+              },
+              {
+                "key": [
+                  "xuzhou",
+                  18,
+                  18,
+                  10,
+                  8,
+                  50
+                ],
+                "ids": [
+                  "0",
+                  "1",
+                  "2"
+                ],
+                "eligible": [
+                  "0",
+                  "1",
+                  "2"
+                ],
+                "fast_count": 3,
+                "selected": [
+                  "0",
+                  "1",
+                  "2"
+                ]
+              }
+            ],
+            "selected": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "matching": "per_stratum_fast_counts_not_measured_cost"
+          },
+          "random_plan_hash": "976b6fdbb2f109e927d2fb82f770dc85466606cffd7431bd59ad4f42da259679",
+          "adaptive_kwargs": {
+            "mode": "adaptive",
+            "criterion": "max_probability",
+            "threshold": 0.0,
+            "min_coverage": 0.8
+          },
+          "initial_reference_and_plan_seconds": 0.04204434435814619,
+          "warmups": 2,
+          "pairs": 8,
+          "samples": [
+            {
+              "order": [
+                "full",
+                "fast",
+                "adaptive",
+                "random"
+              ],
+              "timings": {
+                "full": {
+                  "wall_ms": 44.509523,
+                  "process_cpu_ms": 44.507621
+                },
+                "fast": {
+                  "wall_ms": 26.763868,
+                  "process_cpu_ms": 25.094084
+                },
+                "adaptive": {
+                  "wall_ms": 24.403993,
+                  "process_cpu_ms": 24.411666
+                },
+                "random": {
+                  "wall_ms": 26.56264,
+                  "process_cpu_ms": 26.571349
+                }
+              }
+            },
+            {
+              "order": [
+                "fast",
+                "adaptive",
+                "random",
+                "full"
+              ],
+              "timings": {
+                "fast": {
+                  "wall_ms": 24.364365,
+                  "process_cpu_ms": 24.371756
+                },
+                "adaptive": {
+                  "wall_ms": 24.655079,
+                  "process_cpu_ms": 24.554863
+                },
+                "random": {
+                  "wall_ms": 26.489846,
+                  "process_cpu_ms": 26.49707
+                },
+                "full": {
+                  "wall_ms": 43.377005,
+                  "process_cpu_ms": 43.384066
+                }
+              }
+            },
+            {
+              "order": [
+                "adaptive",
+                "random",
+                "full",
+                "fast"
+              ],
+              "timings": {
+                "adaptive": {
+                  "wall_ms": 23.357267,
+                  "process_cpu_ms": 23.365112
+                },
+                "random": {
+                  "wall_ms": 25.750761,
+                  "process_cpu_ms": 25.759322
+                },
+                "full": {
+                  "wall_ms": 42.612294,
+                  "process_cpu_ms": 42.619754
+                },
+                "fast": {
+                  "wall_ms": 27.761575,
+                  "process_cpu_ms": 24.295084
+                }
+              }
+            },
+            {
+              "order": [
+                "random",
+                "full",
+                "fast",
+                "adaptive"
+              ],
+              "timings": {
+                "random": {
+                  "wall_ms": 25.701117,
+                  "process_cpu_ms": 25.708599
+                },
+                "full": {
+                  "wall_ms": 43.95846,
+                  "process_cpu_ms": 43.967201
+                },
+                "fast": {
+                  "wall_ms": 24.815776,
+                  "process_cpu_ms": 24.822858
+                },
+                "adaptive": {
+                  "wall_ms": 24.441528,
+                  "process_cpu_ms": 24.449812
+                }
+              }
+            },
+            {
+              "order": [
+                "full",
+                "fast",
+                "adaptive",
+                "random"
+              ],
+              "timings": {
+                "full": {
+                  "wall_ms": 43.436187,
+                  "process_cpu_ms": 43.134019
+                },
+                "fast": {
+                  "wall_ms": 23.758167,
+                  "process_cpu_ms": 23.765265
+                },
+                "adaptive": {
+                  "wall_ms": 23.954403,
+                  "process_cpu_ms": 23.962413
+                },
+                "random": {
+                  "wall_ms": 26.154502,
+                  "process_cpu_ms": 26.163436
+                }
+              }
+            },
+            {
+              "order": [
+                "fast",
+                "adaptive",
+                "random",
+                "full"
+              ],
+              "timings": {
+                "fast": {
+                  "wall_ms": 24.188981,
+                  "process_cpu_ms": 24.196476
+                },
+                "adaptive": {
+                  "wall_ms": 24.313141,
+                  "process_cpu_ms": 24.320545
+                },
+                "random": {
+                  "wall_ms": 25.940865,
+                  "process_cpu_ms": 25.87569
+                },
+                "full": {
+                  "wall_ms": 43.489152,
+                  "process_cpu_ms": 43.496652
+                }
+              }
+            },
+            {
+              "order": [
+                "adaptive",
+                "random",
+                "full",
+                "fast"
+              ],
+              "timings": {
+                "adaptive": {
+                  "wall_ms": 23.534888,
+                  "process_cpu_ms": 23.541768
+                },
+                "random": {
+                  "wall_ms": 25.816598,
+                  "process_cpu_ms": 25.82405
+                },
+                "full": {
+                  "wall_ms": 43.087565,
+                  "process_cpu_ms": 43.094533
+                },
+                "fast": {
+                  "wall_ms": 23.881528,
+                  "process_cpu_ms": 23.89037
+                }
+              }
+            },
+            {
+              "order": [
+                "random",
+                "full",
+                "fast",
+                "adaptive"
+              ],
+              "timings": {
+                "random": {
+                  "wall_ms": 25.828878,
+                  "process_cpu_ms": 25.787394
+                },
+                "full": {
+                  "wall_ms": 41.993352,
+                  "process_cpu_ms": 42.000068
+                },
+                "fast": {
+                  "wall_ms": 23.005057,
+                  "process_cpu_ms": 22.965796
+                },
+                "adaptive": {
+                  "wall_ms": 23.490654,
+                  "process_cpu_ms": 23.497245
+                }
+              }
+            }
+          ],
+          "summary": {
+            "full": {
+              "p50_ms": 43.40659599999999,
+              "p95_ms": 44.31665095,
+              "mean_ms": 43.307942249999996,
+              "sample_sd_ms": 0.7729039064381533,
+              "process_cpu_p50_ms": 43.2590425,
+              "blocks_per_second": 138.22783984258984,
+              "calls": {
+                "light_calls": 0,
+                "full_calls": 6,
+                "accepted_tiles": 0,
+                "total_tiles": 6
+              }
+            },
+            "fast": {
+              "p50_ms": 24.276673,
+              "p95_ms": 27.412377550000002,
+              "mean_ms": 24.817414624999998,
+              "sample_sd_ms": 1.6186182815873664,
+              "process_cpu_p50_ms": 24.24578,
+              "blocks_per_second": 247.15083487757983,
+              "calls": {
+                "light_calls": 5,
+                "full_calls": 1,
+                "accepted_tiles": 5,
+                "total_tiles": 6
+              }
+            },
+            "adaptive": {
+              "p50_ms": 24.133772,
+              "p95_ms": 24.580336150000004,
+              "mean_ms": 24.018869125000002,
+              "sample_sd_ms": 0.5033377261394864,
+              "process_cpu_p50_ms": 24.141479,
+              "blocks_per_second": 248.61426551970408,
+              "calls": {
+                "light_calls": 5,
+                "full_calls": 1,
+                "accepted_tiles": 5,
+                "total_tiles": 6
+              }
+            },
+            "random": {
+              "p50_ms": 25.8848715,
+              "p95_ms": 26.5371621,
+              "mean_ms": 26.030650875,
+              "sample_sd_ms": 0.33609842090351916,
+              "process_cpu_p50_ms": 25.84987,
+              "blocks_per_second": 231.7956262599179,
+              "calls": {
+                "light_calls": 5,
+                "full_calls": 1,
+                "accepted_tiles": 5,
+                "total_tiles": 6
+              }
+            }
+          },
+          "output_hashes": {
+            "full": "ca5a34679d0324561eab4648abd3e6cbc8f1f382b8939500c49bdfa64dbb0cb6",
+            "fast": "66ef0d7c405313fa8eead3398c9044c9d01a5b1e64eab8c301333468e56b0c23",
+            "adaptive": "66ef0d7c405313fa8eead3398c9044c9d01a5b1e64eab8c301333468e56b0c23",
+            "random": "66ef0d7c405313fa8eead3398c9044c9d01a5b1e64eab8c301333468e56b0c23"
+          },
+          "matching": "same_stratified_call_counts_not_latency",
+          "optimizer_updates": 0,
+          "query": 0,
+          "peak_memory": null,
+          "energy": null,
+          "scientific_speed_claim": false
+        }
+      },
+      {
+        "name": "all_fallback",
+        "result": {
+          "status": "passed",
+          "scope": "resident_cpu_batch_public_api_validation_and_compute",
+          "affinity": [
+            0
+          ],
+          "threads": 1,
+          "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+          "light_state": "d245e052f34c4029033ab836a6d7f9e42463e7d526326872b7e0414bc9bf329d",
+          "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+          "random_plan": {
+            "format": "dy-stratified-random-v1",
+            "source_state": "ab97aeec00779ac32dcbf117b8714e4ef9d44c4ebb6b1673cb46f337a62f65e7",
+            "light_state": "d245e052f34c4029033ab836a6d7f9e42463e7d526326872b7e0414bc9bf329d",
+            "training_contract": "21f3357be013daa2a95328eb9e8df1e18b0944f7a674a6d340c784d83c262af4",
+            "input_hash": "6d026e44d3c71e9e991ee19288bac034dfbfbf2ebcd005812533fe454b9d795a",
+            "seed": 64,
+            "min_coverage": 0.8,
+            "reference": [
+              {
+                "id": "0",
+                "route": "full"
+              },
+              {
+                "id": "1",
+                "route": "full"
+              },
+              {
+                "id": "2",
+                "route": "full"
+              },
+              {
+                "id": "3",
+                "route": "full"
+              },
+              {
+                "id": "4",
+                "route": "full"
+              },
+              {
+                "id": "5",
+                "route": "full"
+              }
+            ],
+            "strata": [
+              {
+                "key": [
+                  "xuzhou",
+                  9,
+                  11,
+                  10,
+                  8,
+                  50
+                ],
+                "ids": [
+                  "3",
+                  "4",
+                  "5"
+                ],
+                "eligible": [
+                  "3",
+                  "4"
+                ],
+                "fast_count": 0,
+                "selected": []
+              },
+              {
+                "key": [
+                  "xuzhou",
+                  18,
+                  18,
+                  10,
+                  8,
+                  50
+                ],
+                "ids": [
+                  "0",
+                  "1",
+                  "2"
+                ],
+                "eligible": [
+                  "0",
+                  "1",
+                  "2"
+                ],
+                "fast_count": 0,
+                "selected": []
+              }
+            ],
+            "selected": [],
+            "matching": "per_stratum_fast_counts_not_measured_cost"
+          },
+          "random_plan_hash": "b9c464123b4d47bb6e02337355fea3db5d3c7f4a642dff2cd5a54f66e3d7d851",
+          "adaptive_kwargs": {
+            "mode": "adaptive",
+            "criterion": "max_probability",
+            "threshold": 1.0,
+            "min_coverage": 0.8
+          },
+          "initial_reference_and_plan_seconds": 0.06403177510946989,
+          "warmups": 2,
+          "pairs": 8,
+          "samples": [
+            {
+              "order": [
+                "full",
+                "fast",
+                "adaptive",
+                "random"
+              ],
+              "timings": {
+                "full": {
+                  "wall_ms": 43.856553,
+                  "process_cpu_ms": 43.865732
+                },
+                "fast": {
+                  "wall_ms": 24.068486,
+                  "process_cpu_ms": 24.075645
+                },
+                "adaptive": {
+                  "wall_ms": 61.882248,
+                  "process_cpu_ms": 61.889145
+                },
+                "random": {
+                  "wall_ms": 58.769577,
+                  "process_cpu_ms": 58.778736
+                }
+              }
+            },
+            {
+              "order": [
+                "fast",
+                "adaptive",
+                "random",
+                "full"
+              ],
+              "timings": {
+                "fast": {
+                  "wall_ms": 24.242409,
+                  "process_cpu_ms": 24.249953
+                },
+                "adaptive": {
+                  "wall_ms": 56.827827,
+                  "process_cpu_ms": 56.748388
+                },
+                "random": {
+                  "wall_ms": 60.070035,
+                  "process_cpu_ms": 59.950221
+                },
+                "full": {
+                  "wall_ms": 44.569504,
+                  "process_cpu_ms": 44.432803
+                }
+              }
+            },
+            {
+              "order": [
+                "adaptive",
+                "random",
+                "full",
+                "fast"
+              ],
+              "timings": {
+                "adaptive": {
+                  "wall_ms": 55.318748,
+                  "process_cpu_ms": 55.326809
+                },
+                "random": {
+                  "wall_ms": 56.986896,
+                  "process_cpu_ms": 56.977269
+                },
+                "full": {
+                  "wall_ms": 42.666764,
+                  "process_cpu_ms": 42.674873
+                },
+                "fast": {
+                  "wall_ms": 23.05837,
+                  "process_cpu_ms": 23.047571
+                }
+              }
+            },
+            {
+              "order": [
+                "random",
+                "full",
+                "fast",
+                "adaptive"
+              ],
+              "timings": {
+                "random": {
+                  "wall_ms": 57.775137,
+                  "process_cpu_ms": 57.717144
+                },
+                "full": {
+                  "wall_ms": 44.647828,
+                  "process_cpu_ms": 44.609802
+                },
+                "fast": {
+                  "wall_ms": 24.151544,
+                  "process_cpu_ms": 24.159214
+                },
+                "adaptive": {
+                  "wall_ms": 57.017827,
+                  "process_cpu_ms": 57.02534
+                }
+              }
+            },
+            {
+              "order": [
+                "full",
+                "fast",
+                "adaptive",
+                "random"
+              ],
+              "timings": {
+                "full": {
+                  "wall_ms": 44.312079,
+                  "process_cpu_ms": 44.201777
+                },
+                "fast": {
+                  "wall_ms": 31.540195,
+                  "process_cpu_ms": 31.547804
+                },
+                "adaptive": {
+                  "wall_ms": 58.823623,
+                  "process_cpu_ms": 58.831045
+                },
+                "random": {
+                  "wall_ms": 58.218985,
+                  "process_cpu_ms": 57.891867
+                }
+              }
+            },
+            {
+              "order": [
+                "fast",
+                "adaptive",
+                "random",
+                "full"
+              ],
+              "timings": {
+                "fast": {
+                  "wall_ms": 23.350397,
+                  "process_cpu_ms": 23.34762
+                },
+                "adaptive": {
+                  "wall_ms": 54.29632,
+                  "process_cpu_ms": 54.303883
+                },
+                "random": {
+                  "wall_ms": 56.631478,
+                  "process_cpu_ms": 56.638795
+                },
+                "full": {
+                  "wall_ms": 42.496443,
+                  "process_cpu_ms": 42.503628
+                }
+              }
+            },
+            {
+              "order": [
+                "adaptive",
+                "random",
+                "full",
+                "fast"
+              ],
+              "timings": {
+                "adaptive": {
+                  "wall_ms": 54.433249,
+                  "process_cpu_ms": 54.422257
+                },
+                "random": {
+                  "wall_ms": 57.07321,
+                  "process_cpu_ms": 57.080312
+                },
+                "full": {
+                  "wall_ms": 43.333377,
+                  "process_cpu_ms": 42.202369
+                },
+                "fast": {
+                  "wall_ms": 34.823034,
+                  "process_cpu_ms": 24.369614
+                }
+              }
+            },
+            {
+              "order": [
+                "random",
+                "full",
+                "fast",
+                "adaptive"
+              ],
+              "timings": {
+                "random": {
+                  "wall_ms": 79.019889,
+                  "process_cpu_ms": 59.815314
+                },
+                "full": {
+                  "wall_ms": 64.676026,
+                  "process_cpu_ms": 45.603487
+                },
+                "fast": {
+                  "wall_ms": 35.05741,
+                  "process_cpu_ms": 24.024934
+                },
+                "adaptive": {
+                  "wall_ms": 87.30038,
+                  "process_cpu_ms": 57.27768
+                }
+              }
+            }
+          ],
+          "summary": {
+            "full": {
+              "p50_ms": 44.084316,
+              "p95_ms": 57.666156699999995,
+              "mean_ms": 46.319821749999996,
+              "sample_sd_ms": 7.462190811151291,
+              "process_cpu_p50_ms": 44.0337545,
+              "blocks_per_second": 136.1028262296278,
+              "calls": {
+                "light_calls": 0,
+                "full_calls": 6,
+                "accepted_tiles": 0,
+                "total_tiles": 6
+              }
+            },
+            "fast": {
+              "p50_ms": 24.196976499999998,
+              "p95_ms": 34.9753784,
+              "mean_ms": 27.536480625,
+              "sample_sd_ms": 5.313062460674497,
+              "process_cpu_p50_ms": 24.1174295,
+              "blocks_per_second": 247.96486453586465,
+              "calls": {
+                "light_calls": 5,
+                "full_calls": 1,
+                "accepted_tiles": 5,
+                "total_tiles": 6
+              }
+            },
+            "adaptive": {
+              "p50_ms": 56.922827,
+              "p95_ms": 78.4040338,
+              "mean_ms": 60.73752775,
+              "sample_sd_ms": 11.021256934654152,
+              "process_cpu_p50_ms": 56.886864,
+              "blocks_per_second": 105.40586819414293,
+              "calls": {
+                "light_calls": 5,
+                "full_calls": 6,
+                "accepted_tiles": 0,
+                "total_tiles": 6
+              }
+            },
+            "random": {
+              "p50_ms": 57.997061,
+              "p95_ms": 72.3874401,
+              "mean_ms": 60.568150875,
+              "sample_sd_ms": 7.538534582688781,
+              "process_cpu_p50_ms": 57.8045055,
+              "blocks_per_second": 103.45351810154655,
+              "calls": {
+                "light_calls": 5,
+                "full_calls": 6,
+                "accepted_tiles": 0,
+                "total_tiles": 6
+              }
+            }
+          },
+          "output_hashes": {
+            "full": "ca5a34679d0324561eab4648abd3e6cbc8f1f382b8939500c49bdfa64dbb0cb6",
+            "fast": "66ef0d7c405313fa8eead3398c9044c9d01a5b1e64eab8c301333468e56b0c23",
+            "adaptive": "ca5a34679d0324561eab4648abd3e6cbc8f1f382b8939500c49bdfa64dbb0cb6",
+            "random": "ca5a34679d0324561eab4648abd3e6cbc8f1f382b8939500c49bdfa64dbb0cb6"
+          },
+          "matching": "same_stratified_call_counts_not_latency",
+          "optimizer_updates": 0,
+          "query": 0,
+          "peak_memory": null,
+          "energy": null,
+          "scientific_speed_claim": false
+        }
+      }
+    ],
+    "optimizer_updates": 0,
+    "real_training_updates": 0,
+    "query": 0,
+    "real_trained_light_inputs_used": false,
+    "elapsed_seconds": 4.379071698058397
+  },
+  "specialized_synthetic_optimizer_updates": 3,
+  "real_optimizer_updates": 0,
+  "query": 0,
+  "gpu_tests": 0,
+  "limitations": [
+    "synthetic trained-light inputs; no real accuracy or speed conclusion",
+    "matched calls per shape stratum do not imply equal latency",
+    "resident inputs; loading/preprocessing/initial plan/output hashes excluded; public validation included",
+    "no peak-memory or energy measurement"
+  ]
+}

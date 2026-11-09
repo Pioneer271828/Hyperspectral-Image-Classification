@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 293,
+  "issue": 295,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "862373ab805496136edf36423dd3642a35f48a10",
+  "main_snapshot": "62dbc9d348be3951b7eb354a536132c76c04d57f",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -732,6 +732,14 @@
       "remaining": "真实合法独立校准确认划分/模型历史认证、统计非劣、错误概率校准、随机同成本与预算曲线、GPU/端到端部署仍待。当前45旧选步验证不能当独立确认。下一DY-2随机控制与成本曲线工程。",
       "report": "research/reports/DY1D_阈值冻结与独立逐类确认工程验收_20261109.md",
       "chat_report": "本聊天DY-1D完整CPU工程报告后连续推进。"
+    },
+    {
+      "id": "DY-2A分层随机控制与CPU配对成本",
+      "state": "CPU实际执行工程通过，真实效果未验",
+      "evidence": "testedec0383e37f14f190ab4f53313f93c78dafa49477；CPU8专项/43含专项回归、checker496Python151JSON。独立9随机计划/54输出数组/39文件保护通过，调用数匹配；2预热8配对轮×2合成工作点同核实测，全回退更慢，随机与adaptive开销不同。",
+      "remaining": "实测同成本固定路径/全预算曲线/面积、真实独立逐类与置信区间/GPU/内存能量待验。相同回退数不是相同耗时。下一DY-2逐类成本曲线；长训练暂停。",
+      "report": "research/reports/DY2A_分层随机回退与CPU配对成本工程验收_20261109.md",
+      "chat_report": "本聊天DY-2A完整CPU工程报告后继续下一项。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -835,6 +843,13 @@
       "tested_sha": "8f7acee7dff06f95c78c8c22bf3d80ba98dc9eba",
       "merge_sha": "862373ab805496136edf36423dd3642a35f48a10",
       "scope": "DY-1C CPU9/41; independent selected artifacts/routes/35 pins; no calibrated deployment claim"
+    },
+    {
+      "pr_number": 294,
+      "head_sha": "1a344757528f74964cf64c1f0ec2362edd526ae0",
+      "tested_sha": "83dbb0ccf3e0fc69c24d252c9a6a4b85dc155123",
+      "merge_sha": "62dbc9d348be3951b7eb354a536132c76c04d57f",
+      "scope": "DY-1D CPU10/51; independent9 synthetic protocols/17496cells/144routes, real calibration not performed"
     }
   ]
 }
