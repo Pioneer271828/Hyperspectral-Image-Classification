@@ -1,0 +1,250 @@
+{
+  "issue": 287,
+  "status": "passed_cpu_engineering_only",
+  "tested_sha": "2ffd5c1a7d7d750caaeea3931da7f9b4b37d0153",
+  "branch": "codex/curriculum-exposure",
+  "checkout": "/home/lbx/hsi-pioneer271828/checkouts/curriculum-exposure01",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "device": "CPU",
+  "threads": 1,
+  "tests": {
+    "cpu": {
+      "passed": 6,
+      "seconds": 2.588,
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-exposure-tests01/cpu.log",
+      "sha256": "65461a77d6e11b13cd574f9103c3003079b104a2d70ca57d64cd3dbd8945ef9b"
+    },
+    "regression": {
+      "passed": 42,
+      "seconds": 12.074,
+      "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-exposure-tests01/regression.log",
+      "sha256": "d58aa7b18609b32f2c9e04346141f8175c7f6ca822a11e20f89c4bff3505e8a7"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "2ffd5c1a7d7d750caaeea3931da7f9b4b37d0153",
+    "branch": "codex/curriculum-exposure",
+    "python_files": 488,
+    "json_files": 147,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent_receipt": "/home/lbx/hsi-pioneer271828/runs/curriculum-exposure-independent01/receipt.json",
+  "independent_sha256": "6b48d3307845d8f60c00c7dbd40c81a2821579d79fea96cdafe83e0e2376df0c",
+  "independent_result": {
+    "status": "passed",
+    "tested_sha": "2ffd5c1a7d7d750caaeea3931da7f9b4b37d0153",
+    "plan_files": 9,
+    "events_verified": 111,
+    "prefixes_verified": 120,
+    "pixel_counts_verified": 10800,
+    "rows": [
+      {
+        "seed": 64,
+        "updates": 1,
+        "eligible": false,
+        "unvisited_support": 74,
+        "class_blocks": {
+          "1": 1,
+          "2": 1,
+          "3": 1,
+          "4": 1,
+          "5": 1,
+          "6": 1,
+          "7": 1,
+          "8": 1
+        },
+        "minimum_support_visits": 0
+      },
+      {
+        "seed": 64,
+        "updates": 12,
+        "eligible": false,
+        "unvisited_support": 15,
+        "class_blocks": {
+          "1": 12,
+          "2": 11,
+          "3": 12,
+          "4": 11,
+          "5": 9,
+          "6": 11,
+          "7": 12,
+          "8": 11,
+          "9": 9
+        },
+        "minimum_support_visits": 0
+      },
+      {
+        "seed": 64,
+        "updates": 24,
+        "eligible": true,
+        "unvisited_support": 0,
+        "class_blocks": {
+          "1": 24,
+          "2": 23,
+          "3": 24,
+          "4": 23,
+          "5": 18,
+          "6": 22,
+          "7": 24,
+          "8": 22,
+          "9": 20
+        },
+        "minimum_support_visits": 1
+      },
+      {
+        "seed": 512,
+        "updates": 1,
+        "eligible": false,
+        "unvisited_support": 73,
+        "class_blocks": {
+          "1": 1,
+          "2": 1,
+          "3": 1,
+          "4": 1,
+          "5": 1,
+          "6": 1,
+          "7": 1,
+          "8": 1,
+          "9": 1
+        },
+        "minimum_support_visits": 0
+      },
+      {
+        "seed": 512,
+        "updates": 12,
+        "eligible": false,
+        "unvisited_support": 15,
+        "class_blocks": {
+          "1": 12,
+          "2": 8,
+          "3": 12,
+          "4": 8,
+          "5": 12,
+          "6": 10,
+          "7": 12,
+          "8": 10,
+          "9": 10
+        },
+        "minimum_support_visits": 0
+      },
+      {
+        "seed": 512,
+        "updates": 24,
+        "eligible": true,
+        "unvisited_support": 0,
+        "class_blocks": {
+          "1": 24,
+          "2": 18,
+          "3": 24,
+          "4": 18,
+          "5": 22,
+          "6": 20,
+          "7": 24,
+          "8": 20,
+          "9": 17
+        },
+        "minimum_support_visits": 1
+      },
+      {
+        "seed": 2048,
+        "updates": 1,
+        "eligible": false,
+        "unvisited_support": 75,
+        "class_blocks": {
+          "1": 1,
+          "2": 1,
+          "3": 1,
+          "4": 1,
+          "6": 1,
+          "7": 1,
+          "8": 1,
+          "9": 1
+        },
+        "minimum_support_visits": 0
+      },
+      {
+        "seed": 2048,
+        "updates": 12,
+        "eligible": true,
+        "unvisited_support": 0,
+        "class_blocks": {
+          "1": 12,
+          "2": 11,
+          "3": 12,
+          "4": 11,
+          "6": 11,
+          "7": 12,
+          "8": 11,
+          "9": 8,
+          "5": 10
+        },
+        "minimum_support_visits": 1
+      },
+      {
+        "seed": 2048,
+        "updates": 24,
+        "eligible": true,
+        "unvisited_support": 0,
+        "class_blocks": {
+          "1": 24,
+          "2": 23,
+          "3": 24,
+          "4": 23,
+          "6": 21,
+          "7": 24,
+          "8": 21,
+          "9": 17,
+          "5": 18
+        },
+        "minimum_support_visits": 1
+      }
+    ],
+    "automatic_redraws": 0,
+    "budget_extensions": 0,
+    "optimizer_execution_verified": false,
+    "real_optimizer_updates": 0,
+    "query": 0,
+    "elapsed_seconds": 0.2752228993922472,
+    "artifacts": {
+      "512-24.json": "ec966b9f798f6917abae512ffb812c2b65616a23edafb7711925dc43ba5187cb",
+      "2048-1.json": "8293e85f66c79bee4581ac0acc496c96978b243399822fe360f6d5aace214641",
+      "512-1.json": "965c22dba06de59fab8d43becbec11489fe480363873d76ce4257640686f1485",
+      "2048-12.json": "4b564befeb97ae32133fa8164b907885856d09b448f826f5b8067fdf50954774",
+      "64-1.json": "a8e39193b3b419b8531401b8d32af6cc186516fd051770cfd44520e52f2a93a1",
+      "64-12.json": "0439f284a48b2cf342f305f0311abb6b062e7dc8133a108da5a26db67ea2b219",
+      "512-12.json": "f7fd4b71129bca262d0e2649831af578537a780bfebf3af6bcd022bdbb7f1a7e",
+      "64-24.json": "97f2ecbd970a82974263db9033af7b10150e85ba5553cd89a1dd40e69e5e26c2",
+      "2048-24.json": "d726918c06d3047d353b6b69bc97ed5b4a2e438c5619c35e95ee09ff13247f96"
+    }
+  },
+  "synthetic_optimizer_calls_per_specialized_suite": 43,
+  "gpu_tests": 0,
+  "real_optimizer_updates": 0,
+  "query": 0,
+  "failures_preserved": [
+    "7f62b279ee29c20ab58db5a3f6ac924f10103fc7 untested; code review fixed bool/int event equivalence",
+    "five planned underexposure conditions correctly rejected; no redraw/extension"
+  ],
+  "limitations": [
+    "ledger does not alone verify actual optimizer calls",
+    "raw exposure is not weighted loss budget",
+    "synthetic fixture only; real thresholds/GPU/accuracy pending",
+    "production training CLI pending"
+  ]
+}
