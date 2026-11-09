@@ -1,0 +1,87 @@
+{
+  "status": "passed",
+  "tested_sha": "3661277d44253dfd435b2905e086d92c849a5090",
+  "branch": "codex/curriculum-training",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 7,
+      "seconds": 28.848,
+      "command": "python -m unittest tests.test_curriculum_training -v"
+    },
+    "related": {
+      "passed": 35,
+      "seconds": 35.189,
+      "command": "python -m unittest tests.test_curriculum_training tests.test_sample_curriculum tests.test_curriculum_exposure tests.test_light_head_training tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "3661277d44253dfd435b2905e086d92c849a5090",
+    "branch": "codex/curriculum-training",
+    "python_files": 502,
+    "json_files": 155,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/receipt.json",
+    "sha256": "17423db45f5b23f04189cb68f57e097b98d50fa3eade6163d16d9d7000554ff5",
+    "sampler_seeds": [
+      64,
+      512,
+      2048
+    ],
+    "fixed_model_seed": 512,
+    "models": 6,
+    "updates_per_model": 24,
+    "optimizer_calls": 196,
+    "recovery_checks": 3,
+    "completed_restore_updates": 0,
+    "weight_values": 1100,
+    "confusion_cells": 1458,
+    "protected_files": 42,
+    "seconds": 13.80028886999935
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/curriculum-training-tests02/audit.log": "e6341167239875ea9aeacaf92b52b85ad3a7b421d1e7e2f1c64bdd17017b32ab",
+    "/home/lbx/hsi-pioneer271828/runs/curriculum-training-tests02/checker.log": "9aefcd0372903565b50edf5d2ef5ea4c7a0822cceab9edea67763e9da536bec1",
+    "/home/lbx/hsi-pioneer271828/runs/curriculum-training-tests02/cpu.log": "78e71ff0bdb577a130250cd382969837d1fc116478d2e872c39f9dc8870949a4",
+    "/home/lbx/hsi-pioneer271828/runs/curriculum-training-tests02/regression.log": "adac7e526e7fa114f99d71f7d3e18504424de8c8917e57976103a44f645afa35"
+  },
+  "failure_probe": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/injected-failure.pt",
+    "sha256": "1de0cd7b2e9c80eac89aba4aafba93b191c00be2e6054e23337e1bd77be1927f",
+    "optimizer_calls": 1,
+    "claimed_exposure": 0,
+    "resumable": false
+  },
+  "real_training": 0,
+  "query": 0,
+  "limitations": [
+    "CPU FP32 single task uncoupled GroupNorm integration only; no GPU/real training/new query.",
+    "Six synthetic models with three sampler seeds share model initialization512; no real benefit/convergence claim.",
+    "Original full devval fused-NLL first-min retained; small-class synthetic weakness retained.",
+    "First source 2f27975 passed7 before diagnostic persistence added; final3661277 retested7/35.",
+    "Injected post-update failure is nonresumable; partial Adam/model retained separately."
+  ]
+}
