@@ -1,0 +1,113 @@
+{
+  "status": "passed_cpu_local_ternary_engineering",
+  "issue": 275,
+  "tested_commit": "8f6e3c440eac3f5953227bab4914f1755eaa9c2d",
+  "branch": "codex/ternary-layer-engineering",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "8f6e3c440eac3f5953227bab4914f1755eaa9c2d",
+    "branch": "codex/ternary-layer02",
+    "python_files": 473,
+    "json_files": 139,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/ternary-layer-cpu01.log": {
+      "sha256": "5a3ae2b00ea320f738148050b85328cbf4fbb1880ead2a60daadc770f590cc31",
+      "passed": 9,
+      "seconds": 1.519
+    },
+    "/home/lbx/hsi-pioneer271828/runs/ternary-layer-cpu02.log": {
+      "sha256": "ce502e8664a7a05210e3039d006b300cf2dc1b0b3e250aff45707444f650fc69",
+      "passed": 10,
+      "seconds": 1.513
+    },
+    "/home/lbx/hsi-pioneer271828/runs/ternary-layer-regression02.log": {
+      "sha256": "fa25dd92378bca8f71925ec54b6144b28e028711dcec34146d6ba6fd8cceb19a",
+      "passed": 71,
+      "seconds": 7.598
+    }
+  },
+  "real_weight_codec_rows": [
+    {
+      "path": "/home/lbx/hsi-pioneer271828/runs/ternary-layer-engineering01/layer0.tqw",
+      "sha256": "96288201cdc5551e27d7e6f5b4b30cc2912f9a406ceeb0153a9deeb09e01be13",
+      "shape": [
+        128,
+        64,
+        1,
+        1
+      ],
+      "float_weight_bytes": 32768,
+      "packed_file_bytes": 2077,
+      "header_bytes": 29,
+      "positive": 0.06575613468885422,
+      "negative": 0.0656687393784523,
+      "ratio": 0.05000000074505806,
+      "zero_fraction": 0.0531005859375,
+      "relative_frobenius_error": 0.4639355321823749,
+      "exact_independent_decoded_values": 8192
+    },
+    {
+      "path": "/home/lbx/hsi-pioneer271828/runs/ternary-layer-engineering01/layer1.tqw",
+      "sha256": "e1b62042d0b13723e6d4302e6318a9fdcde33794e5976e341c61050321991add",
+      "shape": [
+        64,
+        128,
+        1,
+        1
+      ],
+      "float_weight_bytes": 32768,
+      "packed_file_bytes": 2077,
+      "header_bytes": 29,
+      "positive": 0.04642760753631592,
+      "negative": 0.04577333852648735,
+      "ratio": 0.05000000074505806,
+      "zero_fraction": 0.05126953125,
+      "relative_frobenius_error": 0.46680113366197185,
+      "exact_independent_decoded_values": 8192
+    }
+  ],
+  "protected_files": {
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/receipt.json": "bc880739cc14817102abee2895d4de1a68e2e8077dbf399ce0dcf11d9d67170a",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt.json": "4eb1c638946e3ed78cb69c3d06c274b295ce9e3fcc84be79ddd59700678d2f4d",
+    "/home/lbx/hsi-pioneer271828/runs/int8-model-independent01/receipt.json": "6abae12384985cf80ea74f9d24f2ec9df065253fc5674198568e5de7fe68bbe3"
+  },
+  "synthetic_updates_per_test_call": 39,
+  "recovery": "FP32/TQ each12 continuous plus7 replay, fixed synthetic validation first-min MSE; one all-zero recovery gradient step",
+  "independent_weight_values": 16384,
+  "script_sha256": "5ef8d3dc84a4dd96cdb0faa9d69de26d10d715c16e86411819a5e1864c486641",
+  "real_optimizer_updates": 0,
+  "gt_accessed": false,
+  "query_accessed": false,
+  "limits": [
+    "Local CPU FP32 simulation, not integer arithmetic or GPU acceleration.",
+    "Actual2-bit file contains weight shape/scales/codes only; bias and model metadata excluded.",
+    "Real weights only; no real predictions/labels/class metrics or recovery training.",
+    "Full-model integration, multiseed matched recovery and per-class protection pending."
+  ],
+  "retained_history": [
+    "Initial13d3854 passed9tests; code review addedFP64 scale means and finite-output rejection, targeted extreme-value10th test."
+  ]
+}
