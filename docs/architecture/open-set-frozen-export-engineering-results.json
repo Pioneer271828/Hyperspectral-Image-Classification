@@ -1,0 +1,109 @@
+{
+  "status": "passed",
+  "scope": "E4c-2 CPU nine-control development freeze/export engineering",
+  "branch": "codex/open-set-frozen-export",
+  "tested_sha": "c83f311705d4179ab0262e1cc9126d1609caed96",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "scipy": "1.15.3",
+  "device": "CPU",
+  "threads": 1,
+  "gpu_tests": 0,
+  "tests": [
+    {
+      "command": "python -m unittest tests.test_registered_open_set -v",
+      "passed": 7,
+      "seconds": 14.633
+    },
+    {
+      "command": "python -m unittest tests.test_open_set tests.test_registered_spatial_diagnostics tests.test_repository_delivery -v",
+      "passed": 23,
+      "seconds": 40.965
+    }
+  ],
+  "checker": {
+    "python_files": 530,
+    "json_files": 170,
+    "frozen_runtime_unchanged": true
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/receipt.json",
+    "sha256": "8cc20b54e82728355b058a4571a0a16acfb9ed71539e0bd4211e228cd6ac5073",
+    "summary": {
+      "status": "passed",
+      "tested_sha": "c83f311705d4179ab0262e1cc9126d1609caed96",
+      "cli_calls": 6,
+      "protocols": 3,
+      "comparisons": 27,
+      "independent_score_values": 486,
+      "independent_confusion_cells": 432,
+      "independent_class_rows": 135,
+      "protected_files_unchanged": 21,
+      "optimizer_updates": 0,
+      "query": 0,
+      "real_training": 0,
+      "elapsed_seconds": 30.00371608743444,
+      "protocol_artifacts": [
+        {
+          "seed": 64,
+          "registration": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/64/inputs/registration.json",
+            "sha256": "c420e668a0a11f2e8ae02f2745c6dd6c71c68fed034169d729939a27078d6067"
+          },
+          "freeze": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/64/frozen/freeze.json",
+            "sha256": "fa576dfaec308f3b504b318662bcd7dccccb0c72af9bdf54f03d9affc0e6f117"
+          },
+          "receipt": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/64/export/receipt.json",
+            "sha256": "fea26c1d7430968764b09ffed901352b3e48e662f149361aed68be6b139546ad"
+          }
+        },
+        {
+          "seed": 512,
+          "registration": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/512/inputs/registration.json",
+            "sha256": "d163baf44295824e81978a81896707e4fbd7f42e5fe774f650d252b99ecf3d18"
+          },
+          "freeze": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/512/frozen/freeze.json",
+            "sha256": "32284f1952b326ff42126ce497f9a133113b9df529ae0689ccd2a1422b7e5ee8"
+          },
+          "receipt": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/512/export/receipt.json",
+            "sha256": "3181e9cc47f2ec61cfbf0390293746678259abc21d38127b33933fb07205f16d"
+          }
+        },
+        {
+          "seed": 2048,
+          "registration": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/2048/inputs/registration.json",
+            "sha256": "74e85718c1931051aef79437c68d6c088cacd632a4b585a1a5ccf0f161035a5b"
+          },
+          "freeze": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/2048/frozen/freeze.json",
+            "sha256": "2a8f5b92aeaab58d234a81d8f063750893116dc5312862adb3b1a252236a1aee"
+          },
+          "receipt": {
+            "path": "/home/lbx/hsi-pioneer271828/runs/open-set-frozen-export-independent01/2048/export/receipt.json",
+            "sha256": "e9541fbbd80fb00a68c058f1c0829d810e885ce32c2fbbefc2795f805462bead"
+          }
+        }
+      ],
+      "limits": [
+        "synthetic precomputed arrays with opaque model fixture",
+        "byte identity not independent feature/model production audit",
+        "development labels only; no real closed-set or unknown-class performance claim"
+      ]
+    }
+  },
+  "logs": {
+    "independent01.log": "b9ddb215503ea75ead7b119c9415bd3fb3ca4ddcdab09f8c43a4688ad60c0108",
+    "tests01.log": "8ca978a315b4e84049f19bcd9ecdf9d2ae6d2887337f65a4fd4b54ae442aaaef",
+    "regression01.log": "655c131dedd179d48c14fcaa0677be20135425a7c35b8ff8d2a26a41919c4fbb"
+  },
+  "failed_tests": 0,
+  "optimizer_updates_in_independent_audit": 0,
+  "query": 0,
+  "real_training": 0
+}
