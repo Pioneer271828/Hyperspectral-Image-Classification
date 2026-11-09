@@ -1,0 +1,79 @@
+{
+  "status": "passed",
+  "tested_sha": "6a404304d7465070685a989b25cff9b0f5bca3d2",
+  "branch": "codex/graph-support-diagnostics",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 8,
+      "seconds": 5.764,
+      "command": "python -m unittest tests.test_graph_support_diagnostics -v"
+    },
+    "related": {
+      "passed": 19,
+      "seconds": 38.33,
+      "command": "python -m unittest tests.test_graph_route_training tests.test_graph_route_context tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "6a404304d7465070685a989b25cff9b0f5bca3d2",
+    "branch": "codex/graph-support-diagnostics",
+    "python_files": 512,
+    "json_files": 160,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/graph-support-diagnostics-independent01/receipt.json",
+    "sha256": "f13eb2e5f69e2748241fd4894b4ecfdd0a9c24a17df3f57a50c6649f9c772774",
+    "old_synthetic_models": 6,
+    "probes": 126,
+    "checkpoint_changes": 42,
+    "independent_soft_mass_values": 504,
+    "independent_reachability_cells": 4032,
+    "actual_added_edges": 0,
+    "actual_removed_edges": 0,
+    "probability_heads": 378,
+    "small_soft_mass_cutoff": 81.0,
+    "protected_files_unchanged": 584,
+    "new_optimizer_updates": 0,
+    "elapsed_seconds": 12.858831070829183
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/graph-support-diagnostics-tests01/cpu.log": "04f240e4501ef21893a36a876c5b30852fc5a229e32ce563ca5c59d5195f9df9",
+    "/home/lbx/hsi-pioneer271828/runs/graph-support-diagnostics-tests02/checker.log": "3ae6a4cc59c8e2e930f657f5a2aad51076e80bdf2ef0f52564fc62d96186ac35",
+    "/home/lbx/hsi-pioneer271828/runs/graph-support-diagnostics-tests02/cpu.log": "bde84824aa8537f81783fea3b93da4855d480817eea69379b5f6d207d339ff6f",
+    "/home/lbx/hsi-pioneer271828/runs/graph-support-diagnostics-tests02/related.log": "da0b3484922585a88044721cdaa9aeccdef8761528ceb2f1c13d2de051a0acc7",
+    "/home/lbx/hsi-pioneer271828/runs/graph-support-diagnostics-tests02/independent.log": "af333c43ca5a8f2f722899ec1b6641b5306b37d7f54d290e92870d5e349463db"
+  },
+  "failures": [],
+  "limitations": [
+    "CPU only; no GPU/real accuracy/cost acceptance",
+    "Independent probes reuse six synthetic random-route models, unit tests cover all four modes",
+    "Soft Q region mass is not labelled object size or small-class recall",
+    "Fixed route-step checkpoint probes are not historical training-call edge traces",
+    "Probe overhead is not deployment runtime"
+  ],
+  "real_training": 0,
+  "query": 0
+}
