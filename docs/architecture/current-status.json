@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 281,
+  "issue": 283,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "2d966131867ad463e410d82d9a5dd6bb8adc54a9",
+  "main_snapshot": "2d16c95876a6ad80376718c16ea42565a9e7c690",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -684,6 +684,14 @@
       "remaining": "轻模型训练/校准独立确认/随机同成本/多种子逐类/部署成本与GPU待验。全回退更慢，默认完整不变。下一CUR-O等曝光顺序和恢复工程。",
       "report": "research/reports/DY1_独立CNN与整块延迟回退工程验收_20261109.md",
       "chat_report": "本聊天DY1执行工程完成报告后继续CUR-O。"
+    },
+    {
+      "id": "CUR-O1等曝光观测课程",
+      "state": "CPU调度与合成网络恢复工程通过",
+      "evidence": "tested ed9fe90461ef43d62cbcab66c6ed7316bba39e9b；8专项/41相关回归、checker484Python145JSON。四臂12步与5+7精确；三种子12policy/144记录/156前缀独立通过，真实优化query0。",
+      "remaining": "GPU/真实逐类与遗忘/成本、一般多块联合曝光尚未验。首版JSON结构恢复失败保留并修复。下一CUR-S类别保护，未做二因素组合。",
+      "report": "research/reports/CURO_等曝光观测课程与确定性恢复工程验收_20261109.md",
+      "chat_report": "本聊天CUR-O1工程完成报告，随后继续CUR-S。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -745,6 +753,13 @@
       "tested_sha": "c09f27606ba381818ea91afd43ca6fb8e94e9825",
       "merge_sha": "2d966131867ad463e410d82d9a5dd6bb8adc54a9",
       "scope": "DY0 CPU8/45; fixed45 validation negative result, no routing claim"
+    },
+    {
+      "pr_number": 282,
+      "head_sha": "f89fd9e5d8861fb5f79b1d617a5f8e18cce9ee34",
+      "tested_sha": "f042520df090b1bfda7a5684bdb615dd52951007",
+      "merge_sha": "2d16c95876a6ad80376718c16ea42565a9e7c690",
+      "scope": "DY1 CPU9/51, independent10 arrays31files, no deployed accuracy claim"
     }
   ]
 }
