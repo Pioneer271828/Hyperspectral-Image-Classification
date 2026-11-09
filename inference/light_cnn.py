@@ -35,7 +35,8 @@ class LightCNN(nn.Module):
         self.heads=copy.deepcopy(source.cnn_heads)
         self.requires_grad_(False);self.eval()
 
-    def forward(self,dataset,x,*,wavelengths):
+    def frozen_features(self,dataset,x,*,wavelengths):
+        """Detached CNN features; preserve eval normalization and never build a graph."""
         if any(m.training for m in self.modules()):raise ValueError('LightCNN is inference-only')
         if dataset not in self.heads:raise ValueError('Unknown task')
         if (not torch.is_tensor(x) or x.device.type!='cpu' or x.dtype!=torch.float32 or x.requires_grad
@@ -54,7 +55,12 @@ class LightCNN(nn.Module):
             pixels=stage1.squeeze(0).permute(1,2,0).reshape(h*w,128)
             stage2=self.cnn[1](pixels.reshape(h,w,128).permute(2,0,1).unsqueeze(0),dataset)
             features=stage2.squeeze(0).permute(1,2,0).reshape(h*w,64)
-            result=F.softmax(self.heads[dataset](features),-1)
+        if not torch.isfinite(features).all():raise ValueError('Nonfinite light features')
+        return features
+
+    def forward(self,dataset,x,*,wavelengths):
+        features=self.frozen_features(dataset,x,wavelengths=wavelengths)
+        with torch.no_grad():result=F.softmax(self.heads[dataset](features),-1)
         if not torch.isfinite(result).all():raise ValueError('Nonfinite light output')
         return result
 
