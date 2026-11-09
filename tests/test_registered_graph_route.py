@@ -81,6 +81,16 @@ class RegisteredRouteTests(unittest.TestCase):
                 if tile['role'] in ('devtrain','devval'):np.testing.assert_array_equal(a,scene.cube[tile_slice(tile)])
                 else:self.assertTrue(np.all(a==0))
 
+    def test_other_class_budget_rejected_before_packaging_or_updates(self):
+        from loadData.spatial_development import make_development
+        _,scene,_,_,_=setup()
+        other=make_development(np.resize(np.arange(1,11),(60,60)),scene.plan,list(range(1,11)))
+        with tempfile.TemporaryDirectory() as d:
+            out=Path(d)/'unsupported'
+            with patch('torch.optim.Adam.step',side_effect=AssertionError('unsupported protocol updated')):
+                with self.assertRaisesRegex(ValueError,'nine-class'):export_development(scene,other,out)
+            self.assertFalse(out.exists())
+
     def test_extra_labels_rejected_even_with_recomputed_record_hash(self):
         from model.research_config import digest
         _,scene,record,_,_=setup()
