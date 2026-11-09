@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 275,
+  "issue": 277,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "f8842754f4af581aba70d04f086fd23eb24245f2",
+  "main_snapshot": "3cf9e4988d207c932ecde183db6108e3d13c5755",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -96,7 +96,7 @@
       "id": "压缩与动态推理",
       "state": "未完成完整研究闭环",
       "evidence": "可逆掩码、紧凑恢复、动态出口/路由及E3工程已有分项证据；LR显式矩阵分解CPU工程通过，详见后续模块条目",
-      "remaining": "各机制真实多种子/逐类及成本闭环，LR GPU恢复，普通INT8 PTQ/QAT与后续三值",
+      "remaining": "LR/INT8/TQ CPU工程已覆盖，真实多种子逐类/成本闭环与GPU仍待；下一DY离线潜力和实际跳算工程。",
       "report": "research/全量研究模块必测清单_20261104.md"
     },
     {
@@ -660,6 +660,14 @@
       "remaining": "下一TQ-2整网独立恢复与同预算工程；真实多种子逐类/覆盖/部署成本及GPU仍未测。两层权重误差约46%，未验证精度；浮点默认不改。",
       "report": "research/reports/TQ_局部三值权重与实际2bit存储工程验收_20261109.md",
       "chat_report": "本聊天TQ-1完整CPU局部工程交付，随后继续TQ-2整网。"
+    },
+    {
+      "id": "TQ-2整网打包恢复与三臂等预算",
+      "state": "完整CPU整网工程验收通过",
+      "evidence": "tested24e56fab584c6b109360c416e645d706c3df562f，CPU8专项/90含专项回归、checker476Python140JSON。合成FP32/INT8-QAT/TQ12步与5+7精确恢复，真实PaviaU原train两块5模型30头独立重放/60NumPy字段/39文件不变，真实优化query0。",
+      "remaining": "真实多种子恢复/固定验证逐类与小类、GPU/部署成本仍待。两层TQ文件减17.79%但CPU无加速，浮点默认。下一DY-0离线互补与成本上界工程。",
+      "report": "research/reports/TQ_整网打包恢复与三臂等预算工程验收_20261109.md",
+      "chat_report": "本聊天TQ-2完整CPU工程交付，随后继续DY-0。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -700,6 +708,14 @@
       "tested_sha": "1e0da0069dca59fe90da9edb1626b6df8ef90267",
       "merge_sha": "f8842754f4af581aba70d04f086fd23eb24245f2",
       "scope": "INT8-2 CPU model integration8/72; two train tiles read-only, no accuracy/speed claim"
+    },
+    {
+      "pr_number": 276,
+      "head_sha": "7edb65d3a190c823dc93fa1b5526105fe7cdd55c",
+      "tested_sha": "8f6e3c440eac3f5953227bab4914f1755eaa9c2d",
+      "merge_sha": "3cf9e4988d207c932ecde183db6108e3d13c5755",
+      "scope": "TQ-1 CPU layer10/71 and actual2bit weights; no accuracy/speed claim"
     }
   ]
 }
+
