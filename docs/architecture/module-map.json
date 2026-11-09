@@ -1,22 +1,1048 @@
 {
   "schema_version": 1,
-  "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。",
-  "modules": [
-    {"id": "baseline", "paths": ["smoke_test.py", "scripts/validate_baseline.py", "docs/migration/baseline-source.json"], "tests": ["tests/test_interaction_modules.py", "smoke_test.py"], "depends_on": []},
-    {"id": "C0", "paths": ["model/interaction_config.py", "model/checkpoint_io.py", "interaction_ablation_presets.py", "run_paper_ablation.py"], "extension": "配置校验、运行身份、消融登记", "depends_on": ["baseline"]},
-    {"id": "C1", "paths": ["loadData/"], "extension": "数据登记、固定/空间划分及访问协议", "depends_on": ["C0"]},
-    {"id": "M2", "paths": ["model/variable_channel_adapter.py"], "depends_on": ["C0"]},
-    {"id": "M3", "paths": ["model/learnable_superpixel_graph.py", "createGraph/"], "depends_on": ["C1", "M2"]},
-    {"id": "M5", "paths": ["model/VCASAHGCN.py", "model/SAHGCN.py"], "depends_on": ["M2", "M3"]},
-    {"id": "M8", "paths": ["model/VCASAHGCN.py", "model/checkpoint_io.py"], "depends_on": ["M5"]},
-    {"id": "E0", "paths": ["model/utils.py", "export_interaction_diagnostics.py"], "depends_on": ["M8"]},
-    {"id": "M6", "paths": ["model/region_pixel_alignment.py", "model/cross_branch_interaction.py"], "depends_on": ["M5", "E0"]},
-    {"id": "M7", "paths": ["model/graph_edge_update.py"], "depends_on": ["M6"]},
-    {"id": "M4", "paths": [], "extension": "区域表示与像素残差分工", "depends_on": ["M3", "M5", "E0"]},
-    {"id": "M1", "paths": [], "extension": "真实波段子集与元数据同步", "depends_on": ["C1", "M2"]},
-    {"id": "E1", "paths": [], "extension": "覆盖度描述与调制", "depends_on": ["M1", "E0"]},
-    {"id": "E4a", "paths": [], "extension": "语义映射、固定预算适配及留出协议", "depends_on": ["C1", "M8", "E0"]}
+  "completion_policy": {
+    "as_of": "2026-11-05",
+    "all_candidates_require_testing": true,
+    "negative_results_can_complete_experiments": true,
+    "untested_or_blocked_is_incomplete": true,
+    "guide": "research/全量研究模块必测清单_20261104.md",
+    "current_issue": 168,
+    "continuous_progression_authorized": false,
+    "execution_state": "paused_by_user_after_current_module_closeout",
+    "handoff": "research/项目开发交接_20261105.md"
+  },
+  "note": "导航索引，不维护 Issue 状态；候选模块路径不代表已经实现。现有布局逐模块迁移。delivery_order 是修订后的模块研究顺序，不代表完成状态；已前移验收的接口/协议不重复搭建，整改和当前任务以 current_plan 为准。",
+  "current_plan": "research/当前搭建状态与审查整改清单_20261102.md",
+  "delivery_status": "docs/architecture/delivery-status.json",
+  "baseline_guide": "docs/guides/current-baseline.md",
+  "reference_inventory": "docs/references/research-code-inventory.json",
+  "reference_reuse_guide": "docs/guides/reference-code-reuse.md",
+  "data_protocol_guide": "docs/guides/data-protocol-matrix.md",
+  "experiment_gates": [
+    {
+      "id": "M4-G4B",
+      "issue": 168,
+      "status": "engineering_passed_full_study_paused_native_reload_failed",
+      "tested_commit": "5b4be2aebc528c0442264a18426bb68adceeef5d",
+      "paths": [
+        "m4_source_study.py",
+        "scripts/train_m4_source_full.py",
+        "research/reproduction/m4g4b/supervise.py"
+      ],
+      "tests": [
+        "tests/test_m4_source_study.py"
+      ],
+      "guide": "research/reports/M4G4B_完整源预训练入口验收与原生重载失败_20261105.md",
+      "note": "CPU4/GPU4/full474 and LXC CPU4/GPU4 passed. Actual2004/18036updates: capacity completed,residual1002updates but strictnativeprobabilityreloadfailed,16notstarted. Independent24metrics372recalls224files9inputs unchanged;3native repeats0argmaxchanges but13cumulative residual element violations. Gate unchanged. Userrequestedpause aftermodulehandoff;no target campaign."
+    },
+    {
+      "id": "M4-G4A",
+      "issue": 165,
+      "status": "source_target_engineering_completed",
+      "tested_commit": "77e2a3f45ad5c7e8e319221da69d61af0f2ecf80",
+      "paths": [
+        "m4_transfer.py",
+        "scripts/train_m4_source_short.py",
+        "scripts/train_m4_target_short.py"
+      ],
+      "tests": [
+        "tests/test_m4_transfer.py"
+      ],
+      "guide": "research/reports/M4G4A_区域像素残差纯源到目标接入验收_20261105.md",
+      "note": "CPU5/GPU5/full470;27realshortcases288updates/1067.088s. Independent216metrics2880recalls526trainingfiles22inputs unchanged. Source8step engineeringonly, full M4source/target study stillpending. No query labels/testscore; defaults unchanged."
+    },
+    {
+      "id": "E4-G4I",
+      "issue": 163,
+      "status": "real_query_and_independent_verification_completed",
+      "tested_commit": "0b1dc9f6dfbbafde43922e3a4f0fa3dce978e6e6",
+      "paths": [
+        "evaluation/g4_target.py",
+        "evaluation/g4_target_verification.py",
+        "scripts/evaluate_target_full.py",
+        "scripts/verify_target_full.py"
+      ],
+      "tests": [
+        "tests/test_g4_query.py",
+        "tests/test_g4_query_verification.py"
+      ],
+      "guide": "research/reports/E4G4I_A_全模型冻结评价与独立复算工程验收_20261105.md",
+      "note": "rmvisionCPU11/GPU11/full465 and actualLXC CPU11/GPU11 passed. Actual1500step tiny native audit plus27saved synthetic predictions81metrics1080recalls/27+360branch records. Real incomplete campaign rejected beforequery; wrapper01repr check mistake retained, wrapper02 passed. Real27query completed: independent81headmetrics/1080recalls/27+360branch records;3117training/input files58evaluationfiles4rawinputs unchanged;completedresume58files unchanged. Report E4G4HI_三方向完整目标适配与冻结评价结果_20261105.md."
+    },
+    {
+      "id": "E4-G4H",
+      "issue": 161,
+      "status": "completed_negative_registered_OA_benefit",
+      "tested_commit": "85801647e4824ea4adadebbde3394a38f75cb62c",
+      "paths": [
+        "target_study.py",
+        "scripts/train_target_full.py",
+        "research/reproduction/g4h/supervise.py",
+        "configs/experiments/target_full_study.json"
+      ],
+      "tests": [
+        "tests/test_target_study.py"
+      ],
+      "guide": "research/reports/E4G4H1_完整目标入口与二十七组冻结验收_20261105.md",
+      "note": "CPU5/GPU5/full454,real27case preflight and first2step interruption passed;2steps inside40500total. 27models40500updates completed in9484.772s on frozen8580164. Query after globalfreeze: macroOA scratch89.0389/fullfine88.8424/headonly78.3092;fine macroAA+1.6936pp,registeredOAbenefitfails. Supportseed64K10V5,not support repetitions;fullconvergence not established. Report E4G4HI_三方向完整目标适配与冻结评价结果_20261105.md."
+    },
+    {
+      "id": "E4-G4G",
+      "issue": 159,
+      "status": "target_short_training_engineering_completed",
+      "tested_commit": "b29f7b9f1a99c1245d593dcd167404d3f953d450",
+      "paths": [
+        "target_data_context.py",
+        "target_training.py",
+        "scripts/train_target_short.py",
+        "joint_training.py"
+      ],
+      "tests": [
+        "tests/test_target_training.py"
+      ],
+      "guide": "research/reports/E4G4G_目标支持训练选模与冻结特征恢复验收_20261105.md",
+      "note": "CPU6/GPU6/full449;real9cases108updates/402.848s/native reload all passed. Independent54metrics720recalls,192trainingfiles15inputs unchanged. Exact CPU continuation; native independent CUDA not bitwise. Cache temp-name identity fixed; original selected probability gate unchanged. No query labels/full target accuracy yet; next preregister full paired campaign."
+    },
+    {
+      "id": "E4-G4F",
+      "issue": 157,
+      "status": "engineering_and_real_calibration_completed",
+      "tested_commit": "ca5bdd29a61dcc2001c461d3fbb2ce86960a5232",
+      "paths": [
+        "target_bn_calibration.py",
+        "scripts/inspect_target_bn.py"
+      ],
+      "tests": [
+        "tests/test_target_bn_calibration.py"
+      ],
+      "guide": "research/reports/E4G4F_无标签目标BN总体校准与绑定验收_20261105.md",
+      "note": "CPU5/GPU5/full443;three real scenes none/on, independent binding/state audit passed. Only10 moment buffers change;50 protected states and12 source/observation files unchanged. Zero optimizer/label/test metrics. Not an accuracy-benefit result."
+    },
+    {
+      "id": "E4-G4E",
+      "issue": 155,
+      "status": "engineering_and_real_initialization_completed",
+      "tested_commit": "ab07eb1505aaf89da2146c9d9366f41f93c9b1e8",
+      "paths": [
+        "target_initialization.py",
+        "scripts/inspect_target_initialization.py"
+      ],
+      "tests": [
+        "tests/test_target_initialization.py"
+      ],
+      "guide": "research/reports/E4G4E_源权重到全新目标头与域状态初始化验收_20261105.md",
+      "note": "CPU4/GPU4/full438;ten real initialization cases. Shared weights only, fresh target heads/domains, pinned source weights/sidecar and RNG preservation; frozen-head path requires separate calibration. No target training accuracy."
+    },
+    {
+      "id": "E4-G4P1",
+      "issue": 153,
+      "status": "full_source_pretraining_completed_target_accuracy_pending",
+      "tested_commit": "9c66e20f85d26e88ecb9e6790d8c1e2c62ae8ed1",
+      "paths": [
+        "source_pretrain.py",
+        "scripts/train_source_full.py"
+      ],
+      "tests": [
+        "tests/test_source_pretrain.py"
+      ],
+      "guide": "research/reports/E4G4P1_三方向纯源完整预训练及逐次复盘_20261105.md",
+      "results": "docs/architecture/g4p1-source-results.json",
+      "note": "Nine source-only models,9018 updates/27.04min queue, CPU3/full434/native finalization all passed.108 source metrics/1440 recalls,1008 training files/13 inputs unchanged. Source validation is not held-target accuracy; some curves still improve at budget end."
+    },
+    {
+      "id": "E4-G4D",
+      "issue": 151,
+      "status": "engineering_and_real_interface_completed",
+      "tested_commit": "8708bc7f3d1c51e26eabccdafa4426bbf1f65a79",
+      "paths": [
+        "target_observation.py",
+        "scripts/prepare_target_observation.py"
+      ],
+      "tests": [
+        "tests/test_target_observation.py"
+      ],
+      "note": "CPU4/GPU4/full431; exact tiny existing no-LDA SLIC/hypergraph equivalence. All3 realgraphs4307/1309/4442regions, sparseQ/inputhash/finitegraph and GPUbackward independently verified.0optimizer/testscore. Retained external timing/waiter/CUDAstat wrapper failures; final03QA passed. Report research/reports/E4G4D_无标签目标静态超图与真实链路验收_20261105.md."
+    },
+    {
+      "id": "E4-G4C",
+      "issue": 149,
+      "status": "target_label_protocol_engineering_completed",
+      "tested_commit": "2f9e661bfcb777ed6b8dd2e8b6211a998eac4fdc",
+      "paths": [
+        "loadData/target_label_protocol.py",
+        "scripts/prepare_target_labels.py"
+      ],
+      "tests": [
+        "tests/test_target_label_protocol.py"
+      ],
+      "guide": "research/reports/E4G4C_目标嵌套支持集与验证标签预算验收_20261105.md",
+      "note": "CPU4/full427,real27conditions54independent releases. K1/5/10 plusV5, nested support/fixed query; explicitly transductive and curator full-label stratification. Not target model/graph/accuracy; oldG3 unchanged."
+    },
+    {
+      "id": "E4-G4B",
+      "issue": 147,
+      "status": "source_training_engineering_completed",
+      "tested_commit": "362700bd9f23a44e5dd0d72a5858cc751c6125bb",
+      "paths": [
+        "source_training.py",
+        "scripts/train_source_engineering.py",
+        "joint_training.py"
+      ],
+      "tests": [
+        "tests/test_source_training.py"
+      ],
+      "guide": "research/reports/E4G4B_源任务训练与断点恢复短闭环验收_20261105.md",
+      "note": "CPU3/GPU3/full423; three real rotations24updates,9sourcefiles/18completedfiles protected percase, targetpayload absent. No fullpretraining/transferaccuracy."
+    },
+    {
+      "id": "E4-G4A",
+      "issue": 145,
+      "status": "source_data_access_engineering_completed",
+      "tested_commit": "a0ec969491b0b7b38705a7dff96f2ad500f6a8e7",
+      "paths": [
+        "source_data_context.py",
+        "scripts/prepare_source_context.py"
+      ],
+      "tests": [
+        "tests/test_source_data_context.py"
+      ],
+      "guide": "research/reports/E4G4A_源数据选择性访问与目标隔离验收_20261104.md",
+      "note": "CPU4/full420; real all3rotations. Target cohortmetadata explicitly visible, no target image/label/split/prepared payload. Sourcecontext transductive train-labelLDA; no targetgraph authorization."
+    },
+    {
+      "id": "M2-J2",
+      "issue": 139,
+      "status": "complete_negative_registered_benefit_gate",
+      "tested_commit": "d945daa15ad8752cceaf3898ebed6fca5d8415d0",
+      "paths": [
+        "joint_adapter_study.py",
+        "scripts/train_joint_adapter_full.py",
+        "research/reproduction/m2j2/supervise.py"
+      ],
+      "tests": [
+        "tests/test_joint_adapter_study.py"
+      ],
+      "guide": "research/experiments/M2J2_VCA三模式完整配对预登记_20261104.md",
+      "note": "Nine fresh1503-update runs at d945daa complete; full416. wavelength/index/uniform macroOA95.873/96.610/90.097. Registered wavelength benefit gates fail;81metrics/1080recalls verified,1008trainingfiles/13inputs unchanged. Report research/reports/M2J2_VCA三模式三种子完整对照与复盘_20261105.md. Defaults unchanged."
+    },
+    {
+      "id": "NUM-1",
+      "issue": 141,
+      "status": "descriptive_audit_completed_original_probability_gate_failed",
+      "tested_commit": "09e758e1b134e748e5815ec40de596753fc7a21a",
+      "paths": [
+        "numerical_audit.py",
+        "research/reproduction/num1/audit.py"
+      ],
+      "tests": [
+        "tests/test_numerical_audit.py"
+      ],
+      "guide": "research/reports/NUM1_M4冻结权重数值审计_20261104.md",
+      "note": "CPU4 and576 frozen train/val comparisons;zero decision changes,1350 artifacts/13 inputs unchanged. Does not retroactively pass1e-5 or prove exact operator root cause."
+    },
+    {
+      "id": "NUM-2",
+      "issue": 143,
+      "status": "decision_evaluation_completed",
+      "tested_commit": "9d5318803d926eacebf8984bc4e6a7bed388bbc4",
+      "paths": [
+        "decision_evaluation.py",
+        "research/reproduction/num2/evaluate.py",
+        "research/reproduction/num2/verify.py"
+      ],
+      "tests": [
+        "tests/test_decision_evaluation.py"
+      ],
+      "guide": "research/reports/M4S2_残差与辅助监督三种子完整配对及精度敏感性_20261104.md",
+      "note": "CPU4;explicit post-training/pre-test amendment. Exact states/trainval decisions,FP32/FP64 test sensitivity,144 metrics/1920 recalls and both-context benefit gates independently checked. No probability-calibration or bitwise-reproduction claim."
+    },
+    {
+      "id": "M2-J1",
+      "issue": 137,
+      "status": "engineering_completed_accuracy_pending",
+      "tested_commit": "1b548809210f7c1c03b0c9a8681736e474846c08",
+      "paths": [
+        "joint_adapter_modes.py",
+        "scripts/train_joint_adapter_modes.py"
+      ],
+      "tests": [
+        "tests/test_joint_adapter_modes.py"
+      ],
+      "guide": "research/reports/M2J1_三种VCA联合接入与均匀模式显存验收_20261104.md",
+      "note": "CPU5/GPU5/full404;three real12-update cases,54 metrics/720 recalls,55 files/13 inputs unchanged. Uniform value recomputation fixes retained real OOM; no test scoring or full accuracy claim."
+    },
+    {
+      "id": "M4-S2",
+      "issue": 135,
+      "status": "full_effect_completed_under_NUM2_amendment",
+      "training_commit": "b36f1c976120eb8abd7d74e7f44295227550e9ea",
+      "original_probability_gate_stably_passed": false,
+      "decision_evaluation_passed": true,
+      "paths": [
+        "joint_supervision_study.py",
+        "scripts/train_joint_supervision_full.py",
+        "research/reproduction/m4s2/supervise.py"
+      ],
+      "tests": [
+        "tests/test_joint_supervision_study.py"
+      ],
+      "guide": "research/reports/M4S2_残差与辅助监督三种子完整配对及精度敏感性_20261104.md",
+      "results": "docs/architecture/m4-s2-results.json",
+      "note": "12 fresh/18036 updates. None3head95.88,none-primary96.42,residual3head96.72,residual-primary97.12±.26 macroOA. Both candidate comparisons3/3 positive;AA/HongHu/smallclass guards pass under both precisions. Original probability gate fails;NUM2 explicit pre-test amendment,35 test prediction changes,gate agreement true.1350 artifacts/13 inputs unchanged. Fixed transductive split,not unseen sensors;defaults unchanged."
+    },
+    {
+      "id": "M4-S1",
+      "issue": 133,
+      "status": "engineering_completed",
+      "tested_commit": "5ce3652d1828de8ce994d1c0639ad25798b47b47",
+      "paths": [
+        "joint_supervision.py",
+        "scripts/train_joint_supervision.py"
+      ],
+      "tests": [
+        "tests/test_joint_supervision.py"
+      ],
+      "guide": "research/reports/M4S1_区域残差与辅助监督四组接入验收_20261104.md",
+      "note": "CPU5/GPU5/full395;four real12-update cases,48 metrics/640 recalls,73 files/13 inputs unchanged. No accuracy claim."
+    },
+    {
+      "id": "E0-B2",
+      "issue": 131,
+      "status": "frozen_spatial_diagnostics_completed",
+      "tested_commit": "14e03f0d348617f0f8616908ecac58ea94e41521",
+      "guide": "research/reports/E0B2_M4冻结空间逐类与双支路诊断_20261104.md",
+      "results": "docs/architecture/e0-b2-results.json",
+      "note": "28 related tests;1134 metrics/378 branches/648 spatial contrasts/240 class contrasts independently checked;1045 protected files unchanged. No training or inference. Xuzhou narrow boundary OA+1.86pp;HongHu-0.60pp,class15 recall-1.59pp. Posthoc partial coverage only; independent split/boundary protocol pending."
+    },
+    {
+      "id": "E0-B1",
+      "issue": 129,
+      "status": "engineering_and_support_audit_completed",
+      "tested_commit": "c9a9230489d9867762a48ac0ecc974ba24a30931",
+      "guide": "research/reports/E0B1_空间边界支持审计与全量必测范围验收_20261104.md",
+      "results": "docs/architecture/e0-b1-results.json",
+      "note": "30 related tests,108 independent histograms,13 inputs unchanged. No prediction scores or training. PaviaU boundary unavailable; partial class coverage elsewhere. E0-B2 and independent boundary protocol pending."
+    },
+    {
+      "id": "M1-J2",
+      "paths": [
+        "joint_observation_study.py",
+        "scripts/train_joint_observation_full.py",
+        "docs/architecture/m1-j2-results.json"
+      ],
+      "tests": [
+        "tests/test_joint_observation_study.py"
+      ],
+      "guide": "research/reports/M1J2_真实波段联合三种子完整配对结果_20261104.md",
+      "depends_on": [
+        "M1-J1"
+      ],
+      "note": "PR128;9942c0f,6 cases/9018 fresh updates. Full OA95.89→95.61 and missing-band95.53→95.38; full0/3 robust1/3 positive, HongHu AA guard failed, small-class guard passed.375 tests/GPU5/24 condition checks/216 metrics/2880 recalls/72 complementarity passed;672 artifacts/13 inputs unchanged. Default full retained; pause after this module."
+    },
+    {
+      "id": "M1-J1",
+      "paths": [
+        "joint_observation.py",
+        "scripts/train_joint_observation.py"
+      ],
+      "tests": [
+        "tests/test_joint_observation.py"
+      ],
+      "guide": "docs/guides/joint-observation-m1j1.md",
+      "depends_on": [
+        "M1",
+        "BN-ALIGN3"
+      ],
+      "note": "PR126; tested27f14f1 CPU5/GPU5/full372, real24 updates,36 head metrics/480 recalls independently checked,37 completed files/13 inputs unchanged. Engineering only, full-spectrum graph context retained. Issue127 full study completed with negative joint gate; now paused."
+    },
+    {
+      "id": "M4-J2",
+      "paths": [
+        "research/experiments/M4J2_区域残差联合三种子完整配对预登记_20261104.md"
+      ],
+      "guide": "docs/guides/m4-joint-full-comparison.md",
+      "depends_on": [
+        "M4-J1"
+      ],
+      "note": "Completed9/13527 updates at98d2b75: none95.88/capacity96.22/residual96.74 macroOA; both paired gates passed3/3, HongHu+2.33pp but class15-1.59pp. Full results docs/architecture/m4-j2-results.json;243metrics/81complementarity/2contrasts independently checked. Additive verifier0403879 CPU4/GPU4/full367; all three residual native probability failures preserved, zero new updates,1011artifacts/13inputs unchanged. Fixed joint split only; defaults unchanged. MON-2/3A on independent branches; M1-J1 joint observation engineering passed PR126; M1-J2 Issue127 completed, joint benefit failed; paused as requested."
+    },
+    {
+      "id": "M4-J1",
+      "paths": [
+        "scripts/train_joint_m4.py"
+      ],
+      "tests": [
+        "tests/test_m4_joint.py"
+      ],
+      "guide": "docs/guides/m4-joint-training.md",
+      "depends_on": [
+        "BG-ABL2",
+        "M4"
+      ],
+      "note": "Calibrated joint integration engineering passed; CPU/GPU2 each/full363, off/resume equivalence and real two12-step preflights. No accuracy claim; next M4-J2 preregistration."
+    },
+    {
+      "id": "BG-ABL2",
+      "paths": [
+        "research/experiments/BGABL2_六组独立支路图传播三种子完整配对预登记_20261103.md",
+        "research/reports/BGABL2_六组独立支路图传播三种子完整配对结果_20261103.md",
+        "docs/architecture/bg-abl2-results.json"
+      ],
+      "guide": "docs/guides/branch-graph-full-comparison.md",
+      "depends_on": [
+        "BG-ABL1"
+      ],
+      "note": "18次独立从头训练/27054更新完成；宏OA仅主头双支路96.47±0.16%、原三头95.89±0.33%、CNN96.13±0.27%、Graph94.81±0.22%。双支路相对CNN+0.338pp通过，Graph比较因HongHu AA保护失败；原辅助监督−0.582pp。原超图相对普通图−0.062pp不通过，相对身份+0.021pp按规则通过但很小。324指标/81互补/5配对独立核验，2016训练文件/13输入不变，221源码配置不变。固定已看划分，不冒充新传感器或显著超图收益；下一M4-J1默认关闭联合接入工程，当前队列见current_plan"
+    },
+    {
+      "id": "BG-ABL1",
+      "paths": [
+        "model/branch_graph_ablation.py",
+        "branch_graph_training.py",
+        "joint_training.py",
+        "scripts/train_branch_graph_ablation.py"
+      ],
+      "tests": [
+        "tests/test_branch_graph_ablation.py"
+      ],
+      "guide": "docs/guides/branch-graph-ablation.md",
+      "reference_review": "docs/references/branch-graph-ablation-review.json",
+      "depends_on": [
+        "BN-ALIGN3"
+      ],
+      "note": "六组独立支路/辅助监督/固定传播工程；真实移除未用分支和辅助头，版本signature及来源/场景/Q-A绑定，默认训练器不变。CPU9/GPU9/全量361、48父子默认摘要、六组各12步/72独立指标/完成恢复通过，183历史训练文件/13输入不变。本项工程结论；完整精度与图传播独立贡献见BG-ABL2，当前队列见current_plan"
+    },
+    {
+      "id": "BN-ALIGN3",
+      "paths": [
+        "evaluation/calibrated_baseline.py",
+        "scripts/validate_calibrated_reuse.py",
+        "scripts/evaluate_calibrated_baseline.py"
+      ],
+      "tests": [
+        "tests/test_calibrated_evaluation.py"
+      ],
+      "guide": "docs/guides/calibrated-evaluation.md",
+      "reference_review": "docs/references/bn-calibration-review.json",
+      "depends_on": [
+        "BN-ALIGN2"
+      ],
+      "note": "CPU/GPU各三种子成对原训练隔离、153调度事件复用门槛通过；三组冻结test宏OA88.66±6.10/94.48±2.03/95.86±0.35%，事前收益门槛通过。新增8/全量352、243组指标/81互补独立复算，216历史产物/13输入不变，真实新增更新0。既有test已查看，不作为独立未见传感器结论；下一独立分支/图对照，当前队列见current_plan"
+    },
+    {
+      "id": "BN-ALIGN2",
+      "paths": [
+        "joint_calibrated_selection.py",
+        "joint_training.py",
+        "scripts/train_joint_baseline.py",
+        "scripts/replay_calibrated_selection.py"
+      ],
+      "tests": [
+        "tests/test_calibrated_selection.py"
+      ],
+      "guide": "docs/guides/calibrated-selection.md",
+      "reference_review": "docs/references/bn-calibration-review.json",
+      "depends_on": [
+        "BN-ALIGN1",
+        "BASE-97B"
+      ],
+      "note": "显式版本化校准验证/调度/选模/推理；raw模型与优化器状态续训，默认不变。CPU7/GPU7/全量344、旧默认三种子状态等价、153点只读复评及5508组独立指标通过；复用验证宏OA96.04±0.52%，无真实新增更新/test评分，正式评价及复用见BN-ALIGN3，独立泛化另验收，当前队列见current_plan"
+    },
+    {
+      "id": "BN-ALIGN1",
+      "paths": [
+        "model/bn_calibration.py",
+        "scripts/validate_bn_calibration.py"
+      ],
+      "tests": [
+        "tests/test_bn_calibration.py"
+      ],
+      "guide": "docs/guides/bn-calibration.md",
+      "reference_review": "docs/references/bn-calibration-review.json",
+      "depends_on": [
+        "BASE-97C"
+      ],
+      "note": "默认关闭，固定权重整图DomainBN校准及保存绑定工程/三种子复用验证通过；验证宏OA88.44±6.64→94.60±2.12%，不改正式test；训练选模工程见BN-ALIGN2，独立正式精度待验收，当前状态见current_plan"
+    },
+    {
+      "id": "BASE-97C",
+      "paths": [
+        "research/experiments/BASE97C_三种子完整联合训练预登记_20261103.md",
+        "research/reports/BASE97C_三种子完整联合训练结果与双支路诊断_20261103.md"
+      ],
+      "guide": "research/reports/BASE97C_三种子完整联合训练结果与双支路诊断_20261103.md",
+      "depends_on": [
+        "BASE-97B"
+      ],
+      "note": "三种子完整4509更新与冻结评价完成，宏OA88.66±6.10%；DomainBN验证诊断影响显著，原正式分数不改，独立校准与单支路重训待验收；当前状态见current_plan"
+    },
+    {
+      "id": "BASE-97B",
+      "paths": [
+        "joint_training.py",
+        "scripts/train_joint_baseline.py",
+        "configs/experiments/base97_training.json"
+      ],
+      "tests": [
+        "tests/test_joint_training.py"
+      ],
+      "guide": "docs/guides/joint-training-base97b.md",
+      "depends_on": [
+        "BASE-97A"
+      ],
+      "note": "正式随机预算与训练状态恢复入口；12步工程验收与1503步精度实验分开，当前状态见current_plan"
+    },
+    {
+      "id": "BASE-97A",
+      "paths": [
+        "joint_baseline.py",
+        "scripts/validate_joint_baseline.py",
+        "configs/experiments/base97_joint.json"
+      ],
+      "tests": [
+        "tests/test_joint_baseline.py"
+      ],
+      "guide": "docs/guides/joint-baseline-base97.md",
+      "depends_on": [
+        "C1",
+        "M2",
+        "M5",
+        "M8"
+      ],
+      "note": "用户指定PaviaU/Xuzhou/HongHu联合协议工程门槛，当前状态见current_plan；非历史功能台账模块"
+    }
   ],
-  "shared_integration_paths": ["model/VCASAHGCN.py", "model/interaction_config.py", "model/checkpoint_io.py", "train_vca_multidataset.py"],
-  "delivery_order": ["baseline", "C0", "C1", "M2", "M3", "M5", "M8", "E0", "M6", "M7", "M4", "M1", "E1", "E4a"]
+  "modules": [
+    {
+      "id": "E4a-2",
+      "paths": [
+        "transfer/",
+        "train_cross_sensor.py"
+      ],
+      "tests": [
+        "tests/test_transfer_training.py",
+        "tests/test_development_training.py",
+        "tests/test_run_provenance.py"
+      ],
+      "guide": "docs/guides/g3-training.md",
+      "depends_on": [
+        "E4a",
+        "M1",
+        "M5",
+        "M8"
+      ]
+    },
+    {
+      "id": "MASK-2",
+      "paths": [
+        "compression/masked_checkpoint.py"
+      ],
+      "tests": [
+        "tests/test_masked_checkpoint.py"
+      ],
+      "guide": "docs/guides/masked-training-checkpoints.md",
+      "depends_on": [
+        "MASK-1"
+      ]
+    },
+    {
+      "id": "MASK-1",
+      "paths": [
+        "compression/"
+      ],
+      "tests": [
+        "tests/test_weight_masks.py"
+      ],
+      "guide": "docs/guides/reversible-weight-masks.md",
+      "depends_on": [
+        "M5"
+      ]
+    },
+    {
+      "id": "MON-01",
+      "paths": [
+        "monitoring/"
+      ],
+      "tests": [
+        "tests/test_monitoring_statistics.py"
+      ],
+      "guide": "docs/guides/monitoring-readonly.md",
+      "depends_on": [
+        "M5",
+        "E0"
+      ]
+    },
+    {
+      "id": "baseline",
+      "paths": [
+        "smoke_test.py",
+        "scripts/validate_baseline.py",
+        "docs/migration/baseline-source.json"
+      ],
+      "tests": [
+        "tests/test_interaction_modules.py",
+        "smoke_test.py"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "C0",
+      "paths": [
+        "model/research_config.py",
+        "research_runtime.py",
+        "research_ablation_presets.py",
+        "run_research_ablation.py",
+        "configs/experiments/",
+        "model/interaction_config.py",
+        "model/checkpoint_io.py"
+      ],
+      "tests": [
+        "tests/test_research_c0.py",
+        "tests/test_interaction_modules.py"
+      ],
+      "guide": "docs/guides/c0-experiments.md",
+      "depends_on": [
+        "baseline"
+      ]
+    },
+    {
+      "id": "C1",
+      "paths": [
+        "loadData/dataset_registry.py",
+        "loadData/fixed_splits.py",
+        "loadData/spatial_protocol.py",
+        "loadData/spatial_tiles.py",
+        "prepare_data_protocol.py",
+        "prepare_spatial_protocol.py",
+        "train_spatial.py"
+      ],
+      "tests": [
+        "tests/test_data_c1a.py",
+        "tests/test_spatial_c1b.py",
+        "tests/test_spatial_training.py"
+      ],
+      "guide": "docs/guides/spatial-training.md",
+      "extension": "分区独立多块训练闭环；正式多折评价另立实验任务",
+      "depends_on": [
+        "C0"
+      ]
+    },
+    {
+      "id": "M2",
+      "paths": [
+        "model/variable_channel_adapter.py"
+      ],
+      "tests": [
+        "tests/test_vca_m2.py",
+        "scripts/validate_m2.py"
+      ],
+      "guide": "docs/guides/vca.md",
+      "depends_on": [
+        "C0"
+      ]
+    },
+    {
+      "id": "M3",
+      "paths": [
+        "model/graph_state.py",
+        "model/learnable_superpixel_graph.py",
+        "createGraph/"
+      ],
+      "tests": [
+        "tests/test_graph_m3.py",
+        "scripts/validate_m3.py"
+      ],
+      "guide": "docs/guides/graph-state.md",
+      "depends_on": [
+        "C1",
+        "M2"
+      ]
+    },
+    {
+      "id": "M5",
+      "paths": [
+        "model/VCASAHGCN.py",
+        "model/SAHGCN.py",
+        "model/research_config.py",
+        "train_vca_multidataset.py"
+      ],
+      "tests": [
+        "tests/test_backbone_m5.py",
+        "tests/test_graph_cache.py",
+        "tests/test_dynamic_task_heads.py",
+        "scripts/validate_m5.py"
+      ],
+      "guide": "docs/guides/backbone-stages.md",
+      "depends_on": [
+        "M2",
+        "M3"
+      ]
+    },
+    {
+      "id": "M8",
+      "paths": [
+        "model/branch_fusion.py",
+        "model/task_losses.py",
+        "model/VCASAHGCN.py",
+        "model/checkpoint_io.py",
+        "model/research_config.py",
+        "train_spatial.py",
+        "train_vca_multidataset.py"
+      ],
+      "tests": [
+        "tests/test_fusion_m8.py",
+        "scripts/validate_m8.py"
+      ],
+      "guide": "docs/guides/fusion-losses.md",
+      "depends_on": [
+        "M5"
+      ]
+    },
+    {
+      "id": "E0",
+      "paths": [
+        "evaluation/",
+        "export_research_diagnostics.py",
+        "model/utils.py",
+        "export_interaction_diagnostics.py",
+        "scripts/diagnose_screening_branches.py",
+        "scripts/intervene_screening_messages.py",
+        "scripts/intervene_screening_coordinates.py",
+        "scripts/run_coordinate_screening.py",
+        "scripts/diagnose_accuracy_variance.py",
+        "loadData/coordinate_observation.py"
+      ],
+      "tests": [
+        "tests/test_evaluation_e0a.py",
+        "scripts/validate_e0a.py",
+        "tests/test_screening_branch_diagnostics.py",
+        "tests/test_message_interventions.py",
+        "tests/test_coordinate_interventions.py",
+        "tests/test_coordinate_training.py",
+        "tests/test_accuracy_diagnostics.py"
+      ],
+      "guide": "docs/guides/evaluation-e0a.md",
+      "extension": "E0a三路诊断见docs/guides/screening-branch-diagnostics.md；E0b消息干预见docs/guides/message-interventions.md；其余干预、细结构与成本分别验收",
+      "depends_on": [
+        "M8"
+      ]
+    },
+    {
+      "id": "M6",
+      "paths": [
+        "model/region_pixel_alignment.py",
+        "model/cross_branch_interaction.py"
+      ],
+      "tests": [
+        "tests/test_interaction_m6.py",
+        "scripts/validate_m6.py"
+      ],
+      "guide": "docs/guides/interaction-m6.md",
+      "depends_on": [
+        "M5",
+        "E0"
+      ]
+    },
+    {
+      "id": "M7",
+      "paths": [
+        "model/graph_edge_update.py"
+      ],
+      "depends_on": [
+        "M6"
+      ]
+    },
+    {
+      "id": "M4",
+      "paths": [
+        "model/region_residual_decomposition.py",
+        "model/VCASAHGCN.py",
+        "model/research_config.py",
+        "train_vca_multidataset.py",
+        "transfer/g3_training.py",
+        "transfer/m4_ablation.py",
+        "scripts/run_m4_ablation.py"
+      ],
+      "tests": [
+        "tests/test_region_residual_decomposition.py",
+        "tests/test_region_residual_integration.py",
+        "tests/test_m4_ablation.py",
+        "scripts/validate_m4a.py",
+        "scripts/validate_m4b.py"
+      ],
+      "guide": "docs/guides/region-residual-m4.md",
+      "extension": "M4-A 独立 API；M4-B1 训练接入；M4-B2 四组配对开发筛选见 docs/guides/m4-paired-screen.md，跨传感器收益另验收",
+      "depends_on": [
+        "M3",
+        "M5",
+        "E0"
+      ]
+    },
+    {
+      "id": "M1",
+      "paths": [
+        "loadData/observation_sampling.py",
+        "transfer/observation_policy.py",
+        "transfer/development_training.py",
+        "transfer/m1_ablation.py",
+        "scripts/run_m1_ablation.py",
+        "configs/experiments/m1_c_paired_screen.json"
+      ],
+      "tests": [
+        "tests/test_observation_sampling.py",
+        "tests/test_observation_training.py",
+        "tests/test_m1_ablation.py",
+        "scripts/validate_m1.py",
+        "scripts/validate_m1_training.py"
+      ],
+      "guide": "docs/guides/observation-sampling-m1.md",
+      "extension": "M1-B冻结真实子集训练/固定开发扰动与元数据单位见docs/guides/observation-training-m1.md；M1-C完整/旧置零/真实子集三种子配对筛选见docs/guides/m1-paired-screen.md，结果与当前状态见current_plan；真实跨传感器收益另验收",
+      "depends_on": [
+        "C1",
+        "M2"
+      ]
+    },
+    {
+      "id": "E1",
+      "paths": [
+        "model/observation_coverage.py",
+        "model/coverage_config.py",
+        "model/coverage_controls.py",
+        "model/VCASAHGCN.py",
+        "model/research_config.py",
+        "transfer/run_provenance.py",
+        "transfer/e1_ablation.py",
+        "scripts/run_e1_ablation.py",
+        "scripts/validate_e1a.py",
+        "scripts/validate_e1b.py",
+        "scripts/validate_e1c.py",
+        "configs/experiments/e1_c_paired_screen.json"
+      ],
+      "tests": [
+        "tests/test_observation_coverage.py",
+        "tests/test_coverage_integration.py",
+        "tests/test_coverage_controls.py",
+        "tests/test_e1_ablation.py"
+      ],
+      "guide": "docs/guides/coverage-screen-e1c.md",
+      "reference_review": "docs/references/e1-reference-review.json",
+      "extension": "E1-A/B及E1-C1五组公平对照/冻结入口工程通过，PR #90未合并；对照CPU/GPU各8、批次CPU/GPU各5、全量301、原E1-B/A GPU16/14，真实5组各5步/40文件不变恢复/固定输入作用检查通过；保留原生M1数值波动披露；E1-C2三种子15组75000更新完成，Issue #91 / PR #92；none/连续完整OA均71.85%，范围56.30/54.81%，未达预登记净收益规则；全产物配对/算术核验及120文件不变恢复通过，E1默认关闭，DIAG-2已完成只读训练/验证差距诊断，下一先恢复原三数据集联合基线，MON-2服务诊断；独立划分/真实传感器收益待验收",
+      "depends_on": [
+        "M1",
+        "M2",
+        "E0"
+      ]
+    },
+    {
+      "id": "E4a",
+      "paths": [
+        "loadData/transfer_protocol.py",
+        "configs/protocols/paviau_to_xuzhou_g3.json"
+      ],
+      "tests": [
+        "tests/test_transfer_protocol.py",
+        "scripts/prepare_transfer_protocol.py"
+      ],
+      "guide": "docs/guides/transfer-protocol-e4a.md",
+      "extension": "G3协议准备；训练入口与G2共享语义映射另验收",
+      "depends_on": [
+        "C1",
+        "M8",
+        "E0"
+      ]
+    }
+  ],
+  "research_focus": {
+    "as_of": "2026-10-31",
+    "axes": [
+      "region_pixel_complementarity",
+      "cross_sensor_spectral_adaptation",
+      "pruning_and_quantization"
+    ],
+    "primary_goal": "improve_accuracy_on_all_three_axes",
+    "secondary_goal": "speed_under_predeclared_accuracy_constraint",
+    "guide": "research/三主线研究重心与剪枝量化及论文用途_20261031.md"
+  },
+  "research_candidates": [
+    {
+      "id": "R-LOWRANK",
+      "status": "planned",
+      "issue": 81,
+      "target_modules": [
+        "M5",
+        "E0"
+      ],
+      "guide": "research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md",
+      "gate": "Profile and spectrum diagnostics before factorized layers; M1-C/E1 queue unchanged",
+      "default_enabled": false,
+      "changes_default": false
+    },
+    {
+      "id": "R-TERNARY",
+      "status": "planned",
+      "issue": 81,
+      "target_modules": [
+        "M5",
+        "E0"
+      ],
+      "guide": "research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md",
+      "gate": "Conventional INT8 baseline first; distinguish simulated floats from packed storage and kernels",
+      "default_enabled": false,
+      "changes_default": false
+    },
+    {
+      "id": "R-CURRICULUM",
+      "status": "planned",
+      "issue": 81,
+      "target_modules": [
+        "M1",
+        "E1",
+        "E4a"
+      ],
+      "guide": "research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md",
+      "gate": "Independent observation/sample curriculum comparisons after M1-C/E1; class exposure and permitted-label protection",
+      "default_enabled": false,
+      "changes_default": false
+    },
+    {
+      "id": "R-ADAPTIVE-INFERENCE",
+      "status": "planned",
+      "issue": 81,
+      "target_modules": [
+        "M5",
+        "M8",
+        "E0",
+        "E3"
+      ],
+      "stages": [
+        "offline_complementarity_and_cost",
+        "early_exit_or_lightweight_fallback",
+        "hard_routing"
+      ],
+      "guide": "research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md",
+      "gate": "Prove lazy slow-path skipping and calibrated accuracy protection; preserve tile graph context",
+      "default_enabled": false,
+      "changes_default": false
+    },
+    {
+      "id": "R-MONITORING",
+      "status": "partial",
+      "implemented_stages": [
+        "MON-0/1 limited readonly API",
+        "MON-2 scoped API on PR118; native FP32 strict equivalence pending",
+        "MON-3A frozen contracts PR120",
+        "MON-3B isolated interventions PR122",
+        "MON-3C fixed validation PR124; all candidates rejected"
+      ],
+      "pending_stages": [
+        "temporal/gradient candidate evidence",
+        "MON-4",
+        "controlled overhead",
+        "soft Q class mapping"
+      ],
+      "issue": 37,
+      "guide": "research/统一训练监测搭建与训练接入计划_20261031.md",
+      "stages": [
+        "MON-0",
+        "MON-1",
+        "MON-2",
+        "MON-3",
+        "MON-4"
+      ],
+      "proposed_paths": [
+        "monitoring/",
+        "tests/test_monitoring_statistics.py"
+      ],
+      "default_enabled": false,
+      "changes_default": false,
+      "automatic_pruning": false
+    },
+    {
+      "id": "R-COMPRESSION",
+      "status": "partial",
+      "implementation_frozen": true,
+      "reason": "Prioritize M1 and E4a before pruning accuracy experiments",
+      "implemented_stages": [
+        "explicit reversible elementwise mask API",
+        "masked training checkpoint API"
+      ],
+      "pending_stages": [
+        "candidate_selection",
+        "structured_pruning",
+        "quantization",
+        "accuracy_experiments"
+      ],
+      "issue": 35,
+      "target_modules": [
+        "E0",
+        "M5",
+        "M6",
+        "E4a"
+      ],
+      "stages": [
+        "redundancy_activity_diagnostics",
+        "structured_pruning",
+        "quantization",
+        "combined_deployment"
+      ],
+      "changes_default": false
+    },
+    {
+      "id": "R-MITA",
+      "status": "planned",
+      "issue": 25,
+      "target_modules": [
+        "M6",
+        "E3"
+      ],
+      "source": "https://arxiv.org/abs/2602.01219v6",
+      "guide": "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md",
+      "proposed_paths": [
+        "model/mita_region_message.py"
+      ],
+      "gate": "Frozen branch diagnostics first; M6 message prototype and E3 support routing are separate tasks",
+      "changes_default": false
+    },
+    {
+      "id": "R-REDUNDANCY",
+      "status": "planned",
+      "issue": 25,
+      "target_modules": [
+        "E0",
+        "M5",
+        "M6"
+      ],
+      "source": "https://arxiv.org/abs/2601.22841v2",
+      "guide": "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md",
+      "proposed_paths": [
+        "evaluation/representation_redundancy.py"
+      ],
+      "gate": "Representation diagnostics before width experiments; preserve observation B and VCA K",
+      "changes_default": false
+    }
+  ],
+  "shared_integration_paths": [
+    "model/VCASAHGCN.py",
+    "model/interaction_config.py",
+    "model/checkpoint_io.py",
+    "train_vca_multidataset.py"
+  ],
+  "delivery_order": [
+    "baseline",
+    "C0",
+    "C1",
+    "M2",
+    "M3",
+    "M5",
+    "M8",
+    "E0",
+    "M6",
+    "M4",
+    "M1",
+    "E1",
+    "M7",
+    "E4a"
+  ],
+  "current_status": "docs/architecture/current-status.json",
+  "integration_guide": "docs/guides/current-baseline.md"
 }

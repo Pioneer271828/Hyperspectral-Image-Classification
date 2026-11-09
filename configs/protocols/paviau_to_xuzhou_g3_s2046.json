@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "task_id": "paviau_to_xuzhou_g3_10shot_s2046",
+  "task_type": "G3_few_shot_transfer",
+  "source_dataset": "paviaU",
+  "target_dataset": "xuzhou",
+  "source_sensor": "ROSIS",
+  "target_sensor": "HYSPEX_bundled_readme",
+  "class_policy": "new_target_head_original_classes",
+  "support_budgets_per_class": [
+    1,
+    5,
+    10
+  ],
+  "primary_support_per_class": 10,
+  "target_validation_labels": 0,
+  "tile_size": 32,
+  "gap": 2,
+  "split_seed": 2026,
+  "support_seed": 2027,
+  "model_seed": 2046,
+  "target_head_seed": 2048,
+  "source_sampler_seed": 2049,
+  "target_sampler_seed": 2050,
+  "source_updates": 10000,
+  "source_selection": "source_val_nll",
+  "target_updates": 1000,
+  "target_selection": "fixed_final_step",
+  "normalization": "separate_source_target_train_region_minmax",
+  "graph_mode": "learned_label_free",
+  "norm_type": "group_norm",
+  "methods": [
+    "target_scratch_full",
+    "source_pretrained_head_only",
+    "source_pretrained_full_finetune"
+  ],
+  "spectral_policy": "full_delivered_bands_with_explicit_M1_metadata",
+  "status": "protocol_only_no_training"
+}

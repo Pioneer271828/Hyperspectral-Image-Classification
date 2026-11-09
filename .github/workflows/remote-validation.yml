@@ -1,0 +1,44 @@
+name: Authorized training-container validation
+on:
+  pull_request:
+  push:
+    branches: [codex/issue-167-development-integration]
+  workflow_dispatch:
+    inputs:
+      gpu:
+        description: Run focused CUDA acceptance on the authorized container
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: hsi-validation-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validation:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, hsi-training-container]
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      HSI_PYTHON: ${{ vars.HSI_VALIDATION_PYTHON || '/home/rmvision/venvs/hsi-baseline/bin/python' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check current status and repair inclusion
+        run: '"$HSI_PYTHON" scripts/check_repository.py --expected-commit "$(git rev-parse HEAD)"'
+      - name: Integrated CPU regression
+        run: '"$HSI_PYTHON" -m unittest discover -s tests -v'
+      - name: Focused GPU regression
+        if: github.event_name == 'workflow_dispatch' && inputs.gpu
+        run: |
+          MON2_DEVICE=cuda "$HSI_PYTHON" -m unittest discover -s tests -p test_monitoring_updates.py -v
+          MON3B_DEVICE=cuda "$HSI_PYTHON" -m unittest discover -s tests -p test_monitoring_interventions.py -v
+          REPAIR_DEVICE=cuda "$HSI_PYTHON" -m unittest discover -s tests -p test_vca_release_compatibility.py -v
+      - name: Verify tracked checkout remains clean
+        run: git diff --exit-code

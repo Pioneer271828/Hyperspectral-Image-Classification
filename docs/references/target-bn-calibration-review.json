@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "checked_on": "2026-11-05",
+  "issue": 157,
+  "paper": {
+    "url": "https://arxiv.org/html/2105.07576v1",
+    "title": "Rethinking Batch in BatchNorm",
+    "sections_read": ["3.1", "3.2", "5.1", "A.2", "A.3"],
+    "use": "Fixed-feature population moments and layer order; domain choice matters. Target recalibration can help or hurt. No HSI benefit inferred."
+  },
+  "upstream": {
+    "repository": "https://github.com/facebookresearch/fvcore",
+    "classification": "Meta official library linked by paper reference1",
+    "commit": "8363d8d9e048e04a528112a15a50696fe125f97f",
+    "source_read": ["fvcore/nn/precise_bn.py"],
+    "license_path": "LICENSE",
+    "license_spdx": "Apache-2.0",
+    "license_scope": "Root text and actual file copyright header verified, no unrelated nested-source claim.",
+    "source_copied": false,
+    "library_installed": false,
+    "upstream_code_executed": false
+  },
+  "adaptation": "Independent published-moment adaptation with torch.var_mean and eval-clone prehooks. Generic updater aggregates batches and mutates its model; this contract binds one full target scene, static label-free graph and exact state. No external trainer, split, dependency or benchmark imported.",
+  "local_policy": "Correction0 moments per executed target BN, in forward order; pixels and region populations separate. Only running_mean/var change. Full-target context is transductive, not DG. Legacy source/joint calibration is untouched.",
+  "verification": "Default-none, independent batch-statistics oracle, state/observation/graph binding, CPU/GPU and real3scene acceptance; accuracy remains a later paired experiment."
+}

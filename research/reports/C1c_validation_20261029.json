@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "tested_code": {
+    "commit": "19f7dfd87a4c5a19f1fb0ca0592b705bffb53ba4",
+    "branch": "codex/c1c-spatial-training",
+    "dirty": false,
+    "source_hash": "5175d2aa5cf08f571dce041108e5dd7e0f557e93f6f0224928e466973dafb321"
+  },
+  "tests": {
+    "passed": 47,
+    "seconds": 3.736
+  },
+  "initial_failure": "Two synthetic BN tests failed on one-node graphs; explicit guard and multi-node fixture added, rerun passed",
+  "run_id": "paviau_spatial_smoke-s2026-97f64bcae9965dd3ba20",
+  "status": "completed",
+  "resume_status": "skipped",
+  "optimizer_steps": 2,
+  "coverage": {
+    "counts": {
+      "train": [
+        3495,
+        10040,
+        1221,
+        1730,
+        113,
+        1629,
+        974,
+        1643,
+        314
+      ],
+      "val": [
+        656,
+        2106,
+        440,
+        173,
+        273,
+        538,
+        8,
+        454,
+        268
+      ],
+      "test": [
+        973,
+        1722,
+        0,
+        389,
+        578,
+        1693,
+        0,
+        765,
+        85
+      ]
+    },
+    "missing_classes": {
+      "train": [],
+      "val": [],
+      "test": [
+        3,
+        7
+      ]
+    }
+  },
+  "tile_counts": {
+    "train": 127,
+    "val": 41,
+    "test": 41
+  },
+  "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+  "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+  "artifacts_root": "/home/train/hsi-pioneer271828/runs/c1c-real-smoke",
+  "scope": "engineering smoke only; two updates do not establish accuracy"
+}

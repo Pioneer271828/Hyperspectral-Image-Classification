@@ -1,0 +1,588 @@
+{
+  "producer_commit": "01c29c82e92ce0a529749c53962202e9bf0dc5fe",
+  "audit_commit": "31b062ffa189cd428471a6492663b31dd96ddae1",
+  "status": "passed",
+  "updates": 18036,
+  "cases": [
+    {
+      "name": "paviaU-s64-capacity_control",
+      "target": "paviaU",
+      "seed": 64,
+      "mode": "capacity_control",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9547048509120941,
+      "train_fused_oa": {
+        "xuzhou": 1.0,
+        "whu-honghu": 0.928626642617882
+      },
+      "source_val_fused_oa": {
+        "xuzhou": 0.9885057471264368,
+        "whu-honghu": 0.9209039548022598
+      },
+      "loss_first30": 7.953269179662069,
+      "loss_last30": 0.45321192368865015,
+      "last50epoch_validation_gain": 0.006420135498046875,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "paviaU-s64-x_residual",
+      "target": "paviaU",
+      "seed": 64,
+      "mode": "x_residual",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9647202491760254,
+      "train_fused_oa": {
+        "xuzhou": 0.9971098265895953,
+        "whu-honghu": 0.9443442411749549
+      },
+      "source_val_fused_oa": {
+        "xuzhou": 0.9885057471264368,
+        "whu-honghu": 0.940934771443246
+      },
+      "loss_first30": 7.952446667353312,
+      "loss_last30": 0.4070748249689738,
+      "last50epoch_validation_gain": 0.00924500823020935,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "paviaU-s512-capacity_control",
+      "target": "paviaU",
+      "seed": 512,
+      "mode": "capacity_control",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9581960737705231,
+      "train_fused_oa": {
+        "xuzhou": 0.9956647398843931,
+        "whu-honghu": 0.9391909301726359
+      },
+      "source_val_fused_oa": {
+        "xuzhou": 0.9913793103448276,
+        "whu-honghu": 0.9250128402670775
+      },
+      "loss_first30": 7.66712638537089,
+      "loss_last30": 0.4896520977218946,
+      "last50epoch_validation_gain": 0.011042624711990356,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "paviaU-s512-x_residual",
+      "target": "paviaU",
+      "seed": 512,
+      "mode": "x_residual",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9636930227279663,
+      "train_fused_oa": {
+        "xuzhou": 0.9956647398843931,
+        "whu-honghu": 0.9525895387786653
+      },
+      "source_val_fused_oa": {
+        "xuzhou": 0.9885057471264368,
+        "whu-honghu": 0.9388803287108372
+      },
+      "loss_first30": 7.666388893127442,
+      "loss_last30": 0.44090488702058794,
+      "last50epoch_validation_gain": 0.005906522274017334,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "paviaU-s2048-capacity_control",
+      "target": "paviaU",
+      "seed": 2048,
+      "mode": "capacity_control",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9523935914039612,
+      "train_fused_oa": {
+        "xuzhou": 0.9956647398843931,
+        "whu-honghu": 0.9252769904663747
+      },
+      "source_val_fused_oa": {
+        "xuzhou": 0.9885057471264368,
+        "whu-honghu": 0.91628145865434
+      },
+      "loss_first30": 7.961002286275228,
+      "loss_last30": 0.5840733086069425,
+      "last50epoch_validation_gain": 0.011348128318786621,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "paviaU-s2048-x_residual",
+      "target": "paviaU",
+      "seed": 2048,
+      "mode": "x_residual",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9537816643714905,
+      "train_fused_oa": {
+        "xuzhou": 0.9956647398843931,
+        "whu-honghu": 0.9394485957227519
+      },
+      "source_val_fused_oa": {
+        "xuzhou": 0.985632183908046,
+        "whu-honghu": 0.9219311761684643
+      },
+      "loss_first30": 7.960109043121338,
+      "loss_last30": 0.5340035736560822,
+      "last50epoch_validation_gain": 0.00914090871810913,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "xuzhou-s64-capacity_control",
+      "target": "xuzhou",
+      "seed": 64,
+      "mode": "capacity_control",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9510346055030823,
+      "train_fused_oa": {
+        "paviaU": 1.0,
+        "whu-honghu": 0.9273383148673022
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9863013698630136,
+        "whu-honghu": 0.9157678479712378
+      },
+      "loss_first30": 7.955217742919922,
+      "loss_last30": 0.4920921102166176,
+      "last50epoch_validation_gain": 0.006420135498046875,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10394,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "xuzhou-s64-x_residual",
+      "target": "xuzhou",
+      "seed": 64,
+      "mode": "x_residual",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9579683542251587,
+      "train_fused_oa": {
+        "paviaU": 1.0,
+        "whu-honghu": 0.938675599072404
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9863013698630136,
+        "whu-honghu": 0.9296353364149974
+      },
+      "loss_first30": 7.954075082143148,
+      "loss_last30": 0.4576329618692398,
+      "last50epoch_validation_gain": 0.00998726487159729,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10394,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "xuzhou-s512-capacity_control",
+      "target": "xuzhou",
+      "seed": 512,
+      "mode": "capacity_control",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9546017348766327,
+      "train_fused_oa": {
+        "paviaU": 0.9976851851851852,
+        "whu-honghu": 0.9342952847204329
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9908675799086758,
+        "whu-honghu": 0.9183359013867488
+      },
+      "loss_first30": 7.669018618265787,
+      "loss_last30": 0.49629256476958594,
+      "last50epoch_validation_gain": 0.0051361024379730225,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10394,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "xuzhou-s512-x_residual",
+      "target": "xuzhou",
+      "seed": 512,
+      "mode": "x_residual",
+      "selected_step": 982,
+      "source_validation_macro_oa": 0.9559701979160309,
+      "train_fused_oa": {
+        "paviaU": 0.9953703703703703,
+        "whu-honghu": 0.9430559134243751
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9771689497716894,
+        "whu-honghu": 0.9347714432460195
+      },
+      "loss_first30": 7.667653576533,
+      "loss_last30": 0.46372303515672686,
+      "last50epoch_validation_gain": 0.006676912307739258,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10394,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "xuzhou-s2048-capacity_control",
+      "target": "xuzhou",
+      "seed": 2048,
+      "mode": "capacity_control",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9413041472434998,
+      "train_fused_oa": {
+        "paviaU": 1.0,
+        "whu-honghu": 0.9126513785106931
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9817351598173516,
+        "whu-honghu": 0.9008731381612738
+      },
+      "loss_first30": 8.03595183690389,
+      "loss_last30": 0.6404471452037493,
+      "last50epoch_validation_gain": 0.008960038423538208,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10394,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "xuzhou-s2048-x_residual",
+      "target": "xuzhou",
+      "seed": 2048,
+      "mode": "x_residual",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9472388327121735,
+      "train_fused_oa": {
+        "paviaU": 1.0,
+        "whu-honghu": 0.9245039938160268
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9771689497716894,
+        "whu-honghu": 0.9173086800205444
+      },
+      "loss_first30": 8.03467599550883,
+      "loss_last30": 0.5912607297301292,
+      "last50epoch_validation_gain": 0.0051361024379730225,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10394,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 186
+    },
+    {
+      "name": "whu-honghu-s64-capacity_control",
+      "target": "whu-honghu",
+      "seed": 64,
+      "mode": "capacity_control",
+      "selected_step": 822,
+      "source_validation_macro_oa": 0.9859667718410492,
+      "train_fused_oa": {
+        "paviaU": 0.9953703703703703,
+        "xuzhou": 0.9884393063583815
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9863013698630136,
+        "xuzhou": 0.985632183908046
+      },
+      "loss_first30": 6.338317584991455,
+      "loss_last30": 0.15224055697520575,
+      "last50epoch_validation_gain": 0.0,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 108
+    },
+    {
+      "name": "whu-honghu-s64-x_residual",
+      "target": "whu-honghu",
+      "seed": 64,
+      "mode": "x_residual",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9785270094871521,
+      "train_fused_oa": {
+        "paviaU": 1.0,
+        "xuzhou": 0.9942196531791907
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9771689497716894,
+        "xuzhou": 0.9798850574712644
+      },
+      "loss_first30": 6.336992979049683,
+      "loss_last30": 0.14860375449061394,
+      "last50epoch_validation_gain": 0.001436769962310791,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 108
+    },
+    {
+      "name": "whu-honghu-s512-capacity_control",
+      "target": "whu-honghu",
+      "seed": 512,
+      "mode": "capacity_control",
+      "selected_step": 942,
+      "source_validation_macro_oa": 0.98427414894104,
+      "train_fused_oa": {
+        "paviaU": 0.9976851851851852,
+        "xuzhou": 0.9942196531791907
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9771689497716894,
+        "xuzhou": 0.9913793103448276
+      },
+      "loss_first30": 6.475345738728842,
+      "loss_last30": 0.15211616878708203,
+      "last50epoch_validation_gain": 0.004566222429275513,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 108
+    },
+    {
+      "name": "whu-honghu-s512-x_residual",
+      "target": "whu-honghu",
+      "seed": 512,
+      "mode": "x_residual",
+      "selected_step": 902,
+      "source_validation_macro_oa": 0.9819910228252411,
+      "train_fused_oa": {
+        "paviaU": 0.9907407407407407,
+        "xuzhou": 0.9942196531791907
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9726027397260274,
+        "xuzhou": 0.9913793103448276
+      },
+      "loss_first30": 6.474013741811117,
+      "loss_last30": 0.14933095177014669,
+      "last50epoch_validation_gain": 0.0,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 108
+    },
+    {
+      "name": "whu-honghu-s2048-capacity_control",
+      "target": "whu-honghu",
+      "seed": 2048,
+      "mode": "capacity_control",
+      "selected_step": 922,
+      "source_validation_macro_oa": 0.9828373491764069,
+      "train_fused_oa": {
+        "paviaU": 1.0,
+        "xuzhou": 0.9884393063583815
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9771689497716894,
+        "xuzhou": 0.9885057471264368
+      },
+      "loss_first30": 6.483582639694214,
+      "loss_last30": 0.14910830582181614,
+      "last50epoch_validation_gain": 0.00228312611579895,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8320
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 108
+    },
+    {
+      "name": "whu-honghu-s2048-x_residual",
+      "target": "whu-honghu",
+      "seed": 2048,
+      "mode": "x_residual",
+      "selected_step": 1002,
+      "source_validation_macro_oa": 0.9828373491764069,
+      "train_fused_oa": {
+        "paviaU": 1.0,
+        "xuzhou": 0.9927745664739884
+      },
+      "source_val_fused_oa": {
+        "paviaU": 0.9771689497716894,
+        "xuzhou": 0.9885057471264368
+      },
+      "loss_first30": 6.482173760732015,
+      "loss_last30": 0.1431424491107464,
+      "last50epoch_validation_gain": 0.004566222429275513,
+      "positive_m4_gradient_steps": 1002,
+      "changed_parameters": {
+        "adapter": 10465,
+        "cnn": 20096,
+        "graph": 17088,
+        "m4": 8256
+      },
+      "exact_reload_repeats": 3,
+      "metrics": 12,
+      "recalls": 108
+    }
+  ],
+  "source_validation_by_held_target": {
+    "paviaU": {
+      "capacity_control": {
+        "mean_oa_percent": 95.50981720288594,
+        "sample_std_percent": 0.292116869236194
+      },
+      "x_residual": {
+        "mean_oa_percent": 96.07316454251607,
+        "sample_std_percent": 0.6040734725898793
+      },
+      "paired_deltas_pp": [
+        1.0015398263931274,
+        0.5496948957443237,
+        0.1388072967529297
+      ],
+      "mean_delta_pp": 0.563347339630127
+    },
+    "xuzhou": {
+      "capacity_control": {
+        "mean_oa_percent": 94.89801625410716,
+        "sample_std_percent": 0.6882732824127998
+      },
+      "x_residual": {
+        "mean_oa_percent": 95.3725794951121,
+        "sample_std_percent": 0.5706020195904968
+      },
+      "paired_deltas_pp": [
+        0.6933748722076416,
+        0.13684630393981934,
+        0.5934685468673706
+      ],
+      "mean_delta_pp": 0.47456324100494385
+    },
+    "whu-honghu": {
+      "capacity_control": {
+        "mean_oa_percent": 98.43594233194987,
+        "sample_std_percent": 0.1566453109164272
+      },
+      "x_residual": {
+        "mean_oa_percent": 98.11184604962666,
+        "sample_std_percent": 0.22838084032269731
+      },
+      "paired_deltas_pp": [
+        -0.7439762353897095,
+        -0.22831261157989502,
+        0.0
+      ],
+      "mean_delta_pp": -0.3240962823232015
+    }
+  },
+  "head_metrics": 216,
+  "class_recalls": 2880,
+  "protected_files_and_inputs": 2123,
+  "audit_seconds": 130.4601346962154,
+  "training_controller_seconds": 13534.055970817339,
+  "training_calls_seconds": 12137.151001499966,
+  "launch_sha256": "0ab7b356b0dd9c63aee67fb2e6b7aca147c63ec4fbb242e6d9c0089bbc63e260",
+  "acceptance_sha256": "4a891afd5a35545724481ff9b2da057e80f7842e556479b35065c2047186d54d"
+}

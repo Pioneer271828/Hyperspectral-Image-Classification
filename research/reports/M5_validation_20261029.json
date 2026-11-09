@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "module": "M5",
+  "issue": 15,
+  "pr": 16,
+  "baseline_commit": "b9ef4c98eea3a1df6f4ac4deebc2767fe94050cd",
+  "tested_commit": "231258bdbddaf1d500906851795308f305623956",
+  "branch": "codex/issue-15-m5-backbone",
+  "source_hash": "30708ea5e6994824c75adb8ed2cb9bddb2ae31ce681688013adb19533ccd2aa0",
+  "status": "passed",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "unit_tests": 78,
+  "new_m5_tests": 7,
+  "legacy_comparison_cases": 60,
+  "legacy_output_tolerance": {
+    "rtol": 0.00001,
+    "atol": 0.000001
+  },
+  "legacy_gradient_tolerance": {
+    "rtol": 0.0002,
+    "atol": 0.000002
+  },
+  "parameter_keys_count_and_bn_buffers_unchanged": true,
+  "checks": [
+    {
+      "name": "unit",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cpu",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cpu"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "smoke_cuda",
+      "command": [
+        "/home/rmvision/venvs/hsi-baseline/bin/python",
+        "smoke_test.py",
+        "--device",
+        "cuda"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "spatial_training": [
+    {
+      "variant": "plain",
+      "config": "configs/experiments/m5_spatial_plain.json",
+      "run_id": "m5_paviau_plain-s2026-afd877100dbf500e6026",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "test_missing_classes": [
+        3,
+        7
+      ],
+      "graph_assignment_mode": "learned",
+      "graph_adjacency_mode": "learned",
+      "stage_trace": {
+        "cnn_stage1": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              448,
+              128
+            ],
+            [
+              784,
+              128
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 7.955940246582031,
+          "gradient_l1_max": 9.969156265258789
+        },
+        "graph_stage1": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              12,
+              128
+            ],
+            [
+              16,
+              128
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 2.660515308380127,
+          "gradient_l1_max": 4.14547061920166
+        },
+        "cnn_stage2": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              448,
+              64
+            ],
+            [
+              784,
+              64
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 4.069217681884766,
+          "gradient_l1_max": 4.506425857543945
+        },
+        "graph_stage2": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              12,
+              64
+            ],
+            [
+              16,
+              64
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 2.9181814193725586,
+          "gradient_l1_max": 3.679208517074585
+        }
+      }
+    },
+    {
+      "variant": "fixed_q",
+      "config": "configs/experiments/m5_spatial_fixed_q.json",
+      "run_id": "m5_paviau_fixed_q-s2026-98f5c9655b51ab84ca8a",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "test_missing_classes": [
+        3,
+        7
+      ],
+      "graph_assignment_mode": "fixed_grid",
+      "graph_adjacency_mode": "learned",
+      "stage_trace": {
+        "cnn_stage1": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              448,
+              128
+            ],
+            [
+              784,
+              128
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 7.956225395202637,
+          "gradient_l1_max": 9.96955680847168
+        },
+        "graph_stage1": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              12,
+              128
+            ],
+            [
+              16,
+              128
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 3.183708667755127,
+          "gradient_l1_max": 4.1453657150268555
+        },
+        "cnn_stage2": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              448,
+              64
+            ],
+            [
+              784,
+              64
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 4.069857120513916,
+          "gradient_l1_max": 4.5063629150390625
+        },
+        "graph_stage2": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              12,
+              64
+            ],
+            [
+              16,
+              64
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 3.6498074531555176,
+          "gradient_l1_max": 3.6764373779296875
+        }
+      }
+    },
+    {
+      "variant": "joint",
+      "config": "configs/experiments/m5_spatial_joint.json",
+      "run_id": "m5_paviau_joint-s2026-d2c087618424765231d9",
+      "attempt": "0001",
+      "completed": "completed",
+      "resumed": "skipped",
+      "optimizer_steps": 2,
+      "selection": "val_loss",
+      "plan_hash": "edb778be5ec7e8a8d00d666ca860fbbb2e9ca1bb3c7cd662e7db2ad80d59fa21",
+      "statistics_hash": "c188d202de330eb839bbe552cf8dba7a2839298a6cc8a91341aa51052ef7e9c7",
+      "test_missing_classes": [
+        3,
+        7
+      ],
+      "graph_assignment_mode": "learned",
+      "graph_adjacency_mode": "learned",
+      "stage_trace": {
+        "cnn_stage1": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              448,
+              128
+            ],
+            [
+              784,
+              128
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 7.678529262542725,
+          "gradient_l1_max": 9.811328887939453
+        },
+        "graph_stage1": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              12,
+              128
+            ],
+            [
+              16,
+              128
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 2.6935739517211914,
+          "gradient_l1_max": 4.148791790008545
+        },
+        "cnn_stage2": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              448,
+              64
+            ],
+            [
+              784,
+              64
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 4.055037975311279,
+          "gradient_l1_max": 4.507572174072266
+        },
+        "graph_stage2": {
+          "forward_calls": 84,
+          "output_shapes": [
+            [
+              12,
+              64
+            ],
+            [
+              16,
+              64
+            ]
+          ],
+          "backward_calls": 2,
+          "gradient_l1_min": 2.924856185913086,
+          "gradient_l1_max": 3.6987040042877197
+        }
+      }
+    }
+  ],
+  "training_process_peak_allocated_bytes": 42101248,
+  "training_process_peak_reserved_bytes": 56623104,
+  "artifacts": "/home/train/hsi-pioneer271828/runs/m5-validation-01",
+  "failed_attempts": [],
+  "limits": [
+    "Two optimizer updates per configuration are engineering validation, not convergence or accuracy evidence.",
+    "PaviaU test partition lacks classes 3 and 7; no split redraw.",
+    "M4 not implemented: only the independent CNN stage input is exercised.",
+    "GraphState validation/diagnostics cause synchronization; no speed claim."
+  ]
+}

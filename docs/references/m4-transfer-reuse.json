@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "issue": 165,
+  "kind": "accepted_internal_module_adaptation",
+  "reviewed_before_implementation": true,
+  "reviewed_guides": ["docs/guides/region-residual-m4.md", "docs/guides/m4-joint-training.md", "docs/guides/reference-code-reuse.md"],
+  "internal_revision": "0b1dc9f6dfbbafde43922e3a4f0fa3dce978e6e6",
+  "components": ["model/region_residual_decomposition.py", "model/region_pixel_alignment.py", "scripts/train_joint_m4.py:graph_binding", "source_training.py", "target_training.py", "target_initialization.py"],
+  "original_acceptance": ["f6e937300b3393e0adf2f685909ce1fc289cf56c", "5c0f54b7df09e7115fa3fc04e5a3e856c404dcbd"],
+  "scope": "Reuse already accepted project decomposition and matched graph contracts; add source/target protocol adapters without modifying underlying model math or defaults.",
+  "external_new_algorithm_or_source": false,
+  "external_upstream_sha_or_license": null,
+  "permission_scope": "Existing user-authorized project code; no external code copied or new external license claim.",
+  "prior_evidence": "M4-J2 and M4-S2 fixed joint benchmarks; transfer accuracy untested. No new external-paper reproduction is claimed.",
+  "capacity_limits": {"x_residual_added_parameters": 8256, "capacity_control_added_parameters": 8320, "exact_parameter_or_flop_match": false},
+  "new_validation": ["none delegates legacy exactly", "matched source modes and fresh target heads/domains", "source graph/pair/provenance binding", "gradient and actual M4 updates", "CPU continuation and native GPU reload", "real short-only chain without query labels"],
+  "full_accuracy_stage": "separately register source pretraining and matched target study after engineering"
+}

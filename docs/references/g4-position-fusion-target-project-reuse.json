@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "issue": 232,
+  "plan_sections": [
+    "master2.3",
+    "master existing final64 fixed.8 fusion",
+    "implementation12/18.3F/18.4"
+  ],
+  "sources": [
+    {
+      "commit": "a6ef1f93adbbf68b62c24e4fd9ae78834f311a95",
+      "path": "position_gated_fusion.py",
+      "scope": "Unchanged independent scalar-kernel arithmetic; accepted230 receipt required before real init/config proof",
+      "sha256": "65725ab0984350756d38fb2fc7c38206d19e679de377370dda5438cbf8d891e4"
+    },
+    {
+      "commit": "045a35ae431b75149367256a476b40b2a3777440",
+      "path": "g4_fusion_target.py",
+      "scope": "Complete none-source fixed initialization, original heads/probability losses and orderedBN"
+    },
+    {
+      "commit": "5f85e2220ce3ce357d99e6faaccca51676ce8502",
+      "path": "g4_normalized_edge_target.py",
+      "scope": "Explicit paired-hash custom loader pattern, tensor-only original state and configuration binding"
+    }
+  ],
+  "kernel_receipt": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/m8-position-fusion-issue230-engineering01/receipt.json",
+    "sha256": "2f99fc7bc1579121851bd2a9acc3dba3c2ec58197ffc7ddb18d77fd551985e39",
+    "status": "kernel_engineering_passed"
+  },
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "reference_review": "docs/references/m8-position-gate-reference-review.json",
+  "license_scope": "Internal minimal integration of independently implemented project kernel; same original-author-paper/MIT inspection recorded in230, not new external code reuse",
+  "compatibility": [
+    "Default fixed has no gate or new state and original backbone class",
+    "Enabled local backbone subclass overrides only final fuse_features; original model methods and kernel forward identity captured",
+    "Bound gate uses nn.Module default get/set_extra_state: full-model state remains tensors, exact config in G4 binding/sidecar",
+    "Bound standalone payload unsupported; dedicated full-model loader required; original generic loader rejects enabled extra state keys",
+    "Original loss, labels, source, DomainBN, graph, sampling and update budget unchanged"
+  ],
+  "limits": [
+    "Component initialization/operator/BN/reload only; no bounded12/full/campaign/query",
+    "New129 parameters and8-byte marker, no matched-capacity or speed claim",
+    "Real config/init only after230receipt; no real NN/BN/update/query",
+    "No calibrated physical reliability or originalGMU reproduction",
+    "RealB0/R/F/R+F and support/K/spatial/sensor/M4 combinations after184fullacceptance/audit/review/original331query/204analysis"
+  ]
+}

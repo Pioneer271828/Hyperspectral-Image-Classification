@@ -1,0 +1,427 @@
+{
+  "schema_version": 1,
+  "scope": "engineering acceptance passed; full experiment in progress",
+  "captured_at": "2026-11-02T11:03:28.604248+00:00",
+  "remote": "10.69.37.243:1222",
+  "container": "lxc",
+  "branch": "codex/issue-62-class-sampling",
+  "tested_commit": "b18660d10eea972e5eb94fd84fe8976dd7698014",
+  "clean": true,
+  "checkout": "/home/lbx/hsi-pioneer271828/checkouts/g3-sampling-lxc-b18660d",
+  "environment": {
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "numpy": "2.0.2",
+    "cuda": "12.8",
+    "visible_gpu": "GPU-2fd29d4e-c4c7-618b-22d8-3c2fa73e48e5",
+    "gpu": "NVIDIA GeForce RTX 4090"
+  },
+  "dataset_files_verified": 17,
+  "dataset_bytes_verified": 503329744,
+  "dataset_scope": "PaviaU and Xuzhou, including12 historical split-reference files; training uses frozen development protocol",
+  "tests": [
+    {
+      "name": "test_container_runtime",
+      "tests": 1,
+      "unittest_seconds": 0.003,
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_container_runtime.py",
+        "-v"
+      ],
+      "process_wall_seconds": 0.12808926100842655,
+      "status": "passed"
+    },
+    {
+      "name": "test_tile_sampling",
+      "tests": 3,
+      "unittest_seconds": 1.117,
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_tile_sampling.py",
+        "-v"
+      ],
+      "process_wall_seconds": 1.2567414389923215,
+      "status": "passed"
+    },
+    {
+      "name": "test_development_budget_controls",
+      "tests": 1,
+      "unittest_seconds": 0.003,
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_development_budget_controls.py",
+        "-v"
+      ],
+      "process_wall_seconds": 9.392798739019781,
+      "status": "passed"
+    },
+    {
+      "name": "test_development_training",
+      "tests": 2,
+      "unittest_seconds": 3.46,
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_development_training.py",
+        "-v"
+      ],
+      "process_wall_seconds": 8.561424796935171,
+      "status": "passed"
+    },
+    {
+      "name": "test_sampling_rebuild_review",
+      "tests": 1,
+      "unittest_seconds": 0.09,
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_sampling_rebuild_review.py",
+        "-v"
+      ],
+      "process_wall_seconds": 5.02541399304755,
+      "status": "passed"
+    },
+    {
+      "name": "test_spatial_development",
+      "tests": 2,
+      "unittest_seconds": 0.012,
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_spatial_development.py",
+        "-v"
+      ],
+      "process_wall_seconds": 0.14456519507803023,
+      "status": "passed"
+    },
+    {
+      "name": "test_transfer_training",
+      "tests": 4,
+      "unittest_seconds": 3.845,
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_transfer_training.py",
+        "-v"
+      ],
+      "process_wall_seconds": 9.354894674848765,
+      "status": "passed"
+    }
+  ],
+  "test_count": 14,
+  "real_smoke": {
+    "status": "passed",
+    "steps": 2,
+    "test_evaluated": false,
+    "scope": "real-data integration only; not an accuracy improvement experiment",
+    "peak_allocated_bytes": 87193600,
+    "peak_reserved_bytes": 121634816
+  },
+  "development_exact_match": true,
+  "development_hash": "1cf6c1394c1f5e6e82c0bf9c1d6c08004b6b477edefcaa73b73fdfe22ecfc984",
+  "parent_task_hash": "c9a2e0060d552a737055f4d6fef2b2c490bb3665bf521918f41c7647ad59956b",
+  "commands": [
+    {
+      "name": "environment",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-c",
+        "import sys,torch,numpy,scipy,sklearn,skimage,spectral,h5py; print(sys.version); print(torch.__version__,torch.version.cuda,numpy.__version__); assert torch.cuda.is_available() and torch.cuda.device_count()==1; print(torch.cuda.get_device_name(0))"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 5.109442646848038
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 0.0079130579251796
+    },
+    {
+      "name": "test_container_runtime",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_container_runtime.py",
+        "-v"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 0.12808926100842655
+    },
+    {
+      "name": "test_tile_sampling",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_tile_sampling.py",
+        "-v"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 1.2567414389923215
+    },
+    {
+      "name": "test_development_budget_controls",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_development_budget_controls.py",
+        "-v"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 9.392798739019781
+    },
+    {
+      "name": "test_development_training",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_development_training.py",
+        "-v"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 8.561424796935171
+    },
+    {
+      "name": "test_sampling_rebuild_review",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_sampling_rebuild_review.py",
+        "-v"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 5.02541399304755
+    },
+    {
+      "name": "test_spatial_development",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_spatial_development.py",
+        "-v"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 0.14456519507803023
+    },
+    {
+      "name": "test_transfer_training",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_transfer_training.py",
+        "-v"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 9.354894674848765
+    },
+    {
+      "name": "rebuild-cli-help",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "scripts/run_sampling_rebuild.py",
+        "--help"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 4.9153811580035836
+    },
+    {
+      "name": "prepare-protocol",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "scripts/prepare_transfer_protocol.py",
+        "--expected-commit",
+        "b18660d10eea972e5eb94fd84fe8976dd7698014",
+        "--data-root",
+        "/home/lbx/hsi-pioneer271828/datasets/current",
+        "--out-dir",
+        "/home/lbx/hsi-pioneer271828/runs/transfer-protocol-lxc-20261102-01"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 3.191413363907486
+    },
+    {
+      "name": "prepare-development",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "scripts/prepare_spatial_development.py",
+        "--expected-commit",
+        "b18660d10eea972e5eb94fd84fe8976dd7698014",
+        "--data-root",
+        "/home/lbx/hsi-pioneer271828/datasets/current",
+        "--protocol-root",
+        "/home/lbx/hsi-pioneer271828/runs/transfer-protocol-lxc-20261102-01",
+        "--out-dir",
+        "/home/lbx/hsi-pioneer271828/runs/g3-development-lxc-20261102-01"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 5.010417451849207
+    },
+    {
+      "name": "real-smoke",
+      "command": [
+        "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+        "/home/lbx/hsi-pioneer271828/transfer-records/bootstrap_hsi_lxc_e4_v3.py",
+        "--real-smoke"
+      ],
+      "status": "passed",
+      "returncode": 0,
+      "wall_seconds": 9.752357559045777
+    }
+  ],
+  "training_command": [
+    "/home/lbx/hsi-pioneer271828/envs/hsi/bin/python",
+    "-u",
+    "scripts/run_sampling_rebuild.py",
+    "--expected-commit",
+    "b18660d10eea972e5eb94fd84fe8976dd7698014",
+    "--data-root",
+    "/home/lbx/hsi-pioneer271828/datasets/current",
+    "--protocol-root",
+    "/home/lbx/hsi-pioneer271828/runs/transfer-protocol-lxc-20261102-01",
+    "--development-root",
+    "/home/lbx/hsi-pioneer271828/runs/g3-development-lxc-20261102-01",
+    "--out-dir",
+    "/home/lbx/hsi-pioneer271828/runs/g3-sampling-lxc-20261102-01"
+  ],
+  "training_status": "running",
+  "completed_source_runs": 0,
+  "completed_target_runs": 0,
+  "progress_snapshot": {
+    "phase": "source_train",
+    "step": 6510,
+    "budget": 10000,
+    "tile_id": 104,
+    "loss": {
+      "fused_supervised": 0.14916138350963593,
+      "graph_supervised": 0.07680933177471161,
+      "cnn_supervised": 0.2872202694416046,
+      "weighted_fused_supervised": 0.14916138350963593,
+      "weighted_graph_supervised": 0.07680933177471161,
+      "weighted_cnn_supervised": 0.2872202694416046,
+      "graph_compactness": 0.8300416469573975,
+      "weighted_graph_compactness": 0.00830041617155075,
+      "graph_entropy": 1.326653003692627,
+      "weighted_graph_entropy": 0.0013266530586406589,
+      "graph_balance": 0.1048291027545929,
+      "weighted_graph_balance": 0.001048290985636413,
+      "total": 0.5238663554191589
+    }
+  },
+  "training_root": "/home/lbx/hsi-pioneer271828/runs/g3-sampling-lxc-20261102-01",
+  "plan": {
+    "source_updates_per_seed": 10000,
+    "target_updates_per_run": 5000,
+    "new_source_updates": 20000,
+    "new_target_updates": 40000,
+    "val_every": 100,
+    "selection": "minimum fusion validation NLL, earliest tie",
+    "backbone_lr": 5e-05,
+    "head_lr": 0.0005,
+    "baseline": "uniform retrained in this environment; historical controls not pooled"
+  },
+  "test_evaluated": false,
+  "earlier_preserved_attempts": [
+    {
+      "path": "/home/lbx/hsi-pioneer271828/runs/g3-sampling-lxc-preflight-20261102-01",
+      "status": "failed",
+      "error": "RuntimeError('numpy-own-venv failed; logs preserved')",
+      "tests_or_training_executed": false
+    },
+    {
+      "path": "/home/lbx/hsi-pioneer271828/runs/g3-sampling-lxc-preflight-20261102-02",
+      "status": "failed",
+      "error": "RuntimeError('numpy-own-venv failed; logs preserved')",
+      "tests_or_training_executed": false
+    }
+  ]
+}
