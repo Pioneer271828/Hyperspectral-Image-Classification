@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 343,
+  "issue": 345,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -923,9 +923,17 @@
       "report": "research/reports/WP04ResidualPosition_残差与位置融合组合接入验收_20261110.md",
       "chat_report": "2026-11-10本聊天组合接入CPU工程报告，随后连续推进，不作全WP04完成声明"
     }
+    ,{
+      "id": "WP06 同容量冻结逐层线性探针",
+      "state": "CPU工程通过；跨后端严格决策一致性未通过",
+      "evidence": "Issue345/PR346；tested b620ac1f69771400653e82938f4f7185b383d2f6，LXC CPU23/23 27.786s；10合成探针连续120+恢复120更新，完成0；权威概率NumPy复算2944格208召回/11输入不变；初始化图分支跨后端分类差异保留，未放宽门槛",
+      "remaining": "真实冻结模型与标签权限接入、真实逐层机制/空间重复/GPU/丰度仍待；并列分数不能当可靠语义证据；继续WP06删边控制的度数与距离匹配",
+      "report": "research/reports/WP06LinearProbe_同容量冻结逐层探针工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程与数值负结果报告；不作全WP06完成声明"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp04_residual_position_cpu_passed_continue_wp06_probes",
+  "execution_state": "wp06_probe_cpu_passed_cross_backend_decisions_failed_continue_controls",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
