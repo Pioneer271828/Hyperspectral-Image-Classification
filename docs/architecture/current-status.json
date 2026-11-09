@@ -621,6 +621,14 @@
       "remaining": "待冻结真实跨传感器对照、逐类/最差下降/遗忘与GPU；G2真实文件和波段准入缺口另保留。",
       "report": "research/reports/P4E4b_在线测试时适配完整工程验收_20261109.md",
       "chat_report": "本聊天2026-11-09 E4b在线测试时适配完整工程验收。"
+    },
+    {
+      "id": "E3候选内预算硬连接",
+      "state": "模型接入、整网恢复及独立观测审计工程通过",
+      "evidence": "tested 4124c47cfdca9991a8ab9b2cc340d2d148754c3a，CPU536/536、checker；运行时8289e227275eabbafbb1eaea75cf4d6b0c1e8580，GPU8/8、24精确重载。PaviaU两开发块12组，100边降64、36重载；独立12传播/36概率/44文件不变，旧输出6数组逐位相同。真实优化/query0。",
+      "remaining": "完整训练CLI登记、多种子等预算真实训练/逐类保护/速度收益待验；当前耗时不一致改善，远程边扩展待局部效果依据。",
+      "report": "research/reports/E3_候选内预算硬连接与整网恢复工程验收_20261109.md",
+      "chat_report": "本聊天2026-11-09 E3完整工程报告。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
