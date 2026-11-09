@@ -31,7 +31,7 @@ def inputs():
 
 def predict(net, data, diagnostics=False):
     x, wave, q, a = data
-    return net(x, "demo", q, a, wavelengths=wave, return_graph_info=diagnostics,
+    return net("demo", x, q, a, wavelengths=wave, return_graph_info=diagnostics,
                return_diagnostics=diagnostics)
 
 
