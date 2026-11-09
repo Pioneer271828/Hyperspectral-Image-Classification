@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 299,
+  "issue": 301,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "ea8fa2b8718945975bd58b27d1b57b60413ddfc3",
+  "main_snapshot": "f11a537f081394f7d9848942e3fc03d966a3e64d",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -754,6 +754,13 @@
       "evidence": "tested4ef796a；CPU8/35；独立3合成协议231000重复值/231界限/41文件不变，簇少/尾部不足正确不确定",
       "remaining": "真实独立空间确认、采样假设审查、模型种子不确定性及实际精度成本结论待；下一CUR正式优化/曝光/恢复接入，长训练暂停。",
       "report": "research/reports/DY2C_配对空间簇不确定性工程验收_20261109.md"
+    },
+    {
+      "id": "CUR-S3课程实际优化与恢复",
+      "state": "CPU实际网络合成接入通过，真实收益未验",
+      "evidence": "tested3661277；CPU7/35；六模式24与7+17精确恢复；独立3抽样种子6合成模型/1100权重/1458混淆/42文件不变",
+      "remaining": "GPU与真实完整对照、小类/跨条件收益待；下一CUR-O实际观测课程接入，样本课程关闭；长训练暂停",
+      "report": "research/reports/CURS3_课程实际优化曝光与恢复接入工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -878,6 +885,13 @@
       "tested_sha": "3a3638d10a33fbbd11dc11702b2cdd2c20e57bc2",
       "merge_sha": "ea8fa2b8718945975bd58b27d1b57b60413ddfc3",
       "scope": "DY-2B CPU10/43; synthetic33points/8019cells/36areas and separate8actualcostrows; real curve pending"
+    },
+    {
+      "pr_number": 300,
+      "head_sha": "769fa3ed5559063ccc5290151e0022244d406230",
+      "tested_sha": "4ef796a75dedd52127d57a4c7e15915870048e84",
+      "merge_sha": "f11a537f081394f7d9848942e3fc03d966a3e64d",
+      "scope": "DY-2C CPU8/35; independent231000replicates/231bounds; conditional approximation only, real inference pending"
     }
   ]
 }
