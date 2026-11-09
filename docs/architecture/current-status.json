@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 315,
+  "issue": 317,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "6fc0d3d83a2c745f0450884fb43f3bcba6767941",
+  "main_snapshot": "5042730f22076cb56d45d68c707ef9a262304de3",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -808,8 +808,16 @@
       "id": "E3-C6驻留块完整前向与反向CPU成本",
       "state": "CPU计时与插桩不变工程通过，真实部署成本未验",
       "evidence": "tested1ccfa0c；专项6/另28回归；独立既有24合成模型48块/1824前向912反向/2880统计/4704梯度/212文件不变；优化0",
-      "remaining": "GPU、真实整景/完整优化步/I-O/显存能耗和配对速度对照待。下一实施§13输入敏感度/局部遮挡/区域替换；长训练暂停",
+      "remaining": "E0-B1输入敏感度/局部干预CPU工程已验；GPU、真实整景/完整优化步/I-O/显存能耗和配对速度对照仍待，长训练暂停",
       "report": "research/reports/E3C6_完整图路由前向反向CPU成本工程验收_20261109.md"
+    },
+    {
+      "id": "E0-B1冻结开发块输入敏感度与区域干预",
+      "state": "CPU工程及独立梯度复算通过，真实机制未验",
+      "evidence": "tested884db11；专项6/另28回归；24旧合成模型48块/373248精确梯度/720头概率/212文件不变；独立新增优化0；修复固定验证诊断no_grad截断",
+      "remaining": "GPU、真实逐类/小类、整景与非GraphRouteRun接入待；下一小目标/细窄结构诊断，长训练暂停",
+      "report": "research/reports/E0B1_冻结开发块输入敏感度与局部替换工程验收_20261109.md",
+      "chat_report": "本聊天E0-B1完整CPU工程交付；随后继续小目标/细窄结构诊断。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -990,6 +998,13 @@
       "tested_sha": "d73b5873fbd368f9b133c253b3d29c760d332b38",
       "merge_sha": "6fc0d3d83a2c745f0450884fb43f3bcba6767941",
       "scope": "E3-C5 CPU7 plus27; 6existing synthetic models +1new24-step fixture/8505cells/945recalls/584pins; budget2 degenerate, no accuracy claim"
+    },
+    {
+      "pr_number": 316,
+      "head_sha": "89ddc8222590177233673525c1dd93a77b49fe61",
+      "tested_sha": "1ccfa0c09a3986cfaa8c54e8d0ae25d59398bcfa",
+      "merge_sha": "5042730f22076cb56d45d68c707ef9a262304de3",
+      "scope": "E3-C6 CPU6 plus28; 24 synthetic models48blocks/2880statistics/4704gradient entries/212pins; CPU resident compute only"
     }
   ]
 }
