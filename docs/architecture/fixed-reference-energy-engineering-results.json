@@ -1,0 +1,497 @@
+{
+  "status": "passed",
+  "scope": "E0-B4 CPU fixed reference graph energy engineering",
+  "branch": "codex/fixed-reference-energy",
+  "tested_sha": "68ef38eb9322c9a869a560802a9e0cdde57119a1",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "scipy": "1.15.3",
+  "device": "CPU",
+  "threads": 1,
+  "gpu_tests": 0,
+  "tests": [
+    {
+      "command": "python -m unittest tests.test_fixed_reference_energy -v",
+      "passed": 7,
+      "seconds": 6.55
+    },
+    {
+      "command": "python -m unittest tests.test_representation_redundancy tests.test_graph_support_diagnostics tests.test_graph_route_training tests.test_repository_delivery -v",
+      "passed": 27,
+      "seconds": 52.027
+    }
+  ],
+  "checker": {
+    "python_files": 525,
+    "json_files": 167,
+    "frozen_runtime_unchanged": true
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/receipt.json",
+    "sha256": "867a722f4a2a082a174050ad0126c6c5024c1657d5a7dde359adf24ad8604558",
+    "summary": {
+      "status": "passed",
+      "tested_sha": "68ef38eb9322c9a869a560802a9e0cdde57119a1",
+      "existing_synthetic_models": 24,
+      "development_blocks": 48,
+      "array_cases": 24,
+      "independent_channel_energies": 12480,
+      "independent_rank_summaries": 168,
+      "independent_probability_heads": 144,
+      "independent_confusion_cells": 11664,
+      "independent_recall_entries": 1296,
+      "common_reference_hashes": {
+        "devtrain": [
+          "bb276e35a852c7316488b7ce55e2ac431c8be5404cf8d5cd6ed4da7bf7524c18"
+        ],
+        "devval": [
+          "7a2a9f246faa24dc2ea46d7e01e6d20261ab982b1e796013c6b60e7d7f55ad7e"
+        ]
+      },
+      "protected_files": {
+        "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/acceptance.json": "413b23ab9350201bbd2cf10de675ff355a06a2f7d2207774ec487da709d6509c",
+        "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/registration.json": "fc61d64f204a78595856cd84394809911cce89eb83e19a097ecb3fb1980d4ad2",
+        "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/state.pt": "6fff4651587b3dba42bcb40c4c7e43b8e3f0f215e7088b7745203e3c7ab4e647",
+        "/home/lbx/hsi-pioneer271828/runs/p4-pavia-spatial-real01/case-0-full/result.json": "671c11a5fb12104f11d5935c2e2cd9fc2cec01eb26e7ad6d98be90c05edf607f",
+        "/home/lbx/hsi-pioneer271828/datasets/snapshots/joint-honghu-20261103-issue97/dataset/PaviaU/PaviaU.mat": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+        "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-plan.json": "3f15f0650f500959e603bccd2614226c37089eafc8f06637b010bd69347363d8",
+        "/home/lbx/hsi-pioneer271828/runs/p4-spatial-observation-preflight02/paviaU-statistics.json": "5996f5ad84917f7ad88cd2d62c8cd9f7e9b7a81f8a003df4fe9fd672ef2e4162",
+        "/home/lbx/hsi-pioneer271828/runs/e4b-online-tta-pavia01/receipt.json": "2435a74dc65e27b496db58b998498fb84cb91792facccdef7313ef445c6b410a",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/receipt.json": "bc880739cc14817102abee2895d4de1a68e2e8077dbf399ce0dcf11d9d67170a",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/registration.json": "51d21d9bc436f266c4cfe11ea3efbd58d6faef32d8394617e28a304e98e5cbdc",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile0.npz": "76ac4d37fb21b8f3d99e5ad84f926ac54e922fd71521e2a4d5c49621035a375c",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile0.npz": "fd3570bc8e82efe498cddd5a2adddc799bb62ec1313651610193d300745d4016",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile0.npz": "4a4c82e9cc9227a0e4cf92e4ad219afe658fdfb4358f44f68551f8ba954919ab",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile0.npz": "359a91b8b3a6be6ed63949f734cd0bd36e89bc434c2c53594f17206c4e708128",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense-tile1.npz": "fd7e9f2bc598b327b9c61ec1b387c4b423a09b537d597c16ea3417078dd6abf0",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first-tile1.npz": "360a675ea86387a10c32e204c547a4058d251d3f4daec7ad5db4aadd7dacc619",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second-tile1.npz": "ee9c0a3c39ecd4bbbfd9137e9f42092bf74fe32c18152ad2f1a13d0f2bcf0ab8",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both-tile1.npz": "39167152d30eb4bd16fd21533c832ebd595bf8abc21f0578b65702dcf839919a",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/first.pt": "63b3ae865a4d90e4bcfdcfda1ae10ffc1201d6e4563e09c3eec04b85409bec1f",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/second.pt": "5acb822a3eea2fc2cc06a93114c49194f40a3cf2a9d172880d26f1685c7ea39c",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/both.pt": "9f8e353bed5a437ef4427966d18f95bc8b8ee906783322c641adc6ef4c9204fe",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt": "6905943d53a8063b130af1087bdf0b84fdc58eed45d103088be90bd7b7f75c54",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-pavia02/dense.pt.json": "4eb1c638946e3ed78cb69c3d06c274b295ce9e3fcc84be79ddd59700678d2f4d",
+        "/home/lbx/hsi-pioneer271828/runs/int8-model-independent01/receipt.json": "6abae12384985cf80ea74f9d24f2ec9df065253fc5674198568e5de7fe68bbe3",
+        "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/receipt.json": "a518141d098ad129cdafe22afd8575b687bd975ef031267119ca024b89a2bee1",
+        "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/registration.json": "7014ce153fa50a8de14ea57b0d605e73fa810b8b7df16d9eb3258fde3eccefa2",
+        "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/light.pt": "de0edfe92c9007286b7a193f08839195861f0b67d01eb8034284c2a81cf992d0",
+        "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/full.npz": "eaa847ea1410d545248e42348c5073caf4c27fb782dc6e758192caca491a1ed4",
+        "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/fast.npz": "8f43a2c9deaaa8d20a0df2dbc493b3ef46ad0009e84ac5b18f27ecdf4c7c6717",
+        "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/mixed_unknown.npz": "727336acb315132173d00521ab7be95b8318babe91b252858d5386490383b51c",
+        "/home/lbx/hsi-pioneer271828/runs/dy-cascade-pavia01/adaptive_all_fallback.npz": "eaa847ea1410d545248e42348c5073caf4c27fb782dc6e758192caca491a1ed4",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/receipt.json": "88413ca3a87c8fbdbfe2e1760d4d620b941cdcd4334af8d278417b616fbaf540",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/64-final.pt": "3e466ee926dcabd6c4881961630744afc396176288ac03b5edb1a272ada2bb83",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/512-final.pt": "53afbc11dba8dd2ecef3e182eeadd08838e91460682ab18e928b54025ef53031",
+        "/home/lbx/hsi-pioneer271828/runs/dy-light-head-independent02/2048-final.pt": "01df450601fa7c4f96d32063c9e0348b4c311c1acfc83dbed583d547d2c40a32",
+        "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/receipt.json": "9406de6cc498eb996b39990b0f07c2050d5088f8e0a575615aea018d0363f7b2",
+        "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/light-64.pt": "493af4ab17b3217ea6cae579963373c7e9c7499ec0ec603a3eae8fa35f524a53",
+        "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/light-512.pt": "f26d7a0892a2a5d41ead4da27a4980abb8a4d30dc0b06b364309111af77561ce",
+        "/home/lbx/hsi-pioneer271828/runs/dy-trained-light-independent02/light-2048.pt": "c8159a2b4245f59967f6d699baf2af6aa5c3dc4299f5b167cbc2469698152571",
+        "/home/lbx/hsi-pioneer271828/runs/dy-routing-controls-independent01/receipt.json": "c19bf5855f75809576e2f9c436404925b36cecdd00928791296a52f1557a052f",
+        "/home/lbx/hsi-pioneer271828/runs/dy-budget-curves-independent01/receipt.json": "55f1e7dd35fbe9db2666d44c4b567c41691c1f4ba9d4484a05e18e8193ca6495",
+        "/home/lbx/hsi-pioneer271828/runs/dy-paired-uncertainty-independent01/receipt.json": "3f17f2d0067c030a260b4e690920609bfb6aac6ca0237438440a31a6ee286583",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/receipt.json": "17423db45f5b23f04189cb68f57e097b98d50fa3eade6163d16d9d7000554ff5",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed64.json": "187f30eb641deeb479774d0ba931a42b23bf87cb2b48a3d6e31a7ae3121cdf56",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed2048-partial.pt": "08eeac762c3dd61c719653042bc964fe012ba515257393db3609878f7ada4bd4",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed2048.json": "74b26453c9c57fde0ece43f705c561ad6c4e47f1f81f01034a4708f81bfd0fe4",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed2048-completed.pt": "03f2366d524781c6270de60da0788101d0a7008d848161e0a67d828eb07dc809",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed64-partial.pt": "8da7252e26ea6d258051f57e49611ceeefb33e41158d5dfc2f2567498544d8a6",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/injected-failure.pt": "1de0cd7b2e9c80eac89aba4aafba93b191c00be2e6054e23337e1bd77be1927f",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed512-partial.pt": "144441ce2244d89fb12e76d3b447b9c1a9327b49e2e8f3542954664b4ad52271",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed512.json": "93b1703272cdc030f90ea1c4d857b57341947050ccebf090cd5df0645921b484",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed64-completed.pt": "3947cce2849068827bdae467bcb95603f1ced494bedf1e3729ca8dfdda839ce5",
+        "/home/lbx/hsi-pioneer271828/runs/curriculum-training-independent01/seed512-completed.pt": "493c1c365ab682678f257754725c96728734a1cf13c5a4af948d8ef9e71c1f2a",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-easy_to_hard.json": "2ec53285664c7c7d01ea7f2a3462844f8034ca8fadaa170fc8c9562e55b202df",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-fixed.json": "5d6db6edc9f0c205a99e08ce92a676a431ba59a70082e9f89765236ff530b49a",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/receipt.json": "d95029ea0b510e0415ccd16e48cfd4574697c3e7f3407103c011fbcdea538d82",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-fixed-partial.pt": "092071cfacd649f62c5c6ec6e90ff231076362b9f37581db79bba6b51b8abb09",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-random.json": "e9ab5ca3c31d192336c8d1e4349eef4ac3119f9d7a13c0593e74a4cd39d7c204",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-random-partial.pt": "b051246b446a17f58dbe7dbd32f3bd833b7d6fd3dbfc496fd92a0017f7c33d01",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-fixed.json": "8d207d5286f3ad4e94e1b74ab6d44f3e7c044d55f6d00fc17ee1180eec5d626a",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-hard_to_easy-partial.pt": "4c62e92bec3cce1a7621ab182f4d9537cf9ee1be5151e2e0c81ba09d677928f6",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-fixed-partial.pt": "66a44c3fb8725586e21d285286938d602ae13df7d0e54d3d43d577fa37ae22d7",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-easy_to_hard-partial.pt": "e02fcdcfcec686b8b89844dd02c837ab8a37b08e0821826d14988a6aee7e6ab8",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-fixed-completed.pt": "497e5650cbf17a8960093d480f2aa3eacb013e17c227576828f94e36912a4c7b",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-hard_to_easy.json": "7a8fe55b1e1e9abb420bf1500cb0c9368c03a550bfefeb4475cba6c81f431675",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-easy_to_hard-completed.pt": "1a7e1408a34525c3cd7e76f58bc9ff37ee881ab1783df4cf0f652d409d57f12d",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-fixed-completed.pt": "28f8ff8cdaa3a73a3c1a76cc107738d8a8f4e19b6d34bc35c1ea3acb10fe3208",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-easy_to_hard-completed.pt": "d92004cbd08ae038899dd08a0a196fc9d1468d95c677187f614086cea3aa6ce2",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-hard_to_easy-completed.pt": "db23d6231aea39c751699d5aeb52c9471c6ad2b33f9d8b29c05f5f6668c0b4b1",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-fixed-completed.pt": "086c83c1b550bbadb3284d8542ced9217c02cbb04f5b33a4c266897782ec9cb7",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-hard_to_easy.json": "47bfdfc63ef2a58d6cd3efe699ded7b86074c4057ed274515b5330cc7f8f0504",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-random-partial.pt": "5e3b10587480b731ebe3e1988bfba82a559c40cc0439b080216ca2ee2b9c6a65",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-random-completed.pt": "f998313a1f86b56b82c54ca782a25322416c414c75d6aeb481dea1699ce44b17",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-hard_to_easy-completed.pt": "e8f8c021e36bb976ff5e80bdeaa1e6e322eb74301fa5ffb62d8636b61886909a",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-fixed.json": "ae4ff36af78298b21b74569338c7daade75bf56986fe60ce954d9b4d361143c4",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-hard_to_easy-completed.pt": "09012580df9a5e060b78a341842641be6659d56fc380f73044b4583570854177",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-random.json": "16aa9df01d1dd2a50d9384f4ff0341025f17bb9a2ae8b917e153d55e200f2632",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-easy_to_hard-completed.pt": "c58acb48e01c64586c38695b98d1156128c24844c1272a275ec8b5fe04c0c180",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-easy_to_hard-partial.pt": "2117b46322537d2bf3946f18e0ff804f8e1d9e6d92c15aef66f939f7d4f83d43",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-easy_to_hard.json": "9518c2b635ff3512b98b1eefb2e48d5efcaa8c5120110647085ac9d262f81f49",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-hard_to_easy-partial.pt": "c73a9b1dcf61fbb3ebc5808f222d95c84e5d150057604f8bfc0e9ce33ae631c3",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-easy_to_hard.json": "0e790ea6c12609440d15d39b5e9d787755c820478b4c53602adbd8b1b0f6fae8",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-random-completed.pt": "94faeb42dc1381b912383800357e9b4af6e0c59968ec72745980a70a6c11cdbd",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-random-partial.pt": "6da6e3513fa0ff0a4b9547c0965d133507b0f91fd07ec4223f35eda137521f6b",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/64-random-completed.pt": "0eaa31005e05f1e66396b8f41a13409a5f1e48076a61e1e5bb6dc959589ec7f2",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/2048-hard_to_easy.json": "bac3e94c5af05e78057455763abee838dbbe7a72db8e1fa21d90c884f1a8e3ce",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-fixed-partial.pt": "1457ec19bcf5f1c7a1eb87c704a9ab358cec178ce5c21f0bba0ae4d096d4e2f4",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-hard_to_easy-partial.pt": "c8a4f959037569736d41ad0dd351972810bbad13724f483a211a9518dc3e05d7",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-random.json": "065f3cd941dd4f14a489f9779eade0b1d4879936a1256b02e04e784eda0d53f4",
+        "/home/lbx/hsi-pioneer271828/runs/observation-curriculum-training-independent01/512-easy_to_hard-partial.pt": "f0035900596ff7d9824d79058808d6328d0d3bc3c367dc908d37983c82b4b593",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-joint-partial.pt": "5907f57c4523c2d4fed6dec5d9b8019ffdadab5cff63a285f3f4946fed1fc48b",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-joint-partial.pt.json": "aab8f4df8ac937bc848c092859d6d36a11cb6d8b63b02c520125abc71d47d696",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-graph-partial.pt": "b48119ff93b25aacc98dd8af7300fa0df09a46a7a23240f93a73471a67ac25c5",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-joint.json": "19cb1936a49cc1e0a27b831739ec46a325349e1721616e15183b439926f48369",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-weight-partial.pt": "9ed1e65ce51d8fdf6977873dd07694f42109f71b0976cdc5ab9f93f77a437126",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-joint-optimizer.pt": "2dec602c5501cfa2f60ed959059ff116090344e2b54170176dec5784693f8e23",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-weight.json": "963784150618a9d701cb3693c6ff9cd4d04e0f2ed1af9d3e4d483e4dba7d235c",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-weight.json": "5ba5c98e05c45845d9b9104ee15c57b9bc5d340db5bc066e01f29d66ad8af376",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-weight-optimizer.pt": "eee24ea2d5ae41eda8b814504d0d15d751c6c1b9d3d6239ee46eb71d942abd32",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-weight-optimizer.pt": "92f94bca6961fd3c74f6211e8af1ceaaae3fd48d89f0246ad7a29778493d179d",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-graph.json": "6895e573686331056e46ad5924e8c68304914d6e9d469700ee10681fdc6af5ab",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-random-optimizer.pt": "7511ada435da88d23be92a991f552acd98729d4660b4ac2976dd0cb967ca4d21",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-random-partial.pt.json": "1aa91d0a95a62fbc48170305f87267aac0b333255eae687c0499d8865a498ede",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-random-optimizer.pt": "b2a6cf3d45304f6af3381f6e806c0dab3a6e75a7ccd59e4bae266b062d960d9d",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-random.json": "d48aa624b0964f36f89c03eb8c8f53f3d53bb0f0ce10c8a4268c39cf2909e1d2",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-graph-optimizer.pt": "bc74ba0c5cd8eb8de8b70db9603b899e3b6cf5917640616c6898efa08147adc1",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-graph-partial.pt.json": "f4d4fcf97ddc50f74135869499947f645b390d65af5e805fb2365a9597d8e344",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-graph-partial.pt": "7b759e5cddd8f0af2395cf44ccb03ce1a7846bd4604b9acc4ffb5856092a5d6f",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-graph-partial.pt.json": "61b55360cf53ed712391ef18bfc055e6843aca1386201b841103ac43d0b22c4c",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-joint-optimizer.pt": "15541522d091f63a8b43f42bced4aabd2a89c2faf40d739b18d2e126e586cf62",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-random-partial.pt": "cdd3054b14c9fa77c697e79551f9246156c16c9438f0b3cb06ba76fd66dbe9ca",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-random-partial.pt.json": "3acc15dc63ac7970c9f66119944d8fde6f11e14950016baa63f7c83393ec5885",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-graph.json": "5285b0f0965dc405fabefb2a2857d9b6f0d52ee98b0825e14d4d57fbe18bb3c5",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-random.json": "8e685e9dc1eb19bba19b2e6ae3c91936f2b3db2ac450683dbf5b44665de92f88",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-weight-partial.pt.json": "736b60d77653639b2905c76547c2de9ece4478bf4e4532e510413ef03986202b",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-random-partial.pt": "ed7306492dcf1535f3f6ba5d6af2481d8c94bfb6c0c5160e1b3476c8f0fed88a",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-joint-optimizer.pt": "124d1e442ef5af5c990ec8f422d507d3f8327f4c48806f219fe0da980c1e30ee",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-joint.json": "e766cea0099dfee0621a4bd72c80fe3e84922ab513561369e73f53a7fc50818e",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-joint-partial.pt": "68126125484f321917251c92c80c2aba9ae20109871e85ab9091c971a4dd55f7",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-graph-optimizer.pt": "d70f7f7a1f3eccadada98fba6119a45fdb2bcc917fe3341a962c662b4e0b6d2f",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-joint-partial.pt.json": "32862d8804e9e343541d500f8f58c9d822162d9452fd2097453b2926d3ac0bd2",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-weight.json": "b2f5e89c55f3e7de9505bb82e24503fe4106bfe05e21eda43c2a8b1b3bc3d3db",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-joint-partial.pt.json": "f726c38b202c6c9d160b7ef93082d9c5fcff7340bf31845eae977b19767876c7",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-weight-partial.pt": "9e2c5d3b5ba50df4b4a0550f683aebda0de991b71030677c443aeb32394a08db",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/receipt.json": "e0cccbdd890ef12b30ebb0904d5bf89f20594d115ee46902ffe2e1c7477674c2",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-weight-partial.pt.json": "000f58776eb589178ed5fda30283f2254d8a0e8949c3c78604baab5dd1bffc03",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-joint.json": "fcf0a03dd4ce180da43da5eb1e258cf901c18df17268faee7b0bec9223829b7d",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-graph-partial.pt": "6893e38c0f2d0fb622ad25f8ffce0fe3cbfb20bca00d1ea208ef5bc6a9641e5e",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-joint-partial.pt": "1ccf4a4c932a788e0d63b159e4a3b568665c730814d92ddcd5588e7a99a01dba",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-graph-optimizer.pt": "80ba72d8c51435f6d63765646fc05beb365ce8bf1a6148dd23ecd037e993abe6",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-weight-partial.pt.json": "4600c70a7bdee8eda57a9ee0bad8d2450af82600450edbc9e0c9cbd62e058c5c",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-weight-partial.pt": "632670e4b2a312e4941bd90944d4cc8904e4cbeeb28bd507791b314b17d3cdb0",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-random-partial.pt.json": "390633f2c488b5bf6c7b455e6fe91bf27b1da889c605196b35641c61259728b6",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-weight-optimizer.pt": "251a21327687cb1f4796f819b356d407e5ab6a5072543756022538ca76b79ef3",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-graph.json": "021fbcc6a44015c9226b45b1386f629dfb6d2f5d1105ff8559498a7e9551a0b5",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/64-graph-partial.pt.json": "df00be82718132dd3fefaf9665d31ba9af04c005d2c40423994cd6ef4d96cc6b",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/512-random.json": "1886c9ffcae1d42643b0a5aa47a63a010b81757bdbef1bd50a7e2cc81d8ec12e",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-random-partial.pt": "3916de7d8d23d6334232abe739bd1c1885771ebd634ecb3124830e8dd1498562",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-context-independent01/2048-random-optimizer.pt": "fdb2efe7d301f9150db4276567f5d43668a8d52e061b12f4add825578736aecf",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-weight-True.json": "a4f78b364921c19c7bc188897e0ae19c8d573ed18ed82a1e7fcc04711f374ca7",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-random-True-partial.pt": "bf443563c03d06e7b1805ef09defc27ae0cba314bc951b84a1a9ef65a6d9ea0e",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-weight-False-complete.pt": "4f4efd75b63eee8593e12909bcb456549e29615ee274b49e1788b6325794f1e1",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-graph-False-complete.pt": "f9d485e342e76fe7b469fa2ad0680b3336f7987a2233f9a08eed4586195a7395",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-joint-True.json": "5caf550e415128460fbc7abdc0d7a1f6450bc6022f79ac8a1132fd7d84b9aa95",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-graph-False.json": "81aeada509308709c684008de93939f341fdff2f230d4a465fef52ccdc602ae2",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-graph-False-complete.pt": "ed1222928f5c53818ad22e0b4792e80b86cd8198fa7365290301ad2b9f94be35",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-graph-True-partial.pt": "fbed4b2647cb2e7ee230db2a0c6a2a6ec48a3f4a35bb03ac5e46651887fd64fd",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-joint-False.json": "345b2a45d85cefa261c8601df971a2596e5df2eef8bab5d70d8c81a410bbd9f5",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-graph-True-complete.pt": "4b8f225bff533756803de1089339d0a8eaa59a8073c5f482543b116dbd2bb8a7",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-graph-True-partial.pt": "095b070e30ce521862bd9e9e0bc47bc20975f53a636daacd03dc75895d432116",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-weight-False.json": "68c8f959ce1f16b674ef7df8ad1a759b7db7b68d5e955ab7272fb590d4bd95e2",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-graph-True.json": "06fcfe481fb278fd55317fa00eaad84cb01aea3b9f9b429821be71cc3176985b",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-graph-False-complete.pt": "117d1a9cf16baf2d7b641496de2b17cbc67a9da14ac7efe43b029a9a7ebcf5a1",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-random-False-complete.pt": "47b47694e4c8c3bee003035a14fbdd36ceaaa9e5b69075eda76e76db23d22ab8",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-joint-False-partial.pt": "85779c68cdc7a70206ccb528eb3f408560e7908779357c7e4cf8741493b20a19",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-random-False-partial.pt": "976f418bce9d716ca363dafdf341e008da628425a5b39b5742c7da78c89e88df",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-graph-False-partial.pt": "25f182dff2a83cb9f21e815df2f08f203a60bed7a535877464b2e0d9a970106b",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-random-False-partial.pt": "b1bef7487d45814ec17d120fb6bbc1a7f9e94face74463bcd66f76b78dc169b6",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-random-False-partial.pt": "7e90795ac18edf9bc90e772732ffedcc5ad5b6369ed456c485c56b6488cf2cfc",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-random-True.json": "8c40fb6835f0022dc0c47352467bc1a51ebd3e6e3b541aaa5d1767a73d4bbd98",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-joint-True-partial.pt": "496c8bd1e12d53030c930156b7c112f6a140ef77c9f3335a2dc215d78085343d",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-joint-False-complete.pt": "d6f53f99195923b36787caedc127e0c1e9de93163fbdceb4c3b1d1d524a5b1b5",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-joint-False-complete.pt": "69be0d4699126adfe8afab0b5552a8f8af9b71089c0177d3a1940c434d5d5bf8",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-random-False.json": "59fa82701aba06bdf3dfe53d35688c5d67e23689916c11abc91d164b70a7fbae",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-joint-True.json": "56480a769cbf9deb28ea6b27a366f1884edea7fd1846a88915dc6f99905185fe",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-joint-True-complete.pt": "77f6f8249982f266a6741cce99d1b43ce0dc4238f9d3bec765f24258295ff163",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-graph-False-partial.pt": "2017014d27aed8f33f70600bacfe4e98eed51614149dd609eac896cca7541108",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-graph-True.json": "89fda496533c4f698d563c831a24b618fe032c8590e05d7bb43e990a1f8c5c30",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-joint-False-complete.pt": "5451a948687c1ae691c743bc402c445b3500565ebaab707de391f7fe130affa5",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-weight-False-complete.pt": "5e04dcb78e0ac67d607f2dabadb02d45bf8f494b6377a96784f2b6a370561def",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-weight-True.json": "8e27c83b5204a768d3f10e28c014f65f56cce72f6ce48d505f7597ba76c7306e",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-random-True-complete.pt": "b003b8a073cbdc659804393a322f9feda286674115c4253f6c3a318f0e35b23e",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-joint-False.json": "c0aa2a4a3fcedb13adfaac56d005edbc095af8bd5ebdd4489c02b021d1650015",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-weight-True-partial.pt": "f7bdb8e832971445dcdd595fbbe934a2264cbfcccb1bd0f46fc2cfd752c6cf6b",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-graph-True-complete.pt": "a0a1bf0ceaca7bec77e4af3da6be9ea3b723b18680e4ab1644957b41ad4e1379",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-random-True-complete.pt": "38769636ec14f7e6cf55865bfe991340a9115b5566e7ad825e02e461cc6e17bb",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-random-True-complete.pt": "479f53f7cef4962ee3d5299161e389820d01f74df2704a66214b4cd4e87e2833",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-random-True-partial.pt": "1147a1f412b49ba30170094abc50741faeffa3bf074a6543dc047067ba1cc385",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-graph-True-complete.pt": "1bccdd300913f875157d956c6c1327c640d6f2727729bf7a740fe6816804e03f",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-random-False-complete.pt": "8db607e0b27bf6ae4f7a0a3cd64b43c469481f83b7800251046e860ac07d1694",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-random-False.json": "a16c4c73a8d39877cb8864987ec9c8c79094efb06a8f624581b2023bee632e99",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-joint-False-partial.pt": "673ae9369a7960035d8672a4c9fd44a336d963f50d8556ef5ff192b502788b94",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-weight-True-partial.pt": "634a3da12c6b89aaa8fefbca2a4354bebd1362cbb94e96dcabdeaf5a8b676b79",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-random-True.json": "01b2b12a47a0e59c2bb54d1a559600043980b13326e168333b928f2afc120cb1",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-weight-True.json": "b12a0863c2a084c36cb4ab1bdec72ac7366908249302c9232aa4e19ce2ffaf99",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-graph-False.json": "a6a402fe2a0c3e3bf8e58df8aa56d31b7a9cd059dd458ac9fbda961d717c2e1a",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-weight-True-complete.pt": "ad3d59621f1bb58a4344d50bd81eab292882ebb5448ba7c11308187efebb26b3",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-weight-True-complete.pt": "23770c44746bd81075221b64f96f478e0d05926832baf8aa920ad82285e71f5c",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-weight-False.json": "350324466d8606dd9cb2d13595788c897f3735767a4266fd6a7810b26c59e374",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-joint-True-complete.pt": "e95a595bd729aba9725f4bb3a72a3f7e4bc0c908a1b319d95052bb4ffdb4e6a5",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-weight-True-complete.pt": "9185a913aa3c03c5a14311349996f39a7b25489be4b1ac033fc712b405656ab1",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-joint-True.json": "e97f988dd3f59f39a4641184f297e64ec45375fc1bb6595dc7f583c2d2cec2e0",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-graph-True-partial.pt": "0776f66a0f4642c4058e4e6d0941455065cbeedd5bfd500799a0d6ed2d19987e",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-joint-True-complete.pt": "a1f59a7633a1e205776938d59f3e9957dca835dbfe05c04991f737270d06311b",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-graph-False.json": "e9f1ecfb00f992665997e490ab3da00a05229b1d719c02c3c44497f7fee4a3da",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-weight-False.json": "3f38803e6986827c48d164b15c2f78b69a51bb24dd5fcba071a5d9ac1d888a4f",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-joint-False.json": "969b75e73feb119bc0fb58d9ae3d0926f596866045bf8f9729e935cef9493288",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-graph-False-partial.pt": "c492f550549332bcbf426c1f5b7b314c613602e424470f45b3470c2cfc3efe12",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-graph-True.json": "7d2665777f1a151fe9e887c08c4ed3d9040c151feaceb57dccf603f1dd748350",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/receipt.json": "f41689ebe13331dd8bdd39ebf924123be0a13d4de34b63a35c504568ed062438",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-weight-False-partial.pt": "772bb13b80207a45b33d3749cad6f45e221351a38b824610b19fbd842be1c347",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-weight-False-partial.pt": "af05578a73a8f60126d5102d6c669e37b50927c95f6143745eddae191bea0ebc",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-weight-True-partial.pt": "d9a8d811bbf7bf72c8dd6c45fa66f8121b39f4839a6f5a375435e5c71cd0d52d",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-random-False.json": "428f9e69bf37ffd0d3d44b57297468e79ffa23e089a82444e1295a6338d77f57",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-random-False-complete.pt": "ac36bec3058072cc562c8de6aec525f19e2cedb09d5e9f76c321ed4b1789e8f7",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-joint-False-partial.pt": "35e57aa3a1d4e1380476d9b81d7071243c0669fc87a3b6988b7cca6e0fd0e1b0",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-weight-False-partial.pt": "98727851e04aea074375411b9576703251e9b0954f11c8d58cf472484321ce23",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/64-joint-True-partial.pt": "013b7d224d949911b90bb731b1515a4dbf4491f9214271bff3c558b5c882904c",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-random-True.json": "65cd653b194433033f7e952ce16bd76b9fe06c17a7a01631840a9176b81c954c",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/512-weight-False-complete.pt": "562873fd5655e66f1ea30982e0cb2f27130fde32bdd86fe7f1480995d53b3dcd",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-random-True-partial.pt": "9c9e0c53ef8827a4383e52d68a3a2121b34ff1f665aab7cb0bc0c8d186c7e711",
+        "/home/lbx/hsi-pioneer271828/runs/graph-route-training-independent01/2048-joint-True-partial.pt": "db149a16ea343db1899a9fe7600934fe4748eda1830a4fe4838369af8c9a08f4"
+      },
+      "protected_files_unchanged": 212,
+      "reports": [
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-weight-False-devtrain.json",
+          "sha256": "c16d563d0726ee2802fa62836e9192e7e0ffdf0d88a9e573a532f28a335164ba"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-weight-False-devval.json",
+          "sha256": "ebcdc26ce897a8e2629178355c2830d8c6fd27901d2585790a1b707000b3e1ca"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-weight-True-devtrain.json",
+          "sha256": "412407e384d5973b01ed27728f488c86fc2a21ef4dfecfbd439e91ed13302d7b"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-weight-True-devval.json",
+          "sha256": "87487b4f6d01677ff31dfbd1a3633e1caffa0f0450a2c2f34d80f4c22c50c5a2"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-random-False-devtrain.json",
+          "sha256": "055fdc4c1b0bc0d0d6d64c45690a577b3a878204ad4da948e27790ce628072df"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-random-False-devval.json",
+          "sha256": "f25df861f5ab1775819b8af3bc3c0272f73395f8506fb75e666ae6e031d247b8"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-random-True-devtrain.json",
+          "sha256": "c93504643dbe699ca385b8e3038a42fd34c5fddbfe1eb1e1b6832d2fb01c083a"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-random-True-devval.json",
+          "sha256": "3de8e609475577ece5dd5ceadcb4bb4b1b8b241a59ac0565fb3507d6c86d9560"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-graph-False-devtrain.json",
+          "sha256": "61401ade839735ace21ac4898a1868fe7cc1e89605adf76d0edcca4b4b5af285"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-graph-False-devval.json",
+          "sha256": "c6d03754ad93e46a408e062dfbd8fb81d5362efd888dd07bc8c54bbf22a7a95c"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-graph-True-devtrain.json",
+          "sha256": "4b77ca2f1fc800dd392b5c999a952f06772386b57cd9a3cac236356b8b0bdafa"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-graph-True-devval.json",
+          "sha256": "e9a353e4a17226737f27d3e6af3a5efe32b486a66f4a5505ce87fc44576ff8cf"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-joint-False-devtrain.json",
+          "sha256": "22ae535c6d085e3a1c88a3d274b373942f5a5c452a4b685eeab18dfc9aaf69d3"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-joint-False-devval.json",
+          "sha256": "e450c24b21218f9df72ca19a9340d6d84c3f6828ccb4b10fc539f2eb3b600f63"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-joint-True-devtrain.json",
+          "sha256": "8d8f8b788601f41be20d8e44942bb2c62793f73b9382af9922585f741f1e6192"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/64-joint-True-devval.json",
+          "sha256": "d9ac296c2878d25a2d8a23eeb3edf08e466d0baa85ef5489e7f4fa1fc280112b"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-weight-False-devtrain.json",
+          "sha256": "80f981032c61c0ed6195392308909fe37a9bf17c53af96f9d8abec6728543f30"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-weight-False-devval.json",
+          "sha256": "cf7fac6f390dff65f8ffe9dda60cfdd1ae3c3dd920b4a7b14a066ba323a2ec26"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-weight-True-devtrain.json",
+          "sha256": "a5d120ebfaa31c172d0ffebe83201ed8367eb7928097fb1776b48c51169af7b9"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-weight-True-devval.json",
+          "sha256": "45d597101d3a3e768ce8ba0d5f8c550d9d76d6b88bb9c352be83b917084e508f"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-random-False-devtrain.json",
+          "sha256": "0244f22fc0290bdd4f1036b0689f4164859db4ff02768fb5a2798b6fbe906897"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-random-False-devval.json",
+          "sha256": "8ea81915fd9772ecf4402e0a10b0e5905933e7df129aed1cb220dbbe5b0dcb53"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-random-True-devtrain.json",
+          "sha256": "d18c49a2b8f81e0f6ba77e6e88a8a89c5fd433ba4a9db2cb4de032ef767c838c"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-random-True-devval.json",
+          "sha256": "0d51a1d05699fe17590ead8aa9b3dee1b2b206e665fe94500ce4624bc298cec4"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-graph-False-devtrain.json",
+          "sha256": "a51c901b5a1e98250cf2473f89c96699050b271bc1ff97e4e2a09061a32a8886"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-graph-False-devval.json",
+          "sha256": "3ea33a55fefe940369bbee4b499b5cd6a96bc542be20373b7338a55b67355e50"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-graph-True-devtrain.json",
+          "sha256": "3b6d419a42208ddf36e3f8c0a5bb7bc49a4c083c4bc69747aeffa23d15231d79"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-graph-True-devval.json",
+          "sha256": "85b356eb4c196673f48edfac87b07445d470ce289edb9b7031b2af7923855b79"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-joint-False-devtrain.json",
+          "sha256": "87547fbebb504e4cced7ef77912f2b315a3e3debff0225a637da1ae579f4922d"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-joint-False-devval.json",
+          "sha256": "9c12cef726d879b756b00dfe2c0685c222803e965d13caffc851c5ea2eb47b96"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-joint-True-devtrain.json",
+          "sha256": "65a958cb6b96428a88c36473b8d1f69968aec965418a0a508ef3a97839f2aade"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/512-joint-True-devval.json",
+          "sha256": "0318b14fd955cc9b9d2cf4ccb91bb1d38f0185d7b2dd9a253656b2e661106792"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-weight-False-devtrain.json",
+          "sha256": "89ecb59785850b1d2ecbd463b365eb9dcec70f498500b3c0ede231e2320a20c6"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-weight-False-devval.json",
+          "sha256": "d91240db0bc1c4a4de5174a5c096c8f15b81b19b2170d475ce1213482b7079ab"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-weight-True-devtrain.json",
+          "sha256": "ff47710b5939d21c33d664c5cf03ff43cda4b28e3ee75fa67068354da829868e"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-weight-True-devval.json",
+          "sha256": "8d9edb1e5b28ee020da0f926db23c30b733e0ab01aef8b9cabd41ef692e42989"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-random-False-devtrain.json",
+          "sha256": "e4960c133141e282206cbae8cbd86f2d16f4a9abc90557dc3afdfb42aa894bf3"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-random-False-devval.json",
+          "sha256": "3d60c89546029412b39167be5365d3a35a2afbf1088bcd9d57b7d3d567e73dc8"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-random-True-devtrain.json",
+          "sha256": "7b574cafb49eee91945382eee3399df6298b61361d6d4bf8a9c5b0c35b83adf5"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-random-True-devval.json",
+          "sha256": "e415c80908e36165561b103ad7291f1abe52306b188587cc5bd41ff0e76882bb"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-graph-False-devtrain.json",
+          "sha256": "d35ee163305ed8f5a871c1feab9a6812e77ef25b6c53f3fc76b98454fcf0e181"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-graph-False-devval.json",
+          "sha256": "39955effa0535fe83ef1d473a8b591c42d26bf141cf7c2353f6f8ab438e2c3f4"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-graph-True-devtrain.json",
+          "sha256": "e3b95e0f5601e953a9cf7ad06f9e66f8f7c0dd56386c0a59ae2e5a7b40921b06"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-graph-True-devval.json",
+          "sha256": "4a70998f850f5a0f9b7d95979ae1d8cf302875754592e5744ad233b605e534c7"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-joint-False-devtrain.json",
+          "sha256": "c734072bebe7457095a691fcd68cee75d41a95c1c30fb5273810f7113ada3660"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-joint-False-devval.json",
+          "sha256": "becd3633a6e3e70a9929394b307a8b831fdc0d92966cf10145f90be04e099587"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-joint-True-devtrain.json",
+          "sha256": "8d1cdc8a9795d090aa35f276a6fc108892a7f4e6a8d1e3acb234f677125e9ac1"
+        },
+        {
+          "path": "/home/lbx/hsi-pioneer271828/runs/fixed-reference-energy-independent01/2048-joint-True-devval.json",
+          "sha256": "788e1c32b45cf8f241cdfe5b80da6565f7969ae862efb4c7c6c4e421eccf997c"
+        }
+      ],
+      "optimizer_updates": 0,
+      "query": 0,
+      "real_training": 0,
+      "energy_ranges": {
+        "input": [
+          0.0025399983469375186,
+          0.004087384852854929
+        ],
+        "stage1": [
+          2.3069168428210034e-05,
+          5.049019416098776e-05
+        ],
+        "stage2": [
+          8.033439731093688e-06,
+          3.4071124244446796e-05
+        ]
+      },
+      "limits": [
+        "synthetic24 existing models only",
+        "same grid ids but changing learned Q",
+        "descriptive fixed graph energy not accuracy or oversmoothing proof"
+      ],
+      "elapsed_seconds": 17.93084181379527
+    }
+  },
+  "retained_history": [
+    "1e155ccd5580f04f568913467c1ff42d7e574a58 tests01 6pass/1error6.186s: random two-node fixture had no cross-node edges; corrected assertion uses actual edge presence; production unchanged"
+  ],
+  "logs": {
+    "tests02.log": "5e1ba56cb62ed3166b659f96fca2090ad24f12f8d92fa22b35dde0a47f7f6025",
+    "regression02.log": "cc5514136c86235203a9d6d06442f38381afa5993db959ba25d6c2bdc76dcea7",
+    "independent01.log": "eabb2812b717f3a74941a2458186fa432506ed55f7c6bbbf369a7efc5b1087a7",
+    "tests01.log": "c98259c330c37eb79345087eb7e63ce8c8e6906e0db294dba4cafd6127ae50fc"
+  },
+  "optimizer_updates_in_independent_audit": 0,
+  "query": 0,
+  "real_training": 0
+}
