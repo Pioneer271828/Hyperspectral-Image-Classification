@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 301,
+  "issue": 303,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "f11a537f081394f7d9848942e3fc03d966a3e64d",
+  "main_snapshot": "d35b5dfc4e0d8e55922f42ba30cf539fdf80ca67",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -689,7 +689,7 @@
       "id": "CUR-O1等曝光观测课程",
       "state": "CPU调度与合成网络恢复工程通过",
       "evidence": "tested ed9fe90461ef43d62cbcab66c6ed7316bba39e9b；8专项/41相关回归、checker484Python145JSON。四臂12步与5+7精确；三种子12policy/144记录/156前缀独立通过，真实优化query0。",
-      "remaining": "GPU/真实逐类与遗忘/成本、一般多块联合曝光尚未验。首版JSON结构恢复失败保留并修复。下一CUR-S类别保护，未做二因素组合。",
+      "remaining": "后续CUR-O2已接入实际优化/条件交叉曝光和恢复；GPU、真实逐类/遗忘/成本与二因素组合仍待。首版JSON失败保留。",
       "report": "research/reports/CURO_等曝光观测课程与确定性恢复工程验收_20261109.md",
       "chat_report": "本聊天CUR-O1工程完成报告，随后继续CUR-S。"
     },
@@ -759,8 +759,15 @@
       "id": "CUR-S3课程实际优化与恢复",
       "state": "CPU实际网络合成接入通过，真实收益未验",
       "evidence": "tested3661277；CPU7/35；六模式24与7+17精确恢复；独立3抽样种子6合成模型/1100权重/1458混淆/42文件不变",
-      "remaining": "GPU与真实完整对照、小类/跨条件收益待；下一CUR-O实际观测课程接入，样本课程关闭；长训练暂停",
+      "remaining": "CUR-O2独立接入已通过且旧3个CUR-S3工件零更新恢复；GPU、真实课程对照/小类收益与二因素组合仍待。",
       "report": "research/reports/CURS3_课程实际优化曝光与恢复接入工程验收_20261109.md"
+    },
+    {
+      "id": "CUR-O2观测课程实际优化与条件复盘",
+      "state": "CPU实际网络接入与旧工件恢复通过，真实效果未验",
+      "evidence": "testede2726c3；CPU5/40；独立12合成模型/288实际视图/216条件头/17496混淆/1944召回；53文件不变；旧3CUR-S3工件恢复0更新",
+      "remaining": "GPU、真实课程多种子/逐类/遗忘/成本和二因素组合待；下一E3训练场景节点及固定支持身份绑定，长训练暂停",
+      "report": "research/reports/CURO2_观测课程实际优化与条件复盘工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -892,6 +899,13 @@
       "tested_sha": "4ef796a75dedd52127d57a4c7e15915870048e84",
       "merge_sha": "f11a537f081394f7d9848942e3fc03d966a3e64d",
       "scope": "DY-2C CPU8/35; independent231000replicates/231bounds; conditional approximation only, real inference pending"
+    },
+    {
+      "pr_number": 302,
+      "head_sha": "d5421a21893d24ac81bc953416c00fe7ae007759",
+      "tested_sha": "3661277d44253dfd435b2905e086d92c849a5090",
+      "merge_sha": "d35b5dfc4e0d8e55922f42ba30cf539fdf80ca67",
+      "scope": "CUR-S3 CPU7/35, six-arm exact recovery, independent6syntheticmodels/1100weights/1458cells/42pins; no real benefit claim"
     }
   ]
 }
