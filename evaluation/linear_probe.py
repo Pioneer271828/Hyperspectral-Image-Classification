@@ -102,11 +102,18 @@ def metrics(x, y, weight, bias):
     classes = weight.shape[0]; pred = logp.argmax(1)
     cm = torch.bincount(y*classes+pred, minlength=classes**2).reshape(classes,classes)
     counts = cm.sum(1); supported = counts > 0
+    top = logp.topk(2, dim=1).values
+    margins = top[:,0]-top[:,1]
+    # Diagnostic only: never alter argmax, round probabilities or relax agreement.
+    sensitivity = 8*torch.finfo(logp.dtype).eps*logp.abs().amax(1).clamp_min(1)
     recalls = [int(cm[i,i])/int(counts[i]) if counts[i] else None for i in range(classes)]
     aa = sum(v for v in recalls if v is not None)/int(supported.sum())
     return {"nll":float(-logp[torch.arange(len(y)),y].mean()), "oa":int(cm.diag().sum())/int(cm.sum()),
         "aa_supported":aa, "aa":aa if supported.all() else None, "recall":recalls,
-        "confusion":cm.tolist(), "support":counts.tolist(), "missing_classes":torch.where(~supported)[0].tolist()}
+        "confusion":cm.tolist(), "support":counts.tolist(), "missing_classes":torch.where(~supported)[0].tolist(),
+        "minimum_log_probability_margin":float(margins.min()), "exact_tie_rows":int((margins == 0).sum()),
+        "roundoff_sensitive_rows":int((margins <= sensitivity).sum()),
+        "sensitivity_rule":"diagnostic only: margin <= 8*FP64eps*max(1, max(abs(logp))); argmax unchanged"}
 
 
 def advance(pack, plan, *, state=None, stop_after=None):

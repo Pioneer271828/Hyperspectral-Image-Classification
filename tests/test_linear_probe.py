@@ -49,7 +49,8 @@ class LinearProbeTests(unittest.TestCase):
             a=w.numpy().copy(); a[i,j]+=1e-6; c=w.numpy().copy(); c[i,j]-=1e-6
             numeric=(oracle(x.numpy(),y.numpy(),a,b.numpy(),.01)[0]-oracle(x.numpy(),y.numpy(),c,b.numpy(),.01)[0])/2e-6
             self.assertAlmostEqual(numeric,float(gw[i,j]),places=8)
-        result=metrics(x,y,w,b); pred=(x.numpy()@w.numpy().T+b.numpy()).argmax(1)
+        result=metrics(x,y,w,b); z=x.numpy()@w.numpy().T+b.numpy(); z-=z.max(1,keepdims=True)
+        pred=(z-np.log(np.exp(z).sum(1,keepdims=True))).argmax(1)
         cm=np.zeros((3,3),dtype=np.int64); np.add.at(cm,(y.numpy(),pred),1)
         self.assertEqual(result["confusion"],cm.tolist())
         self.assertEqual(result["oa"],float(np.trace(cm)/cm.sum()))
@@ -86,6 +87,8 @@ class LinearProbeTests(unittest.TestCase):
         for layer in report["layers"].values():
             self.assertEqual(layer["selected_step"],1); self.assertEqual(layer["normalization"]["near_constant_columns"],4)
             self.assertEqual(layer["metrics"]["val"]["missing_classes"],[1,2]); self.assertIsNone(layer["metrics"]["val"]["aa"])
+            self.assertEqual(layer["metrics"]["val"]["exact_tie_rows"],6)
+            self.assertEqual(layer["metrics"]["val"]["roundoff_sensitive_rows"],6)
         for mutate in (lambda p:p["labels"].update(query=torch.tensor([0])),
                        lambda p:p["identity"].update(query_labels_accessed=True),
                        lambda p:p["row_ids"].update(val=p["row_ids"]["train"][:6]),
