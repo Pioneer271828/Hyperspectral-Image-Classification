@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 273,
+  "issue": 275,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "a5240ac592851cf9acc6898826823a5d0e3a500c",
+  "main_snapshot": "f8842754f4af581aba70d04f086fd23eb24245f2",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -652,6 +652,14 @@
       "remaining": "真实多种子等预算恢复、固定验证逐类/小类、校准覆盖与部署成本仍待；两层包减少11.39%但CPU无加速，浮点默认。下一局部三值机制工程。",
       "report": "research/reports/INT8_整网校准隔离与独立恢复工程验收_20261109.md",
       "chat_report": "本聊天INT8-2完整CPU工程交付；随后继续局部三值工程。"
+    },
+    {
+      "id": "TQ-1局部三值权重与2-bit编码",
+      "state": "完整CPU局部工程验收通过",
+      "evidence": "tested 8f6e3c440eac3f5953227bab4914f1755eaa9c2d；10专项/71含专项回归，checker473Python139JSON。解析/有限差分尺度梯度、2bit规范编码与FP32/TQ12+7恢复；既有两层16384权重独立解码相同，4输入不变。",
+      "remaining": "下一TQ-2整网独立恢复与同预算工程；真实多种子逐类/覆盖/部署成本及GPU仍未测。两层权重误差约46%，未验证精度；浮点默认不改。",
+      "report": "research/reports/TQ_局部三值权重与实际2bit存储工程验收_20261109.md",
+      "chat_report": "本聊天TQ-1完整CPU局部工程交付，随后继续TQ-2整网。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -685,6 +693,13 @@
       "tested_sha": "70febbfa8b0c5aabefe05f949ce008bac9fa3bfb",
       "merge_sha": "a5240ac592851cf9acc6898826823a5d0e3a500c",
       "scope": "INT8-1 CPU layer engineering:12/53 tests; no real accuracy claim"
+    },
+    {
+      "pr_number": 274,
+      "head_sha": "a6417d6b4016228275b252e85e5882b5eb2576f0",
+      "tested_sha": "1e0da0069dca59fe90da9edb1626b6df8ef90267",
+      "merge_sha": "f8842754f4af581aba70d04f086fd23eb24245f2",
+      "scope": "INT8-2 CPU model integration8/72; two train tiles read-only, no accuracy/speed claim"
     }
   ]
 }
