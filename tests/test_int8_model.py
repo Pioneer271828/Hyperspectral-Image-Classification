@@ -14,7 +14,7 @@ from compression.int8 import CalibratedMatrix, IntegerMatrix
 from compression.int8_model import ALLOWED_PATHS, calibration_contract, calibrate_model, convert_model
 from compression.int8_checkpoint import save_int8, load_int8
 from loadData.observation_sampling import BandMetadata
-from loadData.spatial_tiles import make_tile_plan, tile_slice
+from loadData.spatial_tiles import make_tile_plan, tile_slice, fit_tile_statistics
 from loadData.spatial_development import make_development
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.checkpoint_io import save_model_checkpoint, load_model_checkpoint
@@ -114,6 +114,25 @@ class Int8ModelTests(unittest.TestCase):
                                   (model, scene, bad_record, digest(contract))):
                 with self.assertRaises(ValueError):
                     calibrate_model(m, s, r, paths=PATHS, contract=contract, expected_hash=pin)
+
+    def test_original_spatial_train_protocol_and_no_development_boundary_bypass(self):
+        model, scene, record = fixture()
+        ids = [t['id'] for t in scene.plan['tiles'] if t['partition'] == 'train'][:2]
+        with self.assertRaises(ValueError): calibration_contract(model, scene, None, PATHS, ids)
+        plain = copy.deepcopy(scene)
+        plain.stats = fit_tile_statistics(plain.cube, plain.plan)
+        contract = calibration_contract(model, plain, None, PATHS, ids)
+        self.assertEqual(contract['fitting_role'], 'train')
+        a = calibrate_model(model, plain, None, paths=PATHS, contract=contract, expected_hash=digest(contract))
+        for t in plain.plan['tiles']:
+            if t['partition'] != 'train': plain.cube[tile_slice(t)] = float('nan')
+        b = calibrate_model(model, plain, None, paths=PATHS, contract=contract, expected_hash=digest(contract))
+        self.assertEqual(state_hash(a), state_hash(b))
+        for partition in ('val', 'test'):
+            denied = next(t['id'] for t in plain.plan['tiles'] if t['partition'] == partition)
+            with self.assertRaises(ValueError): calibration_contract(model, plain, None, PATHS, [denied])
+        model.training_config = {'development_hash': record['validation_hash']}
+        with self.assertRaises(ValueError): calibration_contract(model, plain, None, PATHS, ids)
 
     def test_checkpoint_phases_exact_three_heads_rng_trainability_and_no_clobber(self):
         model, scene, record = fixture()

@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from compression.int8 import CalibratedMatrix, IntegerMatrix
-from loadData.spatial_tiles import tile_slice
+from loadData.spatial_tiles import tile_slice, validate_tile_plan
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.research_config import digest
 from research_runtime import tensor_hash
@@ -45,17 +45,35 @@ def calibration_contract(model, scene, record, paths, tile_ids, *, qat=False):
     paths = _paths(paths)
     if type(qat) is not bool:
         raise ValueError('qat must be boolean')
-    identity = scene_identity(scene, record)
+    if record is not None:
+        identity = scene_identity(scene, record)
+        roles, fitting_role = record['roles'], 'devtrain'
+    else:
+        # Original spatial protocols have train/val/test partitions without a
+        # nested development split. Never erase a known development boundary.
+        validate_tile_plan(scene.plan)
+        stats = scene.stats
+        if (stats.get('fit_partition') != 'train' or 'fit_role' in stats
+                or 'development_hash' in stats
+                or getattr(model, 'training_config', {}).get('development_hash')
+                or stats.get('plan_hash') != scene.plan['plan_hash']
+                or stats.get('statistics_hash') != digest({k:v for k,v in stats.items() if k != 'statistics_hash'})):
+            raise ValueError('plain spatial calibration requires original train-only statistics')
+        identity = dict(plan_hash=scene.plan['plan_hash'], development_hash=None,
+                        statistics_hash=stats['statistics_hash'], metadata_hash=scene.bands.fingerprint,
+                        dataset=scene.dataset, classes=scene.classes)
+        roles = [{**tile, 'role': tile['partition']} for tile in scene.plan['tiles']]
+        fitting_role = 'train'
     heads = model.export_config()['class_counts']
     if scene.dataset not in heads or heads[scene.dataset] != scene.classes:
         raise ValueError('model head differs from scene classes')
     if (not isinstance(tile_ids, (list, tuple)) or not tile_ids
-            or any(type(i) is not int or not 0 <= i < len(record['roles']) for i in tile_ids)
+            or any(type(i) is not int or not 0 <= i < len(roles) for i in tile_ids)
             or len(set(tile_ids)) != len(tile_ids)):
         raise ValueError('explicit unique calibration tile IDs required')
     # Validate every role before touching any calibration image data.
-    if any(record['roles'][i]['role'] != 'devtrain' for i in tile_ids):
-        raise ValueError('calibration accepts devtrain tiles only')
+    if any(roles[i]['role'] != fitting_role for i in tile_ids):
+        raise ValueError('calibration accepts registered training tiles only')
     for path in paths:
         CalibratedMatrix(model.get_submodule(path), qat=qat)
     inputs = [{'tile_id': i, 'sha256': tensor_hash(scene.cube[tile_slice(scene.plan['tiles'][i])])}
@@ -64,7 +82,7 @@ def calibration_contract(model, scene, record, paths, tile_ids, *, qat=False):
                 architecture=model.export_config(), identity=identity, paths=paths,
                 inputs=inputs, qat=qat, engine=torch.backends.quantized.engine,
                 input_range=[0, 127], weight_range=[-127, 127], output_range=[0, 255],
-                fitting_role='devtrain', optimizer_updates=0)
+                fitting_role=fitting_role, optimizer_updates=0)
 
 
 def _replace(model, path, module):
