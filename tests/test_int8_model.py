@@ -144,6 +144,7 @@ class Int8ModelTests(unittest.TestCase):
                     lambda p: p['plan'].update(contract_hash='0'*64),
                     lambda p: p['plan'].update(phase='qat'),
                     lambda p: p['state'].__setitem__(PATHS[0]+'.input_scale', torch.tensor([-1.])),
+                    lambda p: p['state'].__setitem__('heads.xuzhou.weight', p['state']['heads.xuzhou.weight'].double()),
                     lambda p: p['trainable'].clear())):
                 packet = copy.deepcopy(original); change(packet)
                 damaged = Path(tmp)/f'bad{index}.pt'; torch.save(packet, damaged)

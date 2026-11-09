@@ -17,8 +17,9 @@ from model.research_config import digest
 def _check_state(value):
     if torch.is_tensor(value):
         x = value.dequantize() if value.is_quantized else value
-        if x.device.type != 'cpu' or not torch.isfinite(x).all():
-            raise ValueError('nonfinite or non-CPU checkpoint tensor')
+        if (x.device.type != 'cpu' or not torch.isfinite(x).all()
+                or (x.is_floating_point() and x.dtype != torch.float32)):
+            raise ValueError('checkpoint requires finite CPU FP32 or integer tensors')
     elif isinstance(value, dict):
         for v in value.values(): _check_state(v)
     elif isinstance(value, (tuple, list)):
