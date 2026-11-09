@@ -14,7 +14,7 @@ from loadData.observation_sampling import sample
 from model.research_config import digest
 from model.utils import compute_loss
 from transfer.observation_policy import scene_identity
-from transfer.development_training import sparse_labels
+from transfer.development_training import sparse_labels,development_counts
 from transfer.tile_sampling import SupportTileSampler
 from transfer.g3_training import state_hash
 
@@ -79,7 +79,7 @@ class LightHeadRun:
                 if not np.isfinite(probs).all():raise ValueError('Nonfinite validation')
                 prediction=probs.argmax(1);matrix+=np.bincount(target*self.scene.classes+prediction,minlength=self.scene.classes**2).reshape(matrix.shape)
                 nll-=float(np.log(np.maximum(probs[np.arange(len(target)),target],1e-8)).sum());count+=len(target)
-        if count!=45:raise ValueError('Original fixed validation budget45 required')
+        if count!=development_counts(self.record)[1]:raise ValueError('Fixed per-class validation budget required')
         return dict(nll=nll/count,oa=float(np.trace(matrix)/count),count=count,confusion=matrix.tolist(),support=matrix.sum(1).tolist(),recall=(np.diag(matrix)/matrix.sum(1)).tolist())
 
     def step(self):
@@ -137,7 +137,7 @@ class LightHeadRun:
         if spec!=run.spec or digest(spec)!=expected_contract_hash:raise ValueError('Run source/architecture/training contract mismatch')
         n=packet['completed'];history=packet['history']
         if type(n) is not int or not 0<=n<=spec['updates'] or not isinstance(history,list) or len(history)!=n:raise ValueError('Invalid completed budget/history')
-        rng=np.random.default_rng(spec['seed'])
+        rng=np.random.default_rng(spec['seed']);validation_count=development_counts(record)[1]
         for step,row in enumerate(history,1):
             tile,anchor=run.sampler.draw(rng)
             if (set(row)!={'step','tile_id','anchor','loss','head_gradient_l1','validation'} or type(row['step']) is not int
@@ -145,9 +145,9 @@ class LightHeadRun:
                     or not _finite(row['loss']) or row['loss']<0 or not _finite(row['head_gradient_l1']) or row['head_gradient_l1']<0):raise ValueError('Invalid training history')
             v=row['validation'];c=np.asarray(v['confusion'])
             if (set(v)!={'nll','oa','count','confusion','support','recall'} or not _finite(v['nll']) or v['nll']<0
-                    or c.shape!=(scene.classes,scene.classes) or c.dtype.kind not in 'iu' or (c<0).any() or v['count']!=45
-                    or c.sum()!=45 or not np.array_equal(c.sum(1),np.full(scene.classes,5))
-                    or v['support']!=c.sum(1).tolist() or v['recall']!=(np.diag(c)/c.sum(1)).tolist() or v['oa']!=float(np.trace(c)/45)):
+                    or c.shape!=(scene.classes,scene.classes) or c.dtype.kind not in 'iu' or (c<0).any() or v['count']!=validation_count
+                    or c.sum()!=validation_count or not np.array_equal(c.sum(1),np.full(scene.classes,5))
+                    or v['support']!=c.sum(1).tolist() or v['recall']!=(np.diag(c)/c.sum(1)).tolist() or v['oa']!=float(np.trace(c)/validation_count)):
                 raise ValueError('Invalid fixed validation history')
         selected=None if n==0 else min(range(n),key=lambda i:history[i]['validation']['nll'])+1
         if packet['selected_step']!=selected or packet['rng']!=rng.bit_generator.state:raise ValueError('Wrong selection or sampler RNG')

@@ -109,6 +109,8 @@ class EdgeDeletionPlan:
 
 def review_deletions(run,plan,*,expected_plan_hash):
     started=time.perf_counter();model=_selected(run)
+    from transfer.development_training import development_counts
+    validation_count=development_counts(run.record)[1]
     if not isinstance(plan,EdgeDeletionPlan):raise ValueError('Frozen deletion plan required')
     value=EdgeDeletionPlan(plan.to_dict(),expected_hash=expected_plan_hash).to_dict();state=route_state_hash(model)
     if value['contract_hash']!=run.contract_hash or value['selected_step']!=run.selected_step or value['selected_state_hash']!=state:
@@ -139,10 +141,10 @@ def review_deletions(run,plan,*,expected_plan_hash):
     result={}
     for name in names:
         m=matrices[name];support=m.sum(2)
-        if not np.all(support==5) or not np.all(support.sum(1)==45):raise ValueError('Fixed validation support changed')
+        if not np.all(support==5) or not np.all(support.sum(1)==validation_count):raise ValueError('Fixed validation support changed')
         recall=np.stack([np.diag(x) for x in m])/support
-        result[name]=dict(confusion=m.tolist(),recall=recall.tolist(),oa=[float(np.trace(x)/45) for x in m],
-                         aa=recall.mean(1).tolist(),nll=(nll[name]/45).tolist(),support=support.tolist(),traces=traces[name])
+        result[name]=dict(confusion=m.tolist(),recall=recall.tolist(),oa=[float(np.trace(x)/validation_count) for x in m],
+                         aa=recall.mean(1).tolist(),nll=(nll[name]/validation_count).tolist(),support=support.tolist(),traces=traces[name])
     selected=run.history[run.selected_step-1]['validation']
     if result['none']['confusion'][0]!=selected['confusion'] or result['none']['nll'][0]!=selected['nll']:
         raise ValueError('No-deletion baseline differs from original selected validation')

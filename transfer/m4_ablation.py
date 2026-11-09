@@ -155,6 +155,9 @@ class Participation:
 
 def validation_readouts(model, scene, record):
     """Selected checkpoint only; auxiliary heads are not standalone branch models."""
+    development.validate(record,scene.plan)
+    validation_count=development.development_counts(record)[1]
+    require(scene.classes==len(record['classes']), 'Scene/record class counts differ')
     labels = development.sparse_labels(record, scene.plan, 'validation_support')
     classes = record['classes']; n = len(classes)
     matrices = [np.zeros((n, n), dtype=np.int64) for _ in range(3)]; nll = np.zeros(3)
@@ -171,8 +174,8 @@ def validation_readouts(model, scene, record):
                 matrices[index] += np.bincount(truth * n + predicted, minlength=n * n).reshape(n, n)
                 nll[index] -= np.log(np.maximum(probs[np.arange(len(truth)), truth], 1e-8)).sum()
             targets.extend(truth.tolist()); predictions.extend(np.stack(columns, axis=1).tolist())
-    require(len(targets) == 45 and all(m.sum(1).tolist() == [5] * n for m in matrices), 'validation label budget differs')
-    report = {name: {**metrics_from_confusion(matrix, classes), 'nll': float(nll[i] / 45)}
+    require(len(targets) == validation_count and all(m.sum(1).tolist() == [5] * n for m in matrices), 'validation label budget differs')
+    report = {name: {**metrics_from_confusion(matrix, classes), 'nll': float(nll[i] / validation_count)}
               for i, (name, matrix) in enumerate(zip(('fused', 'graph', 'cnn'), matrices))}
     target = np.asarray(targets); predicted = np.asarray(predictions)
     report['both_branches_wrong_by_class'] = [float(((predicted[target == c, 1] != c)
@@ -208,7 +211,7 @@ def selected_review(folder, scene, record, device):
     return {'selected_step': result['selected_step'], 'metrics': metrics, 'interventions': interventions,
             'first_window_train_loss': float(losses[:window].mean()), 'last_window_train_loss': float(losses[-window:].mean()),
             'validation_curve': result['validation'], 'decision': 'pending paired batch; no within-batch tuning',
-            'test_evaluated': False, 'scope': '45 development labels; auxiliary heads and frozen interventions only'}
+            'test_evaluated': False, 'scope': f'{development.development_counts(record)[1]} development labels; auxiliary heads and frozen interventions only'}
 
 
 def case_path(plan, seed, mode):
