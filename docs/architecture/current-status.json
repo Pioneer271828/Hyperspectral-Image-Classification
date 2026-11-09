@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 271,
+  "issue": 273,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "02967d1c208c7c055aebc7ea7c89fc6b6d6e9459",
+  "main_snapshot": "a5240ac592851cf9acc6898826823a5d0e3a500c",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -644,6 +644,14 @@
       "remaining": "下一项整网白名单/校准文件身份绑定/独立checkpoint；真实多种子逐类和部署成本待验。本项只有CPU，未声称整网或GPU收益。",
       "report": "research/reports/INT8_局部PTQ_QAT与整数算子工程验收_20261109.md",
       "chat_report": "本聊天INT8-1局部CPU工程模块交付；随后连续推进整网接入。"
+    },
+    {
+      "id": "INT8-2整网校准隔离与独立恢复",
+      "state": "完整CPU整网接入工程验收通过",
+      "evidence": "tested 1e0da0069dca59fe90da9edb1626b6df8ef90267；8专项/72含专项回归、checker470Python137JSON。合成FP32/QAT12步与5+7精确恢复；PaviaU原train两块4模型24头重载及独立复核，23文件不变，真实优化/query0。",
+      "remaining": "真实多种子等预算恢复、固定验证逐类/小类、校准覆盖与部署成本仍待；两层包减少11.39%但CPU无加速，浮点默认。下一局部三值机制工程。",
+      "report": "research/reports/INT8_整网校准隔离与独立恢复工程验收_20261109.md",
+      "chat_report": "本聊天INT8-2完整CPU工程交付；随后继续局部三值工程。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -670,6 +678,13 @@
       "tested_sha": "8078aa3a98fcb152f6991c0333b8146fe83bf487",
       "merge_sha": "4d0b96474978287a65a852bb6472d57a8de9a22f",
       "scope": "48 engineering heads; scoped788 test matrix:781 current passes,5 historical success paths verified separately,2 GPU-only not rerun; original failed full run retained; not a new scientific success"
+    },
+    {
+      "pr_number": 272,
+      "head_sha": "7b0e1decac1d721cea3e373d4ee1d8d30dccf8f5",
+      "tested_sha": "70febbfa8b0c5aabefe05f949ce008bac9fa3bfb",
+      "merge_sha": "a5240ac592851cf9acc6898826823a5d0e3a500c",
+      "scope": "INT8-1 CPU layer engineering:12/53 tests; no real accuracy claim"
     }
   ]
 }
