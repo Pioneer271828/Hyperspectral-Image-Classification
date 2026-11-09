@@ -17,7 +17,28 @@ class DeliveryTests(unittest.TestCase):
         validate_status(self.status, ROOT)
         self.assertEqual((ROOT / SUMMARY_PATH).read_text(encoding='utf-8'), render_status(self.status))
         self.assertIn('未完成完整研究闭环', render_status(self.status))
-        self.assertEqual(self.status['main_merge'], 'pending_review')
+        self.assertIn(self.status['main_merge'], ('pending_review', 'reviewed_batches_merged'))
+
+    def test_merged_batches_require_pinned_unique_evidence(self):
+        good = copy.deepcopy(self.status)
+        good['main_merge'] = 'reviewed_batches_merged'
+        good['main_merge_evidence'] = [dict(pr_number=169, scope='cache repair',
+            head_sha='a'*40, tested_sha='a'*40, merge_sha='b'*40)]
+        validate_status(good, ROOT)
+        for evidence in ([], [dict(good['main_merge_evidence'][0], merge_sha='main')],
+                         good['main_merge_evidence'] * 2):
+            bad = copy.deepcopy(good); bad['main_merge_evidence'] = evidence
+            with self.assertRaises(ValueError): validate_status(bad, ROOT)
+
+    def test_recorded_merge_requires_actual_ancestry(self):
+        with patch('repository_delivery.subprocess.check_output') as output, \
+                patch('repository_delivery.subprocess.run') as run:
+            output.side_effect = lambda args, **kwargs: ('' if 'status' in args else
+                ('false' if '--is-shallow-repository' in args else 'a'*40))
+            run.side_effect = lambda args, **kwargs: type('R', (), {'returncode':
+                int(args[-1] == self.status['main_snapshot'])})()
+            with self.assertRaisesRegex(ValueError, 'merge ancestry'):
+                check_repository(ROOT)
 
     def test_unsafe_or_unreviewed_delivery_claim_rejected(self):
         for key, value in [('main_merge', 'merged'), ('real_training_started_by_this_task', True),
