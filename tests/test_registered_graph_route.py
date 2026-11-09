@@ -108,6 +108,20 @@ class RegisteredRouteTests(unittest.TestCase):
             with self.assertRaises(ValueError):execute_route(reg,out=root/'zero/nested',to_step=1,expected_commit=sha,resume=good['checkpoint'])
             with self.assertRaises(FileExistsError):execute_route(reg,out=root/'zero',to_step=0,expected_commit=sha)
 
+    def test_authenticated_registration_still_rejects_changed_contract(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);_,_,_,_,reg,sha=prepared(root)
+            original=json.loads(Path(reg['path']).read_text())
+            for name in ('lr','betas'):
+                value=copy.deepcopy(original)
+                if name=='lr':value['lr']=.0002
+                else:value['spec']['optimizer_config'][0]['betas'][0]=.8
+                path=root/'inputs'/f'changed-{name}.json';path.write_text(canonical_json(value))
+                pin=dict(path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+                with patch('torch.optim.Adam.step',side_effect=AssertionError('changed contract updated')):
+                    with self.assertRaises(ValueError):execute_route(pin,out=root/f'bad-{name}',to_step=1,expected_commit=sha)
+                self.assertFalse((root/f'bad-{name}').exists())
+
     def test_failure_keeps_last_success_and_nonresumable_partial_state(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);_,_,_,_,reg,sha=prepared(root)

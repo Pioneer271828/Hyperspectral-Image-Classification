@@ -137,7 +137,7 @@ def _load_registration(pin):
     bank = None if v['bank'] is None else RouteContextBank(json.loads(_read(v['bank'])), expected_hash=v['bank_hash'])
     run = GraphRouteRun(source, scene, record, plan=plan, bank=bank, expected_bank_hash=v['bank_hash'],
             lr=v['lr'], torch_seed=v['torch_seed'], expected_source_state=route_state_hash(source), expected_plan_hash=plan.plan_hash)
-    if run.contract_hash != v['contract_hash'] or run.spec != v['spec']: raise ValueError('Registered execution contract changed')
+    if run.contract_hash != v['contract_hash'] or canonical_json(run.spec) != canonical_json(v['spec']): raise ValueError('Registered execution contract changed')
     return v, run, [deepcopy(pin), v['source'], v['metadata'], *files, *([] if v['bank'] is None else [v['bank']])]
 
 
