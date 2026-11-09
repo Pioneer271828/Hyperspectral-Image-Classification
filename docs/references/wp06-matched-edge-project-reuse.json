@@ -1,0 +1,13 @@
+{
+  "schema_version":1,
+  "issue":347,
+  "plan_sections":["master16", "master22 WP06", "implementation19.7"],
+  "scope":"Experimental control construction, no new graph-learning mechanism",
+  "project_reuse":["evaluation/graph_edge_intervention.py", "monitoring/graph_support.py"],
+  "prior_report":"research/reports/E3C5_冻结选中态重要边与随机删边工程验收_20261109.md",
+  "external_source_copied":false,
+  "upstream_executed":false,
+  "solver":"Existing SciPy1.15.3 scipy.optimize.milp, installed API docstring read on authorized LXC; no dependency installed",
+  "interpretation":"Independent constrained controls; no DropEdge reproduction or causal importance claim",
+  "limits":["Only local existing support", "Random objective is not uniform feasible-mask sampling", "Exact row/column degrees and global distance bins, not exact lengths or weight mass or connectivity", "Unresolved/infeasible alternatives expose no executable mask", "Real trained graph/model identity and retraining require separate integration"]
+}
