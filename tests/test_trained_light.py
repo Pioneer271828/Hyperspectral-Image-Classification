@@ -128,5 +128,28 @@ class TrainedLightTests(unittest.TestCase):
             for requests in (rows+rows,[rows[0],dict(rows[1],x=rows[1]['x'].double())],iter(rows)):
                 with self.assertRaises(ValueError):trained_cascade(self.full,pub,requests,mode='fast')
 
+    def test_publishes_earlier_selected_head_not_last_update(self):
+        run=LightHeadRun(self.full,self.scene,self.record,updates=8,seed=64,lr=.5,class_balance=True)
+        run.advance(8);self.assertLess(run.selected_step,8)
+        p=self.root/'early-run.pt';pin=run.save(p);out=self.root/'early-light.pt'
+        sha=export_trained_light(self.full,self.scene,self.record,p,out,expected_training_sha256=pin,expected_contract_hash=run.contract_hash)
+        pub=load_trained_light(self.full,out,expected_sha256=sha,expected_training_sha256=pin,expected_contract_hash=run.contract_hash)
+        self.assertEqual(pub.specification['selected_step'],run.selected_step)
+        self.assertNotEqual(state_hash(pub.model.heads[self.scene.dataset]),state_hash(run.head))
+        for k,v in run.selected_head.items():self.assertTrue(torch.equal(v,pub.model.heads[self.scene.dataset].state_dict()[k]))
+
+    def test_domain_bn_other_task_and_statistics_remain_frozen(self):
+        from model.VCASAHGCN import MultiDatasetVCASAHGCN
+        cfg=self.full.export_config();cfg['class_counts']['other']=9;cfg['backbone_kwargs']['norm_type']='domain_bn'
+        self.full=MultiDatasetVCASAHGCN(cfg['class_counts'],**cfg['backbone_kwargs']).eval();self.full.backbone.adapter.cache_attention=False
+        self.run=LightHeadRun(self.full,self.scene,self.record,updates=3,seed=64,lr=.0001,class_balance=True)
+        before=state_hash(self.full);pub=self.publish();trained_cascade(self.full,pub,self.rows(),mode='fast')
+        self.assertEqual(before,state_hash(self.full))
+        self.assertEqual(state_hash(pub.model.heads['other']),state_hash(self.full.cnn_heads['other']))
+        packet=torch.load(self.path,weights_only=True);packet['state']['heads.other.bias'].add_(.1)
+        model=LightCNN(self.full);model.load_state_dict(packet['state']);packet['spec']['light_state']=state_hash(model);packet['spec_hash']=digest(packet['spec'])
+        target=self.root/'wrong-other.pt';torch.save(packet,target)
+        with self.assertRaises(ValueError):load_trained_light(self.full,target,expected_sha256=hashlib.sha256(target.read_bytes()).hexdigest(),expected_training_sha256=self.trainsha,expected_contract_hash=self.run.contract_hash)
+
 
 if __name__=='__main__':unittest.main()
