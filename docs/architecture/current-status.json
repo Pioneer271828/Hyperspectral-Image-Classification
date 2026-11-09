@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 337,
+  "issue": 339,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -899,9 +899,17 @@
       "report": "research/reports/WP02G2_已验协议链主线整合与准入复核_20261110.md",
       "chat_report": "2026-11-10本聊天完整整合模块报告，随后继续计划"
     }
+    ,{
+      "id": "WP03 失败轻量批次证据清点",
+      "state": "只读清点工程通过；恢复与全批实验未完成",
+      "evidence": "Issue339；tested a66081740361c8bdcccafc73eafb71311bac69d6，LXC CPU25/25 88.397s；4432文件前后哈希一致21.320823s，35控制器+1外部回执/54000更新、1失败17未运行；新更新/query/GPU重载0；初版NONE字段误读与回执SHA转录拒绝日志保留",
+      "remaining": "显存修复/原合同数值与恢复兼容尚未证明，旧failed批次不续跑；全54独立审计与冻结query未完成，vca实际PAUSED。继续WP04 I7/I9组合工程",
+      "report": "research/reports/WP03LightInventory_失败批次证据与恢复边界_20261110.md",
+      "chat_report": "2026-11-10本聊天完整证据清点模块报告，随后连续推进；不作完整WP03实验交付"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp02_g2_integrated_continue_protocol_and_wp03",
+  "execution_state": "wp03_inventory_passed_continue_wp04_i7_i9",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
