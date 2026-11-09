@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 329,
+  "issue": 331,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "3db48b822b15706645f4573174a6f4fb27293d04",
+  "main_snapshot": "b50d532e96862f43d4c5782e24704f705e6546e2",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -787,7 +787,7 @@
       "id": "E3-C3外部开发登记与可恢复CLI",
       "state": "CPU文件登记与实际CLI工程通过，真实实验未验",
       "evidence": "tested3baabc1；专项8/另25回归；独立6合成模型/192调用/212检查点/6旧工件精确对照/1458混淆/162召回/325文件不变；完成恢复0更新",
-      "remaining": "E3-C4只读连接诊断已验；当前CLI限9类90/45 CPU，GPU/任意类别/真实多种子逐类及成本待，长训练暂停",
+      "remaining": "P4/E3多类别CPU接入已验（3/9/22合成）；GPU/真实多种子逐类与成本待，长训练暂停",
       "report": "research/reports/E3C3_外部开发登记与可恢复命令行工程验收_20261109.md"
     },
     {
@@ -866,6 +866,14 @@
       "remaining": "历史未知类训练排除、真实场景预处理身份、闭集稳定性与真实开放集收益/GPU未验，长训练暂停；下一P4/E3多类别开发训练接入",
       "report": "research/reports/E4c3_固定模型三头特征与原始logits生产工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天模块完整工程报告，随验收交付"
+    },
+    {
+      "id": "P4/E3多类别开发训练",
+      "state": "固定每类10/5、多类别训练与旧九类恢复CPU工程通过",
+      "evidence": "Issue331/PR332；tested50f757476689af69bbd158efc3c50156852309af，CPU6+44；独立16新合成模型384更新+24旧模型0更新/120头/16110混淆1242召回212文件不变；2曝光不足保留拒绝",
+      "remaining": "GPU/真实HongHu空间可行性与真实效果未验；轻头/M4及删边消费者下一项补齐，长训练暂停",
+      "report": "research/reports/P4E3_多类别开发训练与恢复工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天模块完整报告，随验收交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -1095,6 +1103,13 @@
       "tested_sha": "c83f311705d4179ab0262e1cc9126d1609caed96",
       "merge_sha": "3db48b822b15706645f4573174a6f4fb27293d04",
       "scope": "E4c-2 CPU7+23; 3synthetic protocols27reports/21input files; production semantics explicitly unverified"
+    },
+    {
+      "pr_number": 330,
+      "head_sha": "a83c7271733982975f61b676e252c67432c020d7",
+      "tested_sha": "b1be089f0ab30aa95ce8016e22d97a8627339b71",
+      "merge_sha": "b50d532e96862f43d4c5782e24704f705e6546e2",
+      "scope": "E4c-3 CPU7+31;3initialized native models9CLI/31104features972logits/27reports/45pins; history and real-scene identity unverified"
     }
   ]
 }
