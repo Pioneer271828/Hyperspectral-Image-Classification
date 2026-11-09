@@ -1,0 +1,11 @@
+{
+  "issue": 323,
+  "date": "2026-11-10",
+  "plan": ["master16.3", "implementation13 E0"],
+  "paper": {"url": "https://arxiv.org/abs/2006.13318v1", "authors": ["Chen Cai", "Yusu Wang"], "read": "Sections2-3, Definition3.1 and theorem assumptions; trace normalized-Laplacian energy", "scope": "Undirected fixed graph GCN analysis; not a theorem for our directed learned graph/GroupNorm/two-stage model"},
+  "upstream": {"url": "https://github.com/Chen-Cai-OSU/GNN-Over-Smoothing", "author_link": "https://chen-cai-osu.github.io/", "sha": "d7c42bc6c570b1a46d9fc7420f767dbd3d257e4a", "classification": "author code linked by author publication page", "read_files": ["README.md", "oversmoothing/main.py", "oversmoothing/util.py"], "license": "No license file among five tracked files or license notice in inspected sources; no permission to copy asserted", "copied_files": [], "executed": false},
+  "implementation": "Independent sparse edge-difference evaluation of published quadratic form; explicit symmetrization and unit-loop replacement are our diagnostic convention. Divide energy by squared feature norm, not claimed as original paper training recipe.",
+  "reuse": {"path": "evaluation/representation_redundancy.py", "reference": "docs/references/representation-redundancy-review.json", "scope": "existing centered covariance participation ratio, numerical rank; not entropy effective rank"},
+  "additional_read": {"url": "https://arxiv.org/abs/2509.04178", "scope": "2025 comment sections1-5 inspected; not used as a new theorem or implementation"},
+  "limits": ["No upstream execution/reproduction", "No external source copied", "No new dependency", "No real training/query/benefit claim", "Normalized-Laplacian nullspace is degree-weighted, not generally constant features", "Common grid id does not guarantee identical learned Q semantics"]
+}
