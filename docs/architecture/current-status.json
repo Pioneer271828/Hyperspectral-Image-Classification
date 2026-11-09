@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 309,
+  "issue": 311,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "eec26ce6b1ec83df3a6a4d4ad7c7b8a9a8709784",
+  "main_snapshot": "93b89b672abf7d7d0e74e3eca8909c10c38c4a42",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -787,8 +787,15 @@
       "id": "E3-C3外部开发登记与可恢复CLI",
       "state": "CPU文件登记与实际CLI工程通过，真实实验未验",
       "evidence": "tested3baabc1；专项8/另25回归；独立6合成模型/192调用/212检查点/6旧工件精确对照/1458混淆/162召回/325文件不变；完成恢复0更新",
-      "remaining": "下一Issue311 E3-C4同上下文连接诊断；当前只限9类90/45 CPU协议，GPU/任意类别/真实多种子逐类及成本待，长训练暂停",
+      "remaining": "E3-C4只读连接诊断已验；当前CLI限9类90/45 CPU，GPU/任意类别/真实多种子逐类及成本待，长训练暂停",
       "report": "research/reports/E3C3_外部开发登记与可恢复命令行工程验收_20261109.md"
+    },
+    {
+      "id": "E3-C4逐上下文有向支持与小区域诊断",
+      "state": "CPU只读诊断工程通过，真实关系价值未验",
+      "evidence": "tested6a40430；专项8/另19回归；独立既有6合成模型126探针/378头/4032可达性/504质量/42变化/584文件不变，新增优化0",
+      "remaining": "下一§12.3重要边与同数量随机删边只读干预；实际训练边轨迹、真实逐类/成本/GPU待；软区域质量不等于小类召回，长训练暂停",
+      "report": "research/reports/E3C4_有向支持与小区域只读诊断工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -948,6 +955,13 @@
       "tested_sha": "f349e0011cb896d93406c7d6d4080d622235035c",
       "merge_sha": "eec26ce6b1ec83df3a6a4d4ad7c7b8a9a8709784",
       "scope": "E3-C2 CPU6/37; independent24syntheticmodels/678calls/5832cells/648recalls/139pins; 15 old curriculum artifacts restored without updates"
+    },
+    {
+      "pr_number": 310,
+      "head_sha": "fa1884cddd7b21fa0c9d858dc8e2fe4aaac9a9a0",
+      "tested_sha": "3baabc13ebee56b997a17d6465096c630a6ac049",
+      "merge_sha": "93b89b672abf7d7d0e74e3eca8909c10c38c4a42",
+      "scope": "E3-C3 CPU8 plus25; independent6syntheticmodels/192calls/212checkpoints/1458cells/325pins; exact six old artifacts; no real training"
     }
   ]
 }
