@@ -28,7 +28,9 @@ class MatchedRetrainingTests(unittest.TestCase):
                 for key in donor.spec:
                     if key!='graph_route':self.assertEqual(a.spec[key],donor.spec[key],key)
                 b=self.plan.start(donor,name,expected_hash=self.plan.plan_hash)
-                a.advance(24);b.advance(7);p=Path(d)/'run.pt';sha=b.save(p)
+                a.advance(24);b.advance(7);p=Path(d)/(name.replace(':','-')+'-partial.pt');sha=b.save(p)
+                if name=='none':
+                    with self.assertRaises(ValueError):self.plan.restore(donor,'important',p,expected_hash=self.plan.plan_hash,expected_sha256=sha)
                 b=self.plan.restore(donor,name,p,expected_hash=self.plan.plan_hash,expected_sha256=sha);b.advance(24)
                 self.assertEqual(a.history,b.history);self.assertEqual(route_state_hash(a.model),route_state_hash(b.model))
                 self.assertEqual((a.selected_step,route_state_hash(a.model)),(b.selected_step,route_state_hash(b.model)))
@@ -40,6 +42,7 @@ class MatchedRetrainingTests(unittest.TestCase):
                 self.assertTrue(all(r['gradient_l1']['graph']>0 for r in a.history))
                 self.assertTrue(any(r['changed_parameters']['graph']>0 for r in a.history))
                 self.assertTrue(all(r['validation']['support']==[5]*9 for r in a.history))
+                p=Path(d)/(name.replace(':','-')+'-complete.pt')
                 sha=b.save(p);c=self.plan.restore(donor,name,p,expected_hash=self.plan.plan_hash,expected_sha256=sha)
                 c.advance(24);self.assertEqual(c.history,b.history)
                 completed_names.append(name)
