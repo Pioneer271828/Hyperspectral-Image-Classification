@@ -7,7 +7,9 @@ from .classification_metrics import class_order, class_indices, classification_m
 
 def _summary(labels, fast, full, ids):
     branches = branch_diagnostics(labels, fast, full, full, ids)
-    return dict(count=len(labels), four_way={k: v['count'] for k, v in branches['strata'].items()},
+    return dict(count=len(labels), four_way={name: branches['strata'][old]['count'] for name, old in zip(
+                    ('both_correct', 'fast_only_correct', 'full_only_correct', 'both_wrong'),
+                    ('both_correct', 'cnn_only_correct', 'graph_only_correct', 'both_wrong'))},
                 fast=classification_metrics(labels, fast, ids), full=classification_metrics(labels, full, ids),
                 full_corrects_fast=int(((fast != labels) & (full == labels)).sum()),
                 full_harms_fast=int(((fast == labels) & (full != labels)).sum()),

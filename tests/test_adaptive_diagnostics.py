@@ -16,7 +16,7 @@ def run(rows,**kwargs):
 
 class OfflineDiagnosticTests(unittest.TestCase):
     def test_four_cells_harm_correction_and_distinct_oracles(self):
-        r=run([record()]);self.assertEqual(list(r['four_way'].values()),[1,1,1,1])
+        r=run([record()]);self.assertEqual(r['four_way'],dict(both_correct=1,fast_only_correct=1,full_only_correct=1,both_wrong=1))
         self.assertEqual(r['full_corrects_fast'],1);self.assertEqual(r['full_harms_fast'],1)
         self.assertEqual(r['pixel_oracle_accuracy'],.75);self.assertEqual(r['block_oracle']['oa'],.5)
         self.assertFalse(r['blocks'][0]['oracle_use_full']);self.assertFalse(r['deployment_speed_evidence'])
