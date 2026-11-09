@@ -549,9 +549,25 @@
       "remaining": "完整空间效果与测试仍待，Xuzhou/HongHu固定验证缺类保留。已进入G2预审，既有源权重为独立域头，语义映射、Xuzhou家族与祖先/选模访问证明待补。",
       "report": "research/reports/P4PaviaSpatial_共享初始化与空间恢复验收_20261109.md",
       "chat_report": "本聊天2026-11-09 PaviaU空间接入验收与严格传感器留出预审。"
+    },
+    {
+      "id": "P4 G2家族共享语义与源访问门禁",
+      "state": "门禁工程通过，三个真实候选均拒绝",
+      "evidence": "tested d656caddf345f2cd2a87adf7393b8b27691d54ce，CPU10/10与checker。整族排除、语义顺序、祖先访问与源验证角色、文件哈希拒绝通过。真实3景核MAT头/影像哈希，公开元数据支持Xuzhou名义HySpex，本地发布绑定尚未认证；真实3拒绝，GT/query0。",
+      "remaining": "认证本地影像发布绑定、共享语义映射及真实共享头、完整祖先与源选模访问证据，暂未登记真实G2训练或评分",
+      "report": "research/reports/P4G2_传感器家族与共享语义门禁验收_20261109.md",
+      "chat_report": "本聊天2026-11-09 G2门禁工程与真实准入结果。"
+    },
+    {
+      "id": "P4 Xuzhou开发空间角色与HongHu整块可行性",
+      "state": "Xuzhou四组发布通过独立复核，HongHu同预算整块不可行",
+      "evidence": "tested d656caddf345f2cd2a87adf7393b8b27691d54ce。原训练区内留出Xuzhou五块，逐类最少1114/7，四组K1/K5与V5、角色互斥通过。HongHu第21类47候选仅块65，HiGHS不可行且有单块反证。原测试几何固定。Xuzhou运行预检73开发训练块归一化隔离、29共享匹配/6新图通过。",
+      "remaining": "继续Xuzhou四组空间训练和恢复接入；HongHu保留固定/开发整块缺口，未来新协议单独登记",
+      "report": "research/reports/P4SpatialDev_Xuzhou角色发布与HongHu整块可行性_20261109.md",
+      "chat_report": "本聊天2026-11-09 Xuzhou开发角色与HongHu可行性。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "p4_pavia_spatial_short_accepted_g2_provenance_preflight_blocked",
+  "execution_state": "p4_g2_gate_accepted_xuzhou_dev_release_accepted_honghu_whole_tile_infeasible",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。"
 }
