@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-09",
-  "issue": 307,
+  "issue": 309,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "9677eddb9e52b1593dd3e5343832acc4bd6e9a1a",
+  "main_snapshot": "eec26ce6b1ec83df3a6a4d4ad7c7b8a9a8709784",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -773,15 +773,22 @@
       "id": "E3-C1逐块图身份与固定支持",
       "state": "CPU上下文隔离/更新/恢复工程通过，正式训练链待",
       "evidence": "testedf7ed986；CPU6/26；独立12合成模型/120含恢复更新/84上下文/1344归一化和梯度/2916混淆；90文件不变",
-      "remaining": "E3-C2实际优化/选模/恢复API已验；正式外部登记CLI、GPU与真实多种子逐类/成本仍待。",
+      "remaining": "E3-C2/C3优化与登记CLI工程已验；GPU、真实多种子逐类/最终图重训/成本待。",
       "report": "research/reports/E3C1_逐训练块图身份与固定连接工程验收_20261109.md"
     },
     {
       "id": "E3-C2动态固定支持优化选模恢复",
       "state": "CPU八模式实际优化API通过，正式外部CLI及真实实验待",
       "evidence": "testedf349e00；CPU6/37；八模式24与7+17精确恢复；独立24合成模型/678调用/576路由/5832混淆/648召回；15旧课程工件恢复0更新、139文件不变",
-      "remaining": "下一外部文件登记/输入认证/可恢复CLI；GPU和真实多种子逐类、最终图重训与总成本待，长训练暂停",
+      "remaining": "E3-C3外部登记CLI已验；下一E3-C4只读连接诊断；GPU与真实多种子逐类/最终图重训/成本待，长训练暂停。",
       "report": "research/reports/E3C2_动态固定连接优化选模与恢复工程验收_20261109.md"
+    },
+    {
+      "id": "E3-C3外部开发登记与可恢复CLI",
+      "state": "CPU文件登记与实际CLI工程通过，真实实验未验",
+      "evidence": "tested3baabc1；专项8/另25回归；独立6合成模型/192调用/212检查点/6旧工件精确对照/1458混淆/162召回/325文件不变；完成恢复0更新",
+      "remaining": "下一Issue311 E3-C4同上下文连接诊断；当前只限9类90/45 CPU协议，GPU/任意类别/真实多种子逐类及成本待，长训练暂停",
+      "report": "research/reports/E3C3_外部开发登记与可恢复命令行工程验收_20261109.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -934,6 +941,13 @@
       "tested_sha": "f7ed986ba848fc6a564dc87e45487360f62842c3",
       "merge_sha": "9677eddb9e52b1593dd3e5343832acc4bd6e9a1a",
       "scope": "E3-C1 CPU6/26; independent12syntheticmodels/84contexts/1344normalization+gradients/90pins"
+    },
+    {
+      "pr_number": 308,
+      "head_sha": "f628c25072f9f038ab1a5f1b7234a4d74dfd8f87",
+      "tested_sha": "f349e0011cb896d93406c7d6d4080d622235035c",
+      "merge_sha": "eec26ce6b1ec83df3a6a4d4ad7c7b8a9a8709784",
+      "scope": "E3-C2 CPU6/37; independent24syntheticmodels/678calls/5832cells/648recalls/139pins; 15 old curriculum artifacts restored without updates"
     }
   ]
 }

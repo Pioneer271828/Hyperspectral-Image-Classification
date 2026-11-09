@@ -1,0 +1,107 @@
+{
+  "status": "passed",
+  "tested_sha": "3baabc13ebee56b997a17d6465096c630a6ac049",
+  "branch": "codex/graph-route-cli",
+  "environment": {
+    "host": "lbx",
+    "python": "3.10.20",
+    "torch": "2.7.1+cu128",
+    "device": "cpu",
+    "threads": 1
+  },
+  "tests": {
+    "specialized": {
+      "passed": 8,
+      "seconds": 66.989,
+      "command": "python -m unittest tests.test_registered_graph_route -v"
+    },
+    "related": {
+      "passed": 25,
+      "seconds": 42.104,
+      "command": "python -m unittest tests.test_graph_route_training tests.test_graph_route_context tests.test_curriculum_exposure tests.test_repository_delivery -v"
+    }
+  },
+  "checker": {
+    "status": "passed",
+    "commit": "3baabc13ebee56b997a17d6465096c630a6ac049",
+    "branch": "codex/graph-route-cli",
+    "python_files": 510,
+    "json_files": 159,
+    "included_modules": [
+      "accepted_g4i",
+      "accepted_g4i_result_docs",
+      "monitoring_protection",
+      "snapshot_repair",
+      "numerical_audit",
+      "main_cache_repair",
+      "m4_source_handoff",
+      "tool_integration"
+    ],
+    "frozen_runtime_unchanged": true,
+    "main_merged": true,
+    "main_merge_scope": "recorded_pr_batches_only",
+    "ci_runner": "registration_required",
+    "new_real_training": false
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-independent02/receipt.json",
+    "sha256": "3ebe466b1a248558b7061e67350786f730043265b33c4d13a398f0e2436c5906",
+    "synthetic_models": 6,
+    "sampler_seeds": [
+      64,
+      512,
+      2048
+    ],
+    "model_initialization_seed": 512,
+    "router_seed": 64,
+    "updates_per_model": 24,
+    "optimizer_calls": 192,
+    "checkpoints_checked": 212,
+    "old_completed_exact_comparisons": 6,
+    "full_cli_comparisons": 2,
+    "completed_restore_updates": 0,
+    "selected_confusion_cells": 1458,
+    "selected_recalls": 162,
+    "protected_files_unchanged": 325,
+    "elapsed_seconds": 161.7952234116383
+  },
+  "logs": {
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests01/cpu.log": "d1862de83c9c1354dd3d689562295d306aa968971097bbfa93270b980fb8168f",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests02/cpu.log": "0404c38166ba956e2464d87ebca988fbb90bf416a20ed1daee104c15544805b5",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests02/related.log": "d2e8ea8eb07da99c953158f10fdd24ae83b66853a812dae49b26c2526a8c2fe3",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests03/independent.log": "a02d14432bfdfae578d2229df6916b422e57180e3bf4ceb41dfa82fc54265ce6",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests03/help.log": "82a2063cccd724c68a5dbe3733506474a93a532aab93bce9ec56a4fb308e90a8",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests03/related.log": "80bac94d6f5830fa0cd4728f8c744489dcb0ad62dd984adf317827c0d7c65b78",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests03/checker.log": "db85848c4822620a418192c7fd49455b34aa7d224edf80376e9e47a245249fba",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests03/cpu.log": "ae58bdba663f6a0390cadd4850fc63772c3bdb76bd8963c64b9baedbcc183032",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests04/checker.log": "172f478404a183c9362c6ac9811f4667cc8aa3b301a8d32f5d7e0a6eaf355a68",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests04/cpu.log": "9ae2239dbf0472d51d66ba855aa703a70c9d8a685c8967f69227bf797f67ad60",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests04/related.log": "76788d1448b7dc5b3c8db0418094ec949279974faa3b65475e579fe9efadd4d0",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests04/help.log": "82a2063cccd724c68a5dbe3733506474a93a532aab93bce9ec56a4fb308e90a8",
+    "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-tests04/independent.log": "b0bf97ed6b4a7c75fbd52ad0612077e9919e9adc2f4f9cb69f77ddc07c826bdd"
+  },
+  "failures": [
+    {
+      "commit": "fc78f45ff83c655650ae372124f2382e43d82f8f",
+      "scope": "JSON tuple/list contract comparison before optimization",
+      "passed": 2,
+      "failed": 1,
+      "errors": 2,
+      "updates": 0
+    },
+    {
+      "commit": "4cc3cf58d5e36cbc177bed65dbaea7ecbfddb41c",
+      "scope": "external audit passed role-annotated tile instead of original plan tile; failed directory preserved",
+      "synthetic_optimizer_calls": 24,
+      "output": "/home/lbx/hsi-pioneer271828/runs/graph-route-cli-independent01"
+    }
+  ],
+  "limitations": [
+    "CPU FP32 GroupNorm nine-class 90/45 development protocol only",
+    "synthetic engineering; no GPU or real training",
+    "no queue, automatic retry, query release or speed/accuracy claim",
+    "SIGKILL/disk-full recovery is not certified; completed checkpoints retained but no automatic restart"
+  ],
+  "query": 0,
+  "real_training": 0
+}
