@@ -2,6 +2,7 @@
 from collections import Counter
 from copy import deepcopy
 import math
+import json
 import numpy as np
 from model.research_config import digest
 from transfer.observation_policy import ObservationPolicy
@@ -25,7 +26,9 @@ def _permutation(source,severity,order,seed):
 
 def _value(source,severity,order,seed):
     if 'curriculum' in source or source.get('selection_condition')!='full':raise ValueError('Unmodified full-selection source required')
-    source=ObservationPolicy(source).to_dict()
+    # Metadata dataclasses contain tuples; freeze a canonical JSON representation
+    # so disk recovery is structurally identical, not merely hash-equivalent.
+    source=json.loads(json.dumps(ObservationPolicy(source).to_dict()))
     if source.get('training_application','real_subset')!='real_subset':raise ValueError('Real-band subsets only')
     permutation=_permutation(source,severity,order,seed)
     value=deepcopy(source);value.pop('policy_hash')

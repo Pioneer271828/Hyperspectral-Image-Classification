@@ -42,6 +42,7 @@ class CurriculumTests(unittest.TestCase):
             if order=='hard_to_easy':self.assertEqual(v['curriculum']['permutation'],[2,5,8,11,1,4,7,10,0,3,6,9])
             if order=='random':self.assertNotEqual(v['curriculum']['permutation'],list(range(12)))
             self.assertEqual(v,CurriculumPolicy(v).to_dict())
+            self.assertEqual(v,CurriculumPolicy(json.loads(json.dumps(v))).to_dict())
 
     def test_rng_repeat_ownership_disabled_exact_and_seeds(self):
         _,_,_,base,severity=policies();np.random.seed(17);torch.manual_seed(17)
