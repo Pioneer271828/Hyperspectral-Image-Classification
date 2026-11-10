@@ -1,0 +1,923 @@
+{
+  "policy": "g4_light_failed_evidence_inventory_v1",
+  "status": "inventory_passed",
+  "producer_commit": "2cfca12ae52308189c81c6d32dcea10f0ac1b50c",
+  "registration_sha256": "b3cca8f1028004da30177704b107e959cd2fa47aa7892390522e4589fe39e735",
+  "campaign_status": "failed",
+  "planned_cases": 54,
+  "planned_optimizer_updates": 81000,
+  "levels": {
+    "coordinator_receipt_revalidated": 35,
+    "external_receipt_revalidated": 1,
+    "not_started": 17,
+    "failed_case": 1
+  },
+  "historically_accepted_updates_revalidated": 54000,
+  "unaccepted_budget": 27000,
+  "cases": [
+    {
+      "name": "paviaU-s64-none-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        64,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s64-none-source_pretrained_head_only.json",
+      "receipt_sha256": "f0f05968405fff1c9780a43fe14449a077cd2919a6bc15445eed5e230ee767fb"
+    },
+    {
+      "name": "paviaU-s64-capacity_control-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        64,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s64-capacity_control-source_pretrained_head_only.json",
+      "receipt_sha256": "c2f1d831a7c8629abef901b5267816419f2e6a45b7a0f929790d2fc4560fb8d8"
+    },
+    {
+      "name": "paviaU-s64-x_residual-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        64,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s64-x_residual-source_pretrained_head_only.json",
+      "receipt_sha256": "7ead50c7cfaa4de302a0162a840bde3853a8778089bfebae68d5a93faff75ace"
+    },
+    {
+      "name": "paviaU-s64-none-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        64,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 331,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s64-none-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "87e4530d1384ac8c1af3c7fe889f1bbbdd851bbdd36a8a902e517b386d7d7749"
+    },
+    {
+      "name": "paviaU-s64-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        64,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 361,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s64-capacity_control-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "300513decf864398d59f1c7c96e07a1ef2f92fa3e527fe6fd7f451ecd727139a"
+    },
+    {
+      "name": "paviaU-s64-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        64,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 361,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s64-x_residual-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "95879ba1b4c0f201641a90b0954294c5bc2c1a89211080708c10d6758fb7dbfb"
+    },
+    {
+      "name": "paviaU-s512-none-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        512,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s512-none-source_pretrained_head_only.json",
+      "receipt_sha256": "85dde2dc749e7d9a3523cb5d2e218f3e0ed351580280753239b9f0109fc62f30"
+    },
+    {
+      "name": "paviaU-s512-capacity_control-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        512,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s512-capacity_control-source_pretrained_head_only.json",
+      "receipt_sha256": "d5a064c429136298a52156feae09977b1ad6747353e45dd40d40b997ce9f10be"
+    },
+    {
+      "name": "paviaU-s512-x_residual-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        512,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s512-x_residual-source_pretrained_head_only.json",
+      "receipt_sha256": "46b292d83850ea5e55270c6038b02951cb79bd17d013442be55bdcc895c83908"
+    },
+    {
+      "name": "paviaU-s512-none-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        512,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 361,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s512-none-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "83c3cfc93ab5b9a70f2acfce994a00a978adf4cbacb95296aa81d5cebfbdf7dd"
+    },
+    {
+      "name": "paviaU-s512-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        512,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 361,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s512-capacity_control-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "f1aeaaac6d46e533e7fbe05315eba1487314a074363e3f5bf4ebc1f26794a61a"
+    },
+    {
+      "name": "paviaU-s512-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        512,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 421,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s512-x_residual-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "7fcf16199e1f369d7ef580abc920e30d2a21bb941e7cfac38c95f15e6d39febd"
+    },
+    {
+      "name": "paviaU-s2048-none-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        2048,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s2048-none-source_pretrained_head_only.json",
+      "receipt_sha256": "1d2d8f206bbdad95f4c1e1d6bc4e29039cff1a1a52efeee83acfca1bf59b518d"
+    },
+    {
+      "name": "paviaU-s2048-capacity_control-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        2048,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s2048-capacity_control-source_pretrained_head_only.json",
+      "receipt_sha256": "f69919d42a3449b79120071cb4ddcdb5b6ade28fd21c315f3154bef950352e86"
+    },
+    {
+      "name": "paviaU-s2048-x_residual-source_pretrained_head_only",
+      "role": [
+        "paviaU",
+        2048,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s2048-x_residual-source_pretrained_head_only.json",
+      "receipt_sha256": "3d0491ff1b23e9dfb8c01fd578be1304154636e8c5e94fbeb4d6472ae7b2e22f"
+    },
+    {
+      "name": "paviaU-s2048-none-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        2048,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 421,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s2048-none-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "00d870893d785435c7b75265c3337eaab3af954b12e1ac8132e396ed0b046907"
+    },
+    {
+      "name": "paviaU-s2048-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        2048,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 421,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s2048-capacity_control-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "bf88c3bfe516b76a4d63ba1f7ba5b1d68581031bc4d7a94d5ba408624ae4225d"
+    },
+    {
+      "name": "paviaU-s2048-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "paviaU",
+        2048,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 481,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/paviaU-s2048-x_residual-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "f198e834cba6aa5e76b8d1f7d1b74409178a64b3d3b4b36c57bc3d1bfd910202"
+    },
+    {
+      "name": "xuzhou-s64-none-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        64,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s64-none-source_pretrained_head_only.json",
+      "receipt_sha256": "289c947b7ad53c20cdfdd5a6b3a1c7949e0bfcd54c875b6b9d02cf0f37c11140"
+    },
+    {
+      "name": "xuzhou-s64-capacity_control-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        64,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s64-capacity_control-source_pretrained_head_only.json",
+      "receipt_sha256": "a7b8e582bf8c97bdacbe7f37edc3a064bd4db41c7ffd0991c619de6393648fd1"
+    },
+    {
+      "name": "xuzhou-s64-x_residual-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        64,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s64-x_residual-source_pretrained_head_only.json",
+      "receipt_sha256": "b59ccd236f681754dd98e7de274eae287a6f9ec2bc52dbe3816b5bd416a77af5"
+    },
+    {
+      "name": "xuzhou-s64-none-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        64,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 421,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s64-none-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "a13111c9b9f24f78166ffe08db60cbec41444453c1c98ab98b64fd16eb2aab9a"
+    },
+    {
+      "name": "xuzhou-s64-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        64,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 481,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s64-capacity_control-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "0d6660b71e97e15c669d838e7be2478794e61918081ae59d7aa1f6984298d03e"
+    },
+    {
+      "name": "xuzhou-s64-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        64,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 601,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s64-x_residual-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "4b457db5ace12584954a9a04dd4768924f7619eba55478a32bb04d6144e78fc3"
+    },
+    {
+      "name": "xuzhou-s512-none-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        512,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s512-none-source_pretrained_head_only.json",
+      "receipt_sha256": "6f22bc59689e55d05b60689188d9d082041325d4ac9724f4ca20398cebb20172"
+    },
+    {
+      "name": "xuzhou-s512-capacity_control-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        512,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s512-capacity_control-source_pretrained_head_only.json",
+      "receipt_sha256": "1079800a2347d126ff27d7381e90c583c5410ccdd2e775a9f5e86e233cc783de"
+    },
+    {
+      "name": "xuzhou-s512-x_residual-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        512,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s512-x_residual-source_pretrained_head_only.json",
+      "receipt_sha256": "b810caf87202cdc148a8cd65a2e7e546a290e79bc05e75e414b5cdd1b52a9e23"
+    },
+    {
+      "name": "xuzhou-s512-none-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        512,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 1231,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s512-none-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "fed0dc70b50a03f2831abb4f6489f0e5aec5bbd81400933437afbb2b679a20d9"
+    },
+    {
+      "name": "xuzhou-s512-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        512,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 391,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s512-capacity_control-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "9dc0f2c0d096364e6dfbae9b86196f82517cbd975fcb4b0ef29b92dc5935c4b2"
+    },
+    {
+      "name": "xuzhou-s512-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        512,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 241,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s512-x_residual-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "678a08a1b13d722d6922b33a06e499af4ecea1b7b4e2b0f2531ea1cbdb2b5f05"
+    },
+    {
+      "name": "xuzhou-s2048-none-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        2048,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s2048-none-source_pretrained_head_only.json",
+      "receipt_sha256": "bcd0951a104877fc3f9ef1d67f50c0534aa601e17b983bccb56e889ca83db506"
+    },
+    {
+      "name": "xuzhou-s2048-capacity_control-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        2048,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s2048-capacity_control-source_pretrained_head_only.json",
+      "receipt_sha256": "6159c25f283246ae04fd93011ff8d3ca179ea75ecf9fb9838c9a57077f4142d9"
+    },
+    {
+      "name": "xuzhou-s2048-x_residual-source_pretrained_head_only",
+      "role": [
+        "xuzhou",
+        2048,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "external_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/issue249-post-drain-audit01/receipt.json",
+      "receipt_sha256": "22c593478f4badda8b8f54e61d7bc148dd261d666f73283b63ed71e8e11af8aa"
+    },
+    {
+      "name": "xuzhou-s2048-none-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        2048,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "updates": 1500,
+      "selected_step": 361,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s2048-none-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "fbbe171b98e1f4ff7457ab4a9cde45085a3c7d663299a07b7f20026092029f79"
+    },
+    {
+      "name": "xuzhou-s2048-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        2048,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "xuzhou-s2048-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "xuzhou",
+        2048,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "updates": 1500,
+      "selected_step": 241,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 54,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/xuzhou-s2048-x_residual-source_pretrained_adapter_heads.json",
+      "receipt_sha256": "83406912bf05524a1000a9f52f0fa0c70ffbc331bef9b5616046c0c7315a4b6c"
+    },
+    {
+      "name": "whu-honghu-s64-none-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        64,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s64-capacity_control-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        64,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "updates": 1500,
+      "selected_step": 1500,
+      "validation_events": 51,
+      "historical_head_metrics": 6,
+      "historical_class_recalls": 132,
+      "historical_exact_reloads": 3,
+      "level": "coordinator_receipt_revalidated",
+      "receipt": "/home/lbx/hsi-pioneer271828/runs/g4-light-full-issue249-registered01/audits/whu-honghu-s64-capacity_control-source_pretrained_head_only.json",
+      "receipt_sha256": "7f6f68d8e4981791e5cad1db4b0987cf763b86385a3ee5676bbe6c0376d141b8"
+    },
+    {
+      "name": "whu-honghu-s64-x_residual-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        64,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s64-none-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        64,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "level": "failed_case",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": [
+        "adaptation-cost.json",
+        "identity.json"
+      ]
+    },
+    {
+      "name": "whu-honghu-s64-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        64,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s64-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        64,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s512-none-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        512,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s512-capacity_control-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        512,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s512-x_residual-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        512,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s512-none-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        512,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s512-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        512,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s512-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        512,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s2048-none-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        2048,
+        "source_pretrained_head_only",
+        "none"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s2048-capacity_control-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        2048,
+        "source_pretrained_head_only",
+        "capacity_control"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s2048-x_residual-source_pretrained_head_only",
+      "role": [
+        "whu-honghu",
+        2048,
+        "source_pretrained_head_only",
+        "x_residual"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s2048-none-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        2048,
+        "source_pretrained_adapter_heads",
+        "none"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s2048-capacity_control-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        2048,
+        "source_pretrained_adapter_heads",
+        "capacity_control"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    },
+    {
+      "name": "whu-honghu-s2048-x_residual-source_pretrained_adapter_heads",
+      "role": [
+        "whu-honghu",
+        2048,
+        "source_pretrained_adapter_heads",
+        "x_residual"
+      ],
+      "level": "not_started",
+      "cursor_evidence_present": false,
+      "cursor_unverified": null,
+      "files": []
+    }
+  ],
+  "elapsed_seconds": 21.320823228918016,
+  "new_optimizer_updates": 0,
+  "query_labels_accessed": false,
+  "new_model_reloads": 0,
+  "global_acceptance": false,
+  "resume_authorized": false,
+  "scope": "Rehash historical receipts, inputs, artifacts and JSON trace/selection only; no new probability, optimizer-state, scheduler, or GPU reload audit.",
+  "inventory_commit": "a66081740361c8bdcccafc73eafb71311bac69d6",
+  "checked_file_count": 4432,
+  "full_receipt": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/wp03-issue249-inventory03.json",
+    "sha256": "37b398e982f4e9069147ccada2bf55da71b544810c03ecd24620e03ed304ce51"
+  },
+  "tests": {
+    "gpu_run": false,
+    "log": "/home/lbx/hsi-pioneer271828/runs/wp03-failed-inventory-tests01/final25.log",
+    "cpu_passed": 25,
+    "cpu_seconds": 88.397
+  }
+}
