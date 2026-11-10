@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 375,
+  "issue": 377,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -1055,7 +1055,7 @@
       "id": "WP11 独立确认准入与固定路径执行",
       "state": "CPU工程通过，真实确认待准入",
       "evidence": "Issue373；tested 9817916b94624c8fce889760ccb757252e571c48；40/40 CPU；冻结门控、独立块和授权标签、实际固定分支调用、五臂配对计时与曲线入口通过；徐州25候选块",
-      "remaining": "真实轻模型、完整模型同场景祖先审计、校准与确认授权标签及真实成本待验",
+      "remaining": "徐州完整模型祖先已另案审计；同划分真实轻模型、两套授权标签及真实成本待验",
       "report": "research/reports/WP11IndependentConfirmation_独立确认准入与固定路径执行_20261110.md",
       "chat_report": "2026-11-10本聊天继续推进留出观测准备"
     },
@@ -1066,6 +1066,14 @@
       "remaining": "实际角色与授权标签、模型历史和真实确认待验；54成本GPU空闲最高6000MiB，WP04真实短测后补",
       "report": "research/reports/WP11HeldAside_徐州无标签留出候选观测准备_20261110.md",
       "chat_report": "2026-11-10本聊天交付实际影像候选"
+    },
+    {
+      "id": "WP11 真实模型复用与独立标签托管",
+      "state": "完整模型历史与标签托管工程通过，真实标签授权待齐",
+      "evidence": "Issue377；tested 6d17d001d7c396de5f20305f1893fbe379bd59fe；CPU32/32；徐州5000步采样重放、50次历史开发验证、严格CPU加载；78开发块26076288值回读；真实12校准与13确认块无交叠",
+      "remaining": "等待两角色各自的授权稀疏标签及同划分训练轻模型，确认逐类支持后进入校准和独立确认；冻结54成本GPU待资源，WP04真实短测后补",
+      "report": "research/reports/WP11RealReuse_真实模型复用与独立标签托管_20261110.md",
+      "chat_report": "2026-11-10本聊天交付完整模型审计与真实标签托管准备"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
