@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 361,
+  "issue": 362,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -994,10 +994,18 @@
       "remaining": "真实联合评价、独立重复与精度成本证据待验",
       "report": "research/reports/WP12CPUIntegration_CPU与GPU整合回归验收_20261110.md",
       "chat_report": "2026-11-10本聊天工程回归验收"
+    },
+    {
+      "id": "WP12 配对精度与成本汇总",
+      "state": "报告消费者CPU工程通过",
+      "evidence": "Issue362；tested 28b0b68efc8094b4499d5d3cdf46b53e02002f3f；CPU36/36，17.192秒；完整三种子配对、三头逐类、成本口径、输入身份和输出保护通过",
+      "remaining": "接入经过验收的真实统一精度、校准与同硬件成本证据；WP04四组真实短测后补",
+      "report": "research/reports/WP12UnifiedCohort_配对精度与成本汇总工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天工程模块验收"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp12_integration_regression_passed_research_evaluation_pending",
+  "execution_state": "wp12_paired_report_consumer_passed_real_evidence_pending",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
