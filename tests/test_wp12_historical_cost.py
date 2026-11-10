@@ -1,13 +1,28 @@
 import copy
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from evaluation.dynamic_curve import timing_summary as established_summary
 from evaluation.wp12_cost_primitives import timing_summary
 from model.research_config import digest
 from scripts.measure_wp12_historical_cost import PRODUCER, preserved_runtime
+from evaluation.wp12_resident_cost import measure
+from tests.test_wp12_resident_cost import fixture
 
 
 class HistoricalCostTests(unittest.TestCase):
+    def test_cpu_peak_includes_final_validation_boundary(self):
+        with TemporaryDirectory() as directory:
+            job = fixture(Path(directory))
+            peaks = [SimpleNamespace(ru_maxrss=100), SimpleNamespace(ru_maxrss=200)]
+            with patch("evaluation.wp12_resident_cost.resource.getrusage", side_effect=peaks):
+                result = measure(job)
+            self.assertEqual(result["row"]["cost"]["peak_bytes"], 200 * 1024)
+            self.assertEqual(result["environment"]["memory"], "fresh_worker_peak_rss_through_validation_bytes")
+
     def test_standalone_timing_matches_established_reducer(self):
         for values in ([1, 2, 3, 4], [.01, .07, .3, .6, 12, 2], [3] * 12):
             self.assertEqual(timing_summary(values, repeats=len(values), blocks=123),
