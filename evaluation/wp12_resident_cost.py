@@ -1,6 +1,6 @@
 """Native frozen-checkpoint resident costs; no labels, calibration or training.
 
-CPU peak is fresh-worker lifetime RSS (including imports/load/validation), CUDA
+CPU peak is fresh-worker RSS through validation (including imports/load), CUDA
 peak is allocated tensor memory over measured forwards (including resident
 model/input). Neither is incremental model memory. Artifact bytes are the
 checkpoint plus architecture sidecar, excluding runtime and input data.
@@ -17,9 +17,7 @@ import time
 
 import torch
 
-from evaluation.dynamic_curve import pin, timing_summary
-from evaluation.unified_cohort import _fields, _index
-from evaluation.wp12_evidence import COST_POLICY
+from evaluation.wp12_cost_primitives import fields as _fields, pin, timing_summary
 from joint_baseline import forward
 from joint_training import _tree_fingerprint
 from m4_ordered_source import OrderedValidation
@@ -30,7 +28,7 @@ from research_runtime import hash_file
 
 JOB_POLICY = "wp12-native-resident-job-v1"
 OBSERVATION = "net_input Q A wavelengths fwhm superpixel_scale"
-MEMORY = {"cpu": "fresh_worker_lifetime_peak_rss_bytes",
+MEMORY = {"cpu": "fresh_worker_peak_rss_through_validation_bytes",
           "cuda": "measured_forward_peak_allocated_bytes_including_resident_tensors"}
 
 
@@ -181,6 +179,10 @@ def measure(job):
         raise ValueError("Frozen output, model, observation or environment changed")
     for spec in (job["checkpoint"], job["sidecar"], work["file"]):
         pinned_path(spec)
+    if device == "cpu":
+        # Include final tensor/file validation, not just the timing loop. This
+        # ends before receipt/CLI serialization and is not incremental RSS.
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
     row = {k: case[k] for k in ("scene", "seed", "arm")}
     row["cost"] = dict(checkpoint_sha256=case["checkpoint_sha256"],
                        workload_sha256=work["tensor_sha256"], wall_ms=samples, peak_bytes=int(peak),
@@ -193,6 +195,9 @@ def measure(job):
 
 def assemble(plan, results, *, plan_sha256):
     """Join complete pinned worker records; no substitute or missing case accepted."""
+    # Historical workers only measure; aggregation stays in the modern consumer.
+    from evaluation.unified_cohort import _index
+    from evaluation.wp12_evidence import COST_POLICY
     _fields(plan, "policy protocol_sha256 timing workloads cases")
     if plan["policy"] != COST_POLICY or not pin(plan["protocol_sha256"]) or not pin(plan_sha256):
         raise ValueError("Pinned hardware cost plan required")
