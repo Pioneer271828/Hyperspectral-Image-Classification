@@ -23,7 +23,7 @@ def main(argv=None):
     worker.add_argument("--job", required=True)
     worker.add_argument("--job-sha256", required=True)
     join = sub.add_parser("assemble")
-    for field in ("plan", "plan-sha256", "measurements", "measurements-sha256"):
+    for field in ("plan", "plan-sha256", "measurements", "measurements-sha256", "worker-commit"):
         join.add_argument("--" + field, required=True)
     args = parser.parse_args(argv)
     code = code_snapshot()
@@ -52,8 +52,9 @@ def main(argv=None):
         if not isinstance(manifest, list) or any(set(s) != {"path", "sha256"} for s in manifest):
             raise ValueError("List of pinned worker files required")
         results = [read(s["path"], s["sha256"]) for s in manifest]
-        if any(r.get("producer_commit") != code["commit"] or r.get("fresh_process") is not True for r in results):
-            raise ValueError("Fresh workers from this exact producer version required")
+        if (len(args.worker_commit) != 40 or any(c not in "0123456789abcdef" for c in args.worker_commit)
+                or any(r.get("producer_commit") != args.worker_commit or r.get("fresh_process") is not True for r in results)):
+            raise ValueError("Fresh workers from the explicitly pinned producer version required")
         result = assemble(plan, results, plan_sha256=args.plan_sha256)
     require_frozen_code(code)
     if any(hash_file(p) != h for p, h in pins.items()):

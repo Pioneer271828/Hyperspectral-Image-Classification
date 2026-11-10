@@ -17,9 +17,7 @@ import time
 
 import torch
 
-from evaluation.dynamic_curve import pin, timing_summary
-from evaluation.unified_cohort import _fields, _index
-from evaluation.wp12_evidence import COST_POLICY
+from evaluation.wp12_cost_primitives import fields as _fields, pin, timing_summary
 from joint_baseline import forward
 from joint_training import _tree_fingerprint
 from m4_ordered_source import OrderedValidation
@@ -193,6 +191,9 @@ def measure(job):
 
 def assemble(plan, results, *, plan_sha256):
     """Join complete pinned worker records; no substitute or missing case accepted."""
+    # Historical workers only measure; aggregation stays in the modern consumer.
+    from evaluation.unified_cohort import _index
+    from evaluation.wp12_evidence import COST_POLICY
     _fields(plan, "policy protocol_sha256 timing workloads cases")
     if plan["policy"] != COST_POLICY or not pin(plan["protocol_sha256"]) or not pin(plan_sha256):
         raise ValueError("Pinned hardware cost plan required")
