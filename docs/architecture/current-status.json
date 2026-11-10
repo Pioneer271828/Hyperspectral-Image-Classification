@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 325,
+  "issue": 327,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "0eedccd370f5fa77707e0357fb8d9a17c1c7d99b",
+  "main_snapshot": "29631f67c38a7eedadba0ce844ff296b99e3d73a",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -850,6 +850,14 @@
       "remaining": "真实闭集稳定性、合法语义与外部文件认证、真实开放集收益/GPU未验；长训练暂停",
       "report": "research/reports/E4c1_开放集评分与源验证阈值工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天模块交付，随本次验收报告"
+    },
+    {
+      "id": "E4c-2",
+      "state": "九对照开发工件冻结及标签分离导出CPU工程通过",
+      "evidence": "Issue327/PR328；tested c83f311705d4179ab0262e1cc9126d1609caed96，CPU7+23通过；独立3种子6CLI/27对照/486评分对应决策/432混淆/135类别/21输入不变；优化/query0",
+      "remaining": "模型实际特征生产尚未绑定，producer_truth_verified=false；真实闭集/开放集收益及GPU待，长训练暂停",
+      "report": "research/reports/E4c2_开放集开发工件冻结与标签分离导出工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天模块交付，随本次验收报告"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -1065,6 +1073,13 @@
       "tested_sha": "68ef38eb9322c9a869a560802a9e0cdde57119a1",
       "merge_sha": "0eedccd370f5fa77707e0357fb8d9a17c1c7d99b",
       "scope": "E0-B4 CPU7+27;24old synthetic models48blocks/12480energies/168ranks/212pins; no real mechanism claim"
+    },
+    {
+      "pr_number": 326,
+      "head_sha": "c7c809fd8e6f70afc152e85251836e617c85302d",
+      "tested_sha": "b8a1eda40b40095d69279c8ed31361d3635d19a6",
+      "merge_sha": "29631f67c38a7eedadba0ce844ff296b99e3d73a",
+      "scope": "E4c-1 CPU10+27;84synthetic arrays/6804scores/1344cells/420classes;3initializedM8 models756score rows; no real open-set claim"
     }
   ]
 }
