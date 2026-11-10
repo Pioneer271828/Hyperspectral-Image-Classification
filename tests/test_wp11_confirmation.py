@@ -80,8 +80,11 @@ def synthetic_package(root):
                  routes=[dict(id="confirmation", route="full")])
     labels = {"confirmation": list(range(1, 10))}
     evidence = pin("synthetic-history-evidence", {"fixture": True})
-    history = dict(policy=HISTORY_POLICY, full_state=state_hash(full), scene_identity=scene_identity(scene, record),
-                   history_evidence_sha256=evidence["sha256"])
+    train = [t["id"] for t in record["roles"] if t["role"] == "devtrain"]
+    validation = [t["id"] for t in record["roles"] if t["role"] == "devval"]
+    history = dict(policy=HISTORY_POLICY, scope="all_same_scene_ancestry",
+                   tile_usage=dict(fit=train, training=train, selection=validation), full_state=state_hash(full),
+                   scene_identity=scene_identity(scene, record), history_evidence_sha256=evidence["sha256"])
     admission = dict(policy=POLICY, history_sha256=digest(history), light_spec_sha256=digest(published.specification),
                      light_artifact_sha256=light_sha, blocks=blocks, request_sha256=request_hash(requests),
                      labels_sha256=digest(labels), scale=12, benchmark=dict(seed=64, warmups=1, pairs=20))
@@ -150,6 +153,11 @@ class ConfirmationTests(unittest.TestCase):
             bad = dict(history, policy="whole_scene_transductive")
             altered = dict(admission, history_sha256=digest(bad))
             with self.assertRaisesRegex(ValueError, "Audited complete"):
+                admit(full, published, scene, record, bad, altered, expected_registration_hash=digest(altered))
+            bad = copy.deepcopy(history)
+            bad["tile_usage"]["fit"].append(admission["blocks"][-1]["tile_id"])
+            altered = dict(admission, history_sha256=digest(bad))
+            with self.assertRaisesRegex(ValueError, "footprint escapes"):
                 admit(full, published, scene, record, bad, altered, expected_registration_hash=digest(altered))
             changed = dict(admission, request_sha256="0"*64)
             with self.assertRaisesRegex(ValueError, "input bytes differ"):

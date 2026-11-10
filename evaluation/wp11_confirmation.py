@@ -83,10 +83,20 @@ def admit(full, published, scene, record, history, registration, *, expected_reg
             and pin(registration["labels_sha256"]) and pin(registration["light_artifact_sha256"]),
             "Exact confirmation registration required")
     identity = scene_identity(scene, record)
-    require(set(history) == {"policy", "full_state", "scene_identity", "history_evidence_sha256"}
+    require(set(history) == {"policy", "scope", "tile_usage", "full_state", "scene_identity", "history_evidence_sha256"}
             and history["policy"] == HISTORY_POLICY and digest(history) == registration["history_sha256"]
+            and history["scope"] == "all_same_scene_ancestry"
             and pin(history["history_evidence_sha256"]) and history["full_state"] == state_hash(full)
             and history["scene_identity"] == identity, "Audited complete full-model footprint required")
+    usage = history["tile_usage"]
+    require(isinstance(usage, dict) and set(usage) == {"fit", "training", "selection"},
+            "Full history must enumerate fitting, training and selection tiles")
+    for phase, role in (("fit", "devtrain"), ("training", "devtrain"), ("selection", "devval")):
+        allowed = {row["id"] for row in record["roles"] if row["role"] == role}
+        ids = usage[phase]
+        require(isinstance(ids, list) and bool(ids)
+                and all(type(i) is int and i in allowed for i in ids) and ids == sorted(set(ids)),
+                f"Audited full-model {phase} footprint escapes its development role")
     light = published.specification
     require(published.validate(full) == scene.dataset and digest(light) == registration["light_spec_sha256"]
             and light["training_spec"]["identity"] == identity, "Light training and selection footprint differs")
