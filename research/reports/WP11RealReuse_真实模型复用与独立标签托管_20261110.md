@@ -25,9 +25,9 @@ Issue #377 对应研究主计划 §22 WP11、实施计划 §19.12。完整模型
 
 | 文件 | SHA256 |
 |---|---|
-| `real-model-audit.json` | `057f86a14a521a98bd8133d81d15e1fb9b186223fbbb003d91f0bd17dd2d50ae1` |
-| `full-history.json` | `c7c2866d8e869b6f96b01e72eb751f7c6f809d269d8c2aadd510bff3d9d176dd1` |
-| `development-roundtrip.json` | `04f8e9c14b38a5b726c92b2b33f1584b2550f54fdb5564e99e36972d4c1fa2731` |
+| `real-model-audit.json` | `057f86a14a521a98bd8133d81d15e1fb9b186223fbbb003d91f0bd17d2d50ae1` |
+| `full-history.json` | `c7c2866d8e869b6f96b01e72eb751f7c6f809d269d8c2aadd510bf3d9d176dd1` |
+| `development-roundtrip.json` | `04f8e9c14b38a5b726c92b2b33f1584b2550f54fdb564e99e36972d4c1fa2731` |
 | `roles/role-plan.json` | `59db3398d7bcc8f548031de3dd838491dbe0a7d9026f29bfbf92876f78c0c9cb` |
 | `calibration-custodian-request.json` | `4cb2caeb943ceffce7d5999ff715c302a6ae1e8d78b34c46fd18d7a430096018` |
 | `confirmation-custodian-request.json` | `f257d1314cca22ea3063154cfcfa9c679b0cbb3c8e5a618f69a9e74837e12919` |
