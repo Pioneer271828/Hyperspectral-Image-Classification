@@ -3,18 +3,20 @@
 from collections import Counter
 from copy import deepcopy
 from fractions import Fraction
+import math
 
 import numpy as np
 import torch
 
-from compression.int8_model import ALLOWED_PATHS, calibrate_model, calibration_contract, convert_model
+from compression.int8_model import ALLOWED_PATHS, _dense, calibrate_model, calibration_contract, convert_model
+from compression.ternary_model import pack_model, ternarize_model
 from evaluation.classification_metrics import classification_metrics
 from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
 from monitoring.dependency_groups import HEADS, _protection
 from research_runtime import tensor_hash
 from transfer.development_training import sparse_labels
-from transfer.g3_training import _forward
+from transfer.g3_training import _forward, state_hash
 from transfer.observation_policy import scene_identity
 
 
@@ -48,16 +50,12 @@ def _validation_inputs(scene, record):
     return specification, blocks
 
 
-def register_ptq_fallback(reference, scene, record, calibration_tile_ids):
-    """Pin the FP32 reference, training calibration tiles, and validation cohort."""
-    calibration = calibration_contract(reference, scene, record, LAYER_ORDER, calibration_tile_ids, qat=False)
+def _register(reference, scene, record):
     validation, _ = _validation_inputs(scene, record)
     identity = validation['identity']['development_hash']
     if getattr(reference, 'training_config', {}).get('development_hash', identity) != identity:
         raise ValueError('Reference checkpoint was trained on a different development record')
     return {
-        'schema': 'wp10_ptq_precision_fallback_v1',
-        'calibration': calibration,
         'validation': validation,
         'assignments': [list(paths) for paths in PRECISION_ASSIGNMENTS],
         'guards': {'fused_max_drop': {name: float(limit) for name, limit in LIMITS.items()},
@@ -65,6 +63,25 @@ def register_ptq_fallback(reference, scene, record, calibration_tile_ids):
                    'joint_requires_passed_singles': True},
         'selection': 'most_integer_layers_then_fixed_layer_order',
     }
+
+
+def register_ptq_fallback(reference, scene, record, calibration_tile_ids):
+    """Pin the FP32 reference, training calibration tiles, and validation cohort."""
+    calibration = calibration_contract(reference, scene, record, LAYER_ORDER, calibration_tile_ids, qat=False)
+    return {**_register(reference, scene, record), 'schema': 'wp10_ptq_precision_fallback_v1',
+            'calibration': calibration}
+
+
+def register_ternary_fallback(reference, scene, record, *, threshold_ratio):
+    """Pin a packed-weight ternary comparison without fitting activation ranges."""
+    _dense(reference)
+    if type(threshold_ratio) not in (int, float) or not math.isfinite(threshold_ratio) or not 0 <= threshold_ratio <= 1:
+        raise ValueError('Explicit finite ternary threshold ratio required')
+    if reference.export_config()['class_counts'].get(scene.dataset) != scene.classes:
+        raise ValueError('Reference head differs from the development class count')
+    return {**_register(reference, scene, record), 'schema': 'wp10_ternary_precision_fallback_v1',
+            'threshold_ratio': float(threshold_ratio), 'reference_state': state_hash(reference),
+            'architecture': reference.export_config()}
 
 
 @torch.no_grad()
@@ -120,6 +137,8 @@ def run_ptq_fallback(reference, scene, record, *, plan, expected_plan_sha256):
     """Materialize the validation-selected integer/FP32 assignment as an owned model."""
     if digest(plan) != expected_plan_sha256:
         raise ValueError('Precision fallback plan hash mismatch')
+    if plan.get('schema') != 'wp10_ptq_precision_fallback_v1':
+        raise ValueError('Expected a PTQ precision fallback plan')
     tile_ids = [row['tile_id'] for row in plan['calibration']['inputs']]
     if register_ptq_fallback(reference, scene, record, tile_ids) != plan:
         raise ValueError('Precision fallback input or guard contract changed')
@@ -135,4 +154,25 @@ def run_ptq_fallback(reference, scene, record, *, plan, expected_plan_sha256):
     if register_ptq_fallback(reference, scene, record, tile_ids) != plan:
         raise RuntimeError('Precision fallback inputs changed during validation')
     return selected, {**report, 'plan_sha256': expected_plan_sha256, 'precision': 'cpu_int8_ptq',
+                      'evaluation_role': 'devval'}
+
+
+def run_ternary_fallback(reference, scene, record, *, plan, expected_plan_sha256):
+    """Materialize the selected packed ternary/FP32 assignment as an owned model."""
+    if digest(plan) != expected_plan_sha256:
+        raise ValueError('Precision fallback plan hash mismatch')
+    if plan.get('schema') != 'wp10_ternary_precision_fallback_v1':
+        raise ValueError('Expected a ternary precision fallback plan')
+    threshold_ratio = plan['threshold_ratio']
+    if register_ternary_fallback(reference, scene, record, threshold_ratio=threshold_ratio) != plan:
+        raise ValueError('Precision fallback input or guard contract changed')
+    validation, blocks = _validation_inputs(scene, record)
+
+    def make_candidate(paths):
+        return pack_model(ternarize_model(reference, paths=paths, threshold_ratio=threshold_ratio))
+
+    selected, report = _evaluate_assignments(reference, scene, blocks, validation, make_candidate)
+    if register_ternary_fallback(reference, scene, record, threshold_ratio=threshold_ratio) != plan:
+        raise RuntimeError('Precision fallback inputs changed during validation')
+    return selected, {**report, 'plan_sha256': expected_plan_sha256, 'precision': 'ternary_packed_fp32_compute',
                       'evaluation_role': 'devval'}

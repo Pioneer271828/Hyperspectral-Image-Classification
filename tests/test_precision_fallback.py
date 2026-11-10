@@ -9,7 +9,10 @@ import torch
 
 from compression.int8 import IntegerMatrix
 from compression.int8_checkpoint import load_int8, save_int8
-from compression.precision_fallback import HEADS, LAYER_ORDER, register_ptq_fallback, run_ptq_fallback
+from compression.precision_fallback import (HEADS, LAYER_ORDER, register_ptq_fallback, register_ternary_fallback,
+                                            run_ptq_fallback, run_ternary_fallback)
+from compression.ternary_checkpoint import load_ternary, save_ternary
+from compression.ternary_model import PackedTernary
 from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
 from test_int8_model import fixture, predict
@@ -115,3 +118,33 @@ class PrecisionFallbackTests(unittest.TestCase):
                 self.review(scene=modified)
             with self.assertRaisesRegex(ValueError, 'contract changed'):
                 self.review(plan=tampered)
+
+    def test_packed_ternary_fallback_uses_no_calibration_and_restores_mixed_layers(self):
+        plan = register_ternary_fallback(self.reference, self.scene, self.record, threshold_ratio=.05)
+        for tile in self.record['roles']:
+            if tile['role'] != 'devval':
+                self.scene.cube[tile_slice(tile)] = np.nan
+
+        def score(model, scene, blocks, class_ids):
+            truth = np.concatenate([values for _, _, values in blocks])
+            if isinstance(model.get_submodule(LAYER_ORDER[1]), PackedTernary):
+                truth[truth == 1] = 2
+            return {head: truth for head in HEADS}
+
+        with patch('compression.precision_fallback._predict', side_effect=score):
+            model, result = run_ternary_fallback(self.reference, self.scene, self.record, plan=plan,
+                                                expected_plan_sha256=digest(plan))
+        self.assertEqual(result['precision'], 'ternary_packed_fp32_compute')
+        self.assertEqual(result['selected_low_precision_paths'], [LAYER_ORDER[0]])
+        self.assertEqual(result['kept_fp32_paths'], [LAYER_ORDER[1]])
+        self.assertEqual(result['trials'][1]['protection']['fused']['new_small_class_errors']['1'], 5)
+        self.assertIsInstance(model.get_submodule(LAYER_ORDER[0]), PackedTernary)
+        self.assertTrue(torch.equal(model.get_submodule(LAYER_ORDER[1]).weight,
+                                    self.reference.get_submodule(LAYER_ORDER[1]).weight))
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / 'selected.pt'
+            pin = save_ternary(model, path)
+            restored = load_ternary(path, pin)
+            for actual, expected in zip(predict(restored, self.scene, self.record),
+                                        predict(model, self.scene, self.record), strict=True):
+                self.assertTrue(torch.equal(actual, expected))
