@@ -17,6 +17,7 @@ from train_spatial import SpatialConfig,evaluate
 from train_vca_multidataset import supervised_loss
 from model.task_losses import detached_loss_values
 from transfer.run_provenance import resolve_budget,run_fields,verify_run_artifacts
+from transfer.conditional_multiscale import ConditionalMultiscaleVCASAHGCN
 
 METHODS=('target_scratch_full','source_pretrained_head_only','source_pretrained_full_finetune')
 
@@ -106,6 +107,13 @@ def _forward(model,scene,tile,*,observation_view=None,metadata_missing=False):
     extra.update(coverage_forward_kwargs(model,view.bands))
     if coverage_enabled(model) and view.bands.fwhm is not None:
         extra['fwhm']=np.asarray(view.bands.fwhm,dtype=np.float32)
+    if isinstance(model, ConditionalMultiscaleVCASAHGCN):
+        extra.update(wavelength_unit=view.bands.wavelength_unit, fwhm_unit=view.bands.fwhm_unit or 'auto')
+        if view.bands.fwhm is not None:
+            extra['fwhm'] = np.asarray(view.bands.fwhm, dtype=np.float32)
+        with model.partition_bands(view.bands):
+            return forward_partition(model,scene.dataset,obs,np.asarray(view.bands.wavelengths,dtype=np.float32),
+                                     50 if scene.dataset=='paviaU' else 100,**extra)
     return forward_partition(model,scene.dataset,view.observation,np.asarray(view.bands.wavelengths,dtype=np.float32),
                              50 if scene.dataset=='paviaU' else 100,**extra)
 

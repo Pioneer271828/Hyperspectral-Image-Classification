@@ -94,6 +94,14 @@ def verify_run_artifacts(folder):
     result = json.loads((folder / 'result.json').read_text())
     sidecar = json.loads((folder / 'model.pt.json').read_text())
     info = sidecar['training_config']
+    if 'multiscale' in result or 'multiscale' in info:
+        controls = result.get('multiscale', {})
+        _require(set(controls) == {'cnn_multiscale', 'cnn_dilation', 'graph_multiscale', 'graph_radius'}
+                 and controls == info.get('multiscale'), 'multiscale trial identity')
+        architecture = {'graph_multiscale': 'off', 'graph_radius': 1, **sidecar['backbone_kwargs']}
+        _require(all(architecture.get(key) == value for key, value in controls.items()), 'multiscale architecture')
+        identity = result.get('multiscale_metadata_hash', '')
+        _require(len(identity) == 64 and identity == info.get('multiscale_metadata_hash'), 'multiscale metadata identity')
     policy = None
     if 'observation_policy_hash' in result or 'observation_policy_hash' in info:
         from transfer.observation_policy import ObservationPolicy
