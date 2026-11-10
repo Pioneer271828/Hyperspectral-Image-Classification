@@ -1,0 +1,75 @@
+{
+  "status": "passed",
+  "issue": 355,
+  "tested_commit": "c6db02760ab2150c2bc6ab1826d6717c57052e2a",
+  "scope": "9 initialized SharedHGCN regional paths, not trained classifiers or HSI evidence",
+  "cases": [
+    {
+      "seed": 64,
+      "topology": "identity",
+      "calls": 98
+    },
+    {
+      "seed": 64,
+      "topology": "chain",
+      "calls": 98
+    },
+    {
+      "seed": 64,
+      "topology": "bridge",
+      "calls": 98
+    },
+    {
+      "seed": 512,
+      "topology": "identity",
+      "calls": 98
+    },
+    {
+      "seed": 512,
+      "topology": "chain",
+      "calls": 98
+    },
+    {
+      "seed": 512,
+      "topology": "bridge",
+      "calls": 98
+    },
+    {
+      "seed": 2048,
+      "topology": "identity",
+      "calls": 98
+    },
+    {
+      "seed": 2048,
+      "topology": "chain",
+      "calls": 98
+    },
+    {
+      "seed": 2048,
+      "topology": "bridge",
+      "calls": 98
+    }
+  ],
+  "independent_jacobian_entries": 432,
+  "outside_reach_zero_entries": 312,
+  "reachable_zero_entries": 44,
+  "maximum_numpy_jacobian_error": 8.474014975834443e-09,
+  "maximum_finite_difference_discrepancy": 3.285706043243408e-06,
+  "graph_path_calls": 882,
+  "optimizer_updates": 0,
+  "query_labels_accessed": false,
+  "model_input_rng_unchanged_tests": true,
+  "wall_seconds": 0.725637499243021,
+  "audit_script_sha256": "134ad979006c62de7d1a32a1abea4236252294b1241f4752c154e64a60916b3e",
+  "files": {
+    "512-chain.json": "67b050b9f93a32b3b271b89ddf879cbd5ca493fe2f0007d7a43a7b03fa88a3cf",
+    "64-chain.json": "fffec9a73ea7853affebe9fd6a8cecd1de8cf7dc14af6fef373cd1408d1e3e7c",
+    "64-bridge.json": "c4d21a77fbd8e88dbf842be7fd577fafb73b7b7553fd708e641326225cdbf741",
+    "512-bridge.json": "330a201ecf39fd1add22b2cb297e5773b7533571b79673550c9bbe5e3d551289",
+    "2048-chain.json": "5d79277e472f1672e44b3b7bfb2a8ef66291ac3a86b8d59fa527c136eb9f54d4",
+    "64-identity.json": "b324d4f89b5c8ff5de519aca46cee63664fa8ad0e76f06630d02658017d44dcc",
+    "2048-bridge.json": "db367eb1ff6eee3a393fdc220e88692d26aaaaf352b38d95de059be7dbe700c5",
+    "512-identity.json": "ca6260f962beb0944881966fd4fb51858d07992cfb1a19282d3d27ed9ab48a63",
+    "2048-identity.json": "6260a525cc547110e45d0f6def6d4e04707817e4e0dffc7a8ef43bf40933f5ca"
+  }
+}

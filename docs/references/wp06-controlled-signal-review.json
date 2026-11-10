@@ -1,0 +1,18 @@
+{
+  "issue": 355,
+  "plan": "master16/22 WP06; implementation19.7",
+  "paper": "https://arxiv.org/pdf/2111.14522v4",
+  "sections_read": ["2.1", "2.2 including sensitivity and Lemma1"],
+  "scope": "Node Jacobian motivates controlled graph-path sensitivity; do not infer curvature theorem or HSI benefit",
+  "author_repo": "https://github.com/jctops/understanding-oversquashing",
+  "upstream_sha": "c14e91d31ec5e9ff2dc13d90ef61b9dc2bdce829",
+  "official_evidence": "Author-named repo README explicitly links accompanying ICLR2022 paper",
+  "source_read": "gdl/src/gdl/curvature/numba.py: balanced_forman_curvature and sdrf; no per-file license header",
+  "license": "Root LICENSE MIT Copyright(c)2022 Jake Topping read at fixed SHA; no external code incorporated; nested dependency licensing not audited for redistribution",
+  "upstream_executed": false,
+  "reuse": ["model.VCASAHGCN.SharedHGCN original forward_stage1/forward_stage2", "research_runtime.tensor_hash", "evaluation.linear_probe.fingerprint"],
+  "implementation": "Independent CPU bounded node/channel Jacobian and finite differences on private eval clone; optional zero intermediate nodes; no curvature rewiring",
+  "new_dependencies": false,
+  "remaining": ["Full selected-model/source/context binding", "Controlled learned signal-recovery task", "Real trained-model and HSI comparisons", "GPU"],
+  "lookup_failures": ["MIT-hosted PDF restricted; arxiv original read", "Guessed curvature path404; actual src path read through connector", "Two git clone TLS failures; no upstream installation"]
+}
