@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import torch
 
-from evaluation.wp12_resident_cost import (JOB_POLICY, OBSERVATION, assemble, environment, measure)
+from evaluation.wp12_resident_cost import (JOB_POLICY, OBSERVATION, admit_gpu, assemble, environment, measure)
 from evaluation.wp12_evidence import COST_POLICY, join_hardware
 from joint_baseline import forward, load_config
 from joint_training import _tree_fingerprint
@@ -116,6 +116,18 @@ class ResidentCostTests(unittest.TestCase):
                 with self.subTest(fn=fn.__name__), patch("evaluation.wp12_resident_cost.forward", fn), \
                         self.assertRaises(ValueError):
                     measure(job)
+
+    def test_resource_gate_matches_physical_uuid_and_does_not_wait(self):
+        env = {"gpu": {"uuid": "GPU-fixture"}}
+        for free, util, allowed in ((12288, 60, True), (12287, 0, False), (20000, 61, False)):
+            output = f"GPU-other, 24000, 0\nGPU-fixture, {free}, {util}\n"
+            with self.subTest(free=free, util=util), patch(
+                    "evaluation.wp12_resident_cost.subprocess.check_output", return_value=output):
+                if allowed:
+                    self.assertEqual(admit_gpu(env)["free_mib"], free)
+                else:
+                    with self.assertRaisesRegex(ValueError, "resource gate"):
+                        admit_gpu(env)
 
     def test_fresh_process_cli_output_and_exclusive_write(self):
         with TemporaryDirectory() as directory:

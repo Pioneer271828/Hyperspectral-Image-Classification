@@ -8,6 +8,7 @@ checkpoint plus architecture sidecar, excluding runtime and input data.
 
 from contextlib import nullcontext
 import os
+import math
 from pathlib import Path
 import platform
 import resource
@@ -91,6 +92,20 @@ def validate_job(job):
         raise ValueError("Case checkpoint differs from measured checkpoint")
 
 
+def admit_gpu(env):
+    """Read-only admission; do not queue or interfere with other GPU processes."""
+    rows = subprocess.check_output(["nvidia-smi", "--query-gpu=uuid,memory.free,utilization.gpu",
+                                    "--format=csv,noheader,nounits"], text=True).splitlines()
+    matches = [line.split(",") for line in rows if line.split(",")[0].strip() == env["gpu"]["uuid"]]
+    if len(matches) != 1:
+        raise ValueError("Visible GPU UUID cannot be matched to physical admission")
+    _, free, utilization = matches[0]
+    admission = dict(free_mib=int(free), utilization_percent=int(utilization))
+    if admission["free_mib"] < 12288 or admission["utilization_percent"] > 60:
+        raise ValueError("GPU resource gate not met; no measurement started")
+    return admission
+
+
 def measure(job):
     """Call once per fresh CLI worker; fingerprints/validation are outside timing."""
     validate_job(job)
@@ -99,6 +114,7 @@ def measure(job):
     env = environment(device, job["arithmetic"])
     if digest(env) != timing["environment_sha256"]:
         raise ValueError("Measured environment differs from registered environment")
+    admission = admit_gpu(env) if device == "cuda" else None
     checkpoint, sidecar, observation = [pinned_path(s) for s in
                                        (job["checkpoint"], job["sidecar"], work["file"])]
     if sidecar != Path(str(checkpoint) + ".json"):
@@ -108,7 +124,11 @@ def measure(job):
     # This tensor-only payload deliberately cannot carry train/val/query labels.
     item = torch.load(observation, map_location="cpu", weights_only=True)
     _fields(item, OBSERVATION)
-    if (not torch.is_tensor(item["net_input"]) or item["net_input"].ndim != 3
+    if (any(not torch.is_tensor(item[k]) for k in ("net_input", "Q", "A"))
+            or any(item[k] is not None and not torch.is_tensor(item[k]) for k in ("wavelengths", "fwhm"))
+            or type(item["superpixel_scale"]) not in (int, float)
+            or not math.isfinite(item["superpixel_scale"]) or item["superpixel_scale"] <= 0
+            or item["net_input"].ndim != 3
             or item["net_input"].shape[0] * item["net_input"].shape[1] != work["work_items"]
             or _tree_fingerprint(item) != work["tensor_sha256"]):
         raise ValueError("Observation tensor identity or work-item count differs")
@@ -166,7 +186,7 @@ def measure(job):
                        workload_sha256=work["tensor_sha256"], wall_ms=samples, peak_bytes=int(peak),
                        parameters=sum(p.numel() for p in model.parameters()),
                        package_bytes=checkpoint.stat().st_size + sidecar.stat().st_size)
-    return dict(status="passed", job=job, environment=env, row=row,
+    return dict(status="passed", job=job, environment=env, row=row, resource_admission=admission,
                 model_state_sha256=state_sha, output_sha256=before,
                 optimizer_updates=0, query_labels_accessed=False)
 
