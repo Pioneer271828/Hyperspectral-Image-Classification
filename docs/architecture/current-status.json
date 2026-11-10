@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 377,
+  "issue": 379,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -1074,6 +1074,14 @@
       "remaining": "等待两角色各自的授权稀疏标签及同划分训练轻模型，确认逐类支持后进入校准和独立确认；冻结54成本GPU待资源，WP04真实短测后补",
       "report": "research/reports/WP11RealReuse_真实模型复用与独立标签托管_20261110.md",
       "chat_report": "2026-11-10本聊天交付完整模型审计与真实标签托管准备"
+    },
+    {
+      "id": "WP11 同划分轻模型登记与恢复",
+      "state": "CPU工程与真实输入零步核查通过",
+      "evidence": "Issue379；tested 17f08da3d3e97080a9b992034ac3107a8417e5d9；CPU51/51；合成整跑3对1+2、完成恢复0及发布严格回读；徐州真实开发包和完整模型已通过零步登记",
+      "remaining": "真实轻模型学习与保护待验；真实校准/确认标签分别授权后才可进入门控；WP12冻结54成本待GPU，WP04真实短测后补",
+      "report": "research/reports/WP11RegisteredLight_同划分轻模型登记恢复与发布_20261110.md",
+      "chat_report": "2026-11-10本聊天接续真实模型复用后交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
