@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "tested_sha": "c9ddaa68db6ecafedf96a6e90310e375c13f9959",
+  "fixture": "synthetic 9-class actual network",
+  "donor_updates": 24,
+  "restart_models": 6,
+  "restart_updates": 144,
+  "completion_reload_updates": 0,
+  "independent_confusion_cells": 1458,
+  "independent_recalls": 162,
+  "query": 0,
+  "real_training_updates": 0,
+  "source_and_donor_unchanged": true,
+  "elapsed_seconds": 19.975430537946522,
+  "files": {
+    "low_weight.pt": "0f8d26b978f5f646854d061c01aedf9597fcd6ffb4a2c77339277fb562ddc928",
+    "summary.json": "9cc2f2d201bb5683fd74a4a5b85f6400bb23ac8d18ee6cce1efc52c2593dc400",
+    "random-2048.pt": "e838ef321cd1b3f16bf96ba2b357ca04b81ba5fb3609e07abd254f6867c3ad52",
+    "donor.pt": "fe0e8096bc451ba6b8fe2196164acfa68955ab83d25e0942ff32eee991f95216",
+    "random-512.pt": "37f0a9971b7811a2fce19cf17891e213de045323fac0116fa3c91aaaad2eca6a",
+    "important.pt": "3842ab13faa4571f33658eaa512db26d6d85c980d77144746f67ff0cb41098f5",
+    "random-64.pt": "e838ef321cd1b3f16bf96ba2b357ca04b81ba5fb3609e07abd254f6867c3ad52",
+    "plan.json": "771c139f3b38de35749781a09b7f0ac910d5448e4c12e34216ec8b2429d25f72",
+    "none.pt": "2006dc2cf57284dc7876684a34b42740dcca426702519eb9202591033ead2f87"
+  }
+}
