@@ -13,6 +13,8 @@ from model.VCASAHGCN import MultiDatasetVCASAHGCN, VCASAHGCNBackbone
 from model.checkpoint_io import load_model_checkpoint
 from model.research_config import digest
 from none_full_transfer import initialize_none_full_target
+from m4_full_transfer import initialize_full_target
+from m4_transfer import MODES
 from target_bn_calibration import (CONTEXT, GRAPH_POLICY, POLICY as BN_POLICY, calibrate_target,
                                     observation_id, verify_target_binding)
 from target_initialization import METHODS, state_id
@@ -33,12 +35,18 @@ def configuration(condition):
             "graph_branch_loss_weight": 0. if condition == "aux_off" else 1., "balanced": True}
 
 
-def initialize(target, method, condition, *, model_seed, head_seed, source_spec=None, device="cpu"):
+def initialize(target, method, condition, *, model_seed, head_seed, source_spec=None, device="cpu", mode="none"):
     contract = configuration(condition)
     if (method not in METHODS[:2] or type(model_seed) is not int or model_seed not in (64, 512, 2048)
             or type(head_seed) is not int or head_seed != model_seed + 1000):
         raise ValueError("Declared M8 scratch/full NONE-source role and separate seeds required")
-    base, record = initialize_none_full_target(target, method, model_seed=model_seed, head_seed=head_seed,
+    if mode not in MODES:
+        raise ValueError("Explicit accepted residual/capacity mode required")
+    if mode == "none":
+        base, record = initialize_none_full_target(target, method, model_seed=model_seed, head_seed=head_seed,
+                                                  source_spec=source_spec, device=device)
+    else:
+        base, record = initialize_full_target(target, method, mode, model_seed=model_seed, head_seed=head_seed,
                                               source_spec=source_spec, device=device)
     if contract["alph"] == .8:
         model = base
@@ -62,9 +70,20 @@ def initialize(target, method, condition, *, model_seed, head_seed, source_spec=
         "added_parameter_count": 0, "source": "accepted_full_none_source_fixed_M8_target_configuration",
         "optimizer_updates": 0, "training_executable": False, "query_labels_accessed": False,
         "full_target_scene_transductive": True}
+    if mode != "none":
+        binding.update(residual_mode=mode, combination_version=1,
+                       source="accepted_full_m4_source_fixed_M8_target_configuration")
     model.training_config = {"target_initialization": copy.deepcopy(record), KEY: copy.deepcopy(binding)}
     verify_initialization_binding(model, binding)
     return model.eval(), binding
+
+
+def residual_mode(binding):
+    mode = binding.get("residual_mode", "none")
+    if (mode not in MODES or binding["base_initialization"].get("m4_mode", "none") != mode
+            or (mode != "none" and binding.get("combination_version") != 1)):
+        raise ValueError("Residual mode and original source initialization differ")
+    return mode
 
 
 def verify_initialization_binding(model, expected):
@@ -78,7 +97,7 @@ def verify_initialization_binding(model, expected):
             or getattr(model.predict_features, "__func__", None) is not MultiDatasetVCASAHGCN.predict_features
             or getattr(model.fuse_and_predict, "__func__", None) is not MultiDatasetVCASAHGCN.fuse_and_predict
             or backbone.interaction_config.active or backbone.interaction is not None or backbone.edge_updater is not None
-            or backbone.coverage_modulation is not None or backbone.region_residual_mode != "none"
+            or backbone.coverage_modulation is not None or backbone.region_residual_mode != residual_mode(expected)
             or backbone.graph_mode != "static" or backbone.norm_type != "domain_bn"
             or any(tuple(family) != (expected["target"],) for family in (model.heads, model.hgnn_heads, model.cnn_heads))
             or digest(model.export_config()) != expected["architecture_sha256"]

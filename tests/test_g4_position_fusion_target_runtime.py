@@ -251,7 +251,7 @@ class PositionRuntimeTests(unittest.TestCase):
             before = hashes(out)
             self.assertEqual(call(["--resume"])["updates_this_call"], 0)
             self.assertEqual(before, hashes(out))
-            for extra in (["--full"], ["--query"], ["--mode", "x_residual"], ["--stop-after", "1500"], ["--preset", "alternate75"]):
+            for extra in (["--full"], ["--query"], ["--mode", "residual_only"], ["--stop-after", "1500"], ["--preset", "alternate75"]):
                 self.assertNotEqual(subprocess.run(command + extra, capture_output=True).returncode, 0)
 
 

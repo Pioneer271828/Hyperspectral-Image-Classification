@@ -12,7 +12,8 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from g4_fusion_target import initialize as fixed_initialize, configuration as fixed_configuration, KEY as BASE_KEY
+from g4_fusion_target import (initialize as fixed_initialize, configuration as fixed_configuration,
+                             KEY as BASE_KEY, residual_mode)
 from joint_baseline import forward as legacy_forward
 from loadData.dataset_registry import file_hash
 from m4_ordered_source import OrderedValidation
@@ -102,10 +103,10 @@ def operator_signature(model, enabled):
         "tensor_only_bound_state": True, "enabled": enabled}
 
 
-def initialize(target, method, condition, *, model_seed, head_seed, source_spec=None, device="cpu"):
+def initialize(target, method, condition, *, model_seed, head_seed, source_spec=None, device="cpu", mode="none"):
     config = configuration(condition)
     model, base = fixed_initialize(target, method, "default", model_seed=model_seed, head_seed=head_seed,
-        source_spec=source_spec, device=device)
+        source_spec=source_spec, device=device, mode=mode)
     before = {n: v.detach().clone() for n, v in model.state_dict().items()}
     rng = torch.get_rng_state().clone()
     if config["enabled"]: _install(model)
@@ -143,7 +144,7 @@ def verify_initialization_binding(model, expected):
             or base["target"] != expected["target"] or base["method"] != expected["method"]
             or base["model_seed"] != expected["model_seed"] or base["head_seed"] != expected["head_seed"]
             or b.alph != .8 or b.interaction is not None or b.edge_updater is not None or b.interaction_config.active
-            or b.coverage_modulation is not None or b.region_residual_mode != "none"
+            or b.coverage_modulation is not None or b.region_residual_mode != residual_mode(base)
             or b.graph_mode != "static" or b.norm_type != "domain_bn"
             or getattr(b.forward_features, "__func__", None) is not VCASAHGCNBackbone.forward_features
             or getattr(model.predict_features, "__func__", None) is not MultiDatasetVCASAHGCN.predict_features

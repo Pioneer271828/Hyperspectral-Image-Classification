@@ -1,0 +1,93 @@
+{
+  "status": "passed",
+  "tested_sha": "94d96ce3e55a1cba2d9a2bd1846efa471afbfaba",
+  "synthetic_cases": 8,
+  "synthetic_optimizer_updates": 96,
+  "head_metrics": 48,
+  "confusion_cells": 3888,
+  "class_recalls": 432,
+  "exact_reloads": 24,
+  "completed_resume_updates": 0,
+  "real_optimizer_updates": 0,
+  "query_labels_accessed": false,
+  "gpu_executed": false,
+  "training_seconds": 21.706585520412773,
+  "total_seconds": 29.86595606803894,
+  "unchanged_review_files": 227,
+  "protected_inputs": 59,
+  "cases": [
+    {
+      "name": "capacity_control-target_scratch_full-fixed",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "capacity_control-target_scratch_full-position_gate",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "capacity_control-source_pretrained_full_finetune-fixed",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "capacity_control-source_pretrained_full_finetune-position_gate",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "x_residual-target_scratch_full-fixed",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "x_residual-target_scratch_full-position_gate",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "x_residual-source_pretrained_full_finetune-fixed",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "x_residual-source_pretrained_full_finetune-position_gate",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    }
+  ],
+  "scope": "Independent NumPy metric and state/selection review; shared production network/loader, no independent full-network oracle"
+}
