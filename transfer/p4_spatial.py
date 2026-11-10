@@ -13,16 +13,17 @@ import torch
 from evaluation.g4_target import independent_trainval
 from joint_training import _atomic_torch_save, _restore_rng, _rng_state, _run_lock, _tree_fingerprint
 from loadData.data_read import read_band_metadata
+from loadData.dataset_registry import DATASETS
 from loadData.spatial_tiles import tile_slice, validate_tile_plan
 from model.checkpoint_io import load_model_checkpoint
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from train_spatial import SpatialConfig
 from transfer.g3_training import Scene, _forward, _optimizer, _update, state_hash
+from transfer import p4_guarded
 
-TARGETS = {'paviaU', 'xuzhou'}
-SOURCE_TASKS = {'paviaU', 'xuzhou', 'whu-honghu'}
-CLASSES = 9
+TARGETS = {'paviaU', 'xuzhou', p4_guarded.SCENE}
+SOURCE_TASKS = TARGETS
 STEPS = 12
 EVENTS = (1, 4, 7, 10, 12)
 SEED = 64
@@ -57,6 +58,10 @@ def development_tiles(development, plan):
 
 def fit_development_statistics(cube, plan, development):
     tiles = development_tiles(development, plan)['train']
+    return fit_role_statistics(cube, plan, tiles, development['development_roles_hash'])
+
+
+def fit_role_statistics(cube, plan, tiles, roles_hash):
     if cube.ndim != 3 or list(cube.shape[:2]) != plan['shape']:
         raise ValueError('Development observation shape differs')
     low, high = [], []
@@ -67,13 +72,13 @@ def fit_development_statistics(cube, plan, development):
         low.append(values.min(axis=(0,1)))
         high.append(values.max(axis=(0,1)))
     stats = {'schema_version': 1, 'plan_hash': plan['plan_hash'], 'fit_partition': 'train',
-             'fit_role': 'devtrain', 'development_roles_hash': development['development_roles_hash'],
+             'fit_role': 'devtrain', 'development_roles_hash': roles_hash,
              'minimum': np.min(low,axis=0).tolist(), 'maximum': np.max(high,axis=0).tolist()}
     stats['statistics_hash'] = digest(stats)
     return stats
 
 
-def load_release(release, plan, support_seed, k, development=None):
+def load_release(release, plan, support_seed, k, development=None, *, guarded_tiles=None):
     validate_tile_plan(plan)
     fields = {'scene', 'support', 'validation', 'release_hash'}
     if development is None:
@@ -83,13 +88,15 @@ def load_release(release, plan, support_seed, k, development=None):
         role_tiles = {r:[t for t in plan['tiles'] if t['partition']==r] for r in ('train','val')}
     else:
         fields.add('development_roles_hash')
-        contract = (release.get('scene') == 'xuzhou'
+        scene = p4_guarded.SCENE if guarded_tiles is not None else 'xuzhou'
+        contract = (release.get('scene') == scene
                     and release.get('development_roles_hash') == development['development_roles_hash'])
-        role_tiles = development_tiles(development, plan)
+        role_tiles = development_tiles(development, plan) if guarded_tiles is None else guarded_tiles
     if (set(release) != fields or not contract or support_seed not in (512,2048) or k not in (1,5)
             or release['release_hash'] != digest({n: v for n, v in release.items() if n != 'release_hash'})):
         raise ValueError('Spatial role release identity differs')
     shape = tuple(plan['shape'])
+    classes = DATASETS[release['scene']][2]
     role_ids = np.full(shape, -1, dtype=np.int32)
     result = {}
     seen = set()
@@ -97,11 +104,11 @@ def load_release(release, plan, support_seed, k, development=None):
         row = release[key]
         ids, labels = row['indices'], row['labels']
         if (set(row) != {'seed', 'per_class', 'indices', 'labels'} or row['seed'] != seed
-                or row['per_class'] != budget or len(ids) != CLASSES * budget or len(labels) != len(ids)
+                or row['per_class'] != budget or len(ids) != classes * budget or len(labels) != len(ids)
                 or any(type(i) is not int or not 0 <= i < math.prod(shape) for i in ids)
                 or ids != sorted(set(ids)) or seen.intersection(ids)
-                or any(type(c) is not int or not 1 <= c <= CLASSES for c in labels)
-                or any(labels.count(c) != budget for c in range(1, CLASSES + 1))):
+                or any(type(c) is not int or not 1 <= c <= classes for c in labels)
+                or any(labels.count(c) != budget for c in range(1, classes + 1))):
             raise ValueError('Spatial role label budget or coordinates differ')
         seen.update(ids)
         tiles = role_tiles[role]
@@ -123,7 +130,7 @@ def initialize(config, source_path=None, source_result=None):
         raise ValueError('Unknown P4 spatial target')
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(SEED)
-        model = config.research.build_model({target: CLASSES})
+        model = config.research.build_model({target: DATASETS[target][2]})
     backbone = model.backbone
     fresh = backbone.state_dict()
     if backbone.graph_mode != 'learned' or backbone.norm_type != 'domain_bn':
@@ -164,7 +171,7 @@ def initialize(config, source_path=None, source_result=None):
 
 
 @torch.no_grad()
-def validation(model, scene, tiles, allowed_tiles):
+def validation(model, scene, tiles, allowed_tiles, view=None):
     model.eval()
     names = ('fused', 'graph', 'cnn')
     scores = {n: [] for n in names}
@@ -175,7 +182,7 @@ def validation(model, scene, tiles, allowed_tiles):
         local = torch.from_numpy(local.reshape(-1))
         valid = local > 0
         truth.append(local[valid] - 1)
-        heads = _forward(model, scene, tile)[:3]
+        heads = _forward(model, scene, tile, observation_view=view(tile) if view else None)[:3]
         for name, head in zip(names, heads):
             scores[name].append(head[valid].cpu())
     labels = torch.cat(truth)
@@ -183,13 +190,14 @@ def validation(model, scene, tiles, allowed_tiles):
     for name in names:
         p = torch.cat(scores[name])
         predicted = p.argmax(1)
-        cm = torch.bincount(labels * CLASSES + predicted, minlength=CLASSES**2).reshape(CLASSES, CLASSES)
+        classes = scene.classes
+        cm = torch.bincount(labels * classes + predicted, minlength=classes**2).reshape(classes, classes)
         recall = cm.diag().double() / cm.sum(1)
         metrics[name] = {'confusion': cm.tolist(), 'recall': recall.tolist(), 'oa': float(cm.diag().sum().double() / len(labels)),
                          'aa': float(recall.mean()), 'nll': float(-p[torch.arange(len(labels)), labels].clamp_min(1e-8).log().mean())}
         probabilities[name] = p
     independent_trainval({'train': probabilities, 'val': probabilities},
-                         {'train_labels': labels, 'val_labels': labels, 'class_num': CLASSES},
+                         {'train_labels': labels, 'val_labels': labels, 'class_num': scene.classes},
                          {'train': metrics, 'val': metrics})
     return metrics, probabilities
 
@@ -197,6 +205,16 @@ def validation(model, scene, tiles, allowed_tiles):
 def run_case(registration, index, out, until, code):
     case = registration['cases'][index]
     pins = {Path(n): h for n, h in registration['pins'].items()}
+    paths = [registration[x] for x in ('image', 'plan', 'statistics')]
+    if 'development' in registration:
+        paths.append(registration['development'])
+    if 'guarded' in registration:
+        paths.extend(registration['guarded'].values())
+    paths += [row['release'] for row in registration['cases']]
+    source = registration['source']
+    paths += [source['weight'], source['weight'] + '.json', source['result']]
+    if set(map(Path, paths)) - pins.keys():
+        raise ValueError('Registration has unpinned inputs')
 
     def guard():
         require_frozen_code(code)
@@ -204,24 +222,35 @@ def run_case(registration, index, out, until, code):
             raise ValueError('A frozen input changed')
 
     out = external_directory(out)
-    if any(out == p or out in p.parents for p in pins):
+    if any(out == p.resolve() or out in p.resolve().parents for p in pins):
         raise ValueError('Output contains a frozen input')
     guard()
     plan = read(registration['plan'])
     target = registration['config']['dataset']
     development = read(registration['development']) if 'development' in registration else None
-    if target != ('xuzhou' if development else 'paviaU'):
+    guarded = development is not None and development.get('kind') == p4_guarded.KIND
+    expected_target = p4_guarded.SCENE if guarded else ('xuzhou' if development else 'paviaU')
+    if target != expected_target or guarded != ('guarded' in registration):
         raise ValueError('Target/role protocol differs')
-    role = load_release(read(case['release']), plan, case['support_seed'], case['k'], development)
-    cube = loadmat(registration['image'], variable_names=[target])[target]
+    guarded_plan, guarded_tiles = p4_guarded.bind_inputs(registration, plan, development) if guarded else (None, None)
+    role = load_release(read(case['release']), plan, case['support_seed'], case['k'], development,
+                        guarded_tiles=guarded_tiles)
+    _, variable, classes, _ = DATASETS[target]
+    cube = loadmat(registration['image'], variable_names=[variable])[variable]
     bands = read_band_metadata(target, cube.shape[-1])
-    if development:
+    view = None
+    if guarded:
+        allowed = guarded_tiles
+        stats = fit_role_statistics(cube, guarded_plan, allowed['train'], development['development_roles_hash'])
+        scene = Scene(target, cube, guarded_plan, bands, classes, stats)
+        view = p4_guarded.observation_provider(scene, allowed)
+    elif development:
         allowed = development_tiles(development, plan)
         stats = fit_development_statistics(cube, plan, development)
-        scene = Scene(target, cube, plan, bands, CLASSES, stats)
+        scene = Scene(target, cube, plan, bands, classes, stats)
     else:
         allowed = {r:[t for t in plan['tiles'] if t['partition']==r] for r in ('train','val')}
-        scene = Scene.prepare(target, cube, plan, bands, CLASSES)
+        scene = Scene.prepare(target, cube, plan, bands, classes)
     train_ids = {t['id'] for t in allowed['train']}
     val_ids = {t['id'] for t in allowed['val']}
     if scene.stats != read(registration['statistics']):
@@ -239,7 +268,7 @@ def run_case(registration, index, out, until, code):
     out.mkdir(parents=True, exist_ok=True)
     state_path = out/'state.pt'
     with _run_lock(out):
-        model.training_config = {'spatial_p4_identity': identity, 'plan_hash': plan['plan_hash'],
+        model.training_config = {'spatial_p4_identity': identity, 'plan_hash': scene.plan['plan_hash'],
                                  'statistics_hash': scene.stats['statistics_hash'], 'initialization': init}
         if state_path.exists():
             state = torch.load(state_path, map_location='cpu', weights_only=True)
@@ -269,7 +298,8 @@ def run_case(registration, index, out, until, code):
             if tile['id'] not in train_ids:
                 raise ValueError('Optimization can only access training tiles')
             graph_before = {n: p.detach().clone() for n, p in model.backbone.learnable_graph.named_parameters()}
-            loss = _update(model, scene, tile, local, config, optimizer)
+            loss = _update(model, scene, tile, local, config, optimizer,
+                           observation_view=view(tile) if view else None)
             graph = dict(model.backbone.learnable_graph.named_parameters())
             changed = sum(int(torch.count_nonzero(p.detach() - graph_before[n])) for n, p in graph.items())
             grad = sum(float(p.grad.detach().abs().sum()) for p in graph.values() if p.grad is not None)
@@ -278,7 +308,7 @@ def run_case(registration, index, out, until, code):
             trace.append({'step': i+1, 'tile': tile['id'], 'loss': loss, 'graph_changed_elements': changed,
                           'graph_gradient_l1': grad, 'lr': [g['lr'] for g in optimizer.param_groups]})
             if i+1 in EVENTS:
-                metrics, scores = validation(model, scene, role['val'], val_ids)
+                metrics, scores = validation(model, scene, role['val'], val_ids, view)
                 nll = metrics['fused']['nll']
                 scheduler.step(nll)
                 history.append({'step': i+1, 'metrics': metrics})
@@ -293,7 +323,7 @@ def run_case(registration, index, out, until, code):
         guard()
         if until == STEPS:
             model.load_state_dict(best['model'], strict=True)
-            metrics, scores = validation(model, scene, role['val'], val_ids)
+            metrics, scores = validation(model, scene, role['val'], val_ids, view)
             if (_tree_fingerprint(scores) != _tree_fingerprint(best['scores'])
                     or metrics != next(e['metrics'] for e in history if e['step'] == best['step'])):
                 raise ValueError('Selected checkpoint probabilities changed after strict reload')
@@ -322,14 +352,6 @@ def main():
     code = code_snapshot()
     if code['commit'] != registration['commit'] or not 0 <= args.case < len(registration['cases']):
         raise ValueError('Unregistered code or case')
-    paths = [registration[x] for x in ('image', 'plan', 'statistics')]
-    if 'development' in registration:
-        paths.append(registration['development'])
-    paths += [case['release'] for case in registration['cases']]
-    source = registration['source']
-    paths += [source['weight'], source['weight']+'.json', source['result']]
-    if set(paths) - set(registration['pins']):
-        raise ValueError('Registration has unpinned inputs')
     print(json.dumps(run_case(registration, args.case, args.out, args.until, code)), flush=True)
 
 
