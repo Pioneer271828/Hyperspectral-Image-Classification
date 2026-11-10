@@ -1,5 +1,6 @@
 """Opt-in WP07 receptive-field controls on the existing VCA backbone."""
 
+from contextlib import contextmanager
 from contextvars import ContextVar
 import math
 
@@ -13,6 +14,7 @@ from transfer.multiscale_region_graph import GRAPH_RADII, MultiRangeBackbone
 
 
 _observation = ContextVar("multiscale_observation", default=None)
+_partition_bands = ContextVar("multiscale_partition_bands", default=None)
 DILATIONS = (1, 2, 3)
 MODES = ("fixed", "mean", "content", "metadata", "joint")
 
@@ -97,6 +99,8 @@ class ConditionalMultiscaleVCASAHGCN(MultiDatasetVCASAHGCN):
                  graph_multiscale="off", graph_radius=1, **backbone_kwargs):
         if graph_multiscale not in ("off", *MODES) or type(graph_radius) is not int or graph_radius not in GRAPH_RADII:
             raise ValueError("Explicit graph multiscale mode and radius 1 or 2 required")
+        if graph_multiscale != "fixed" and graph_radius != 1:
+            raise ValueError("A single graph radius can only be chosen in fixed mode")
         if graph_multiscale != "off":
             if backbone_kwargs.get("graph_mode") != "learned":
                 raise ValueError("Graph range comparisons require graph_mode=learned")
@@ -112,6 +116,7 @@ class ConditionalMultiscaleVCASAHGCN(MultiDatasetVCASAHGCN):
                                      for key in missing):
                     raise RuntimeError("The graph comparison must share the full baseline backbone state")
                 self.backbone = backbone
+        with torch.random.fork_rng(devices=[]):
             self.backbone.CNN_Branch[0] = ConditionalSpatialConv(self.backbone.CNN_Branch[0], cnn_multiscale, cnn_dilation)
 
     def export_config(self):
@@ -122,13 +127,25 @@ class ConditionalMultiscaleVCASAHGCN(MultiDatasetVCASAHGCN):
             config["backbone_kwargs"].update(graph_multiscale=self.graph_multiscale, graph_radius=self.graph_radius)
         return config
 
+    @contextmanager
+    def partition_bands(self, bands):
+        """Bind the metadata of the exact spectral view passed to the backbone."""
+        token = _partition_bands.set((self, bands))
+        try:
+            yield
+        finally:
+            _partition_bands.reset(token)
+
     def forward(self, dataset_name, x, Q=None, A=None, wavelengths=None, fwhm=None, superpixel_scale=100,
                 return_graph_info=False, return_diagnostics=False, graph_state=None, return_logits=False,
                 wavelength_unit="auto", fwhm_unit="auto", coverage_metadata=None, coverage_reference_nm=None,
                 *, band_metadata=None, coverage_fraction=None, gsd_m=None):
         if self.graph_multiscale != "off" and any(value is not None for value in (Q, A, graph_state)):
-            raise ValueError("Graph range comparisons build both supports internally")
+            raise ValueError("Graph range comparisons build their supports internally")
         first = self.backbone.CNN_Branch[0]
+        bound = _partition_bands.get()
+        if bound is not None and bound[0] is self and band_metadata is None:
+            band_metadata = bound[1]
         observation = (band_metadata, coverage_fraction, gsd_m)
         token = _observation.set((first, *observation))
         args = (dataset_name, x, Q, A, wavelengths, fwhm, superpixel_scale)
