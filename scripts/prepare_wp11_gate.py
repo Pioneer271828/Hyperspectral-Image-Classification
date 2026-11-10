@@ -9,12 +9,13 @@ from evaluation.dynamic_curve import pin
 from evaluation.wp11_confirmation import (POLICY, build_requests, layout, load_held_aside_tiles, unused_tiles,
                                             validate_benchmark, validate_full_history, validate_gate_inputs)
 from inference.gate_calibration import GateProtocol, SPARSE_PROTOCOL
-from inference.route_controls import request_hash
+from inference.route_controls import _fixed_routes, request_hash
 from inference.trained_light import load_trained_light
 from model.research_config import digest
-from research_runtime import code_snapshot, external_directory, hash_file, write_json
+from research_runtime import code_snapshot, external_directory, write_json
+from scripts.prepare_wp11_confirmation import confirmation_protocols
 from scripts.prepare_wp11_label_custody import COMMITMENT, PLAN, ROLES, read, verify_inputs
-from transfer.registered_development import _load_source, _read, load_development
+from transfer.registered_development import _load_source, _pin as file_pin, _read, load_development
 
 
 MODEL_FILES = ("development", "full_weights", "full_metadata", "full_history", "history_evidence", "light")
@@ -23,14 +24,10 @@ COMMITMENT_FIELDS = {"policy", "role", "plan_sha256", "authority_sha256", "recei
                      "labels_content_sha256", "blocks_sha256"}
 
 
-def file_pin(path):
-    return dict(path=str(path), sha256=hash_file(path))
-
-
 def run(registration, out, code):
     spec = read(registration)
     fields = {*MODEL_FILES, *LIGHT_PINS, "role_plan", "calibration", "confirmation", "settings", "scale", "benchmark"}
-    if set(spec) != fields or set(spec["calibration"]) != {"commitment", "blocks", "labels", "receipt"} or set(
+    if set(spec) not in (fields, fields | {"confirmation_design"}) or set(spec["calibration"]) != {"commitment", "blocks", "labels", "receipt"} or set(
             spec["confirmation"]) != {"commitment", "blocks"}:
         raise ValueError("Only the registered calibration and confirmation metadata are allowed")
     if set(spec["settings"]) != {"name", "criterion", "thresholds", "min_coverage", "min_class_support", "max_drop"}:
@@ -124,6 +121,10 @@ def run(registration, out, code):
     admission = dict(policy=POLICY, history_sha256=digest(history), light_spec_sha256=digest(light_spec),
                      light_artifact_sha256=spec["light"]["sha256"], blocks=blocks, request_sha256=request_hash(requests),
                      labels_sha256=hashes["confirmation"], scale=spec["scale"], benchmark=spec["benchmark"])
+    design_pin = spec.get("confirmation_design")
+    if design_pin is not None:
+        admission.update(confirmation_design_sha256=design_pin["sha256"],
+                         confirmation_labels_file_sha256=commitments["confirmation"]["labels_sha256"])
     gate_blocks = [dict(id=f"development-{b['id']}", scene=scene.dataset, condition="full", context=b["box"],
                         role="training" if b["role"] == "devtrain" else "selection", label_indices=[])
                    for b in record["roles"] if b["role"] in ("devtrain", "devval")]
@@ -132,8 +133,23 @@ def run(registration, out, code):
     gate = dict(schema=SPARSE_PROTOCOL, **spec["settings"], full_state=history["full_state"],
                 light_artifact=spec["light"]["sha256"], classes=scene.classes, blocks=gate_blocks, data_hashes=hashes,
                 admission_hash=digest(admission), calibration_request_hash=request_hash([r for r in requests if r["id"] in calibration]))
-    GateProtocol(gate, digest(gate))
+    protocol = GateProtocol(gate, digest(gate))
     validate_gate_inputs(gate, scene, history, admission)
+    if design_pin is not None:
+        safe([design_pin])
+        if design_pin["sha256"] == admission["confirmation_labels_file_sha256"]:
+            raise ValueError("Confirmation labels cannot serve as preregistered controls")
+        design = read(design_pin)
+        safe([design["fixed"]])
+        if design["fixed"]["sha256"] == admission["confirmation_labels_file_sha256"]:
+            raise ValueError("Confirmation labels cannot serve as preregistered controls")
+        fixed = read(design["fixed"])
+        confirmation_requests = [r for r in requests if r["id"] not in calibration]
+        if fixed["min_coverage"] != gate["min_coverage"]:
+            raise ValueError("Fixed and adaptive coverage rules differ")
+        _fixed_routes(full, light, confirmation_requests, fixed, digest(fixed))
+        confirmation_protocols(protocol, design, spec["benchmark"], fixed, "0" * 64)
+        inputs.extend([design_pin, design["fixed"]])
     verify_inputs(inputs, code, out)
 
     out.mkdir()
@@ -143,12 +159,19 @@ def run(registration, out, code):
     base.update(admission=file_pin(out / "admission.json"), gate_protocol=file_pin(out / "gate-protocol.json"))
     cal_tiles = {b["tile_id"] for b in calibration.values()}
     tile_files = [dict(tile_id=i, file=p) for i, p in sorted(tiles.items())]
-    write_json(out / "calibration-registration.json", dict(base,
+    calibration_spec = dict(base,
                calibration_tiles=[t for t in tile_files if t["tile_id"] in cal_tiles],
-               **{f"calibration_{key}": spec["calibration"][key] for key in ("receipt", "blocks", "labels")}))
-    write_json(out / "confirmation-handoff.json", dict(inputs=dict(base, tiles=tile_files),
+               **{f"calibration_{key}": spec["calibration"][key] for key in ("receipt", "blocks", "labels")})
+    if design_pin is not None:
+        calibration_spec["confirmation_design_sha256"] = design_pin["sha256"]
+    write_json(out / "calibration-registration.json", calibration_spec)
+    handoff = dict(inputs=dict(base, tiles=tile_files),
                confirmation_labels_sha256=commitments["confirmation"]["labels_sha256"],
-               required_after_freeze=["gate_freeze", "fixed", "confirmation_labels", "curve_protocol", "comparison"]))
+               required_after_freeze=["gate_freeze", "fixed", "confirmation_labels", "curve_protocol", "comparison"])
+    if design_pin is not None:
+        handoff.update(confirmation_design=design_pin, calibration=file_pin(out / "calibration-registration.json"),
+                       required_after_freeze=["gate_freeze", "freeze_receipt", "confirmation_labels"])
+    write_json(out / "confirmation-handoff.json", handoff)
     receipt = dict(status="registered", gate_protocol_hash=digest(gate), admission_hash=digest(admission),
                    calibration=file_pin(out / "calibration-registration.json"), confirmation=file_pin(out / "confirmation-handoff.json"),
                    calibration_tiles=len(calibration), confirmation_tiles=len(blocks)-len(calibration),

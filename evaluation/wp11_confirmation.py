@@ -22,6 +22,7 @@ from transfer.registered_development import _read
 POLICY = "dy-independent-development-v1"
 HISTORY_POLICY = "dy-audited-devtrain-devval-footprint-v1"
 TIMING_SCOPE = "resident_cpu_batch_public_api_validation_and_compute"
+DESIGN_PINS = {"confirmation_design_sha256", "confirmation_labels_file_sha256"}
 
 
 def confirmation_environment():
@@ -110,10 +111,12 @@ def validate_admission(full, published, scene, record, history, registration, *,
     """Verify provenance and layout without reading held-aside observations."""
     require(pin(expected_registration_hash) and digest(registration) == expected_registration_hash,
             "Pinned confirmation registration required")
-    require(set(registration) == {"policy", "history_sha256", "light_spec_sha256", "light_artifact_sha256",
-                                  "blocks", "request_sha256", "labels_sha256", "scale", "benchmark"}
+    fields = {"policy", "history_sha256", "light_spec_sha256", "light_artifact_sha256",
+              "blocks", "request_sha256", "labels_sha256", "scale", "benchmark"}
+    require(set(registration) in (fields, fields | DESIGN_PINS)
             and registration["policy"] == POLICY
-            and pin(registration["labels_sha256"]) and pin(registration["light_artifact_sha256"]),
+            and all(pin(registration[key]) for key in ({"labels_sha256", "light_artifact_sha256"} |
+                                                       (DESIGN_PINS & registration.keys()))),
             "Exact confirmation registration required")
     require(digest(history) == registration["history_sha256"], "Full history registration differs")
     identity = validate_full_history(full, scene, record, history)

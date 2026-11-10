@@ -6,17 +6,20 @@ import unittest
 
 import numpy as np
 
-from evaluation.wp11_confirmation import unused_tiles
+from evaluation.wp11_confirmation import build_requests, confirmation_environment, unused_tiles
+from inference.route_controls import request_hash
+from model.research_config import digest
 from research_runtime import code_snapshot
 from scripts.prepare_wp11_gate import MODEL_FILES, LIGHT_PINS, run
 from scripts.prepare_wp11_label_custody import AUTHORITY, RELEASE, ROLES, package, plan_roles
 from scripts.run_wp11_calibration import run as calibrate
 from tests.test_wp11_calibration import read, save
 from tests.test_wp11_confirmation import file_pin, synthetic_package
+from transfer.g3_training import state_hash
 
 
-def synthetic_registration(root, code):
-    base, (_, _, scene, record, _, _, _, _) = synthetic_package(root)
+def synthetic_registration(root, code, *, with_design=False):
+    base, (full, light, scene, record, _, _, _, _) = synthetic_package(root)
     source = read(base)
     tiles = {t['tile_id']: t['file'] for t in source['tiles']}
     available = unused_tiles(scene.plan, record)
@@ -49,6 +52,14 @@ def synthetic_registration(root, code):
         package(save(root, f'{role}-spec', dict(plan=role_plan, role=role, authority=authority, source=sparse)), out, code)
         spec[role] = {key: file_pin(out / f'{key}.json') for key in ('commitment', 'blocks')}
     spec['calibration'].update({key: file_pin(root / 'calibration' / f'{key}.json') for key in ('labels', 'receipt')})
+    if with_design:
+        requests = build_requests(scene, read(spec['confirmation']['blocks']), spec['scale'])
+        fixed = save(root, 'planned-fixed', dict(format='dy-fixed-path-v1', input_hash=request_hash(requests),
+                     full_state=state_hash(full), light_state=state_hash(light.model), min_coverage=1.,
+                     routes=[dict(id=request['id'], route='full') for request in requests]))
+        spec['confirmation_design'] = save(root, 'planned-design', dict(
+            fixed=fixed, environment_hash=digest(confirmation_environment()), cost_interval_ms=[.001, 10000.],
+            ece_bins=2, nll_epsilon=1e-8, relative_tolerances=dict(p50_ms=.1, p95_ms=.1)))
     return spec
 
 

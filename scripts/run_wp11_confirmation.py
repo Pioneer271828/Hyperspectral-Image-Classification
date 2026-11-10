@@ -13,6 +13,7 @@ from inference.gate_calibration import GateProtocol
 from inference.trained_light import load_trained_light
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
+from scripts.prepare_wp11_confirmation import resolve_confirmation
 from transfer.registered_development import _load_source, _read, load_development
 
 
@@ -21,7 +22,7 @@ def run(registration, out, code):
     fields = {"development", "full_weights", "full_metadata", "full_history", "history_evidence", "light",
               "light_training_sha256", "light_contract_hash", "admission", "tiles", "gate_protocol",
               "gate_freeze", "fixed", "confirmation_labels", "curve_protocol", "comparison"}
-    if set(spec) != fields:
+    if set(spec) not in (fields, fields | {"confirmation_binding"}):
         raise ValueError("Exact confirmation campaign artifacts required")
 
     def read(name):
@@ -30,15 +31,31 @@ def run(registration, out, code):
     pins = [registration, *[spec[k] for k in fields - {"tiles", "light_training_sha256", "light_contract_hash"}]]
     pins.extend(row["file"] for row in spec["tiles"])
     label_path = Path(spec["confirmation_labels"]["path"]).resolve()
-    if sum(Path(p["path"]).resolve() == label_path for p in pins) != 1:
+    label_sha = spec["confirmation_labels"]["sha256"]
+    if sum(Path(p["path"]).resolve() == label_path or p["sha256"] == label_sha for p in pins) != 1:
         raise ValueError("Confirmation labels require a separate deferred artifact")
     if out.exists() or any(out == Path(p["path"]).resolve() or out in Path(p["path"]).resolve().parents for p in pins):
         raise ValueError("New external output outside all input packages required")
+    admission = read("admission")
+    committed = "confirmation_design_sha256" in admission
+    if committed != ("confirmation_binding" in spec):
+        raise ValueError("Precommitted confirmation requires its calibration freeze binding")
+    if committed:
+        binding = spec["confirmation_binding"]
+        if set(binding) != {"handoff", "freeze_receipt"}:
+            raise ValueError("Exact confirmation binding required")
+        resolved = resolve_confirmation(dict(binding, freeze=spec["gate_freeze"],
+                                             confirmation_labels=spec["confirmation_labels"]), registration=registration)
+        if (resolved["result"]["status"] != "registered" or
+                any(spec[key] != value for key, value in resolved["inputs"].items()) or
+                spec["fixed"] != resolved["fixed"] or read("curve_protocol") != resolved["curve"] or
+                read("comparison") != resolved["comparison"]):
+            raise ValueError("Confirmation inputs or controls differ from the precommitted design")
+        pins.extend(resolved["pins"])
     scene, record, development_files = load_development(spec["development"])
     if any(Path(p["path"]).resolve() == label_path for p in development_files):
         raise ValueError("Confirmation labels cannot be part of the training package")
     pins.extend(development_files)
-    admission = read("admission")
     blocks = admission["blocks"]
     layout(scene.plan, record, blocks)
     tiles = {row["tile_id"]: row["file"] for row in spec["tiles"]}

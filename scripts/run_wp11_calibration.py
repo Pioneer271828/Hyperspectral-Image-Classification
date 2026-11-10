@@ -9,6 +9,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.wp11_confirmation import build_requests, endpoint_records, load_held_aside_tiles, validate_admission, validate_gate_inputs
+from evaluation.dynamic_curve import pin
 from inference.gate_calibration import GateProtocol, SPARSE_PROTOCOL, calibrate, save_freeze
 from inference.route_controls import _output_hash, request_hash
 from inference.trained_light import load_trained_light, trained_cascade
@@ -22,8 +23,10 @@ def run(registration, out, code):
     fields = {"development", "full_weights", "full_metadata", "full_history", "history_evidence", "light",
               "light_training_sha256", "light_contract_hash", "admission", "calibration_tiles", "gate_protocol",
               "calibration_receipt", "calibration_blocks", "calibration_labels"}
-    if set(spec) != fields:
+    if set(spec) not in (fields, fields | {"confirmation_design_sha256"}):
         raise ValueError("Exact calibration-only registration required")
+    if "confirmation_design_sha256" in spec and not pin(spec["confirmation_design_sha256"]):
+        raise ValueError("Pinned confirmation design required")
 
     def read(key):
         return json.loads(_read(spec[key]))
@@ -41,6 +44,8 @@ def run(registration, out, code):
     if gate["schema"] != SPARSE_PROTOCOL:
         raise ValueError("Calibration requires the sparse commitment protocol")
     admission, history = read("admission"), read("full_history")
+    if spec.get("confirmation_design_sha256") != admission.get("confirmation_design_sha256"):
+        raise ValueError("Confirmation design must match admission before calibration")
     if history["history_evidence_sha256"] != spec["history_evidence"]["sha256"]:
         raise ValueError("Full history evidence differs")
     _read(spec["history_evidence"])
@@ -96,6 +101,8 @@ def run(registration, out, code):
                   endpoints={"full": _output_hash(full_result), "fast": _output_hash(fast_result)},
                   calibration_tiles=len(requests), confirmation_observations=0, confirmation_labels_read=False,
                   optimizer_updates=0, query=0)
+    if "confirmation_design_sha256" in spec:
+        result["confirmation_design_sha256"] = spec["confirmation_design_sha256"]
     write_json(out / "receipt.json", result)
     return result
 
