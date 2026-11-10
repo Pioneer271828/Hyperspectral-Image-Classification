@@ -1098,6 +1098,13 @@
       "remaining": "同划分真实轻模型、双角色托管签发和真实校准/确认；WP12冻结54成本待GPU；WP04真实短测后补",
       "report": "research/reports/WP11CustodyRegistration_独立标签托管盲登记验收_20261110.md",
       "chat_report": "按2026-11-10最新用户指令持续推进，阶段性汇总"
+    },
+    {
+      "id": "WP11 冻结后独立确认登记",
+      "state": "预承诺设计至独立确认的CPU链路通过",
+      "evidence": "tested 662075e15532087102e1dd171f4b0395dae7b118，CPU69/69，四个合成CLI全通；先冻结固定路径与计时判据，校准与最终登记阶段确认标签缺席，改规则或缺绑定在读取前拒绝",
+      "remaining": "真实同划分训练轻模型、分别授权的校准/确认包及真实效果。WP12已登记54例成本批次等待GPU资源门槛",
+      "report": "research/reports/WP11ConfirmationBinding_冻结后独立确认登记_20261111.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
