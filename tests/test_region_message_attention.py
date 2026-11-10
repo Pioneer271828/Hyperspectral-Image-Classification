@@ -1,9 +1,12 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 
 import torch
 
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
-from transfer.region_message_attention import RegionMessageAttention, RegionMessageVCASAHGCN
+from model.checkpoint_io import save_model_checkpoint
+from transfer.region_message_attention import RegionMessageAttention, RegionMessageVCASAHGCN, load_region_message_checkpoint
 
 
 def identity_attention(mode, *, top_k=2, chunk=1):
@@ -82,12 +85,13 @@ class RegionMessageTests(unittest.TestCase):
         for a, b in zip(before, weights, strict=True):
             self.assertTrue(torch.isfinite(b.grad).all())
             self.assertFalse(torch.equal(a, b))
-        saved = model.export_config()
-        restored = RegionMessageVCASAHGCN(saved['class_counts'], **saved['backbone_kwargs']).eval()
-        restored.load_state_dict(model.state_dict(), strict=True)
-        actual = model.eval()('fixture', x, **options)
-        reload = restored('fixture', x, **options)
-        self.assertTrue(all(torch.equal(a, b) for a, b in zip(actual[:3], reload[:3], strict=True)))
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / 'selected.pt'
+            save_model_checkpoint(model, path)
+            restored = load_region_message_checkpoint(path)
+            actual = model.eval()('fixture', x, **options)
+            reload = restored('fixture', x, **options)
+            self.assertTrue(all(torch.equal(a, b) for a, b in zip(actual[:3], reload[:3], strict=True)))
 
     def test_zero_strength_matches_original_exchange(self):
         torch.manual_seed(50)
