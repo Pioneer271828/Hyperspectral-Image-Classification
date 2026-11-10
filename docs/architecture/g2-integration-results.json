@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "tested_sha": "42e9bcf17ae9660d5e46b2dc07cdce4778f68c79",
+  "source_commit": "635213d7dd1c442b4b0fc886acc1d388db2378bb",
+  "unchanged_source_blobs": 12,
+  "historical_target_pixels": 64,
+  "exact_head_replays": 3,
+  "confusion_cells": 12,
+  "class_recalls": 6,
+  "protected_files": 35,
+  "blocked_real_candidates": [
+    {
+      "target": "xuzhou",
+      "reason": "Local family binding missing for paviaU"
+    },
+    {
+      "target": "whu-honghu",
+      "reason": "Local family binding missing for paviaU"
+    },
+    {
+      "target": "paviaU",
+      "reason": "Local family binding missing for paviaU"
+    }
+  ],
+  "optimizer_updates": 0,
+  "real_query_access": false,
+  "historical_synthetic_metrics": {
+    "fused": {
+      "confusion": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "recall": [
+        1.0,
+        0.0
+      ],
+      "nll": 0.6994630785636512
+    },
+    "graph": {
+      "confusion": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "recall": [
+        1.0,
+        0.0
+      ],
+      "nll": 0.693282564394581
+    },
+    "cnn": {
+      "confusion": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "recall": [
+        1.0,
+        0.0
+      ],
+      "nll": 0.684141968209808
+    }
+  },
+  "elapsed_seconds": 0.2796226763166487,
+  "scope": "archived synthetic source reload and manual target preprocessing/metrics; shared network forward; real preflight metadata only"
+}

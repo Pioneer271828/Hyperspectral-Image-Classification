@@ -1,0 +1,58 @@
+{
+  "issue": 337,
+  "scope": "Exact reuse of accepted G2 source and tests; integration still pending validation",
+  "source_commit": "635213d7dd1c442b4b0fc886acc1d388db2378bb",
+  "base_main": "d44ac33ae5d3ff2d2f30c58a4f35ba3fb5128b16",
+  "files": [
+    {
+      "git_blob": "70068ab45c7786eda9f533b068b8a15a54382836",
+      "path": "transfer/g2_contract.py"
+    },
+    {
+      "git_blob": "ee0daf441df924e5ad8c924a6e268b7571fc59f8",
+      "path": "transfer/g2_source.py"
+    },
+    {
+      "git_blob": "f417d303c2127badaa4f38bdbebb6cbce1c84abf",
+      "path": "transfer/g2_observations.py"
+    },
+    {
+      "git_blob": "1b3c699096eafc1baedac15d6fe6e7bf983a87a6",
+      "path": "transfer/g2_validation.py"
+    },
+    {
+      "git_blob": "de729652b5b27708c55d365a69fb9fb37f803863",
+      "path": "transfer/g2_source_runner.py"
+    },
+    {
+      "git_blob": "272da38cd0a2f5a18236deade9adfc1a70944225",
+      "path": "transfer/g2_frozen_target.py"
+    },
+    {
+      "git_blob": "a526e50551ab32e7ef9e5f675ab9089b60f4ceed",
+      "path": "tests/test_g2_contract.py"
+    },
+    {
+      "git_blob": "db13b83db88134fef85b4060cb79a3abc3604be6",
+      "path": "tests/test_g2_source.py"
+    },
+    {
+      "git_blob": "8f35ed977baf28e13482d46ceba30b01e129fdec",
+      "path": "tests/test_g2_observations.py"
+    },
+    {
+      "git_blob": "79bf6e61ca0e692d988a84a87d34db4bf95b4b0b",
+      "path": "tests/test_g2_validation.py"
+    },
+    {
+      "git_blob": "dbef4842c4eb54e2b96e08eaa32a87feb3d68360",
+      "path": "tests/test_g2_source_runner.py"
+    },
+    {
+      "git_blob": "a99f5e0ec797c03b68c9ce617b14551385eb5f89",
+      "path": "tests/test_g2_frozen_target.py"
+    }
+  ],
+  "real_admission": "blocked until local release, spectral mapping and radiometric evidence verified",
+  "query_access": null
+}
