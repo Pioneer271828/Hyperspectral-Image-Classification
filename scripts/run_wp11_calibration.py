@@ -1,20 +1,17 @@
 """Freeze a registered WP11 gate using only the authorized calibration package."""
 
 import argparse
-import io
 import json
 from pathlib import Path
 import sys
 
-import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from evaluation.wp11_confirmation import build_requests, endpoint_records, validate_admission, validate_gate_inputs
+from evaluation.wp11_confirmation import build_requests, endpoint_records, load_held_aside_tiles, validate_admission, validate_gate_inputs
 from inference.gate_calibration import GateProtocol, SPARSE_PROTOCOL, calibrate, save_freeze
 from inference.route_controls import _output_hash, request_hash
 from inference.trained_light import load_trained_light, trained_cascade
-from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from transfer.registered_development import _load_source, _read, load_development
@@ -62,12 +59,7 @@ def run(registration, out, code):
     calibration = [b for b in blocks.values() if b["role"] == "calibration"]
     if len(tiles) != len(spec["calibration_tiles"]) or tiles.keys() != {b["tile_id"] for b in calibration}:
         raise ValueError("Exactly the calibration observations are required")
-    for tile_id, pin in tiles.items():
-        sl = tile_slice(scene.plan["tiles"][tile_id])
-        data = np.load(io.BytesIO(_read(pin)), allow_pickle=False)
-        if not isinstance(data, np.ndarray) or data.shape != scene.cube[sl].shape or data.dtype != np.float32 or not np.isfinite(data).all():
-            raise ValueError("Finite registered FP32 calibration tile required")
-        scene.cube[sl] = data
+    load_held_aside_tiles(scene, tiles)
     requests = build_requests(scene, calibration, admission["scale"])
     if request_hash(requests) != gate["calibration_request_hash"]:
         raise ValueError("Calibrated input bytes differ")
