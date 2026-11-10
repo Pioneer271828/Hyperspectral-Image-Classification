@@ -122,7 +122,7 @@ def package(specification, out, code):
                   raw_labels_read=False, query=0)
     write_json(out / "receipt.json", result)
     if not missing:
-        write_json(out / "commitment.json", dict(policy=COMMITMENT, **{key: result[key] for key in (
+        write_json(out / "commitment.json", dict(policy=COMMITMENT, receipt_sha256=hash_file(out / "receipt.json"), **{key: result[key] for key in (
             "role", "plan_sha256", "authority_sha256", "labels_sha256", "labels_content_sha256", "blocks_sha256")}))
     return result
 

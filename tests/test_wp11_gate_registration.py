@@ -88,7 +88,8 @@ class GateRegistrationTests(unittest.TestCase):
                 swapped['confirmation'].pop(key)
             with self.assertRaisesRegex(ValueError, 'Role-specific'):
                 run(save(root, 'swapped', swapped), root / 'bad', code)
-            calibration = dict(spec['calibration'], labels=dict(spec['calibration']['labels'], sha256='0'*64))
-            with self.assertRaisesRegex(ValueError, 'label pin differs'):
-                run(save(root, 'wrong-hash', dict(spec, calibration=calibration)), root / 'bad', code)
+            for key in ('labels', 'receipt'):
+                calibration = dict(spec['calibration'], **{key: dict(spec['calibration'][key], sha256='0'*64)})
+                with self.assertRaisesRegex(ValueError, f'{key} pin differs'):
+                    run(save(root, f'wrong-{key}', dict(spec, calibration=calibration)), root / 'bad', code)
             self.assertFalse((root / 'bad').exists())

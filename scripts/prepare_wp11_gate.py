@@ -19,7 +19,7 @@ from transfer.registered_development import _load_source, _read, load_developmen
 
 MODEL_FILES = ("development", "full_weights", "full_metadata", "full_history", "history_evidence", "light")
 LIGHT_PINS = ("light_training_sha256", "light_contract_hash")
-COMMITMENT_FIELDS = {"policy", "role", "plan_sha256", "authority_sha256", "labels_sha256",
+COMMITMENT_FIELDS = {"policy", "role", "plan_sha256", "authority_sha256", "receipt_sha256", "labels_sha256",
                      "labels_content_sha256", "blocks_sha256"}
 
 
@@ -96,8 +96,9 @@ def run(registration, out, code):
                     or candidate["box"] != scene.plan["tiles"][block["tile_id"]]["box"]):
                 raise ValueError("Released positions escape the frozen role plan")
         blocks.extend(selected)
-    if commitments["calibration"]["labels_sha256"] != spec["calibration"]["labels"]["sha256"]:
-        raise ValueError("Deferred calibration label pin differs from custody")
+    for key in ("labels", "receipt"):
+        if commitments["calibration"][f"{key}_sha256"] != spec["calibration"][key]["sha256"]:
+            raise ValueError(f"Deferred calibration {key} pin differs from custody")
     layout(scene.plan, record, blocks)
 
     history = read(spec["full_history"])
