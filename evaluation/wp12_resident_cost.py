@@ -11,6 +11,7 @@ import os
 import math
 from pathlib import Path
 import platform
+import re
 import resource
 import subprocess
 import time
@@ -30,6 +31,15 @@ JOB_POLICY = "wp12-native-resident-job-v1"
 OBSERVATION = "net_input Q A wavelengths fwhm superpixel_scale"
 MEMORY = {"cpu": "fresh_worker_peak_rss_through_validation_bytes",
           "cuda": "measured_forward_peak_allocated_bytes_including_resident_tensors"}
+
+
+def canonical_gpu_uuid(value):
+    """Normalize the two full physical UUID formats emitted by CUDA and nvidia-smi."""
+    match = re.fullmatch(r"(?:GPU-)?([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})",
+                         value, flags=re.IGNORECASE)
+    if match is None:
+        raise ValueError("Explicit full physical GPU UUID required")
+    return "GPU-" + match[1].lower()
 
 
 def environment(device, arithmetic):
@@ -55,7 +65,7 @@ def environment(device, arithmetic):
         if not torch.cuda.is_available() or torch.cuda.device_count() != 1:
             raise ValueError("Exactly one visible CUDA device required per worker")
         props = torch.cuda.get_device_properties(0)
-        result["gpu"] = dict(name=props.name, uuid=str(props.uuid), total_memory=props.total_memory,
+        result["gpu"] = dict(name=props.name, uuid=canonical_gpu_uuid(str(props.uuid)), total_memory=props.total_memory,
                              driver=subprocess.check_output(
                                  ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
                                  text=True).splitlines()[0])
@@ -94,7 +104,8 @@ def admit_gpu(env):
     """Read-only admission; do not queue or interfere with other GPU processes."""
     rows = subprocess.check_output(["nvidia-smi", "--query-gpu=uuid,memory.free,utilization.gpu",
                                     "--format=csv,noheader,nounits"], text=True).splitlines()
-    matches = [line.split(",") for line in rows if line.split(",")[0].strip() == env["gpu"]["uuid"]]
+    uuid = canonical_gpu_uuid(env["gpu"]["uuid"]).lower()
+    matches = [line.split(",") for line in rows if line.split(",")[0].strip().lower() == uuid]
     if len(matches) != 1:
         raise ValueError("Visible GPU UUID cannot be matched to physical admission")
     _, free, utilization = matches[0]
