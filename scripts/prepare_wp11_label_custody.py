@@ -16,6 +16,7 @@ ROLES = ("calibration", "confirmation")
 PLAN = "dy-held-aside-label-roles-v1"
 AUTHORITY = "dy-held-aside-sparse-label-authorization-v1"
 RELEASE = "dy-held-aside-sparse-curator-release-v1"
+COMMITMENT = "dy-held-aside-sparse-commitment-v1"
 
 
 def read(pin):
@@ -120,6 +121,9 @@ def package(specification, out, code):
                   blocks_sha256=None if missing else hash_file(out / "blocks.json"),
                   raw_labels_read=False, query=0)
     write_json(out / "receipt.json", result)
+    if not missing:
+        write_json(out / "commitment.json", dict(policy=COMMITMENT, receipt_sha256=hash_file(out / "receipt.json"), **{key: result[key] for key in (
+            "role", "plan_sha256", "authority_sha256", "labels_sha256", "labels_content_sha256", "blocks_sha256")}))
     return result
 
 

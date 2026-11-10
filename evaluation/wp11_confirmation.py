@@ -1,5 +1,7 @@
 """Admit held-aside development tiles and run frozen confirmation controls."""
 
+import io
+
 import numpy as np
 import torch
 
@@ -9,11 +11,12 @@ from inference.gate_calibration import SPARSE_PROTOCOL, _validate_freeze, confir
 from inference.route_controls import _fixed_routes, _output_hash, benchmark_controls, fixed_cascade, request_hash
 from inference.trained_light import trained_cascade
 from loadData.observation_sampling import sample
-from loadData.spatial_tiles import observe_tile
+from loadData.spatial_tiles import observe_tile, tile_slice
 from model.research_config import digest
 from transfer.development_training import validate
 from transfer.g3_training import state_hash
 from transfer.observation_policy import scene_identity
+from transfer.registered_development import _read
 
 
 POLICY = "dy-independent-development-v1"
@@ -71,6 +74,16 @@ def build_requests(scene, blocks, scale):
                              wavelengths=torch.tensor(view.bands.wavelengths, dtype=torch.float32), scale=scale,
                              coverage_known=True, coverage_fraction=1.0))
     return requests
+
+
+def load_held_aside_tiles(scene, tiles):
+    """Copy authenticated FP32 observations into an already admitted layout."""
+    for tile_id, pin in tiles.items():
+        sl = tile_slice(scene.plan["tiles"][tile_id])
+        data = np.load(io.BytesIO(_read(pin)), allow_pickle=False)
+        require(isinstance(data, np.ndarray) and data.shape == scene.cube[sl].shape
+                and data.dtype == np.float32 and np.isfinite(data).all(), "Finite registered FP32 tile required")
+        scene.cube[sl] = data
 
 
 def validate_full_history(full, scene, record, history):
@@ -148,6 +161,14 @@ def endpoint_records(fast, full, requests, blocks, labels):
     return records
 
 
+def validate_benchmark(budget):
+    require(set(budget) == {"seed", "warmups", "pairs"}
+            and all(type(budget[k]) is int for k in budget)
+            and 0 <= budget["seed"] < 2**32 and budget["warmups"] >= 1
+            and 20 <= budget["pairs"] <= 100 and budget["pairs"] % 20 == 0,
+            "Balanced five-arm and curve-compatible repeat budget required")
+
+
 def run_confirmation(full, published, scene, record, history, registration, *, expected_registration_hash,
                      protocol, frozen, expected_freeze_hash, read_labels, fixed, expected_fixed_hash):
     """Evaluate one frozen candidate and its preregistered fixed path on confirmation."""
@@ -165,11 +186,7 @@ def run_confirmation(full, published, scene, record, history, registration, *, e
     require(fixed["min_coverage"] == spec["min_coverage"], "Fixed and adaptive coverage rules differ")
     routes = _fixed_routes(full, published, requests, fixed, expected_fixed_hash)
     budget = registration["benchmark"]
-    require(set(budget) == {"seed", "warmups", "pairs"}
-            and all(type(budget[k]) is int for k in budget)
-            and 0 <= budget["seed"] < 2**32 and budget["warmups"] >= 1
-            and 20 <= budget["pairs"] <= 100 and budget["pairs"] % 20 == 0,
-            "Balanced five-arm and curve-compatible repeat budget required")
+    validate_benchmark(budget)
     observed_environment = confirmation_environment()
     require(len(observed_environment["affinity"]) == 1, "One CPU core required")
     # Only this deferred loader sees confirmation values. No raw GT reader is used.

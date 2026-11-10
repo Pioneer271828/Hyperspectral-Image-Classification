@@ -53,6 +53,7 @@ class LabelCustodyTests(unittest.TestCase):
                 case = root / ("result-"+name)
                 result = package(save(root, name+"-spec", spec), case, code)
                 self.assertEqual((case / "labels.json").exists(), name == "full")
+                self.assertEqual((case / "commitment.json").exists(), name == "full")
                 self.assertEqual(result["status"], "packaged" if name == "full" else "insufficient_support")
                 if name == "full":
                     bad = save(root, "wrong-role", dict(spec, role="calibration"))

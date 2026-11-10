@@ -1,20 +1,16 @@
 """Run one preregistered WP11 confirmation using isolated tile and model packages."""
 
 import argparse
-import io
 import json
 from pathlib import Path
 import sys
 
-import numpy as np
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.dynamic_cost_pairs import matched_cost_pairs
 from evaluation.dynamic_curve import CurveProtocol
-from evaluation.wp11_confirmation import confirmation_environment, layout, run_confirmation
+from evaluation.wp11_confirmation import confirmation_environment, layout, load_held_aside_tiles, run_confirmation
 from inference.gate_calibration import GateProtocol
 from inference.trained_light import load_trained_light
-from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
 from transfer.registered_development import _load_source, _read, load_development
@@ -48,12 +44,7 @@ def run(registration, out, code):
     tiles = {row["tile_id"]: row["file"] for row in spec["tiles"]}
     if len(tiles) != len(spec["tiles"]) or tiles.keys() != {b["tile_id"] for b in blocks}:
         raise ValueError("Exactly the registered held-aside tile files required")
-    for tile_id, pin in tiles.items():
-        sl = tile_slice(scene.plan["tiles"][tile_id])
-        data = np.load(io.BytesIO(_read(pin)), allow_pickle=False)
-        if not isinstance(data, np.ndarray) or data.shape != scene.cube[sl].shape or data.dtype != np.float32:
-            raise ValueError("Held-aside file must be a raw FP32 spectral tile")
-        scene.cube[sl] = data
+    load_held_aside_tiles(scene, tiles)
     history = read("full_history")
     if history["history_evidence_sha256"] != spec["history_evidence"]["sha256"]:
         raise ValueError("Full history evidence differs")
