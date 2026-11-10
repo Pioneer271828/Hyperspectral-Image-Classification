@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 371,
+  "issue": 375,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -1050,6 +1050,22 @@
       "remaining": "真实独立确认、同成本固定路径与部署成本待验；真实GPU成本当前空闲最高4004MiB，WP04真实短测后补",
       "report": "research/reports/WP11MatchedCost_动态与固定路径同成本比较工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天接续WP12成本计划后交付"
+    },
+    {
+      "id": "WP11 独立确认准入与固定路径执行",
+      "state": "CPU工程通过，真实确认待准入",
+      "evidence": "Issue373；tested 9817916b94624c8fce889760ccb757252e571c48；40/40 CPU；冻结门控、独立块和授权标签、实际固定分支调用、五臂配对计时与曲线入口通过；徐州25候选块",
+      "remaining": "真实轻模型、完整模型同场景祖先审计、校准与确认授权标签及真实成本待验",
+      "report": "research/reports/WP11IndependentConfirmation_独立确认准入与固定路径执行_20261110.md",
+      "chat_report": "2026-11-10本聊天继续推进留出观测准备"
+    },
+    {
+      "id": "WP11 徐州无标签留出候选观测",
+      "state": "真实候选观测准备通过",
+      "evidence": "Issue375；tested 8c95cf57892be8470687044a5687419194d5f1f8；CPU41/41、checker598Python198JSON；徐州25块8399104值独立回读一致、5输入不变",
+      "remaining": "实际角色与授权标签、模型历史和真实确认待验；54成本GPU空闲最高6000MiB，WP04真实短测后补",
+      "report": "research/reports/WP11HeldAside_徐州无标签留出候选观测准备_20261110.md",
+      "chat_report": "2026-11-10本聊天交付实际影像候选"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
