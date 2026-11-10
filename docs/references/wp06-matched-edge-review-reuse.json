@@ -1,0 +1,13 @@
+{
+  "schema_version":1,
+  "issue":349,
+  "plan_sections":["master16", "master22 WP06", "implementation19.7"],
+  "scope":"Integration of accepted experimental controls; no new research operator",
+  "project_commit":"e7115cebd7ad70af3cf5110cd6e32a5041b7cc7a",
+  "reused":["evaluation/matched_edge_controls.py", "evaluation/graph_edge_intervention.py", "transfer/graph_route_context.py", "transfer/graph_route_training.py"],
+  "prior_review":"docs/references/wp06-matched-edge-project-reuse.json",
+  "external_source_copied":false,
+  "upstream_executed":false,
+  "new_dependency":false,
+  "limitations":["Seed-grid centers in pixels, not learned centroids or physical GSD", "Selection validation reused, not independent accuracy", "Any unavailable tile invalidates whole control", "Frozen intervention is not retraining or causal evidence"]
+}

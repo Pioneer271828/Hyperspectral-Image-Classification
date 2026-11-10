@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "tested_sha": "bfcd14c04662bf57a1ce1388fb4185a9aa1fe42c",
+  "fixture": "one synthetic actual network, route budget4, 24 training updates",
+  "real_training_updates": 0,
+  "review_updates": 0,
+  "query": 0,
+  "evaluated_controls": 6,
+  "control_statuses": {
+    "none": "evaluated",
+    "important": "evaluated",
+    "low_weight": "evaluated",
+    "random:64": "evaluated",
+    "random:512": "evaluated",
+    "random:2048": "evaluated"
+  },
+  "independent_confusion_cells": 1458,
+  "independent_recalls": 162,
+  "independent_degree_and_distance_constraints": 48,
+  "checkpoint_unchanged": true,
+  "complete_reload_exact": true,
+  "source_model_history_unchanged": true,
+  "elapsed_seconds": 3.5279181310907006,
+  "files": {
+    "trained.pt": "fe0e8096bc451ba6b8fe2196164acfa68955ab83d25e0942ff32eee991f95216",
+    "review.json": "c85b54739923ca4930c75d72ab7ec4adccc4d4989783794a9de0b2f66b3008ff",
+    "audit.py": "3432f689c90677d94dce468612937783d6671bf7642fe7d9c78cc9bcbfffb05d",
+    "plan.json": "1472cb83eeff630d1a303ef81d32fe0dce1d4eb3a5609e70630c17989871adc8"
+  }
+}
