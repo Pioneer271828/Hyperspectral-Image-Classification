@@ -8,7 +8,7 @@ import math
 import statistics
 import numpy as np
 
-from inference.gate_calibration import _metrics
+from inference.gate_calibration import SPARSE_PROTOCOL, _metrics, observed_records_hash
 from model.research_config import digest
 
 
@@ -113,6 +113,8 @@ class CurveProtocol:
         require(pin(expected_results_hash) and digest(results) == expected_results_hash, 'External result evidence mismatch')
         rows, data_hash = self.gate.records(records, 'confirmation')
         s, g = self._spec, self.gate.specification
+        if g['schema'] == SPARSE_PROTOCOL:
+            data_hash = observed_records_hash(rows)
         require(isinstance(results, list) and len(results) == len(s['points']), 'Every registered point must be reported')
         by_id = {p['id']: p for p in s['points']}
         seen = set()

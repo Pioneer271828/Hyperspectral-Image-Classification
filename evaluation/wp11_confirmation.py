@@ -201,7 +201,7 @@ def run_confirmation(full, published, scene, record, history, registration, *, e
     policy_hashes = dict(full=digest({"mode": "full"}), fast=digest({"mode": "fast", "min_coverage": spec["min_coverage"]}),
                          adaptive=expected_freeze_hash, fixed=expected_fixed_hash)
     points = [dict(id=arm, policy_hash=policy_hashes[arm], full_state=spec["full_state"],
-                   light_artifact=spec["light_artifact"], data_hash=confirmation["confirmation_hash"],
+                   light_artifact=spec["light_artifact"], data_hash=confirmation.get("observed_records_hash", confirmation["confirmation_hash"]),
                    environment_hash=digest(observed_environment), timing_scope=timing["scope"],
                    warmups=timing["warmups"], routes=[dict(id=r["id"], fast=r["route"] == "fast") for r in value["outputs"]],
                    wall_ms=[r["timings"][arm]["wall_ms"] for r in timing["samples"]],

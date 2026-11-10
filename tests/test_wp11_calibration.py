@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+from evaluation.dynamic_curve import CurveProtocol
 from inference.gate_calibration import SPARSE_PROTOCOL
 from inference.route_controls import request_hash
 from model.research_config import digest
@@ -75,7 +76,16 @@ class CalibrationTests(unittest.TestCase):
                 pairs = read(confirmation['comparison'])
                 pairs['curve_protocol_hash'] = digest(curve)
                 confirmation['comparison'] = save(root, 'sparse-pairs', pairs)
-                check = confirm(save(root, 'confirmation-spec', confirmation), root / 'confirmed', code_snapshot())
+                original_report = CurveProtocol.report
+
+                def reject_changed_predictions(protocol, records, results, *, expected_results_hash):
+                    changed = [dict(row, fast=row['fast'][:, ::-1]) for row in records]
+                    with self.assertRaisesRegex(ValueError, 'runtime identity mismatch'):
+                        original_report(protocol, changed, results, expected_results_hash=expected_results_hash)
+                    return original_report(protocol, records, results, expected_results_hash=expected_results_hash)
+
+                with patch.object(CurveProtocol, 'report', reject_changed_predictions):
+                    check = confirm(save(root, 'confirmation-spec', confirmation), root / 'confirmed', code_snapshot())
                 self.assertEqual(check['support'], [1]*9)
                 self.assertEqual(check['confirmation']['confirmation_hash'], gate['data_hashes']['confirmation'])
         finally:
