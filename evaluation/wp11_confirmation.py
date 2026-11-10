@@ -73,18 +73,11 @@ def build_requests(scene, blocks, scale):
     return requests
 
 
-def admit(full, published, scene, record, history, registration, *, expected_registration_hash):
-    """Verify pinned provenance and crop only held-aside observations. No label reads."""
-    require(pin(expected_registration_hash) and digest(registration) == expected_registration_hash,
-            "Pinned confirmation registration required")
-    require(set(registration) == {"policy", "history_sha256", "light_spec_sha256", "light_artifact_sha256",
-                                  "blocks", "request_sha256", "labels_sha256", "scale", "benchmark"}
-            and registration["policy"] == POLICY
-            and pin(registration["labels_sha256"]) and pin(registration["light_artifact_sha256"]),
-            "Exact confirmation registration required")
+def validate_full_history(full, scene, record, history):
+    """Check the declared footprint against the isolated development scene."""
     identity = scene_identity(scene, record)
     require(set(history) == {"policy", "scope", "tile_usage", "full_state", "scene_identity", "history_evidence_sha256"}
-            and history["policy"] == HISTORY_POLICY and digest(history) == registration["history_sha256"]
+            and history["policy"] == HISTORY_POLICY
             and history["scope"] == "all_same_scene_ancestry"
             and pin(history["history_evidence_sha256"]) and history["full_state"] == state_hash(full)
             and history["scene_identity"] == identity, "Audited complete full-model footprint required")
@@ -97,6 +90,20 @@ def admit(full, published, scene, record, history, registration, *, expected_reg
         require(isinstance(ids, list) and bool(ids)
                 and all(type(i) is int and i in allowed for i in ids) and ids == sorted(set(ids)),
                 f"Audited full-model {phase} footprint escapes its development role")
+    return identity
+
+
+def admit(full, published, scene, record, history, registration, *, expected_registration_hash):
+    """Verify pinned provenance and crop only held-aside observations. No label reads."""
+    require(pin(expected_registration_hash) and digest(registration) == expected_registration_hash,
+            "Pinned confirmation registration required")
+    require(set(registration) == {"policy", "history_sha256", "light_spec_sha256", "light_artifact_sha256",
+                                  "blocks", "request_sha256", "labels_sha256", "scale", "benchmark"}
+            and registration["policy"] == POLICY
+            and pin(registration["labels_sha256"]) and pin(registration["light_artifact_sha256"]),
+            "Exact confirmation registration required")
+    require(digest(history) == registration["history_sha256"], "Full history registration differs")
+    identity = validate_full_history(full, scene, record, history)
     light = published.specification
     require(published.validate(full) == scene.dataset and digest(light) == registration["light_spec_sha256"]
             and light["training_spec"]["identity"] == identity, "Light training and selection footprint differs")
