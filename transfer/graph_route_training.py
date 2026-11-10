@@ -9,7 +9,7 @@ import torch
 from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
 from transfer.curriculum_training import CurriculumRun
-from transfer.development_training import sparse_labels
+from transfer.development_training import sparse_labels, development_counts
 from transfer.g3_training import _forward
 from transfer.graph_route_context import RouteContextBank, route_state_hash, _model, _context
 
@@ -80,6 +80,8 @@ class GraphRouteRun(CurriculumRun):
     def _evaluate(self, model):
         # Same full-validation arithmetic/order as the accepted development runner.
         # Random dynamic routes use step0 at EVERY selection event, including reload.
+        _,validation_count = development_counts(self.record)
+        if self.scene.classes!=len(self.record['classes']):raise ValueError('Scene/record class counts differ')
         labels = sparse_labels(self.record, self.scene.plan, 'validation_support')
         matrix = np.zeros((self.scene.classes, self.scene.classes), dtype=np.int64)
         total = correct = 0; nll = 0.; model.eval()
@@ -94,7 +96,7 @@ class GraphRouteRun(CurriculumRun):
                                       minlength=self.scene.classes**2).reshape(matrix.shape)
                 correct += int((prediction == target).sum()); total += len(target)
                 nll -= float(np.log(np.maximum(probs[np.arange(len(target)), target], 1e-8)).sum())
-        if total != 45: raise ValueError('Fixed validation budget changed')
+        if total != validation_count: raise ValueError('Fixed per-class validation budget changed')
         return dict(nll=nll/total, oa=correct/total, count=total, confusion=matrix.tolist(),
                     support=matrix.sum(1).tolist(), recall=(np.diag(matrix)/matrix.sum(1)).tolist())
 

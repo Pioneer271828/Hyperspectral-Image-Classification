@@ -18,7 +18,7 @@ from model.research_config import canonical_json, digest
 from research_runtime import external_directory, code_snapshot, require_frozen_code
 from transfer.container_runtime import training_container_kind
 from transfer.curriculum_exposure import ExposurePlan
-from transfer.development_training import prepare_scene, validate
+from transfer.development_training import prepare_scene, validate, development_counts
 from transfer.graph_route_context import RouteContextBank, route_state_hash
 from transfer.graph_route_training import GraphRouteRun
 from transfer.observation_policy import scene_identity
@@ -57,8 +57,7 @@ def _released_record(record):
               'oracle_disclosure','normalization_contract','runner_compatible','validation_hash'}
     if set(record) != fields or record['schema_version'] != 1 or record['kind'] != 'oracle_spatial_development_v1':
         raise ValueError('Only the released development record may be packaged')
-    if len(record['classes']) != 9 or record['training_labels'] != 90 or record['validation_labels'] != 45 or record['total_training_selection_labels'] != 135:
-        raise ValueError('This runner requires the accepted nine-class 90/45 development protocol')
+    development_counts(record)
     for name in ('train_support', 'validation_support'):
         if set(record[name]) != {'indices','labels','seed'}:
             raise ValueError('Unregistered support payload')

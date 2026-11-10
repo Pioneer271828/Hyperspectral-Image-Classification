@@ -13,7 +13,7 @@ from inference.light_cnn import validate_source
 from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
 from transfer.curriculum_exposure import ExposurePlan, ExposureLedger
-from transfer.development_training import sparse_labels, evaluate_validation
+from transfer.development_training import sparse_labels, evaluate_validation, development_counts
 from transfer.g3_training import _forward, state_hash
 from transfer.observation_policy import scene_identity, ObservationPolicy, evaluate_conditions
 from transfer.observation_curriculum import CurriculumPolicy
@@ -360,11 +360,12 @@ class CurriculumRun:
             expected = np.ones(len(event['support_ids'])) if policy is None else policy.weights(event['support_ids'], step=step)
             if row['weights'] != expected.tolist(): raise ValueError('Wrong weighted exposure')
             val = row['validation']; c = np.asarray(val['confusion'])
+            _,validation_count = development_counts(record)
             if (set(val) != {'nll','oa','count','confusion','support','recall'} or not _finite(val['nll']) or val['nll'] < 0
                     or c.shape != (scene.classes,scene.classes) or c.dtype.kind not in 'iu' or (c < 0).any()
-                    or val['count'] != 45 or c.sum() != 45 or not np.array_equal(c.sum(1), np.full(scene.classes,5))
+                    or val['count'] != validation_count or c.sum() != validation_count or not np.array_equal(c.sum(1), np.full(scene.classes,5))
                     or val['support'] != c.sum(1).tolist() or val['recall'] != (np.diag(c)/c.sum(1)).tolist()
-                    or val['oa'] != float(np.trace(c)/45)): raise ValueError('Invalid validation history')
+                    or val['oa'] != float(np.trace(c)/validation_count)): raise ValueError('Invalid validation history')
         selected = None if n == 0 else min(range(n), key=lambda i:history[i]['validation']['nll']) + 1
         if v['selected_step'] != selected or v['rng'] != rng.bit_generator.state: raise ValueError('Wrong selection/sampler state')
         run._validate_optimizer(v['optimizer'], history)
