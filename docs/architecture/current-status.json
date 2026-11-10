@@ -1034,10 +1034,18 @@
       "remaining": "8卡均不满足显存门槛，未跑GPU或真实54成本；CPU峰值已修订为收尾校验后读取，旧记录保留；WP04真实短测后补",
       "report": "research/reports/WP12HistoricalCost_原始冻结推理运行时隔离采集验收_20261110.md",
       "chat_report": "2026-11-10本聊天第三项连续模块交付；真实测量与工程分别验收"
+    },
+    {
+      "id": "WP12 冻结54成本批次登记与汇总",
+      "state": "CPU工程与真实登记通过，GPU实际测量待验",
+      "evidence": "Issue370；tested 8327b0f94a7e1fa86f9c42c459e28e578f6d202a；CPU28通过/1GPU跳过，28.686秒；实际54登记 e373b6648314e3e0514506ecf78fa8dcb582791a24f98fa23d2060f89a84c978；全54合成续跑与联合汇总通过",
+      "remaining": "GPU达到既定门槛后执行原54常驻成本；端到端成本与WP04真实短测待补",
+      "report": "research/reports/WP12CostCampaign_冻结54成本批次登记与汇总验收_20261110.md",
+      "chat_report": "2026-11-10本聊天交付后继续WP11固定路径同成本比较"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp12_historical_runtime_admitted_hardware_resource_pending",
+  "execution_state": "wp12_frozen54_cost_registered_hardware_resource_pending",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
