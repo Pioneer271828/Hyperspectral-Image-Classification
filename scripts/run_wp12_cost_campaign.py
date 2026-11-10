@@ -5,7 +5,6 @@ import fcntl
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 import tempfile
@@ -14,14 +13,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.wp12_cost_preparation import POLICY as PREPARATION
 from evaluation.wp12_cost_primitives import fields, read_pinned
 from evaluation.wp12_evidence import COST_POLICY, accuracy_records, join_hardware
-from evaluation.wp12_resident_cost import JOB_POLICY, MEMORY, admit_gpu, assemble, pinned_path, validate_job
+from evaluation.wp12_resident_cost import (JOB_POLICY, MEMORY, admit_gpu, assemble, canonical_gpu_uuid,
+                                           pinned_path, validate_job)
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from scripts.measure_wp12_historical_cost import preserved_runtime
 
 
 POLICY = "wp12-frozen54-resident-campaign-v1"
-WORKER_COMMIT = "ad107501595f9b9cb625086e8457a852d7a60789"
+WORKER_COMMIT = "3ba683439ed6c5ea3ae219bea0840e41b738ffce"
 BASELINE = "target_scratch_full/none"
 WARMUPS, REPEATS, CASE_TIMEOUT = 3, 12, 900
 CASE_FIELDS = "scene seed arm evaluation_sha256 checkpoint_sha256".split()
@@ -162,8 +162,7 @@ def run_campaign(args, out, code):
     worker = Path(args.worker_root).resolve(strict=True)
     if out == worker or worker in out.parents:
         raise ValueError("Campaign outputs must be outside the worker checkout")
-    if not re.fullmatch(r"GPU-[0-9a-fA-F-]{36}", args.gpu_uuid):
-        raise ValueError("Explicit physical GPU UUID required")
+    gpu_uuid = canonical_gpu_uuid(args.gpu_uuid)
     worker_code = code_snapshot(worker)
     if worker_code["commit"] != WORKER_COMMIT:
         raise ValueError("Historical worker commit differs from registration")
@@ -172,11 +171,11 @@ def run_campaign(args, out, code):
     freeze_spec = registration["inputs"]["accuracy"]["freeze"]
     command = [sys.executable, "scripts/measure_wp12_historical_cost.py", "--expected-commit", WORKER_COMMIT,
                "--freeze", freeze_spec["path"], "--freeze-sha256", freeze_spec["sha256"]]
-    env = dict(os.environ, CUDA_VISIBLE_DEVICES=args.gpu_uuid, OMP_NUM_THREADS="1", MKL_NUM_THREADS="1",
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES=gpu_uuid, OMP_NUM_THREADS="1", MKL_NUM_THREADS="1",
                OPENBLAS_NUM_THREADS="1", PYTHONDONTWRITEBYTECODE="1", PYTHONPATH="")
 
     def invoke(path, operation):
-        admit_gpu({"gpu": {"uuid": args.gpu_uuid}})
+        admit_gpu({"gpu": {"uuid": gpu_uuid}})
         with (path.parent / "worker.log").open("xb") as log:
             subprocess.run(command + ["--out", str(path)] + operation, cwd=worker, env=env,
                            stdout=log, stderr=subprocess.STDOUT, check=True,
@@ -191,7 +190,7 @@ def run_campaign(args, out, code):
             environment = json.loads(path.read_text(encoding="utf-8"))
         else:
             environment = json.loads(environment_path.read_text(encoding="utf-8"))
-        if (environment["device"] != "cuda" or environment["gpu"]["uuid"] != args.gpu_uuid
+        if (environment["device"] != "cuda" or environment["gpu"]["uuid"] != gpu_uuid
                 or environment["arithmetic"] != "ordered" or environment["memory"] != MEMORY["cuda"]):
             raise ValueError("Campaign must stay on its bound physical GPU and ordered environment")
         publish(environment_path, environment)

@@ -118,9 +118,10 @@ class ResidentCostTests(unittest.TestCase):
                     measure(job)
 
     def test_resource_gate_matches_physical_uuid_and_does_not_wait(self):
-        env = {"gpu": {"uuid": "GPU-fixture"}}
+        physical = "GPU-12340000-0000-0000-0000-000000000001"
+        env = {"gpu": {"uuid": physical}}
         for free, util, allowed in ((12288, 60, True), (12287, 0, False), (20000, 61, False)):
-            output = f"GPU-other, 24000, 0\nGPU-fixture, {free}, {util}\n"
+            output = f"GPU-12340000-0000-0000-0000-000000000002, 24000, 0\n{physical}, {free}, {util}\n"
             with self.subTest(free=free, util=util), patch(
                     "evaluation.wp12_resident_cost.subprocess.check_output", return_value=output):
                 if allowed:
