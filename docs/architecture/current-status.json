@@ -670,6 +670,13 @@
       "chat_report": "本聊天TQ-2完整CPU工程交付，随后继续DY-0。"
     },
     {
+      "id": "WP10 INT8与三值逐层精度回退",
+      "state": "两种CPU混合精度回退完成，Xuzhou既有短测权重只读复核通过",
+      "evidence": "回归 f235fb20d7c0ffb9491b9a4b16e053e060f1b1c2，CPU31/31。真实只读 717b59ed100397baf51b274a99001953c22f8f97，45验证点；PTQ只保留第二层，三值只保留第一层，两个候选三头精确恢复，10输入不变，新增优化/query0",
+      "remaining": "正式多种子等预算恢复、独立确认及成本；真实剪枝空名单，全部通道保留；已登记54例成本测量待GPU资源门槛",
+      "report": "research/reports/WP10PrecisionFallback_INT8与三值逐层回退_20261111.md"
+    },
+    {
       "id": "DY-0离线互补与块级成本上界",
       "state": "CPU诊断工程通过，单个既有短测模型无互补收益",
       "evidence": "tested c09f27606ba381818ea91afd43ca6fb8e94e9825；8专项/45含专项回归、checker478Python142JSON。PaviaU固定45验证标签/41块，独立82头（含空数组）/243混淆格/69文件不变。两路共同正确5、共同错误40，oracle11.11%，优化query0。",
