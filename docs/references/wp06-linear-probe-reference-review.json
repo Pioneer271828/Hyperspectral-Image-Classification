@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "issue": 345,
+  "review_date": "2026-11-10",
+  "plan_sections": ["master16", "master22 WP06", "implementation19.7"],
+  "paper": {"title":"Understanding intermediate layers using linear classifier probes", "authors":["Guillaume Alain","Yoshua Bengio"], "version":"arXiv:1610.01644v4", "url":"https://arxiv.org/abs/1610.01644v4", "read_sections":["1","3.1","3.2","3.3","3.4"], "full_text_read":false},
+  "method_summary": "Independent linear softmax classifiers inspect frozen intermediate representations; their gradients do not train the source network. Probe quality describes linear separability, not a causal proof of semantic improvement.",
+  "author_code_search": {"queries":["Guillaume Alain linear classifier probes github code author", "Guillaume Alain homepage linear probes code"], "paper_code_references":"TensorFlow MNIST and pretrained ResNet examples are not a verified dedicated author probe repository", "status":"No dedicated author implementation verified in bounded search; existence is not ruled out", "official_repository":null, "fixed_commit":null, "file_level_license":null},
+  "implementation": "Independent PyTorch affine softmax cross-entropy with explicit full-batch SGD, validated against NumPy; no external source copied",
+  "external_source_copied": false,
+  "upstream_executed": false,
+  "new_dependency": false,
+  "project_reuse": ["evaluation/frozen_representation_capture.py", "model/region_pixel_alignment.py", "research_runtime.py"],
+  "controls": ["fixed seeded columns to common width, equal C*(d+1) parameters", "train-only centering/scaling", "zero initialization, fixed updates/lr/L2", "first-min validation NLL; validation does not affect optimizer", "immutable checksum-bound recovery, completed resume zero updates"],
+  "limitations": ["Feature column reduction loses information and does not compare full-dimensional optimum", "Finite SGD budget is not a convergence certificate", "Pack pins alone do not authenticate upstream checkpoint, split or label permission", "Initialized synthetic capture is not real trained-model evidence", "No query loader, real accuracy gain or causal semantic claim"]
+}
