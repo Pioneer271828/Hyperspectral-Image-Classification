@@ -7,6 +7,7 @@ import torch
 from torch import nn
 
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
+from model.checkpoint_io import read_checkpoint_metadata
 from model.region_pixel_alignment import pool_regions
 
 
@@ -155,3 +156,17 @@ class RegionMessageVCASAHGCN(MultiDatasetVCASAHGCN):
             return super().forward(dataset_name, x, *args, **kwargs)
         finally:
             _block.reset(token)
+
+
+def load_region_message_checkpoint(path, device="cpu"):
+    metadata = read_checkpoint_metadata(path)
+    if metadata is None or metadata.get("format_version") != 1:
+        raise ValueError("Region message checkpoint requires its architecture sidecar")
+    kwargs = metadata["backbone_kwargs"]
+    if "region_attention" not in kwargs:
+        raise ValueError("Checkpoint does not specify a region message backend")
+    with torch.random.fork_rng(devices=[]):
+        model = RegionMessageVCASAHGCN(metadata["class_counts"], **kwargs).to(device)
+    model.load_state_dict(torch.load(path, map_location=device, weights_only=True), strict=True)
+    model.training_config = metadata.get("training_config", {})
+    return model.eval()
