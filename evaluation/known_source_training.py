@@ -50,6 +50,8 @@ def _source_inputs(prepared):
     yy, xx = np.mgrid[r:r+h, c:c+w]
     coordinates = np.stack((yy / (sh-1), xx / (sw-1)), axis=-1).astype(np.float32)
     scale = np.where(high > low, high-low, np.float32(1))
+    if not np.isfinite(scale).all():
+        raise ValueError('Normalization range overflow')
     expected_x = np.concatenate(((a['spectral'] - low) / scale, coordinates), axis=-1)
     if (not np.array_equal(source['x'], expected_x) or
             not np.array_equal(source['indices'], a['indices']) or

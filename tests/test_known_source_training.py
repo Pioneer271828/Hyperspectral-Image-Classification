@@ -30,8 +30,8 @@ class KnownSourceTrainingTests(unittest.TestCase):
                     (base/directory/(role+'.npz')).unlink()
             config = json.loads((ROOT/'configs/experiments/screen_m6_none.json').read_text())
             config['model'].update(latent_channels=8, adapter_embed_dim=8)
-            config = _json_new(base/'config.json', config)
-            trial = _json_new(base/'train.json', dict(version=1, kind='known_source_fixed_budget_v1',
+            config = _json_new(base/'inputs'/'config.json', config)
+            trial = _json_new(base/'inputs'/'train.json', dict(version=1, kind='known_source_fixed_budget_v1',
                                                      prepared=prepared, config=config, seed=64, updates=2))
             result = subprocess.run([sys.executable, str(ROOT/'scripts/train_known_source.py'),
                                      '--expected-commit', sha, '--registration', trial['path'],
