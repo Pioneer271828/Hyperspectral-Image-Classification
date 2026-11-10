@@ -677,6 +677,13 @@
       "report": "research/reports/WP10PrecisionFallback_INT8与三值逐层回退_20261111.md"
     },
     {
+      "id": "WP10 CPU常驻与独立进程成本",
+      "state": "选中混合模型的CPU真实观测成本已记录，保留FP32默认",
+      "evidence": "tested f630f75faaaf52ef6b412a507c8f2c7e1c45b6ed，CPU34/34。Xuzhou固定5块3920像素；3臂12常驻配对轮和9独立进程。INT8/三值包减少11.35%/14.94%，常驻p50 209.38/210.51ms，FP32 203.65ms；9次恢复三头哈希匹配，更新/query0",
+      "remaining": "单个两步模型的CPU工程证据；正式多种子、独立确认、合格结构剪枝组合与GPU部署成本仍待。54例已登记批次等待GPU门槛",
+      "report": "research/reports/WP10PrecisionCost_CPU常驻推理与独立进程成本_20261111.md"
+    },
+    {
       "id": "DY-0离线互补与块级成本上界",
       "state": "CPU诊断工程通过，单个既有短测模型无互补收益",
       "evidence": "tested c09f27606ba381818ea91afd43ca6fb8e94e9825；8专项/45含专项回归、checker478Python142JSON。PaviaU固定45验证标签/41块，独立82头（含空数组）/243混淆格/69文件不变。两路共同正确5、共同错误40，oracle11.11%，优化query0。",
