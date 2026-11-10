@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 351,
+  "issue": 353,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -955,9 +955,17 @@
       "report": "research/reports/WP06MatchedRetraining_等预算固定图重训与恢复工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
     }
+    ,{
+      "id": "WP06 冻结特征与探针标签权限绑定",
+      "state": "历史产物与K10/V5标签身份CPU工程通过",
+      "evidence": "Issue353/PR354；tested4320d40a8a4f15a51d11b7698cbe54b3d221b64e，CPU16/16 54.416s；独立51840特征格/648混淆格/72召回/175输入不变，四探针32步+恢复32步/完成0，骨干0/query0",
+      "remaining": "真实特征采集/逐层机制、源初始化与空间重复/GPU未完成；合成零召回6/6/6/4；全54摘要不能替代逐像素特征；下一项受控长程信号与瓶颈干预",
+      "report": "research/reports/WP06AuthenticatedProbes_冻结特征与标签权限工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp06_matched_retraining_cpu_passed_continue_authenticated_probes",
+  "execution_state": "wp06_authenticated_probes_cpu_passed_continue_controlled_signal",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
