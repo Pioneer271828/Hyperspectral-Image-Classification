@@ -119,6 +119,28 @@ class PrecisionFallbackTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'contract changed'):
                 self.review(plan=tampered)
 
+    def test_both_singles_can_pass_while_joint_loses_a_protected_recall(self):
+        def score(model, scene, blocks, class_ids):
+            truth = np.concatenate([values for _, _, values in blocks])
+            predicted = truth.copy()
+            first_class = np.flatnonzero(truth == 1)
+            second_class = np.flatnonzero(truth == 2)
+            if all(isinstance(model.get_submodule(path), IntegerMatrix) for path in LAYER_ORDER):
+                predicted[first_class[0]] = 2
+            else:
+                predicted[second_class[:2]] = 1
+            return {head: predicted for head in HEADS}
+
+        with patch('compression.precision_fallback._predict', side_effect=score):
+            _, result = self.review()
+        self.assertTrue(all(row['passed'] for row in result['trials'][:2]))
+        joint = result['trials'][2]
+        self.assertEqual(joint['failed_single_layers'], [])
+        self.assertLess(joint['protection']['fused']['oa_drop'], 0.)
+        self.assertEqual(joint['protection']['fused']['failed_recall_classes'], [1])
+        self.assertFalse(joint['passed'])
+        self.assertEqual(result['selected_low_precision_paths'], [LAYER_ORDER[0]])
+
     def test_packed_ternary_fallback_uses_no_calibration_and_restores_mixed_layers(self):
         plan = register_ternary_fallback(self.reference, self.scene, self.record, threshold_ratio=.05)
         for tile in self.record['roles']:
