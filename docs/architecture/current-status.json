@@ -1098,6 +1098,14 @@
       "remaining": "同划分真实轻模型、双角色托管签发和真实校准/确认；WP12冻结54成本待GPU；WP04真实短测后补",
       "report": "research/reports/WP11CustodyRegistration_独立标签托管盲登记验收_20261110.md",
       "chat_report": "按2026-11-10最新用户指令持续推进，阶段性汇总"
+    },
+    {
+      "id": "WP08 区域跨支路消息原型",
+      "state": "区域注意力已接入三头模型，CPU工程通过",
+      "evidence": "tested 9996c4c389b3c31a7592e6501fe51bdaf353610e，CPU36/36，7.411秒。局部同容量、稠密、仅压缩、仅路由、组合；显式公式前后向、双向实际更新和严格恢复通过",
+      "remaining": "正式真实等预算对照、GPU成本和独立图边支持。WP09已知源训练实现独立推进",
+      "report": "research/reports/WP08RegionMessage_区域跨支路注意力原型_20261111.md",
+      "chat_report": "2026-11-11用户要求持续搭建，阶段性汇总"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
