@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-09",
-  "issue": 319,
+  "as_of": "2026-11-10",
+  "issue": 321,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "1aa8114441a56e20b2c7204e0210978cb633311b",
+  "main_snapshot": "36c2086cd062af82f0f304b585986ad489e57e31",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -823,9 +823,17 @@
       "id": "E0-B2标注分量与小区域细窄结构诊断",
       "state": "CPU几何与分层指标工程通过，真实空间效果未验",
       "evidence": "testedb4717ab；专项7/另33回归；79几何/4192分量/22619距离格/97776混淆/11856召回/212旧文件不变；SciPy独立几何一致",
-      "remaining": "既有模型1488分量全部不完整，不能称真实小目标；完整真实空间标签/收益及GPU待。下一认证开发诊断导出，长训练暂停",
+      "remaining": "E0-B3认证开发诊断导出CPU工程已验；完整真实空间标签/收益及GPU仍待，1488旧分量全部不完整限制保留，长训练暂停",
       "report": "research/reports/E0B2_标注小分量与细窄结构诊断工程验收_20261109.md",
       "chat_report": "本聊天E0-B2完整CPU工程交付；随后继续认证开发诊断导出。"
+    },
+    {
+      "id": "E0-B3认证开发工件冻结空间诊断导出",
+      "state": "CPU冻结/CLI/独立接入工程通过，真实空间结论未验",
+      "evidence": "tested446d373；专项6/另28回归；6旧合成模型42块/126头/142884混淆/15876召回/336分支计数/12既验梯度锚点/681旧文件不变；独立优化0",
+      "remaining": "GPU、真实完整空间标签/小类收益、非GraphRouteRun接入待；下一固定参考图能量/有效维度联合诊断，长训练暂停",
+      "report": "research/reports/E0B3_认证开发工件冻结空间诊断导出工程验收_20261110.md",
+      "chat_report": "本聊天E0-B3完整CPU工程交付；随后继续固定参考图表征诊断。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -1020,6 +1028,13 @@
       "tested_sha": "884db1115f3a8bf6e4f74e85c10fccab79886380",
       "merge_sha": "1aa8114441a56e20b2c7204e0210978cb633311b",
       "scope": "E0-B1 CPU6 plus28; 24 old synthetic models48blocks/373248exact gradients/720heads/212pins; private fixed-val diagnostic gradient fix"
+    },
+    {
+      "pr_number": 320,
+      "head_sha": "6fef9fd61bc27ff0b0a63c1abeb985d52c524960",
+      "tested_sha": "b4717ab8d32e83744a97ae97b26efd2b1611d91b",
+      "merge_sha": "36c2086cd062af82f0f304b585986ad489e57e31",
+      "scope": "E0-B2 CPU7 plus33;79 geometries4192components22619depth cells97776confusion11856recalls212pins; sparse incomplete limits"
     }
   ]
 }

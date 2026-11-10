@@ -1,0 +1,72 @@
+{
+  "status": "passed",
+  "scope": "E0-B3 CPU registered development diagnostics engineering",
+  "branch": "codex/registered-spatial-diagnostics",
+  "tested_sha": "446d3732da23eb43091345f80e6147d7750d0cc8",
+  "python": "3.10.20",
+  "torch": "2.7.1+cu128",
+  "scipy": "1.15.3",
+  "device": "CPU",
+  "threads": 1,
+  "gpu_tests": 0,
+  "tests": [
+    {
+      "command": "python -m unittest tests.test_registered_spatial_diagnostics -v",
+      "passed": 6,
+      "seconds": 40.485
+    },
+    {
+      "command": "python -m unittest tests.test_registered_graph_route tests.test_block_input_diagnostics tests.test_annotated_components tests.test_repository_delivery -v",
+      "passed": 28,
+      "seconds": 71.492
+    }
+  ],
+  "checker": {
+    "python_files": 523,
+    "json_files": 165,
+    "frozen_runtime_unchanged": true
+  },
+  "independent": {
+    "path": "/home/lbx/hsi-pioneer271828/runs/registered-spatial-diagnostics-independent02/receipt.json",
+    "sha256": "e37a484d6897446f9d4a2b2a38fda99d8186e706b77fc255e0ade44d850525e6",
+    "summary": {
+      "status": "passed",
+      "tested_sha": "446d3732da23eb43091345f80e6147d7750d0cc8",
+      "existing_synthetic_models": 6,
+      "cli_calls": 12,
+      "development_blocks": 42,
+      "independent_probability_heads": 126,
+      "independent_confusion_cells": 142884,
+      "independent_recall_entries": 15876,
+      "independent_branch_counts": 336,
+      "prior_independently_verified_input_gradient_anchors": 12,
+      "protected_files_unchanged": 681,
+      "optimizer_updates": 0,
+      "query": 0,
+      "real_training": 0,
+      "original_ground_truth_read": false,
+      "limits": [
+        "CPU9class90/45 development only",
+        "sparse observed components not complete objects",
+        "independent module integration verification not real research acceptance"
+      ],
+      "elapsed_seconds": 88.9677855130285
+    }
+  },
+  "retained_history": [
+    "f6ad tests01: 5pass/1fail40.383s incorrectly assumed no restore forward",
+    "000556 tests02:5pass/1fail42.091s omitted last-state validation recheck",
+    "independent01 numeric checks passed but case metadata overwritten by head loop; retained; corrected independent02 accepted"
+  ],
+  "logs": {
+    "tests01.log": "ad0049b9987ee4cd1e25d75bea4c8042741902bda5d1f76718f13615b199fdee",
+    "independent03.log": "f0b7be772bdf19a135c12ba9f49e37c0c0a714c07b6b217b57fc130abc3cb9e3",
+    "independent04.log": "fa79ae4f8409198c8bcda1a718ec01e64776ebbac7ec6b65c586259ae809e0c3",
+    "tests02.log": "c004b2252bcc80f041c945644dff74c55d368291e351469a956be2e80baa251d",
+    "regression03.log": "9b1184b696d4e004d6c435d1fd83d4e52c983e2ef971a25d4b8c5ab29bc5cbef",
+    "tests03.log": "4f659f8a7d886c10b83eb306efc4e38e1d1f820751a2d80cd216aa887ced36fe"
+  },
+  "optimizer_updates_in_independent_audit": 0,
+  "query": 0,
+  "real_training": 0
+}
