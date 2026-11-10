@@ -1,6 +1,7 @@
 """Verify the WP07 CNN operator through a full three-head VCA forward."""
 
 import unittest
+from unittest.mock import patch
 
 import torch
 
@@ -70,3 +71,59 @@ class ConditionalMultiscaleTests(unittest.TestCase):
         self.assertEqual(encoder(None, None, 2., ref).shape, (32,))
         with self.assertRaisesRegex(ValueError, "GSD"):
             encoder(self.bands, None, 0., ref)
+
+    def graph_model(self, mode, radius=1, **options):
+        model = ConditionalMultiscaleVCASAHGCN(self.classes, graph_multiscale=mode, graph_radius=radius,
+                                              **{**self.architecture, **options}).eval()
+        missing, unexpected = model.load_state_dict(self.base.state_dict(), strict=mode in ("fixed", "mean"))
+        self.assertFalse(unexpected)
+        self.assertTrue(all(key.startswith("backbone.range_") for key in missing))
+        return model
+
+    def test_graph_ranges_build_one_assignment_and_mix_full_message_paths(self):
+        baseline = self.forward(self.base)
+        for adjacency in ("learned", "fixed_local"):
+            with self.subTest(adjacency=adjacency):
+                options = dict(graph_adjacency_mode=adjacency)
+                narrow = self.graph_model("fixed", **options)
+                wider = self.graph_model("fixed", radius=2, **options)
+                mean = self.graph_model("mean", **options)
+                a = self.forward(narrow, return_graph_info=True)
+                b = self.forward(wider, return_graph_info=True)
+                builder = mean.backbone.learnable_graph
+                with patch.object(builder, "_build_assignment", wraps=builder._build_assignment) as assignment:
+                    c = self.forward(mean, return_graph_info=True)
+                    assignment.assert_called_once()
+                if adjacency == "learned":
+                    self.assertTrue(all(torch.equal(u, v) for u, v in zip(baseline, a[:3], strict=True)))
+                self.assertEqual(c[3]["assignment_nnz"], a[3]["assignment_nnz"])
+                self.assertGreater(b[3]["graph_nnz"], a[3]["graph_nnz"])
+                self.assertEqual(c[3]["multiscale_graph"]["nnz"], (a[3]["graph_nnz"], b[3]["graph_nnz"]))
+                self.assertFalse(torch.allclose(a[1], b[1]))
+                self.assertTrue(torch.equal(a[2], c[2]))
+                torch.testing.assert_close(c[1], (a[1] + b[1]) / 2)
+                torch.testing.assert_close(c[0], (a[0] + b[0]) / 2)
+
+    def test_graph_selection_fallback_gradient_and_exact_reload(self):
+        metadata = self.graph_model("metadata")
+        mean = self.graph_model("mean")
+        self.assertTrue(torch.equal(self.forward(metadata)[1], self.forward(mean)[1]))
+
+        joint = self.graph_model("joint")
+        options = dict(band_metadata=self.bands, coverage_fraction=.75, gsd_m=1.5, return_graph_info=True)
+        result = self.forward(joint, **options)
+        perturbed = self.forward(joint, **{**options, "gsd_m": 5.})
+        self.assertFalse(torch.equal(result[3]["multiscale_graph"]["weights"], perturbed[3]["multiscale_graph"]["weights"]))
+        result[1].square().mean().backward()
+        backbone = joint.backbone
+        for parameter in (backbone.range_content.weight, backbone.range_metadata.weight,
+                          backbone.range_encoder.band_encoder[0].weight, backbone.learnable_graph.graph_key.weight,
+                          backbone.learnable_graph.pixel_query.weight, backbone.HGNN_Branch.hgc1.weight):
+            self.assertTrue(torch.isfinite(parameter.grad).all())
+            self.assertGreater(parameter.grad.abs().sum().item(), 0.)
+        cfg = joint.export_config()
+        restored = ConditionalMultiscaleVCASAHGCN(cfg["class_counts"], **cfg["backbone_kwargs"]).eval()
+        restored.load_state_dict(joint.state_dict(), strict=True)
+        self.assertTrue(torch.equal(result[1], self.forward(restored, **options)[1]))
+        with self.assertRaisesRegex(ValueError, "internally"):
+            self.forward(joint, Q=torch.eye(81))
