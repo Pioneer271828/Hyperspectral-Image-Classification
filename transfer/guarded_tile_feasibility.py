@@ -88,9 +88,9 @@ def scan_guarded_cuts(labels, plan, classes, blocker):
             continue
         answer = _assign(np.stack([*other_counts, left, right], axis=1))
         if answer['status'] == 'feasible':
-            labels_for_indices = [tile['id'] for tile in others] + ['first', 'second']
+            block_ids = [tile['id'] for tile in others] + ['first', 'second']
             answer['validation_blocks'] = [
-                labels_for_indices[i] for i in answer.pop('validation_indices')
+                block_ids[i] for i in answer.pop('validation_indices')
             ]
         result.append(dict(row, **answer))
     return result

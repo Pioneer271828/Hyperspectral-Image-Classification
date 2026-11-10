@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 
-from loadData.guarded_tile_feasibility import scan_guarded_cuts
 from loadData.spatial_tiles import make_tile_plan, tile_slice
+from transfer.guarded_tile_feasibility import scan_guarded_cuts
 
 
 class GuardedTileFeasibilityTest(unittest.TestCase):
