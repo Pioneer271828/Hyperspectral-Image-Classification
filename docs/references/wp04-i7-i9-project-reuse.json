@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "issue": 341,
+  "scope": "Bounded G4 target adapters for existing I7/I9 controls, not a new mechanism",
+  "design_sources": [
+    "双支路网络创新方向与技术研究方案_按推荐程度整理.md §5.11 I7/I9",
+    "research/研究内容整合与详细搭建测试计划_2026-10-28.md P1/P2 and §22 WP04",
+    "research/模块化搭建与测试消融实施计划_2026-10-28.md §19.5"
+  ],
+  "project_commit": "7b3cfd4c3c8117c8af374b038a5456849d95703b",
+  "reused_unchanged": [
+    "model/cross_branch_interaction.py", "model/region_pixel_alignment.py",
+    "model/graph_edge_update.py", "model/VCASAHGCN.py", "model/interaction_config.py",
+    "g4_edge_target_runtime.py", "none_full_transfer.py", "target_bn_calibration.py",
+    "joint_training.py", "target_training.py"
+  ],
+  "prior_reviews": [
+    "docs/references/g4-edge-target-project-reuse.json",
+    "docs/references/g4-interaction-target-project-reuse.json"
+  ],
+  "change": "Two explicit configurations in the existing bound factory; six prior payloads unchanged",
+  "external_source_copied": false,
+  "new_dependency": false,
+  "upstream_executed": false,
+  "paper_reproduction_claim": false,
+  "license_scope": "No additional external source or license grant asserted",
+  "limits": [
+    "I7 add uses existing normalized projected messages, not raw feature addition",
+    "I9 uses global means both for messages and CNN features supplied to joint edge updating",
+    "Original graph pooling/broadcast still uses Q; global is not a graph-free network",
+    "M6/M7 parameters initialize at target; they are not pretrained in the full NONE source",
+    "Only 12-update engineering profile; real full-budget paired efficacy remains untested"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "tested_sha": "07b448a355fc38cc6342f7d35c076b23af625237",
+  "synthetic_cases": 4,
+  "synthetic_optimizer_updates": 48,
+  "head_metrics": 24,
+  "confusion_cells": 1944,
+  "class_recalls": 216,
+  "exact_reloads": 12,
+  "completed_resume_updates": 0,
+  "real_optimizer_updates": 0,
+  "query_labels_accessed": false,
+  "gpu_executed": false,
+  "training_seconds": 12.268532982096076,
+  "total_seconds": 17.0877821338363,
+  "unchanged_review_files": 138,
+  "protected_inputs": 54,
+  "cases": [
+    {
+      "name": "target_scratch_full-add_joint",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "target_scratch_full-global_joint",
+      "updates": 12,
+      "selected_step": 1,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "source_pretrained_full_finetune-add_joint",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    },
+    {
+      "name": "source_pretrained_full_finetune-global_joint",
+      "updates": 12,
+      "selected_step": 12,
+      "head_metrics": 6,
+      "confusion_cells": 486,
+      "recalls": 54,
+      "exact_reloads": 3
+    }
+  ],
+  "scope": "Independent NumPy metric and state/selection review; shared production network/loader, no independent full-network oracle"
+}
