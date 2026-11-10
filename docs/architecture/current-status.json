@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 321,
+  "issue": 323,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "36c2086cd062af82f0f304b585986ad489e57e31",
+  "main_snapshot": "57cd1edf89fa88ffdba8c6dccd6236bc32a0449a",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -834,6 +834,14 @@
       "remaining": "GPU、真实完整空间标签/小类收益、非GraphRouteRun接入待；下一固定参考图能量/有效维度联合诊断，长训练暂停",
       "report": "research/reports/E0B3_认证开发工件冻结空间诊断导出工程验收_20261110.md",
       "chat_report": "本聊天E0-B3完整CPU工程交付；随后继续固定参考图表征诊断。"
+    },
+    {
+      "id": "E0-B4",
+      "state": "CPU工程与独立只读验收完成",
+      "evidence": "Issue323/PR324；tested68ef38eb9322c9a869a560802a9e0cdde57119a1，CPU7+27通过；24旧合成模型48块12480通道能量168秩摘要144头11664混淆1296召回，212文件不变；两角色各24模型共用固定参考图；新增优化/query0",
+      "remaining": "GPU与真实数据、物理区域对应及过平滑因果结论未测；长训练暂停",
+      "report": "research/reports/E0B4_固定参考图能量与有效维度诊断工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天模块完成报告，随本次验收交付"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
@@ -1035,6 +1043,13 @@
       "tested_sha": "b4717ab8d32e83744a97ae97b26efd2b1611d91b",
       "merge_sha": "36c2086cd062af82f0f304b585986ad489e57e31",
       "scope": "E0-B2 CPU7 plus33;79 geometries4192components22619depth cells97776confusion11856recalls212pins; sparse incomplete limits"
+    },
+    {
+      "pr_number": 322,
+      "head_sha": "67331d95ab1857936e76ff94561268b212ebd835",
+      "tested_sha": "446d3732da23eb43091345f80e6147d7750d0cc8",
+      "merge_sha": "57cd1edf89fa88ffdba8c6dccd6236bc32a0449a",
+      "scope": "E0-B3 CPU6 plus28; 6existing synthetic models42blocks/142884cells/15876recalls/681pins; no real training"
     }
   ]
 }
