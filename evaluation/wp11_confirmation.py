@@ -5,7 +5,7 @@ import torch
 
 from evaluation.dynamic_curve import pin, require
 from evaluation.wp12_resident_cost import environment
-from inference.gate_calibration import _validate_freeze, confirm
+from inference.gate_calibration import SPARSE_PROTOCOL, _validate_freeze, confirm
 from inference.route_controls import _fixed_routes, _output_hash, benchmark_controls, fixed_cascade, request_hash
 from inference.trained_light import trained_cascade
 from loadData.observation_sampling import sample
@@ -93,8 +93,8 @@ def validate_full_history(full, scene, record, history):
     return identity
 
 
-def admit(full, published, scene, record, history, registration, *, expected_registration_hash):
-    """Verify pinned provenance and crop only held-aside observations. No label reads."""
+def validate_admission(full, published, scene, record, history, registration, *, expected_registration_hash):
+    """Verify provenance and layout without reading held-aside observations."""
     require(pin(expected_registration_hash) and digest(registration) == expected_registration_hash,
             "Pinned confirmation registration required")
     require(set(registration) == {"policy", "history_sha256", "light_spec_sha256", "light_artifact_sha256",
@@ -108,9 +108,44 @@ def admit(full, published, scene, record, history, registration, *, expected_reg
     require(published.validate(full) == scene.dataset and digest(light) == registration["light_spec_sha256"]
             and light["training_spec"]["identity"] == identity, "Light training and selection footprint differs")
     layout(scene.plan, record, registration["blocks"])
+
+
+def admit(full, published, scene, record, history, registration, *, expected_registration_hash):
+    """Verify pinned provenance and crop only held-aside observations. No label reads."""
+    validate_admission(full, published, scene, record, history, registration,
+                       expected_registration_hash=expected_registration_hash)
     requests = build_requests(scene, registration["blocks"], registration["scale"])
     require(request_hash(requests) == registration["request_sha256"], "Held-aside input bytes differ")
     return requests
+
+
+def validate_gate_inputs(spec, scene, history, registration):
+    require(spec["full_state"] == history["full_state"] and spec["classes"] == scene.classes
+            and spec["light_artifact"] == registration["light_artifact_sha256"], "Gate model identity differs")
+    blocks = {b["id"]: b for b in registration["blocks"]}
+    expected = [dict(id=b["id"], scene=scene.dataset, condition="full", role=b["role"],
+                     context=scene.plan["tiles"][b["tile_id"]]["box"], label_indices=b["label_indices"])
+                for b in blocks.values()]
+    declared = [b for b in spec["blocks"] if b["role"] in ("calibration", "confirmation")]
+    require(sorted(declared, key=lambda b: b["id"]) == sorted(expected, key=lambda b: b["id"]),
+            "Gate calibration and confirmation geometry differs")
+    if spec["schema"] == SPARSE_PROTOCOL:
+        require(spec["admission_hash"] == digest(registration)
+                and spec["data_hashes"]["confirmation"] == registration["labels_sha256"],
+                "Gate admission or deferred confirmation commitment differs")
+    return blocks
+
+
+def endpoint_records(fast, full, requests, blocks, labels):
+    records = []
+    for a, b, req in zip(fast["outputs"], full["outputs"], requests, strict=True):
+        key = req["id"]
+        require(a["id"] == b["id"] == key, "Scored endpoint order differs")
+        y = np.zeros(b["probabilities"].shape[0], dtype=np.int64)
+        y[blocks[key]["label_indices"]] = labels[key]
+        records.append(dict(id=key, labels=y, fast=a["probabilities"].numpy(), full=b["probabilities"].numpy(),
+                            coverage_known=req["coverage_known"], coverage_fraction=req["coverage_fraction"]))
+    return records
 
 
 def run_confirmation(full, published, scene, record, history, registration, *, expected_registration_hash,
@@ -122,15 +157,10 @@ def run_confirmation(full, published, scene, record, history, registration, *, e
     requests = admit(full, published, scene, record, history, registration,
                      expected_registration_hash=expected_registration_hash)
     spec = protocol.specification
-    require(spec["full_state"] == history["full_state"] and spec["classes"] == scene.classes
-            and spec["light_artifact"] == registration["light_artifact_sha256"], "Gate model identity differs")
-    blocks = {b["id"]: b for b in registration["blocks"]}
-    expected = [dict(id=b["id"], scene=scene.dataset, condition="full", role=b["role"],
-                     context=scene.plan["tiles"][b["tile_id"]]["box"], label_indices=b["label_indices"])
-                for b in blocks.values()]
-    declared = [b for b in spec["blocks"] if b["role"] in ("calibration", "confirmation")]
-    require(sorted(declared, key=lambda b: b["id"]) == sorted(expected, key=lambda b: b["id"]),
-            "Gate calibration and confirmation geometry differs")
+    blocks = validate_gate_inputs(spec, scene, history, registration)
+    if spec["schema"] == SPARSE_PROTOCOL:
+        calibration = [r for r in requests if blocks[r["id"]]["role"] == "calibration"]
+        require(request_hash(calibration) == spec["calibration_request_hash"], "Calibrated input bytes differ")
     requests = [r for r in requests if blocks[r["id"]]["role"] == "confirmation"]
     require(fixed["min_coverage"] == spec["min_coverage"], "Fixed and adaptive coverage rules differ")
     routes = _fixed_routes(full, published, requests, fixed, expected_fixed_hash)
@@ -158,13 +188,7 @@ def run_confirmation(full, published, scene, record, history, registration, *, e
                    fast=trained_cascade(full, published, requests, mode="fast", min_coverage=spec["min_coverage"]),
                    adaptive=trained_cascade(full, published, requests, **adaptive_kwargs),
                    fixed=fixed_cascade(full, published, requests, fixed, expected_plan_hash=expected_fixed_hash))
-    records = []
-    for a, b, req in zip(outputs["fast"]["outputs"], outputs["full"]["outputs"], requests):
-        key = req["id"]
-        y = np.zeros(b["probabilities"].shape[0], dtype=np.int64)
-        y[blocks[key]["label_indices"]] = labels[key]
-        records.append(dict(id=key, labels=y, fast=a["probabilities"].numpy(), full=b["probabilities"].numpy(),
-                            coverage_known=req["coverage_known"], coverage_fraction=req["coverage_fraction"]))
+    records = endpoint_records(outputs["fast"], outputs["full"], requests, blocks, labels)
     confirmation = confirm(protocol, frozen, records, expected_freeze_hash=expected_freeze_hash)
     timing = benchmark_controls(full, published, requests, adaptive_kwargs=adaptive_kwargs,
                                 fixed=(fixed, expected_fixed_hash), **budget)

@@ -14,6 +14,9 @@ from inference.tile_cascade import gate_score
 from model.research_config import digest
 
 
+SPARSE_PROTOCOL = 'dy-gate-protocol-sparse-v2'
+
+
 def _require(ok,message):
     if not ok:raise ValueError(message)
 
@@ -25,9 +28,15 @@ def _unit(x):return type(x) in (int,float) and math.isfinite(x) and 0<=x<=1
 class GateProtocol:
     def __init__(self,spec,expected_hash):
         _require(isinstance(spec,dict) and digest(spec)==expected_hash,'External protocol hash mismatch')
-        _require(set(spec)=={'schema','name','full_state','light_artifact','criterion','thresholds','min_coverage',
-                             'classes','min_class_support','max_drop','blocks','data_hashes'},'Exact protocol fields required')
-        _require(spec['schema']=='dy-gate-protocol-v1' and isinstance(spec['name'],str) and spec['name'],'Named protocol required')
+        fields = {'schema','name','full_state','light_artifact','criterion','thresholds','min_coverage',
+                  'classes','min_class_support','max_drop','blocks','data_hashes'}
+        schema = spec.get('schema')
+        if schema == SPARSE_PROTOCOL:
+            fields |= {'admission_hash', 'calibration_request_hash'}
+            _require(all(_hash(spec.get(k)) for k in ('admission_hash', 'calibration_request_hash')),
+                     'Pinned admission and calibration requests required')
+        _require(set(spec)==fields,'Exact protocol fields required')
+        _require(schema in ('dy-gate-protocol-v1', SPARSE_PROTOCOL) and isinstance(spec['name'],str) and spec['name'],'Named protocol required')
         _require(_hash(spec['full_state']) and _hash(spec['light_artifact']),'Frozen model identities required')
         _require(type(spec['classes']) is int and spec['classes']>=2,'At least two classes required')
         _require(type(spec['min_class_support']) is int and spec['min_class_support']>=1,'Explicit positive support floor required')
@@ -65,6 +74,7 @@ class GateProtocol:
         _require(isinstance(records,list),'Materialized aligned records required')
         blocks=[b for b in self._spec['blocks'] if b['role']==role];byid={b['id']:b for b in blocks}
         _require(len(records)==len(blocks),'Complete registered phase required');seen=set();rows=[];canonical=[];classes=self._spec['classes']
+        sparse = self._spec['schema'] == SPARSE_PROTOCOL
         for r in records:
             _require(isinstance(r,dict) and set(r)=={'id','labels','fast','full','coverage_known','coverage_fraction'},'Exact aligned input fields required')
             _require(r['id'] in byid and r['id'] not in seen,'Wrong role or repeated block');seen.add(r['id']);b=byid[r['id']]
@@ -77,9 +87,15 @@ class GateProtocol:
                     and np.allclose(p.sum(1),1,rtol=0,atol=1e-6),'Finite aligned full-context FP32 probabilities required')
                 probs.append(p.copy())
             _require(type(r['coverage_known']) is bool and _unit(r['coverage_fraction']),'Explicit finite coverage required')
-            item=dict(id=b['id'],labels=y.tolist(),fast=probs[0].tolist(),full=probs[1].tolist(),coverage_known=r['coverage_known'],coverage_fraction=r['coverage_fraction'])
+            item = dict(id=b['id'], labels=y.tolist())
+            if not sparse:
+                item.update(fast=probs[0].tolist(), full=probs[1].tolist(), coverage_known=r['coverage_known'], coverage_fraction=r['coverage_fraction'])
             canonical.append(item);rows.append(dict(block=b,labels=y,indices=indices,fast=probs[0],full=probs[1],known=r['coverage_known'],coverage=r['coverage_fraction']))
-        pin=digest(sorted(canonical,key=lambda r:r['id']));_require(pin==self._spec['data_hashes'][role],'Frozen development data changed')
+        if sparse:
+            pin = digest({row['id']: row['labels'] for row in canonical})
+        else:
+            pin = digest(sorted(canonical, key=lambda r:r['id']))
+        _require(pin==self._spec['data_hashes'][role],'Frozen development data changed')
         return sorted(rows,key=lambda r:r['block']['id']),pin
 
 
