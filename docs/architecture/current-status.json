@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-10",
-  "issue": 364,
+  "issue": 365,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -1018,10 +1018,18 @@
       "remaining": "真实54观测准备与历史加载兼容性，CUDA实测及同模型全批次成本；常驻前向不替代端到端成本，WP04真实短测继续后补",
       "report": "research/reports/WP12ResidentCost_冻结模型常驻推理成本采集工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天CPU工程模块交付；随即推进真实观测与兼容性准备"
+    },
+    {
+      "id": "WP12 冻结54成本观测准备与运行时准入",
+      "state": "工程与真实观测准备通过，历史推理等价性待验",
+      "evidence": "Issue365；tested e9a091b27498c386323643d97df57ba2c62e882a；CPU22/22，19.606秒；真实54案例/3场景无标签观测17.797秒，6源文件不变；preparation c32ff8865bfce91c40a3c19305e9d3f5c454568f6556a9b93cbb12a4ffa86ee4；checker585Python198JSON",
+      "remaining": "原生产8文件不同含模型默认关闭图路由，保留compatibility_pending，不生成执行作业；需固定历史推理或独立等价性核验，再补GPU/全54成本；WP04真实短测后补",
+      "report": "research/reports/WP12CostPreparation_冻结54成本观测准备与运行时准入_20261110.md",
+      "chat_report": "2026-11-10本聊天模块交付：工程通过与真实测量准入待补分别报告"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp12_resident_cost_cpu_passed_gpu_and_real_cohort_pending",
+  "execution_state": "wp12_frozen54_workloads_prepared_runtime_admission_pending",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
