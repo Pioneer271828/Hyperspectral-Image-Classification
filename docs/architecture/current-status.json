@@ -1103,9 +1103,17 @@
       "id": "WP07 条件多尺度CNN首层",
       "state": "可选模型实现及CPU工程通过",
       "evidence": "Issue386，tested f2c043e7333cfd8ac166b4ed1abf4a6db7ffa2ef，CPU18/18，5.806秒。共享膨胀率1/2/3，固定、平均、内容、物理元数据、联合选择。三头前向、梯度、缺失回退及严格恢复通过",
-      "remaining": "同Q图邻域半径1/2，训练入口，真实尺度失效证据和正式对照。WP11冻结后确认登记开发暂存于独立工作树，真实轻模型与托管标签仍待。WP12冻结54成本待GPU，WP04真实短测后补",
+      "remaining": "图邻域和空间训练接入证据见下项。真实尺度失效证据和正式对照待补。WP11真实轻模型与托管标签仍待，WP12冻结54成本待GPU，WP04真实短测后补",
       "report": "research/reports/WP07ConditionalCNN_条件多尺度CNN实现_20261111.md",
       "chat_report": "2026-11-11用户要求把重心转回核心模块搭建后继续推进"
+    },
+    {
+      "id": "WP07 图邻域与空间训练接入",
+      "state": "可选CNN与图多尺度已接入空间训练，CPU工程通过",
+      "evidence": "Issue386，PR387，tested 7773e135f901be59b0a31aa46c063bc90127e9ac，CPU28/28，6.599秒。半径1/2共用同一Q、共享图卷积。合成等预算短测复现关闭轨迹、验证尺度选择器实际更新及选中态恢复",
+      "remaining": "真实尺度失效诊断、可信物理元数据、正式配对精度和硬件成本。WP08区域消息独立推进",
+      "report": "research/reports/WP07ConditionalGraph_图邻域与空间训练接入_20261111.md",
+      "chat_report": "2026-11-11用户要求持续搭建，阶段性汇总"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
