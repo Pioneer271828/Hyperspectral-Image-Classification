@@ -60,7 +60,7 @@ class MatchedReviewPlan:
         value['plan_hash']=digest(value);return cls(value,expected_hash=value['plan_hash'])
 
 
-def review(run,plan,*,expected_plan_hash,observe=None):
+def review(run,plan,*,expected_plan_hash,observe=None,blocked_controls=None):
     started=time.perf_counter();model=_selected(run);state=route_state_hash(model)
     if type(plan) is not MatchedReviewPlan:raise ValueError('Authenticated matched review plan required')
     value=MatchedReviewPlan(plan.to_dict(),expected_hash=expected_plan_hash).to_dict()
@@ -69,7 +69,9 @@ def review(run,plan,*,expected_plan_hash,observe=None):
     tiles=[t for t in run.record['roles'] if t['role']=='devval'];contexts=[_context(run.scene,run.record,t['id']) for t in tiles]
     if [row['context'] for row in value['contexts']]!=contexts:raise ValueError('Complete validation contexts required')
     # Validate every graph and mask before any intervention/metric calculation.
-    unavailable={};names=value['names']
+    unavailable=deepcopy({} if blocked_controls is None else blocked_controls);names=value['names']
+    if not set(unavailable)<=set(names[2:]) or any(not reasons for reasons in unavailable.values()):
+        raise ValueError('Unrecognized externally blocked control')
     for tile,row in zip(tiles,value['contexts']):
         p=row['control_plan'];expected=['none','important','low_weight',*[f'random:{s}' for s in p['seeds']]]
         if names!=expected or set(p['controls'])!=set(expected[2:]):raise ValueError('Control population differs')

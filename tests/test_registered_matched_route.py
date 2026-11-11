@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+from scipy.optimize import milp
 import torch
 
 from loadData.observation_sampling import BandMetadata
@@ -165,6 +166,52 @@ class RegisteredMatchedRouteTests(unittest.TestCase):
         self.assertEqual(admission.read(audit)["status"],"incomplete_or_failed")
         self.assertFalse((self.root/"timeout-audit"/"acceptance.json").exists())
 
+    def test_infeasible_training_tile_blocks_the_whole_review_arm(self):
+        calls = 0
+        def fail_first_training_control(*args,**kwargs):
+            nonlocal calls
+            calls += 1
+            if calls==1:
+                return SimpleNamespace(status=2)
+            return milp(*args,**kwargs)
+        with patch("evaluation.matched_edge_controls.milp",side_effect=fail_first_training_control):
+            scope = pipeline.prepare(self.catalog,self.candidate["name"],self.root/"infeasible",self.code,
+                                     allow_synthetic=True)
+        value = admission.read(scope)
+        preflight = admission.read(value["preflight"])
+        row = value["arms"]["low_weight"]
+        self.assertEqual(row["status"],"unavailable")
+        self.assertEqual(len(row["reasons"]),1)
+        self.assertIn(row["reasons"][0]["tile_id"],preflight["donor"]["devtrain_tiles"])
+        review_plan = admission.read(value["review_plan"])
+        self.assertTrue(all(x["control_plan"]["controls"]["low_weight"]["status"]=="optimal"
+                            for x in review_plan["contexts"]))
+        result = admission.read(pipeline.frozen_review(scope,self.root/"infeasible-review",self.code))
+        self.assertEqual(result["status"],"incomplete_or_failed")
+        self.assertIsNone(result["original"]["controls"]["low_weight"]["metrics"])
+        self.assertEqual(result["independent"]["low_weight"]["status"],"unavailable")
+        self.assertEqual(result["independent"]["none"]["status"],"evaluated")
+
+    def test_three_identical_random_masks_still_have_separate_arm_identity(self):
+        objectives = []
+        def shared_random_objective(cost,*args,**kwargs):
+            objectives.append(cost.copy())
+            group_position = (len(objectives)-1)%4
+            if group_position>1:
+                cost = objectives[-group_position]
+            return milp(cost,*args,**kwargs)
+        with patch("evaluation.matched_edge_controls.milp",side_effect=shared_random_objective):
+            scope = pipeline.prepare(self.catalog,self.candidate["name"],self.root/"duplicate-scope",self.code,
+                                     allow_synthetic=True)
+        result = admission.read(scope)
+        self.assertEqual(result["duplicate_random_banks"],[["random:64","random:512","random:2048"]])
+        for name in ("random:64","random:512"):
+            proof = pipeline.execute(scope,name,"split-first",self.root/f"duplicate-{name[-2:]}",self.code)
+            if name=="random:64":
+                wrong = admission.read(proof)["attempt"]
+        with self.assertRaisesRegex(ValueError,"Cross-arm"):
+            pipeline.execute(scope,"random:512","split-last",self.root/"duplicate-wrong",self.code,resume=wrong)
+
     def test_allocation_cross_arm_and_frozen_bank_pin(self):
         a = pipeline.execute(self.scope,"none","split-first",self.root/"none-first",self.code)
         b = pipeline.execute(self.scope,"important","split-first",self.root/"important-first",self.code)
@@ -183,6 +230,12 @@ class RegisteredMatchedRouteTests(unittest.TestCase):
                 pipeline.load_scope(self.scope,self.code)
         finally:
             bank.write_bytes(original)
+        scope["arms"]["none"] = scope["arms"]["important"]
+        alias = self.root/"alias"
+        alias.mkdir()
+        bad_scope = dev._json_new(alias/"scope.json",scope)
+        with self.assertRaisesRegex(ValueError,"registered matched mask"):
+            pipeline.load_scope(bad_scope,self.code)
 
 
 if __name__=="__main__":

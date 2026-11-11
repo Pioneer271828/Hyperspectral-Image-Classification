@@ -156,9 +156,10 @@ def load_scope(scope_pin,code):
         and set(scope["arms"])==set(ARMS) and scope["optimizer_updates"]==scope["query"]==0
         and scope["budget"]==preflight["donor"]["budget"] and scope["synthetic"] is preflight["donor"]["synthetic"],
         "Prepared scope, candidate, budget or consumer changed")
-    for key in ("review_plan","retraining_plan"):
-        admission.check_pins([scope[key]])
-    for arm in scope["arms"].values():
+    admission.check_pins([scope["review_plan"]])
+    saved = MatchedRetrainingPlan(admission.read(scope["retraining_plan"]),
+                                  expected_hash=scope["retraining_plan_hash"]).to_dict()
+    for name,arm in scope["arms"].items():
         if arm["status"]=="registered":
             registration = admission.read(arm["registration"])
             original = preflight["donor"]
@@ -169,7 +170,10 @@ def load_scope(scope_pin,code):
                 and registration["expected_commit"]==code["commit"] and registration["lr"]==original["lr"]
                 and digest({k:v for k,v in registration["spec"].items() if k!="graph_route"})
                     ==original["fixed_training_spec_sha256"],"Arm source, exposure, bank or consumer changed")
+            bank = MatchedRetrainingPlan._materialize(saved,name)
             admission.check_pins([arm["bank"]])
+            admission.require(arm["bank_hash"]==bank.bank_hash and admission.read(arm["bank"])==bank.to_dict(),
+                              "Arm bank differs from the registered matched mask")
         else:
             admission.require(arm["status"]=="unavailable" and arm["reasons"],"Unavailable arm requires a reason")
     return scope,preflight
@@ -184,8 +188,17 @@ def frozen_review(scope_pin,out,code):
     before = snapshot(run)
     plan = review.MatchedReviewPlan(admission.read(scope["review_plan"]),expected_hash=scope["review_plan_hash"])
     observer = Population(run)
+    validation_tiles = set(donor["devval_tiles"])
+    training_blocks = {}
+    for name,arm in scope["arms"].items():
+        if arm["status"]=="unavailable":
+            for reason in arm["reasons"]:
+                if reason["tile_id"] not in validation_tiles:
+                    training_blocks.setdefault(name,[]).append(
+                        {key:reason[key] for key in ("tile_id","status","reason")})
     try:
-        original = review.review(run,plan,expected_plan_hash=plan.plan_hash,observe=observer.observe)
+        original = review.review(run,plan,expected_plan_hash=plan.plan_hash,observe=observer.observe,
+                                 blocked_controls=training_blocks)
         independent = observer.finish(original)
         admission.require(before==snapshot(run),"Frozen review changed source, donor state, optimizer or RNG")
         admission.check_pins(pins)
@@ -222,12 +235,26 @@ def read_segment(scope_pin,arm,segment,scope):
     admission.require(proof["allocation"]["path"]==str(claim)
         and allocation["scope"]==scope_pin and (allocation["arm"],allocation["segment"])==(arm,segment),
         "Cross-arm, cross-bank or cross-scope restore rejected")
-    start,stop,_ = SEGMENTS[segment]
+    start,stop,previous = SEGMENTS[segment]
     status = admission.read(proof["attempt"])
-    admission.require(status["registration"]==scope["arms"][arm]["registration"]
+    expected_arm = scope["arms"][arm]
+    expected_status = "completed" if stop==scope["budget"] else "partial"
+    admission.require(allocation["registration"]==status["registration"]==expected_arm["registration"]
+        and allocation["bank_hash"]==expected_arm["bank_hash"]
+        and (allocation["start"],allocation["stop"])==(start,stop)
+        and proof["attempt"]["path"]==str(Path(allocation["out"])/"status.json")
+        and status["code"]["commit"]==scope["consumer_commit"]
+        and status["code"]["source_hash"]==scope["consumer_source_hash"]
+        and proof["status"]==status["status"]==expected_status and status["total_budget"]==scope["budget"]
         and status["initial_updates"]==start and status["completed_updates"]==status["target_updates"]==stop
         and status["new_updates"]==stop-start and status["query"]==0,
         "Stored attempt has wrong arm or update interval")
+    if previous is None:
+        admission.require(allocation["resume_attempt"] is None,"Fresh allocation declares a resume attempt")
+    else:
+        earlier,prior = read_segment(scope_pin,arm,previous,scope)
+        admission.require(allocation["resume_attempt"]==prior["attempt"]
+            and earlier["checkpoint"] in status["inputs"],"Stored attempt has the wrong prefix checkpoint")
     return status,proof
 
 
