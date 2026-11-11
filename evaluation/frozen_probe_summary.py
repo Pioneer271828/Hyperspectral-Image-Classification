@@ -18,17 +18,17 @@ def write_csv(path, rows, empty_fields):
         writer.writerows(rows)
 
 
-def summarize(rows, keys):
+def summarize(rows, keys, values=VALUES):
     groups = defaultdict(list)
     for row in rows:
         groups[tuple(row[key] for key in keys)].append(row)
     result = []
     for group, sample in groups.items():
         stats = {}
-        for metric in VALUES:
-            values = [row[metric] for row in sample if row[metric] is not None]
-            stats[metric] = {"mean": mean(values) if values else None, "sample_sd": stdev(values) if len(values) > 1 else None,
-                             "seeds": len(values)}
+        for metric in values:
+            measured = [row[metric] for row in sample if row[metric] is not None]
+            stats[metric] = {"mean": mean(measured) if measured else None,
+                             "sample_sd": stdev(measured) if len(measured) > 1 else None, "seeds": len(measured)}
         decisions = [row["strict_decisions"] for row in sample if row["strict_decisions"] is not None]
         result.append({**dict(zip(keys, group, strict=True)), "seed_count": len(sample),
                        "all_strict_decisions": all(decisions) if decisions else None,
@@ -36,7 +36,7 @@ def summarize(rows, keys):
     return result
 
 
-def metric_rows(results):
+def metric_rows(results, *, scenes=False):
     for row in results:
         if "layers" not in row:
             continue
@@ -45,7 +45,9 @@ def metric_rows(results):
             for partition, observed in layer["roles"].items():
                 for checkpoint in ("selected", "terminal"):
                     scores = observed[checkpoint]
-                    yield {"case": row["case"], "seed": role["seed"], "mode": role["mode"], "method": role["method"],
+                    classes = range(1, len(scores["support"])+1) if scenes else range(1, 10)
+                    scene = {"scene": role["target"], "source": row["disposition"]} if scenes else {}
+                    yield {**scene, "case": row["case"], "seed": role["seed"], "mode": role["mode"], "method": role["method"],
                            "layer": name, "role": partition, "checkpoint": checkpoint,
                            "case_status": row["status"], "selected_step": layer["selected_step"],
                            "selected_at_budget_end": layer["selected_at_budget_end"],
@@ -53,16 +55,16 @@ def metric_rows(results):
                            "probabilities_close": observed["cross_backend"]["probabilities_close"] if checkpoint == "selected" else None,
                            "zero_recall_classes": " ".join(map(str, scores["zero_recall_classes"])),
                            **{key: scores[key] for key in METRICS},
-                           **dict(zip(RECALLS, scores["recall"], strict=True)),
+                           **{f"recall_{i}": v for i, v in zip(classes, scores["recall"], strict=True)},
                            **{f"support_{i}": v for i, v in enumerate(scores["support"], 1)},
                            **{f"f1_{i}": v for i, v in enumerate(scores["f1"], 1)}}
 
 
-def paired_rows(rows):
-    lookup = {(r["seed"], r["method"], r["mode"], r["layer"], r["role"]): r
+def paired_rows(rows, *, scenes=False, values=VALUES):
+    lookup = {(r.get("scene"), r["seed"], r["method"], r["mode"], r["layer"], r["role"]): r
               for r in rows if r["checkpoint"] == "selected"}
     for key, current in lookup.items():
-        seed, method, mode, layer, role = key
+        scene, seed, method, mode, layer, role = key
         controls = []
         if layer.endswith("_cnn"):
             controls.append(("cnn_minus_graph", mode, layer.replace("_cnn", "_graph")))
@@ -71,15 +73,15 @@ def paired_rows(rows):
         if mode == "x_residual":
             controls.extend(("residual_minus_"+base, base, layer) for base in ("capacity_control", "none"))
         for contrast, base_mode, base_layer in controls:
-            base = lookup.get((seed, method, base_mode, base_layer, role))
+            base = lookup.get((scene, seed, method, base_mode, base_layer, role))
             if base is None:
                 continue
-            delta = {k: current[k]-base[k] if current[k] is not None and base[k] is not None else None for k in VALUES}
-            yield {"seed": seed, "method": method, "mode": mode, "layer": layer, "role": role,
+            delta = {k: current[k]-base[k] if current.get(k) is not None and base.get(k) is not None else None for k in values}
+            yield {**({"scene": scene} if scenes else {}), "seed": seed, "method": method, "mode": mode, "layer": layer, "role": role,
                    "contrast": contrast, "baseline_mode": base_mode, "baseline_layer": base_layer,
                    "strict_decisions": current["strict_decisions"] and base["strict_decisions"],
-                   "declining_classes": " ".join(str(i) for i, k in enumerate(RECALLS, 1)
-                                                 if delta[k] is not None and delta[k] < 0), **delta}
+                   "declining_classes": " ".join(k.removeprefix("recall_") for k, value in delta.items()
+                                                 if k.startswith("recall_") and value is not None and value < 0), **delta}
 
 
 def write_outputs(out, results):

@@ -45,12 +45,16 @@ def audit_pack(pack, bound, scope, case, local):
                  selected["selected_step"], family["family_hash"], case["phase_hashes"], case["capture_receipt_sha256"],
                  scope["freeze_sha256"], scope["analysis_sha256"]),
             "Stored pack does not bind the actual authorized historical model and releases")
-    for phase, role in (("adapt", "train"), ("validation", "val")):
+    classes = scope["probe_plan"]["classes"]
+    support = {}
+    for phase, role, count in (("adapt", "train", 10), ("validation", "val", 5)):
         ids, labels = pack["row_ids"][role], pack["labels"][role]
         registry.require(ids.dtype == labels.dtype == torch.int64
             and ids.tolist() == phases[phase]["indices"] and labels.tolist() == [i-1 for i in phases[phase]["labels"]]
             and torch.equal(ids, overlay[role+"_indices"]) and torch.equal(labels, overlay[role+"_labels"]),
             "Stored pack has changed, reordered or swapped authorized labels/rows")
+        support[role] = torch.bincount(labels, minlength=classes).tolist()
+        registry.require(support[role] == [count]*classes, "Full scene class support required")
     check_files(local)
     cells, maximum = 0, 0.0
     for stage, width in (("stage1", 128), ("stage2", 64)):
@@ -75,7 +79,7 @@ def audit_pack(pack, bound, scope, case, local):
                 maximum = max(maximum, float(np.max(np.abs(value-reference))))
     check_files(local)
     return {"feature_cells_checked": cells, "maximum_feature_absolute_error": maximum,
-            "authorized_train_support": [10]*9, "authorized_val_support": [5]*9}
+            "authorized_train_support": support["train"], "authorized_val_support": support["val"]}
 
 
 def endpoint_logp(pack, plan, state):
