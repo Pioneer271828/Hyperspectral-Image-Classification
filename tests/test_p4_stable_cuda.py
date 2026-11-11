@@ -1,6 +1,6 @@
 """Fixed operator mathematics and qualification identity for FP64 edge accumulation."""
 import argparse
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 from functools import partial
 import json
@@ -156,6 +156,24 @@ class StableSparseWeightTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'accepted physical recovery'):
             registration.bind_recovery(None,registration.ADMISSION,device.CUDA_FP64_WEIGHT,False,{})
 
+    def test_recovery_reserves_shared_physical_lease(self):
+        gpu = 'GPU-11111111-1111-1111-1111-111111111111'
+        with TemporaryDirectory() as tmp:
+            out = Path(tmp)/'recovery'
+            lock = out.parent/'.p4_gpu_leases'/(gpu+'.lock')
+
+            def checked(folder, code, device_uuid, qualification, physical_lease):
+                self.assertEqual((folder, device_uuid),(out,gpu))
+                self.assertFalse(physical_lease.closed)
+                with self.assertRaises(device.ResourceUnavailable), device.lease(lock):
+                    self.fail('Another project worker acquired the physical UUID')
+                return 'isolated'
+
+            with patch(__name__+'.recovery_pairs',side_effect=checked):
+                self.assertEqual(bounded_recovery(out,{},gpu,None),'isolated')
+            with device.lease(lock):
+                self.assertTrue(out.is_dir())
+
 
 @contextmanager
 def synthetic_schema(classes):
@@ -171,12 +189,26 @@ def synthetic_schema(classes):
 
 
 def bounded_recovery(out, code, gpu, qualification):
-    from research_runtime import external_directory, hash_file, write_json
+    from research_runtime import external_directory
+
+    out = external_directory(out)
+    if gpu:
+        device.require(device.UUID.fullmatch(gpu), 'Physical recovery requires a valid GPU UUID')
+        lease_root = out.parent/'.p4_gpu_leases'
+        lease_root.mkdir(exist_ok=True)
+        lease = device.lease(lease_root/(gpu+'.lock'))
+    else:
+        lease = nullcontext()
+    with lease as physical_lease:
+        out.mkdir(exist_ok=False)
+        return recovery_pairs(out,code,gpu,qualification,physical_lease)
+
+
+def recovery_pairs(out, code, gpu, qualification, physical_lease):
+    from research_runtime import hash_file, write_json
     from tests.test_p4_coverage import fixture
     from transfer import p4_full_budget_campaign as campaign
 
-    out = external_directory(out)
-    out.mkdir(exist_ok=False)
     protocol, gpus = (device.CUDA_FP64_WEIGHT,[gpu]) if gpu else (device.CPU,[])
     cases = []
     for classes in (9,22):
@@ -195,7 +227,8 @@ def bounded_recovery(out, code, gpu, qualification):
 
             def launcher(command, log_dir, case, operation, locks):
                 wrapped = [*command[:2], 'tests.test_p4_stable_cuda', '--worker-classes', str(classes), *command[3:]]
-                return campaign.invoke(wrapped,log_dir,case,operation,locks)
+                inherited = (*locks,physical_lease) if physical_lease is not None else locks
+                return campaign.invoke(wrapped,log_dir,case,operation,inherited)
 
             state = campaign.run(scope,sha,execution,code,launcher=launcher)
             if state['status'] != 'completed':
