@@ -217,9 +217,9 @@ def validation(model, scene, tiles, allowed_tiles, view=None, *, metadata_missin
 def run_case(registration, index, out, until, code, *, coverage_arm=None, runtime=None):
     if ('full_budget_policy' in registration) != (runtime is not None):
         raise ValueError('Full budget cases require their explicit runtime contract')
-    target = CPU if runtime is None else torch.device(runtime['numeric']['device'])
+    device = CPU if runtime is None else torch.device(runtime['numeric']['device'])
     audited = registration.get('parameter_audit') == updates.SCHEMA
-    timing = updates.Timing(target) if audited else None
+    timing = updates.Timing(device) if audited else None
     coverage_enabled = 'coverage' in registration
     if coverage_enabled != (coverage_arm is not None) or (coverage_enabled and coverage_arm not in p4_coverage.ARMS):
         raise ValueError('Coverage registration requires an explicitly registered coverage arm')
@@ -320,7 +320,6 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
     if case['method'] not in ('scratch', 'shared_transfer'):
         raise ValueError('Unknown initialization method')
     model_seed = SEED if runtime is None else runtime['case']['model_seed']
-    device = target
     model, init = initialize(config, source['weight'] if source else None, source['result'] if source else None,
                              coverage_arm=coverage_arm, model_seed=model_seed)
     if runtime is not None:

@@ -136,7 +136,8 @@ class AdmissionTests(unittest.TestCase):
         sha = hash_file(path)
         scope, reg = registration.load(path, sha, self.code)
         reported = {GPU_A: {'free_mib': 12288, 'utilization': 60}, GPU_B: {'free_mib': 12287, 'utilization': 0}}
-        with patch.object(registration, 'load', return_value=({**scope, 'synthetic': False}, reg)), +                patch.object(device, 'simultaneous_inventory', return_value=reported):
+        with (patch.object(registration, 'load', return_value=({**scope, 'synthetic': False}, reg)),
+              patch.object(device, 'simultaneous_inventory', return_value=reported)):
             status = campaign.run(path, sha, self.root / 'blocked', self.code,
                                   launcher=lambda *args: self.fail('Worker dispatched before both GPUs qualified'))
         self.assertEqual((status['status'], status['optimizer_updates']), ('waiting_for_resources', 0))
