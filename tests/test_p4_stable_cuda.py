@@ -7,6 +7,8 @@ import json
 import math
 from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -100,6 +102,49 @@ class StableSparseWeightTests(unittest.TestCase):
             change(wrong)
             with self.assertRaises(ValueError):
                 qual.check_receipt(wrong,device.CUDA_FP64_WEIGHT,code,geometry)
+        from research_runtime import write_json
+
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp)/'qualified.json'
+            write_json(path,row)
+            other = 'GPU-22222222-2222-2222-2222-222222222222'
+            with self.assertRaisesRegex(ValueError,'unregistered GPU'):
+                registration.qualification_bindings([path],[other],device.CUDA_FP64_WEIGHT,code,geometry)
+
+    def test_v4_scope_restores_settings_on_exception(self):
+        import os
+
+        gpu = 'GPU-11111111-1111-1111-1111-111111111111'
+        props = SimpleNamespace(name='mocked', major=8, minor=9)
+        initial = qual.runtime_settings()
+        with patch.dict(os.environ,{'CUDA_VISIBLE_DEVICES':gpu,'CUBLAS_WORKSPACE_CONFIG':device.WORKSPACE}), \
+                patch.object(device,'gate',return_value={'driver':'test'}), \
+                patch.multiple(torch.cuda,is_available=lambda:True,device_count=lambda:1,
+                               set_device=lambda index:None,get_device_properties=lambda index:props):
+            with self.assertRaisesRegex(RuntimeError,'leave the worker'):
+                with device.arithmetic(device.CUDA_FP64_WEIGHT,gpu) as numeric:
+                    self.assertTrue(torch.are_deterministic_algorithms_enabled())
+                    self.assertFalse(torch.backends.cuda.matmul.allow_tf32)
+                    self.assertEqual(numeric['sparse_weight_contract'],device.FP64_WEIGHT_CONTRACT)
+                    raise RuntimeError('leave the worker')
+        self.assertEqual(qual.runtime_settings(),initial)
+
+    def test_admission_retains_all_class_counts_and_failed_recall(self):
+        from transfer.p4_full_budget_campaign import admission_validation
+
+        def audit(arm, matrix):
+            recall = (np.diag(matrix)/5).tolist()
+            score = {**dict.fromkeys(('oa','aa','kappa','macro_f1','nll'),.5),
+                     'recall':recall,'confusion':matrix.tolist()}
+            return {'case':{'arm':arm,'id':arm,'pair_sha256':'paired'},'selected_step':30,
+                    'fit':{'selected':{'val':{'heads':{k:score for k in ('fused','graph','cnn')}}}}}
+        baseline = np.eye(22,dtype=np.int64)*5
+        candidate = baseline.copy()
+        candidate[-1,-1],candidate[-1,0] = 0,5
+        a,b = admission_validation([audit('none',baseline),audit('anchor',candidate)])
+        self.assertEqual(a['heads']['fused']['class_support'],[5]*22)
+        self.assertEqual(b['heads']['fused']['zero_recall_classes'],[22])
+        self.assertEqual(b['heads']['fused']['recall_drop_over_2pp_classes'],[22])
 
     def test_new_real_scope_requires_recovery_and_single_card_scope_is_synthetic(self):
         gpu = 'GPU-11111111-1111-1111-1111-111111111111'
