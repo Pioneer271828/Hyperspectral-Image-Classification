@@ -1,5 +1,4 @@
 """Exercise the registered P4 optimizer and acceptance with synthetic guarded labels."""
-import json
 import os
 from pathlib import Path
 import subprocess
@@ -116,7 +115,8 @@ class FullBudgetTests(unittest.TestCase):
             args = dict(zip(command[4::2], command[5::2]))
             calls.append((case['id'], operation))
             return campaign.worker(self.small, hash_file(self.small), out, case['id'], operation,
-                                   int(args['--until']) if '--until' in args else None, self.code)
+                                   int(args['--until']) if '--until' in args else None, self.code,
+                                   lease_fds=tuple(lock.fileno() for lock in locks))
 
         result = campaign.run(self.small, hash_file(self.small), out, self.code, launcher=launch)
         self.assertEqual(result['status'], 'completed')
@@ -140,8 +140,16 @@ class FullBudgetTests(unittest.TestCase):
                    '--expected-commit', self.code['commit'], '--scope', str(self.small),
                    '--scope-sha256', hash_file(self.small), '--out', str(out),
                    '--case', case['id'], '--operation', 'advance', '--until', '2']
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        self.assertEqual(json.loads(result.stdout)['updates'], 2)
+        rejected = subprocess.run(command, capture_output=True, text=True)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('--coordinator-fd', rejected.stderr)
+        with device.lease(out / '.coordinator.lock') as coordinator, device.lease(out / '.cpu.lock') as slot:
+            with self.assertRaisesRegex(ValueError, 'Worker lease does not match'):
+                campaign.worker(self.small, hash_file(self.small), out, case['id'], 'advance', 2, self.code,
+                                lease_fds=(coordinator.fileno(), coordinator.fileno()))
+            result = campaign.invoke_operation(self.small, hash_file(self.small), out, self.code, case,
+                                               'advance', 2, (coordinator, slot), campaign.invoke)
+        self.assertEqual(result['updates'], 2)
         self.assertEqual(audit.ledger(campaign.bound_folder(out, case), case, hash_file(self.small))[0], 2)
         with self.assertRaisesRegex(ValueError, 'explicit runtime'):
             run_case(self.reg, 0, out / 'unowned', 2, self.code, coverage_arm='none')

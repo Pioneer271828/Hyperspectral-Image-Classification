@@ -67,6 +67,16 @@ def lease(path):
         yield stream
 
 
+def check_inherited_lease(fd, path):
+    import fcntl
+
+    require(os.path.samestat(os.fstat(fd), path.stat()), f'Worker lease does not match {path}')
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as error:
+        raise ResourceUnavailable(f'Worker did not inherit the active lease: {path}') from error
+
+
 @contextmanager
 def arithmetic(protocol, gpu=None):
     """Apply a versioned FP32 protocol and restore process settings on exit."""

@@ -56,13 +56,22 @@ def accepted(folder, scope, case, sha):
     return row
 
 
-def worker(scope_path, sha, out, case_id, operation, until, code):
+def slot_lock(out, gpu):
+    return out / '.cpu.lock' if gpu is None else out.parent / '.p4_gpu_leases' / (gpu + '.lock')
+
+
+def worker(scope_path, sha, out, case_id, operation, until, code, *, lease_fds=None):
     scope, reg = registration.load(scope_path, sha, code, check_files=False)
     out = batch.sibling(out, scope_path)
     device.require(read(out / 'owner.json') == owner(out, scope_path, sha), 'Unowned campaign directory')
     matches = [case for case in scope['cases'] if case['id'] == case_id]
     device.require(len(matches) == 1, 'Unregistered case')
     case, = matches
+    if lease_fds is not None or not scope['synthetic']:
+        device.require(lease_fds is not None, 'Production worker requires the coordinator and slot leases')
+        coordinator_fd, slot_fd = lease_fds
+        device.check_inherited_lease(coordinator_fd, out / '.coordinator.lock')
+        device.check_inherited_lease(slot_fd, slot_lock(out, case['physical_uuid']))
     folder = bound_folder(out, case)
     # Do not claim the case or initialize CUDA while the device is ineligible.
     with device.arithmetic(case['protocol'], case['physical_uuid']) as numeric:
@@ -134,7 +143,8 @@ def invoke_operation(scope_path, sha, out, code, case, operation, until, locks, 
         device.gate(case['physical_uuid'])
     command = [sys.executable, '-m', 'transfer.p4_full_budget_campaign', 'worker',
                '--expected-commit', code['commit'], '--scope', str(scope_path), '--scope-sha256', sha,
-               '--out', str(out), '--case', case['id'], '--operation', operation]
+               '--out', str(out), '--case', case['id'], '--operation', operation,
+               '--coordinator-fd', str(locks[0].fileno()), '--slot-fd', str(locks[1].fileno())]
     if until is not None:
         command.extend(['--until', str(until)])
     result = launcher(command, out / 'logs', case, operation, locks)
@@ -182,8 +192,7 @@ def run(scope_path, sha, out, code, *, resume=False, segment=None, launcher=invo
         new_updates = 0
         slots = device.slots(scope['protocol'], scope['gpus'])
         if scope['gpus']:
-            leases = out.parent / '.p4_gpu_leases'
-            leases.mkdir(exist_ok=True)
+            slot_lock(out, scope['gpus'][0]).parent.mkdir(exist_ok=True)
 
         def publish(status, slot, case=None, reason=None):
             with mutex:
@@ -196,8 +205,7 @@ def run(scope_path, sha, out, code, *, resume=False, segment=None, launcher=invo
             nonlocal new_updates
             active = None
             try:
-                lock_path = leases / (slot + '.lock') if slot is not None else out / '.cpu.lock'
-                with device.lease(lock_path) as lock:
+                with device.lease(slot_lock(out, slot)) as lock:
                     for case in cases:
                         active = case['id']
                         if stop.is_set():
@@ -314,6 +322,8 @@ def main():
     work.add_argument('--case', required=True)
     work.add_argument('--operation', choices=('advance', 'completed', 'audit'), required=True)
     work.add_argument('--until', type=int)
+    work.add_argument('--coordinator-fd', type=int, required=True)
+    work.add_argument('--slot-fd', type=int, required=True)
     for mode in (execute, work, modes.add_parser('accept')):
         mode.add_argument('--scope', type=Path, required=True)
         mode.add_argument('--scope-sha256', required=True)
@@ -329,7 +339,8 @@ def main():
         result = {'path': str(path), 'sha256': hash_file(path)}
     elif args.mode == 'worker':
         try:
-            result = worker(args.scope, args.scope_sha256, args.out, args.case, args.operation, args.until, code)
+            result = worker(args.scope, args.scope_sha256, args.out, args.case, args.operation, args.until, code,
+                            lease_fds=(args.coordinator_fd, args.slot_fd))
         except device.ResourceUnavailable as error:
             result = {'status': 'waiting_for_resources', 'case': args.case, 'updates': 0, 'reason': str(error)}
     elif args.mode == 'accept':
