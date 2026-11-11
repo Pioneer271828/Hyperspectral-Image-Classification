@@ -29,8 +29,9 @@ def summarize(rows, keys):
             values = [row[metric] for row in sample if row[metric] is not None]
             stats[metric] = {"mean": mean(values) if values else None, "sample_sd": stdev(values) if len(values) > 1 else None,
                              "seeds": len(values)}
+        decisions = [row["strict_decisions"] for row in sample if row["strict_decisions"] is not None]
         result.append({**dict(zip(keys, group, strict=True)), "seed_count": len(sample),
-                       "all_strict_decisions": all(row["strict_decisions"] for row in sample),
+                       "all_strict_decisions": all(decisions) if decisions else None,
                        "estimates": stats})
     return result
 
@@ -48,8 +49,8 @@ def metric_rows(results):
                            "layer": name, "role": partition, "checkpoint": checkpoint,
                            "case_status": row["status"], "selected_step": layer["selected_step"],
                            "selected_at_budget_end": layer["selected_at_budget_end"],
-                           "strict_decisions": observed["cross_backend"]["strict_decisions"],
-                           "probabilities_close": observed["cross_backend"]["probabilities_close"],
+                           "strict_decisions": observed["cross_backend"]["strict_decisions"] if checkpoint == "selected" else None,
+                           "probabilities_close": observed["cross_backend"]["probabilities_close"] if checkpoint == "selected" else None,
                            "zero_recall_classes": " ".join(map(str, scores["zero_recall_classes"])),
                            **{key: scores[key] for key in METRICS},
                            **dict(zip(RECALLS, scores["recall"], strict=True)),

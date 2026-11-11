@@ -40,9 +40,12 @@ def synthetic_grid(root, *, original_stage=False):
         folder = root/("archive-"+name)
         folder.mkdir()
         for file, values in stages.items():
+            # This fixture's superpixels repeat across classes. Use a constant graph
+            # control with identical logits for the passing path and test nonconstant
+            # captures and decision mismatches separately.
             features = values if original_stage else {
-                **values, **{branch: torch.randn(values[branch].shape, generator=rng, dtype=values["Q"].dtype)
-                             for branch in ("cnn", "graph")}}
+                **values, "cnn": torch.randn(values["cnn"].shape, generator=rng, dtype=values["cnn"].dtype),
+                "graph": torch.zeros_like(values["graph"])}
             torch.save(features, folder/file)
         for stage in (1, 2):
             write_json(folder/f"stage{stage}-summary.json", {"synthetic": True})

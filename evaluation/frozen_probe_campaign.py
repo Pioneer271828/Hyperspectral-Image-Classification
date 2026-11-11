@@ -258,6 +258,8 @@ def review(scope_path, scope_sha, run_path, run_sha, out, code):
     complete = (all(r["status"] == "accepted" for r in results)
                 and run["status"] == "executed" and run["probe_updates"] == scope["planned_probe_updates"])
     aggregate_files = summary.write_outputs(out, results)
+    reviewed = [row for row in results if "layers" in row]
+    failed_probes = sum(len({fail["layer"] for fail in row["numerical_failures"]}) for row in reviewed)
     all_pins = {**inputs, **artifacts}
     check_files(all_pins)
     require_frozen_code(code)
@@ -266,7 +268,9 @@ def review(scope_path, scope_sha, run_path, run_sha, out, code):
                "synthetic": scope["synthetic"], "cases": [{k: row[k] for k in ("case", "status", "probe_updates")} for row in results],
                "accepted_cases": sum(row["status"] == "accepted" for row in results),
                "strict_decisions": complete, "probe_updates": run["probe_updates"], "audit_probe_updates": 0,
-               "accepted_probes": len(registry.LAYERS)*sum(row["status"] == "accepted" for row in results),
+               "reviewed_probes": len(registry.LAYERS)*len(reviewed),
+               "accepted_probes": len(registry.LAYERS)*len(reviewed)-failed_probes,
+               "failed_probes": failed_probes,
                "new_frozen_captures": sum(case["origin"] == "captured" for case, _, _ in cases),
                "reused_frozen_captures": sum(case["origin"] == "reused" for case, _, _ in cases),
                "backbone_updates": 0, "bn_updates": 0, "raw_gt_deserialized": False, "query_labels_accessed": False,

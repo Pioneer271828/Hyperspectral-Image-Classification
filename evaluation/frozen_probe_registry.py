@@ -124,9 +124,10 @@ def authenticate_inputs(freeze, freeze_sha, analysis, analysis_sha, index, index
 def registry_data(*, freeze, freeze_sha, analysis, analysis_sha, index, index_sha, code, plan, paths,
                   synthetic, cases, pins):
     if synthetic:
-        require(plan["classes"] == 9 and paths["full"] == [plan["steps"]]
-                and paths["split"] == [2, 4, plan["steps"]] and plan["steps"] > 4
-                and paths["completed"] == [plan["steps"]], "Bounded synthetic probe path differs")
+        steps = plan["steps"]
+        require(plan == {**PLAN, "steps": steps} and type(steps) is int and 4 < steps <= PLAN["steps"]
+                and paths == {"full": [steps], "split": [2, 4, steps], "completed": [steps]},
+                "Registered matrix synthetic probe plan or paths changed")
     else:
         require(plan == PLAN and paths == PATHS, "Real probe plan and paired budget are fixed")
     return {"policy": POLICY, "commit": code["commit"], "source_hash": code["source_hash"], "synthetic": synthetic,
