@@ -16,7 +16,6 @@ from transfer.graph_route_training import GraphRouteRun
 
 CATALOG = "wp06_registered_route_candidate_catalog_v1"
 ORIGIN = "wp06_development_route_provenance_v1"
-RUNTIME_FILES = ("model/","loadData/","transfer/","configs/")
 
 
 def require(ok,message):
@@ -39,13 +38,16 @@ def runtime_identity():
 def producer_compatibility(producer,consumer):
     require(not producer["dirty"] and digest(producer["files"])==producer["source_hash"],
             "Producer source manifest differs or was dirty")
+    require(not consumer["dirty"] and digest(consumer["files"])==consumer["source_hash"],
+            "Consumer source manifest differs or was dirty")
     if producer["commit"]==consumer["commit"]:
         require(producer["source_hash"]==consumer["source_hash"],"Same commit has a different source fingerprint")
         return "exact_source"
-    files = [name for name in producer["files"] if name.startswith(RUNTIME_FILES)
-             or name in ("research_runtime.py","train_spatial.py")]
-    require(files and all(consumer["files"].get(name)==producer["files"][name] for name in files),
-            "Historical route runtime source is not byte-compatible")
+    # code_snapshot covers every Python module and repository config. Compare
+    # both directions so a newly introduced module cannot change imports.
+    original = {name:sha for name,sha in producer["files"].items() if not name.startswith("tests/")}
+    current = {name:sha for name,sha in consumer["files"].items() if not name.startswith("tests/")}
+    require(original and original==current,"Historical route runtime source is not byte-compatible")
     return "producer_runtime_files_identical"
 
 

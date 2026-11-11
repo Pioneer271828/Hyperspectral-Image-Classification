@@ -16,6 +16,7 @@ from loadData.spatial_development import make_development
 from loadData.spatial_tiles import make_tile_plan
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.checkpoint_io import save_model_checkpoint
+from model.research_config import digest
 from research_runtime import code_snapshot
 from transfer import matched_route_admission as admission, registered_development as dev
 from transfer import registered_matched_route as pipeline
@@ -66,6 +67,32 @@ def attest(root,candidate,*,changes=None):
         "raw_gt_accessed":False,"query_accessed":False,**(changes or {})}
     candidate = {**candidate,"provenance":dev._json_new(root/"provenance.json",proof)}
     return candidate,dev._json_new(root/"catalog.json",{"policy":admission.CATALOG,"candidates":[candidate]})
+
+
+class ProducerCompatibilityTests(unittest.TestCase):
+    def test_cross_commit_uses_entire_non_test_source_in_both_directions(self):
+        def snapshot(commit, files):
+            return {"commit":commit, "dirty":False, "source_hash":digest(files), "files":files}
+
+        runtime = {path:"old" for path in ("research_runtime.py", "train_vca_multidataset.py",
+            "inference/light_cnn.py", "compression/int8_model.py", "configs/route.json")}
+        producer = snapshot("producer", {**runtime, "tests/test_old.py":"old"})
+        consumer = snapshot("consumer", {**runtime, "tests/test_new.py":"new"})
+        self.assertEqual(admission.producer_compatibility(producer, consumer), "producer_runtime_files_identical")
+        self.assertEqual(admission.producer_compatibility(producer, producer), "exact_source")
+        for path in runtime:
+            with self.subTest(path=path, change="edit"):
+                with self.assertRaisesRegex(ValueError, "not byte-compatible"):
+                    admission.producer_compatibility(producer, snapshot("consumer", {**runtime, path:"new"}))
+            with self.subTest(path=path, change="delete"):
+                with self.assertRaisesRegex(ValueError, "not byte-compatible"):
+                    admission.producer_compatibility(producer, snapshot("consumer", {k:v for k,v in runtime.items() if k!=path}))
+        for path in ("inference/__init__.py", "configs/new.json", "scripts/new_route_cli.py"):
+            with self.subTest(path=path, change="add"):
+                with self.assertRaisesRegex(ValueError, "not byte-compatible"):
+                    admission.producer_compatibility(producer, snapshot("consumer", {**runtime, path:"new"}))
+        with self.assertRaisesRegex(ValueError, "Consumer source manifest"):
+            admission.producer_compatibility(producer, {**consumer, "source_hash":"invalid"})
 
 
 class RegisteredMatchedRouteTests(unittest.TestCase):
