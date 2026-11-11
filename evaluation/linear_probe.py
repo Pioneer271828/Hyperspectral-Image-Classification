@@ -10,10 +10,12 @@ import math
 import torch
 import torch.nn.functional as F
 
+from evaluation import stable_probe_standardization
 from model.research_config import digest
 from research_runtime import tensor_hash
 
 POLICY = "equal_capacity_frozen_linear_probe_v1"
+POLICY_V2 = "equal_capacity_frozen_linear_probe_stable_standardization_v2"
 ROLES = ("train", "val")
 
 
@@ -26,7 +28,7 @@ def fingerprint(value):
 
 def validate_plan(plan):
     if (set(plan) != {"policy", "classes", "width", "seed", "steps", "lr", "l2", "scale_floor"}
-            or plan["policy"] != POLICY):
+            or plan["policy"] not in (POLICY, POLICY_V2)):
         raise ValueError("Exact declared linear-probe plan required")
     for k, low, high in (("classes",2,256), ("width",1,512), ("seed",0,2**32-1), ("steps",1,10000)):
         if type(plan[k]) is not int or not low <= plan[k] <= high:
@@ -74,14 +76,19 @@ def prepare(pack, plan):
         if rows["val"].shape[1] != width: raise ValueError("Layer role widths differ")
         generator = torch.Generator(device="cpu").manual_seed(plan["seed"])
         columns = torch.arange(width) if width == plan["width"] else torch.randperm(width, generator=generator)[:plan["width"]].sort().values
-        train = rows["train"][:, columns]
-        mean, sd = train.mean(0), train.std(0, unbiased=False)
-        scale = torch.where(sd > plan["scale_floor"], sd, torch.ones_like(sd))
-        layers[name] = {role: (x[:,columns]-mean)/scale for role,x in rows.items()}
+        if plan["policy"] == POLICY_V2:
+            layers[name], normalization = stable_probe_standardization.standardize(
+                {role:x[:,columns] for role,x in rows.items()}, plan["scale_floor"])
+        else:
+            train = rows["train"][:, columns]
+            mean, sd = train.mean(0), train.std(0, unbiased=False)
+            scale = torch.where(sd > plan["scale_floor"], sd, torch.ones_like(sd))
+            layers[name] = {role: (x[:,columns]-mean)/scale for role,x in rows.items()}
+            normalization = {"mean":mean, "scale":scale, "near_constant_columns":int((sd <= plan["scale_floor"]).sum())}
         if any(not torch.isfinite(v).all() for v in layers[name].values()):
             raise ValueError("Standardized probe feature overflow")
         metadata[name] = {"original_width":width, "columns":columns.tolist(),
-            "mean":mean, "scale":scale, "near_constant_columns":int((sd <= plan["scale_floor"]).sum()),
+            **normalization,
             "parameters":plan["classes"]*(plan["width"]+1)}
     return layers, labels, metadata
 
@@ -120,7 +127,7 @@ def advance(pack, plan, *, state=None, stop_after=None):
     """One immutable budget; validation affects selection only, never updates."""
     before = fingerprint(pack); rng = torch.get_rng_state().clone()
     layers, labels, normalization = prepare(pack, plan)
-    identity = digest({"policy":POLICY, "plan":plan, "input":before})
+    identity = digest({"policy":plan["policy"], "plan":plan, "input":before})
     if state is None:
         state = {"identity":identity, "cursor":0, "layers":{}}
         for name in layers:
@@ -180,7 +187,7 @@ def advance(pack, plan, *, state=None, stop_after=None):
     if fingerprint(pack) != before or not torch.equal(rng, torch.get_rng_state()):
         raise RuntimeError("Read-only feature/input/RNG contract violated")
     state["checksum"] = fingerprint(state)
-    return state, {"policy":POLICY, "input_identity":before, "plan":copy.deepcopy(plan),
+    return state, {"policy":plan["policy"], "input_identity":before, "plan":copy.deepcopy(plan),
         "status":"completed" if end == plan["steps"] else "partial", "updates_this_call_per_probe":end-start,
         "probe_updates_this_call":(end-start)*len(layers), "backbone_updates":0, "query_labels_accessed":False,
         "input_unchanged":True, "layers":reports, "convergence_claim":False,
