@@ -89,7 +89,7 @@ def build(results):
     keys = (*pairs.PAIR_KEYS,*GATE_FIELDS,"endpoint_audits")
     classes = list(pairs.class_rows(contrasts,keys,paired=True))
     groups = annotate_groups(contrasts,GROUP,base.METRICS)
-    class_groups = annotate_groups(classes,(*GROUP,"class_id"),("recall","f1"))
+    class_groups = annotate_groups(classes,(*GROUP,"class_id","support"),("recall","f1"))
     class_index = {tuple(row[key] for key in (*GROUP,"class_id")):row for row in class_groups}
     protection = list(pairs.protection(classes))
     for row in protection:
