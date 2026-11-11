@@ -20,7 +20,7 @@ from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from train_spatial import SpatialConfig
 from transfer.g3_training import Scene, _forward, _optimizer, _update, state_hash
-from transfer import p4_guarded
+from transfer import p4_exposure, p4_guarded
 
 TARGETS = {'paviaU', 'xuzhou', p4_guarded.SCENE}
 SOURCE_TASKS = TARGETS
@@ -210,6 +210,8 @@ def run_case(registration, index, out, until, code):
         paths.append(registration['development'])
     if 'guarded' in registration:
         paths.extend(registration['guarded'].values())
+    if 'exposure' in registration:
+        paths.extend(registration['exposure'].values())
     paths += [row['release'] for row in registration['cases']]
     source = registration['source']
     paths += [source['weight'], source['weight'] + '.json', source['result']]
@@ -235,6 +237,21 @@ def run_case(registration, index, out, until, code):
     guarded_plan, guarded_tiles = p4_guarded.bind_inputs(registration, plan, development) if guarded else (None, None)
     role = load_release(read(case['release']), plan, case['support_seed'], case['k'], development,
                         guarded_tiles=guarded_tiles)
+    steps, events, exposure = STEPS, EVENTS, None
+    if 'exposure' in registration:
+        if not guarded:
+            raise ValueError('Exposure plan requires guarded HongHu')
+        frozen, exposure = p4_exposure.bind(registration, case, role['train'])
+        steps, events = frozen['steps'], frozen['validation_steps']
+        lookup = {tile['id']: (tile, local) for tile, local in role['train']}
+        sequence = [lookup[i] for i in exposure['tile_sequence']]
+        if not 1 <= until <= steps:
+            raise ValueError('Requested stop exceeds the registered exposure budget')
+    else:
+        if until not in (2, STEPS):
+            raise ValueError('Legacy spatial stops must be 2 or 12')
+        rng = np.random.default_rng(SEED)
+        sequence = [role['train'][i] for i in rng.integers(len(role['train']), size=STEPS).tolist()]
     _, variable, classes, _ = DATASETS[target]
     cube = loadmat(registration['image'], variable_names=[variable])[variable]
     bands = read_band_metadata(target, cube.shape[-1])
@@ -262,8 +279,6 @@ def run_case(registration, index, out, until, code):
     model, init = initialize(config, source['weight'] if source else None, source['result'] if source else None)
     optimizer = _optimizer(model, config)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=.5, patience=20)
-    rng = np.random.default_rng(SEED)
-    sequence = rng.integers(len(role['train']), size=STEPS).tolist()
     identity = digest({'registration': registration, 'case': index, 'code': code['commit'], 'init': init})
     out.mkdir(parents=True, exist_ok=True)
     state_path = out/'state.pt'
@@ -282,8 +297,10 @@ def run_case(registration, index, out, until, code):
             scheduler.load_state_dict(state['scheduler'])
             _restore_rng(state['rng'], CPU)
             cursor, trace, history, best = (state[n] for n in ('cursor', 'trace', 'history', 'best'))
-            if (not 0 <= cursor <= STEPS or [r['step'] for r in trace] != list(range(1, cursor+1))
-                    or [r['step'] for r in history] != [i for i in EVENTS if i <= cursor] or (cursor and not best)):
+            if (not 0 <= cursor <= steps or [r['step'] for r in trace] != list(range(1, cursor+1))
+                    or [r['tile'] for r in trace] != [tile['id'] for tile, _ in sequence[:cursor]]
+                    or [r['step'] for r in history] != [i for i in events if i <= cursor]
+                    or bool(history) != (best is not None)):
                 raise ValueError('Resume cursor and event history differ')
         else:
             torch.manual_seed(SEED)
@@ -294,7 +311,7 @@ def run_case(registration, index, out, until, code):
         if cursor > until:
             raise ValueError('Requested stop precedes authoritative state')
         for i in range(cursor, until):
-            tile, local = role['train'][sequence[i]]
+            tile, local = sequence[i]
             if tile['id'] not in train_ids:
                 raise ValueError('Optimization can only access training tiles')
             graph_before = {n: p.detach().clone() for n, p in model.backbone.learnable_graph.named_parameters()}
@@ -307,7 +324,7 @@ def run_case(registration, index, out, until, code):
                 raise ValueError('Learned graph did not participate in optimization')
             trace.append({'step': i+1, 'tile': tile['id'], 'loss': loss, 'graph_changed_elements': changed,
                           'graph_gradient_l1': grad, 'lr': [g['lr'] for g in optimizer.param_groups]})
-            if i+1 in EVENTS:
+            if i+1 in events:
                 metrics, scores = validation(model, scene, role['val'], val_ids, view)
                 nll = metrics['fused']['nll']
                 scheduler.step(nll)
@@ -321,15 +338,18 @@ def run_case(registration, index, out, until, code):
             state['fingerprints'] = {n: _tree_fingerprint(state[n]) for n in ('model','optimizer','scheduler','rng','trace','history','best')}
             _atomic_torch_save(state, state_path)
         guard()
-        if until == STEPS:
+        if until == steps:
             model.load_state_dict(best['model'], strict=True)
             metrics, scores = validation(model, scene, role['val'], val_ids, view)
             if (_tree_fingerprint(scores) != _tree_fingerprint(best['scores'])
                     or metrics != next(e['metrics'] for e in history if e['step'] == best['step'])):
                 raise ValueError('Selected checkpoint probabilities changed after strict reload')
-            report = {'identity': identity, 'initialization': init, 'updates': STEPS,
+            report = {'identity': identity, 'initialization': init, 'updates': steps,
                       'best_step': best['step'], 'metrics': metrics, 'raw_gt_loaded': False,
                       'query_accessed': False, 'state_sha256': hash_file(state_path)}
+            if exposure is not None:
+                report['exposure'] = {key: exposure[key] for key in (
+                    'first_all_classes_step', 'label_exposure_at_events')}
             if (out/'result.json').exists():
                 if read(out/'result.json') != report:
                     raise ValueError('Completed result differs')
@@ -344,7 +364,7 @@ def main():
     p.add_argument('--sha256', required=True)
     p.add_argument('--case', type=int, required=True)
     p.add_argument('--out', type=Path, required=True)
-    p.add_argument('--until', type=int, choices=(2, STEPS), required=True)
+    p.add_argument('--until', type=int, required=True)
     args = p.parse_args()
     if hash_file(args.registration) != args.sha256:
         raise ValueError('Registration SHA256 differs')
