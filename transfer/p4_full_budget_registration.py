@@ -65,11 +65,11 @@ def check_budget(purpose, protocol, gpus, synthetic, steps, interval):
     device.require(purpose in POLICIES, 'Unknown P4 registration purpose')
     if purpose == ADMISSION:
         device.require((steps, interval) == (ADMISSION_STEPS, INTERVAL)
-                       and (synthetic or (protocol == device.CUDA_V2 and len(gpus) == 2)),
-                       'Admission requires two registered CUDA v2 GPUs and the 60-step paired budget')
+                       and (synthetic or (protocol == device.CUDA_AUDITED and len(gpus) == 2)),
+                       'Admission requires two registered audited CUDA GPUs and the 60-step paired budget')
     elif not synthetic:
         device.require((steps, interval) == (STEPS, INTERVAL), 'Full research budget differs')
-    device.require(protocol != device.CUDA_V2 if purpose == LEGACY else protocol != device.CUDA,
+    device.require(protocol != device.CUDA_AUDITED if purpose == LEGACY else protocol != device.CUDA,
                    'Numerical protocol does not match the evidence schema')
 
 
@@ -165,7 +165,7 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
                        'Original exposure or fixed seed-64 source differs')
     batch.check_pins(reg['pins'])
     guarded_plan, allowed, releases = role_inputs(reg)
-    requires_qualification = not synthetic and protocol == device.CUDA_V2
+    requires_qualification = not synthetic and protocol == device.CUDA_AUDITED
     qualification, qualification_pins, shape_contract = {}, {}, None
     if requires_qualification:
         from transfer.p4_cuda_qualification import geometry_contract
@@ -173,7 +173,7 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
         shape_contract = geometry_contract(guarded_plan, allowed, reg['config'])
         qualification, qualification_pins = qualification_bindings(qualifications, gpus, protocol, code, shape_contract)
     else:
-        device.require(not qualifications, 'Qualification receipts apply only to real CUDA v2 scopes')
+        device.require(not qualifications, 'Qualification receipts apply only to real audited CUDA scopes')
     floor_path = reg['exposure']['floor']
     floor = read_pinned(Path(floor_path), reg['pins'][floor_path])
     validation_steps = events(steps, interval)
@@ -280,7 +280,7 @@ def load(path, sha, code, *, check_files=True):
     paths = ADMISSION_PATHS if purpose == ADMISSION else None
     schema = None if purpose == LEGACY else updates.SCHEMA
     quals = frozen.get('qualifications', {})
-    if not synthetic and frozen['protocol'] == device.CUDA_V2:
+    if not synthetic and frozen['protocol'] == device.CUDA_AUDITED:
         from transfer.p4_cuda_qualification import check_receipt
 
         device.require(set(quals) == set(frozen['gpus']) and all(

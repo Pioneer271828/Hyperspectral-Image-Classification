@@ -12,8 +12,8 @@ from torch.overrides import TorchFunctionMode
 
 CPU = 'cpu_fp32_v1'
 CUDA = 'cuda_deterministic_fp32_v1'
-CUDA_V2 = 'cuda_deterministic_fp32_named_adam_v2'
-CUDA_PROTOCOLS = (CUDA, CUDA_V2)
+CUDA_AUDITED = 'cuda_deterministic_fp32_named_adam_gemm_v3'
+CUDA_PROTOCOLS = (CUDA, CUDA_AUDITED)
 WORKSPACE = ':4096:8'
 UUID = re.compile(r'GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}')
 MIN_FREE_MIB, MAX_UTILIZATION = 12288, 60
@@ -119,11 +119,37 @@ def sparse_row_product(left, right):
     return right.new_zeros((left.shape[0], right.shape[1])).index_add(0, rows, terms)
 
 
+class _SparseRowProductGemm(torch.autograd.Function):
+    """Use a deterministic FP32 matrix product for the COO weight gradient."""
+
+    @staticmethod
+    def forward(ctx, weights, features, rows, columns, height):
+        ctx.save_for_backward(weights, features, rows, columns)
+        return features.new_zeros((height, features.shape[1])).index_add(
+            0, rows, weights[:, None] * features[columns])
+
+    @staticmethod
+    def backward(ctx, sensitivity):
+        weights, features, rows, columns = ctx.saved_tensors
+        # Gather only the original edges from dY @ X^T, including transposed graphs.
+        weight_grad = (sensitivity @ features.T)[rows, columns] if ctx.needs_input_grad[0] else None
+        feature_grad = (features.new_zeros(features.shape).index_add(0, columns, weights[:, None] * sensitivity[rows])
+                        if ctx.needs_input_grad[1] else None)
+        return weight_grad, feature_grad, None, None, None
+
+
+def sparse_row_product_gemm(left, right):
+    graph = left.coalesce()
+    rows, columns = graph.indices()
+    return _SparseRowProductGemm.apply(graph.values(), right, rows, columns, graph.shape[0])
+
+
 class _CudaGraphKernels(TorchFunctionMode):
     """Use the registered FP32 graph operators only inside a P4 CUDA worker."""
 
-    def __init__(self, calls=None):
+    def __init__(self, sparse_product, calls=None):
         super().__init__()
+        self.sparse_product = sparse_product
         self.calls = calls
 
     def __torch_function__(self, func, types, args=(), kwargs=None):
@@ -137,7 +163,7 @@ class _CudaGraphKernels(TorchFunctionMode):
             if func is torch.sparse.mm and args[0].is_cuda and args[0].is_sparse:
                 if self.calls is not None:
                     self.calls['sparse_mm'] += 1
-                return sparse_row_product(*args)
+                return self.sparse_product(*args)
         return func(*args, **options)
 
 
@@ -158,9 +184,11 @@ def arithmetic(protocol, gpu=None, *, kernel_calls=None):
                 'Expected one visible logical CUDA device')
         torch.cuda.set_device(0)
         props = torch.cuda.get_device_properties(0)
+        graph_kernels = ('adaptive_bin_mean_and_sparse_row_product_weight_gemm_v3' if protocol == CUDA_AUDITED
+                         else 'adaptive_bin_mean_and_sparse_row_product_v1')
         details.update(driver=row['driver'], cuda=torch.version.cuda, cudnn=torch.backends.cudnn.version(),
                        gpu_name=props.name, compute_capability=[props.major, props.minor],
-                       graph_kernels='adaptive_bin_mean_and_sparse_row_product_v1')
+                       graph_kernels=graph_kernels)
     old_threads = torch.get_num_threads()
     old_precision = torch.get_float32_matmul_precision()
     old_determinism = torch.are_deterministic_algorithms_enabled(), torch.is_deterministic_algorithms_warn_only_enabled()
@@ -178,7 +206,8 @@ def arithmetic(protocol, gpu=None, *, kernel_calls=None):
         details['deterministic_algorithms'] = torch.are_deterministic_algorithms_enabled()
         details['deterministic_warn_only'] = torch.is_deterministic_algorithms_warn_only_enabled()
         details['float32_matmul_precision'] = torch.get_float32_matmul_precision()
-        with (_CudaGraphKernels(kernel_calls) if gpu is not None else nullcontext()):
+        sparse_product = sparse_row_product_gemm if protocol == CUDA_AUDITED else sparse_row_product
+        with (_CudaGraphKernels(sparse_product, kernel_calls) if gpu is not None else nullcontext()):
             yield details
     finally:
         torch.use_deterministic_algorithms(old_determinism[0], warn_only=old_determinism[1])

@@ -248,7 +248,7 @@ class FullBudgetCudaTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             root = Path(temp)
             parent, prior = parent_fixture(root)
-            scope_path = prepare(root / 'scope', parent, prior, code, protocol=device.CUDA_V2, gpus=(gpu, peer),
+            scope_path = prepare(root / 'scope', parent, prior, code, protocol=device.CUDA_AUDITED, gpus=(gpu, peer),
                                  purpose=registration.AUDITED)
             sha = hash_file(scope_path)
             scope, _ = registration.load(scope_path, sha, code)

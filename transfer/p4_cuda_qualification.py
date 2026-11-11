@@ -92,9 +92,16 @@ def compare(actual, expected):
                 'max_tolerance_ratio': None}
     nonzero = expected != 0
     bound = ATOL + RTOL * np.abs(expected)
-    return {'compatible': bool((error <= bound).all()), 'max_absolute_error': float(error.max()),
+    ratio = error / bound
+    summary = {'compatible': bool((error <= bound).all()), 'max_absolute_error': float(error.max()),
             'max_relative_error': float((error[nonzero] / np.abs(expected[nonzero])).max(initial=0)),
-            'max_tolerance_ratio': float((error / bound).max())}
+            'max_tolerance_ratio': float(ratio.max())}
+    if not summary['compatible']:
+        index = np.unravel_index(ratio.argmax(), ratio.shape)
+        summary['out_of_bound_elements'] = int((ratio > 1).sum())
+        summary['worst_tolerance_element'] = {'index': [int(i) for i in index], 'actual': float(actual[index]),
+            'reference': float(expected[index]), 'absolute_error': float(error[index]), 'bound': float(bound[index])}
+    return summary
 
 
 def outputs(result, parameters, sensitivity):
@@ -128,7 +135,7 @@ def evaluate_sparse(rng, indices, shape, channels, target):
         values = torch.tensor(weights, device=where, requires_grad=True)
         features = torch.tensor(raw_features, device=where).T.requires_grad_()
         graph = torch.sparse_coo_tensor(torch.tensor(indices, device=where), values, shape)
-        result = (device.sparse_row_product(graph, features) if use_registered and where == 'cpu'
+        result = (device.sparse_row_product_gemm(graph, features) if use_registered and where == 'cpu'
                   else torch.sparse.mm(graph, features))
         results.append(outputs(result, (values, features), torch.tensor(sensitivity, device=where)))
     return comparisons('sparse', reference, *results)
@@ -192,7 +199,7 @@ def check_receipt(row, protocol, code, contract):
         and row['commit'] == code['commit'] and row['source_hash'] == code['source_hash']
         and row['parent_sha256'] == batch.PARENT_SHA and row['geometry'] == contract
         and row['tolerances'] == {'rtol': RTOL, 'atol': ATOL}
-        and row['numeric']['protocol'] == protocol == device.CUDA_V2
+        and row['numeric']['protocol'] == protocol == device.CUDA_AUDITED
         and row['numeric']['device'] == 'cuda:0' and row['numeric']['deterministic_algorithms']
         and not row['numeric']['deterministic_warn_only'] and row['optimizer_updates'] == 0
         and row['query_accessed'] is row['raw_gt_loaded'] is False and row['scope_restored']
@@ -228,7 +235,7 @@ def qualify(parent, gpu, out, code):
     contract = geometry_contract(plan, allowed, reg['config'])
     calls = Counter()
     before = torch.are_deterministic_algorithms_enabled(), torch.get_num_threads()
-    with device.arithmetic(device.CUDA_V2, gpu, kernel_calls=calls) as numeric:
+    with device.arithmetic(device.CUDA_AUDITED, gpu, kernel_calls=calls) as numeric:
         # A CPU pooling call and ordinary CUDA product must not affect interceptions.
         host = F.adaptive_avg_pool2d(torch.ones(1, 1, 2, 2), (1, 1))
         unrelated = torch.eye(2, device='cuda:0') @ torch.ones((2, 2), device='cuda:0')
@@ -250,7 +257,7 @@ def qualify(parent, gpu, out, code):
            'wall_seconds': perf_counter() - started}
     require_frozen_code(code)
     write_json(path, row)
-    check_receipt(row, device.CUDA_V2, code, contract)
+    check_receipt(row, device.CUDA_AUDITED, code, contract)
     return path
 
 

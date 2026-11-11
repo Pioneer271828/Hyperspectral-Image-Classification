@@ -125,14 +125,14 @@ class AdmissionTests(unittest.TestCase):
         self.assertEqual(self.scope['paths'], {'full': [60], 'split': [2, 30, 60]})
         with self.assertRaisesRegex(ValueError, 'two registered CUDA'):
             registration.check_budget(registration.ADMISSION, device.CPU, [], False, 60, 30)
-        rows = registration.matrix(self.reg, device.CUDA_V2, [GPU_A, GPU_B], registration.ADMISSION)
+        rows = registration.matrix(self.reg, device.CUDA_AUDITED, [GPU_A, GPU_B], registration.ADMISSION)
         for gpu in (GPU_A, GPU_B):
             assigned = [row for row in rows if row['physical_uuid'] == gpu]
             self.assertEqual(len(assigned), 10)
             self.assertEqual({row['k'] for row in assigned}, {1, 5})
             self.assertEqual({row['method'] for row in assigned}, {'scratch', 'shared_transfer'})
         path = prepare(self.root / 'synthetic-cuda-pair', self.parent, self.prior, self.code, steps=60, interval=30,
-                       purpose=registration.ADMISSION, protocol=device.CUDA_V2, gpus=(GPU_A, GPU_B))
+                       purpose=registration.ADMISSION, protocol=device.CUDA_AUDITED, gpus=(GPU_A, GPU_B))
         sha = hash_file(path)
         scope, reg = registration.load(path, sha, self.code)
         reported = {GPU_A: {'free_mib': 12288, 'utilization': 60}, GPU_B: {'free_mib': 12287, 'utilization': 0}}
@@ -172,14 +172,15 @@ class AdmissionTests(unittest.TestCase):
     def test_real_geometry_math_references_and_tolerances(self):
         config = {'tile_size': 32, 'model': {'learned_assignment_radius': 1, 'learned_graph_radius': 1}}
         plan = {'shape': [940, 475], 'plan_hash': 'synthetic_geometry_contract'}
-        roles = {'train': [{'box': [0, 32, 0, 32]}, {'box': [32, 46, 0, 32]}],
-                 'val': [{'box': [48, 80, 0, 32]}]}
+        roles = {'train': [{'box': [0, h, 0, w]} for h, w in ((8, 23), (8, 28), (28, 18), (28, 23), (28, 28))],
+                 'val': [{'box': [0, h, 0, w]} for h, w in ((28, 8), (28, 28))]}
         contract = qualification.geometry_contract(plan, roles, config)
         self.assertIn([12, 27], contract['shapes'])
-        self.assertIn([14, 32], contract['shapes'])
+        self.assertIn([8, 23], contract['shapes'])
         with device.arithmetic(device.CPU):
             results, matrices = qualification.run_fixtures(contract, 'cpu')
         self.assertEqual(list(results), qualification.fixture_specs(contract))
+        self.assertEqual(len(results), 52)
         self.assertEqual(matrices['32x32/assignment']['shape'], [1024, 16])
         self.assertEqual(matrices['32x32/adjacency128']['channels'], 128)
         self.assertTrue(all(proof['compatible'] for row in results.values()
