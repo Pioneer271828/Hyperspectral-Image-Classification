@@ -51,7 +51,7 @@ def make_grid(root):
     for scene, classes in registry.CLASSES.items():
         item, files = (template, initial) if scene == "xuzhou" else scene_inputs(root, scene, classes, template)
         model, _ = initialize(scene, 64, METHODS[0], "none")
-        stages, _, evidence = capture(model, scene, {k:item[k] for k in OBS_KEYS})
+        stages, _, evidence = capture(model.eval(), scene, {k:item[k] for k in OBS_KEYS})
         records[scene] = files
         model_stages[scene] = stages, evidence
         frozen["protected_files"].update({str(path): hash_file(path) for path in files})
@@ -249,6 +249,27 @@ class AllSceneProbeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 audit.audit_pack(bad, bound, plan, case, local)
         self.assertEqual(audit.audit_probes(pack, plan, state, report, probabilities)["history_selection_roles"], 4)
+
+        original = self.root/"actual-honghu"
+        original.mkdir()
+        path, receipt, record, family, phases, overlay, selected, pins = bound
+        for stage, values in stages.items():
+            torch.save(values, original/(stage+"-features.pt"))
+            write_json(original/(stage+"-summary.json"), {"synthetic_initialized_network": True})
+        current = {**receipt, "outputs": {p.name: hash_file(p) for p in original.iterdir()}}
+        current_path = original/"receipt.json"
+        write_json(current_path, current)
+        case = {**case, "capture_receipt": str(current_path), "capture_receipt_sha256": hash_file(current_path)}
+        stage_pins = {str(original/name): sha for name, sha in current["outputs"].items()}
+        stage_pins[str(current_path)] = case["capture_receipt_sha256"]
+        fresh = (current_path, current, record, family, phases, overlay, selected, {**pins, **stage_pins})
+        local = {**{name: sha for name, sha in local.items() if Path(name).parent != path.parent}, **stage_pins}
+        out = self.root/"actual-honghu-probe"
+        sha = pavia.run_case(out, fresh, case, local, plan, self.scope_sha, lambda receipt: None)
+        actual, state, report, probabilities, counts, _ = pavia.checked_execution(out, sha, plan, self.scope_sha, case, local)
+        self.assertEqual(counts, {"full": 24, "split": 24, "completed": 0})
+        self.assertEqual(audit.audit_pack(actual, fresh, plan, case, local)["authorized_train_support"], [10]*22)
+        self.assertEqual(audit.audit_probes(actual, plan, state, report, probabilities)["history_selection_roles"], 4)
 
     def test_numerical_failure_is_retained_without_accepting_successful_subset(self):
         oracle = audit.numpy_logp
