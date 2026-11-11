@@ -53,14 +53,18 @@ def read_state(path, sha):
     return state
 
 
-def prepare_pack(folder, bound, case, local, scope_sha):
+def terminal_pack_contract(case):
+    return {"policy": packs.POLICY, "selected_model_sha256": case["primary_sha256"]}
+
+
+def prepare_pack(folder, bound, case, local, scope_sha, *, writer=packs._pack, contract=terminal_pack_contract):
     check_files(local)
-    pack = packs._pack(bound, local_only=True)
+    pack = writer(bound, local_only=True)
     path = folder_at(folder, "pack.pt")
     _atomic_torch_save(pack, path)
     identity = fingerprint(pack)
-    receipt = {"policy": packs.POLICY, "scope_sha256": scope_sha, "case": case["name"],
-               "capture_receipt_sha256": case["capture_receipt_sha256"], "selected_model_sha256": case["primary_sha256"],
+    receipt = {**contract(case), "scope_sha256": scope_sha, "case": case["name"],
+               "capture_receipt_sha256": case["capture_receipt_sha256"],
                "pack_identity": identity, "pack_sha256": hash_file(path), "local_source_files": local,
                "train_rows": len(pack["labels"]["train"]), "val_rows": len(pack["labels"]["val"]),
                "backbone_updates": 0, "query_labels_accessed": False}
@@ -98,10 +102,11 @@ def execute_segment(folder, pack, pack_receipt, plan, case, scope_sha, path, sta
     return file, sha, receipt
 
 
-def run_case(folder, bound, case, local, scope, scope_sha, record_update):
+def run_case(folder, bound, case, local, scope, scope_sha, record_update, *, writer=packs._pack,
+             contract=terminal_pack_contract):
     folder.mkdir(exist_ok=False)
     started = time.monotonic()
-    pack, pack_receipt = prepare_pack(folder, bound, case, local, scope_sha)
+    pack, pack_receipt = prepare_pack(folder, bound, case, local, scope_sha, writer=writer, contract=contract)
     written, segments = {}, {}
     for path, start, until, previous, name in schedule(scope):
         state_path, sha, receipt = execute_segment(folder_at(folder, name), pack, pack_receipt, scope["probe_plan"],
@@ -167,7 +172,7 @@ def run(scope_path, scope_sha, out, code):
     return status_file
 
 
-def checked_execution(folder, expected_sha, scope, scope_sha, case, local):
+def checked_execution(folder, expected_sha, scope, scope_sha, case, local, *, contract=terminal_pack_contract):
     execution = registry.pinned_json(folder / "execution.json", expected_sha)
     names = list(schedule(scope))
     files = pins_for(folder, ("pack.pt", "pack-receipt.json", "selected-logp.pt"))
@@ -181,7 +186,7 @@ def checked_execution(folder, expected_sha, scope, scope_sha, case, local):
     pack_receipt = registry.pinned_json(folder/"pack-receipt.json", files[str(folder/"pack-receipt.json")])
     registry.require(pack_receipt["local_source_files"] == local and pack_receipt["case"] == case["name"]
         and pack_receipt["scope_sha256"] == scope_sha and pack_receipt["capture_receipt_sha256"] == case["capture_receipt_sha256"]
-        and pack_receipt["selected_model_sha256"] == case["primary_sha256"]
+        and all(pack_receipt.get(key) == value for key, value in contract(case).items())
         and pack_receipt["pack_sha256"] == execution["pack_sha256"] == files[str(pack_path)]
         and pack_receipt["backbone_updates"] == 0 and pack_receipt["query_labels_accessed"] is False,
         "Authenticated pack receipt differs")

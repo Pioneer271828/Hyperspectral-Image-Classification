@@ -32,9 +32,7 @@ def sparse_rows(q, regions, ids):
 def audit_pack(pack, bound, scope, case, local):
     """Reconstruct selected CNN rows and Q broadcast independently of the pack writer."""
     path, receipt, record, family, phases, overlay, selected, _ = bound
-    registry.require(set(pack) == {"features", "labels", "row_ids", "identity"}
-            and set(pack["features"]) == set(registry.LAYERS)
-            and set(pack["labels"]) == set(pack["row_ids"]) == set(ROLES)
+    registry.require(set(pack) == {"features","labels","row_ids","identity"}
             and pack["identity"]["policy"] == "authenticated_full54_train_val_probe_pack_v1"
             and pack["identity"]["query_labels_accessed"] is False
             and pack["identity"]["label_authorization"] == "accepted_case_family_K10_V5_phases"
@@ -45,6 +43,14 @@ def audit_pack(pack, bound, scope, case, local):
                  selected["selected_step"], family["family_hash"], case["phase_hashes"], case["capture_receipt_sha256"],
                  scope["freeze_sha256"], scope["analysis_sha256"]),
             "Stored pack does not bind the actual authorized historical model and releases")
+    return audit_features(pack,bound,scope,local)
+
+
+def audit_features(pack,bound,scope,local):
+    path, _, record, family, phases, overlay, _, _ = bound
+    registry.require(set(pack) == {"features","labels","row_ids","identity"}
+        and set(pack["features"]) == set(registry.LAYERS)
+        and set(pack["labels"]) == set(pack["row_ids"]) == set(ROLES), "Exact ordered feature pack required")
     classes = scope["probe_plan"]["classes"]
     support = {}
     for phase, role, count in (("adapt", "train", 10), ("validation", "val", 5)):
