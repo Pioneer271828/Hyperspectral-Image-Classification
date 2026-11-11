@@ -50,14 +50,14 @@ def grid_rows(frozen, target):
     return rows
 
 
-def capture_plan(bound, frozen_row, synthetic):
+def capture_plan(bound, frozen_row, synthetic, *, classes=9):
     path, receipt, _, family, releases, overlay, selected, _ = bound
     require(selected == frozen_row and family["family_hash"] == selected["family_hash"]
             and receipt["case"] == selected["name"]
             and receipt["evidence"]["stage_calls"] == dict.fromkeys(capture.STAGES, 1),
             "Capture stage, authorized family or selected model role differs")
     for role, expected in (("train", 10), ("val", 5)):
-        require(torch.bincount(overlay[role+"_labels"], minlength=9).tolist() == [expected]*9,
+        require(torch.bincount(overlay[role+"_labels"], minlength=classes).tolist() == [expected]*classes,
                 "Exact K10/V5 released class support required")
     summaries = [read(path.parent / f"stage{stage}-summary.json") for stage in (1, 2)]
     if not synthetic:
@@ -73,44 +73,63 @@ def capture_plan(bound, frozen_row, synthetic):
             "phase_hashes": {key: digest(value) for key, value in releases.items()}}
 
 
-def authenticate_inputs(freeze, freeze_sha, analysis, analysis_sha, index, index_sha, *, synthetic=False):
-    started = time.monotonic()
-    target = "xuzhou" if synthetic else TARGET
-    require(synthetic or (freeze_sha, analysis_sha) == (FREEZE_SHA, ANALYSIS_SHA),
-            "Exact accepted Issue184 freeze and analysis required")
+def capture_index(index, index_sha, sizes):
     index_data = pinned_json(index, index_sha)
     require(set(index_data) == {"captures"} and isinstance(index_data["captures"], list)
-            and len(index_data["captures"]) == 18, "Exact capture index required")
+            and len(index_data["captures"]) in sizes, "Exact capture index required")
     entries = {}
     for row in index_data["captures"]:
         require(set(row) == {"case", "receipt", "sha256", "origin"} and row["origin"] in ("captured", "reused")
                 and row["case"] not in entries, "Duplicate or unregistered capture index row")
         entries[row["case"]] = row
+    return entries
+
+
+def authenticate_inputs(freeze, freeze_sha, analysis, analysis_sha, index, index_sha, *, synthetic=False):
+    started = time.monotonic()
+    target = "xuzhou" if synthetic else TARGET
+    entries = capture_index(index, index_sha, (18,))
+    frozen, launch, boundary, producer = authenticated_boundary(freeze, freeze_sha, analysis, analysis_sha,
+                                                               entries, synthetic=synthetic)
+    cases, pins = authenticate_captures(frozen, launch, boundary, entries, producer, {target: 9},
+                                      freeze_sha, analysis_sha, synthetic=synthetic)
+    pins[str(Path(index).resolve(strict=True))] = index_sha
+    return launch, cases, pins, time.monotonic()-started
+
+
+def authenticated_boundary(freeze, freeze_sha, analysis, analysis_sha, entries, *, synthetic):
+    require(synthetic or (freeze_sha, analysis_sha) == (FREEZE_SHA, ANALYSIS_SHA),
+            "Exact accepted Issue184 freeze and analysis required")
     first = next(iter(entries.values()))
     _, first_receipt = packs.read_capture_receipt(first["receipt"], first["sha256"])
     frozen, _, launch, boundary = capture._authenticate_boundary(freeze, freeze_sha, analysis, analysis_sha,
                                                                   first_receipt["code"])
-    expected = grid_rows(frozen, target)
+    return frozen, launch, boundary, first_receipt["code"]
+
+
+def authenticate_captures(frozen, launch, boundary, entries, producer, scene_classes,
+                          freeze_sha, analysis_sha, *, synthetic):
+    expected = [row for target in scene_classes for row in grid_rows(frozen, target)]
     require(set(entries) == {row["name"] for row in expected}, "Capture index does not cover the entire frozen matrix")
-    pins = {**boundary, str(Path(index).resolve(strict=True)): index_sha}
-    cases, seen_paths, common = [], set(), None
+    pins = dict(boundary)
+    cases, seen_paths, common = [], set(), {}
     for frozen_row in expected:
         name = frozen_row["name"]
+        target = frozen_row["target"]
         item = entries[name]
         path, receipt = packs.read_capture_receipt(item["receipt"], item["sha256"])
         require(path.name == "receipt.json" and path.parent not in seen_paths and receipt["case"] == name
                 and (receipt["freeze_sha256"], receipt["analysis_sha256"]) == (freeze_sha, analysis_sha)
-                and receipt["code"]["files"] == first_receipt["code"]["files"],
+                and receipt["code"]["files"] == producer["files"],
                 "Capture is reused across roles or from a different frozen producer/boundary")
         seen_paths.add(path.parent)
         case, record, _, _, local = capture._authenticate_case(frozen, launch, boundary, name)
         require(all(boundary.get(p) == sha for p, sha in local.items()), "Case files are outside full authentication")
         bound = packs.bind_capture(path, item["sha256"], receipt, frozen, case, record, boundary, local_pins=local)
-        plan = capture_plan(bound, frozen_row, synthetic)
+        plan = capture_plan(bound, frozen_row, synthetic, classes=scene_classes[target])
         identity = (plan["released_rows_sha256"], plan["phase_hashes"], receipt["evidence"]["observation"])
-        if common is None:
-            common = identity
-        require(common == identity, "PaviaU roles do not use one ordered label/observation release")
+        require(common.setdefault(target, identity) == identity,
+                "Scene roles do not use one ordered label/observation release")
         local = {**local, **packs.capture_files(bound)}
         family = str(Path(case["inputs"]["family"]).resolve(strict=True))
         local[family] = boundary[family]
@@ -118,7 +137,7 @@ def authenticate_inputs(freeze, freeze_sha, analysis, analysis_sha, index, index
             require(p not in pins or pins[p] == sha, "Conflicting batch input pin")
             pins[p] = sha
         cases.append(({**plan, "origin": item["origin"]}, bound, local))
-    return launch, cases, pins, time.monotonic()-started
+    return cases, pins
 
 
 def registry_data(*, freeze, freeze_sha, analysis, analysis_sha, index, index_sha, code, plan, paths,
