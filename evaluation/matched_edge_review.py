@@ -37,13 +37,21 @@ class MatchedReviewPlan:
     def to_dict(self):return deepcopy(self._value)
 
     @classmethod
-    def freeze(cls,run,*,per_row,distance_bins,seeds,time_limit=30.):
+    def freeze(cls,run,*,per_row,distance_bins,seeds,time_limit=30.,frozen_controls=None):
         model=_selected(run);state=route_state_hash(model);rows=[]
         for tile in run.record['roles']:
             if tile['role']!='devval':continue
             context=_context(run.scene,run.record,tile['id'])
             _,(graph,_)=_probe(run,model,tile['id'])
-            plan=freeze(graph,coordinates(context),per_row=per_row,distance_bins=distance_bins,seeds=seeds,time_limit=time_limit)
+            if frozen_controls is None:
+                plan=freeze(graph,coordinates(context),per_row=per_row,distance_bins=distance_bins,seeds=seeds,time_limit=time_limit)
+            else:
+                saved=frozen_controls[tile['id']]
+                plan=saved['control_plan']
+                if saved['context']!=context or (plan['per_row'],plan['distance_bins'],plan['seeds'],plan['time_limit'])!=(
+                        per_row,distance_bins,list(seeds),time_limit):
+                    raise ValueError('Frozen validation control settings or context differ')
+                verify(plan,graph,coordinates(context),expected_hash=plan['plan_hash'])
             rows.append({'context':context,'control_plan':plan})
         if not rows or state!=route_state_hash(model):raise ValueError('Empty validation or changed selected model')
         run._check()
@@ -52,7 +60,7 @@ class MatchedReviewPlan:
         value['plan_hash']=digest(value);return cls(value,expected_hash=value['plan_hash'])
 
 
-def review(run,plan,*,expected_plan_hash):
+def review(run,plan,*,expected_plan_hash,observe=None):
     started=time.perf_counter();model=_selected(run);state=route_state_hash(model)
     if type(plan) is not MatchedReviewPlan:raise ValueError('Authenticated matched review plan required')
     value=MatchedReviewPlan(plan.to_dict(),expected_hash=expected_plan_hash).to_dict()
@@ -85,6 +93,8 @@ def review(run,plan,*,expected_plan_hash):
                 q=prob.detach().numpy()[valid];pred=q.argmax(1)
                 matrices[name][head]+=np.bincount(y*run.scene.classes+pred,minlength=run.scene.classes**2).reshape(run.scene.classes,run.scene.classes)
                 nll[name][head]-=float(np.log(np.maximum(q[np.arange(len(y)),y],1e-8)).sum())
+            if observe is not None:
+                observe(name,tile['id'],outputs[:3],graph,actual,removed,p)
             traces[name].append({'tile_id':tile['id'],'removed':removed,'original_nnz':graph._nnz(),'actual_nnz':actual._nnz(),
                                 'probability_hashes':[tensor_hash(x) for x in outputs[:3]],'actual_graph_hash':tensor_hash(actual)})
     result={name:{'status':'unavailable','blocking_contexts':reasons,'metrics':None} for name,reasons in unavailable.items()}
