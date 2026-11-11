@@ -1095,17 +1095,25 @@
       "id": "WP06 真实动态路由donor准入与匹配删边外部复盘",
       "state": "CPU外部准入和9/22类六臂跨进程恢复工程通过；真实动态donor未准入",
       "evidence": "Issue403/PR404；LXC实际运行c92c6915246289070bedef1c862551486bcba573，专项与回归d999cf65384c8b6e3b36ab9b8b187d8299683af6（只差测试负例定位），CPU8+25及checker；1918元数据、70候选预加载拒绝、123原指纹一致。两组合成48 donor更新、576重训、完成态重载0；六臂全标签三头复核通过，9类random64/2048同bank",
-      "remaining": "授权目录无身份齐全的真实动态GraphRouteRun；真实前向、复盘、求解、donor和重训/query均0。待接受真实来源及原运行时，再登记零更新全开发验证；288步草案未授权，独立空间/query、机制因果、WP05第二GPU与真实2400仍待",
+      "remaining": "该历史清单无身份齐全的真实动态GraphRouteRun；后续Xuzhou合格真实donor及全上下文匹配见Issue407/PR408。独立空间/query、真实六臂重训和WP05第二GPU/2400仍待",
       "report": "research/reports/WP06_真实动态路由donor准入与匹配删边外部复盘_20261112.md",
-      "chat_report": "主审已接受原同提交合成及有限候选拒绝。跨提交兼容门改为全部非tests Python/config路径与摘要双向相等，tested ea956810f55292e1594611cafeee8cf009b1b8b9，9+25与checker通过；原624合成更新证据身份不变，修复待主审"
+      "chat_report": "主审接受原同提交合成、历史候选拒绝及全运行源码兼容修复。tested ea956810f55292e1594611cafeee8cf009b1b8b9，9+25与checker通过；Issue403关闭，PR404 ready未合并，原624合成更新身份保留"
     }
     ,{
       "id": "WP02/WP06 Xuzhou真实开发桥接与动态路由曝光",
       "state": "真实K5/V5桥接、独立像素与标签核验和CPU预检通过；原24步动态donor曝光阻塞",
       "evidence": "Issue405/PR406；真实CLI a70611079d99de171224b09c62d326da8538a1bd，测试2bebb345676da97d69ff5955b1c2893213f62150仅修合成夹具。原73训练/5验证块、90标签、26076288光谱值与统计独核，6真实包负例拒绝，2预检前向，真实优化/求解/GT/query为0",
-      "remaining": "K5支持点在31个不同训练块，单块每步且每点需曝光，24步任意seed不足；固定seed64漏16点/1类，原注册器拒绝。待单独登记可满足曝光的预算，再验证真实donor恢复及全上下文六臂；真实逐类/机制结果待验",
+      "remaining": "24步任意seed不足的原拒绝保留，固定seed64漏16点/1类。新固定预算的真实donor恢复及匹配见Issue407/PR408；真实全六臂重训和机制验收待完成",
       "report": "research/reports/WP02WP06_Xuzhou真实开发桥接与24步曝光门槛_20261112.md",
-      "chat_report": "原标签、几何和测试角色按接受发布保留；原DomainBN无法直接用于E3，以原宽度新建GroupNorm零更新；主审待复核"
+      "chat_report": "主审接受真实桥接与原24步拒绝。波段指纹文档更正d2765495b6dbec85058561801a149a1b1f65d175，48条证据复核；Issue405关闭，PR406 ready未合并"
+    }
+    ,{
+      "id": "WP06 Xuzhou 固定曝光真实动态donor与匹配删边",
+      "state": "真实256步donor与恢复通过独审；完整匹配六臂因48个上下文无不同掩码而阻塞",
+      "evidence": "Issue407/PR408，LXC tested 723b1afe43f6408ece6f34d461af8ef3c0a87365；专项3+回归36与checker通过。固定预算64/128/256缺5/1/0点，512真实更新、完成重载0，first-min选246且曝光齐。312求解120最优/192无不同掩码；独立1459458候选穷举。无删/重要边完整V5三头复盘，27逐类差为0pp",
+      "remaining": "全六臂真实重训0，低权重和三随机整臂无指标，保留45训练/3验证块失败。融合/图/CNN各有5/4/6零召回类；单seed开发验证，独立空间/query及等预算机制结论未验。WP05第二GPU/2400待满足资源",
+      "report": "research/reports/WP06_Xuzhou真实动态路由与匹配删边_20261112.md",
+      "chat_report": "真实donor模型/Adam/RNG/history逐位与独立选步核验；零更新匹配和重训阻塞分别登记，待主审"
     }
     ,{
       "id": "WP06 选中模型全网络信号诊断",
