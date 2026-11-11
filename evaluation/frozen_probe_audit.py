@@ -167,6 +167,11 @@ def audit_probes(pack, scope, state, report, recorded):
         result[name] = {"selected_step": best["step"], "selected_at_budget_end": best["step"] == plan["steps"],
                         "parameters": saved["normalization"]["parameters"],
                         "near_constant_columns": saved["normalization"]["near_constant_columns"], "roles": {}}
+        if plan["policy"] == POLICY_V2:
+            result[name]["independent_normalization"] = {"reference":"decimal_train_only",
+                "floor_branches_exact":True,"columns":len(columns),"roles":{
+                    role:{"cells":independent_x[role].size,"max_absolute_error":float(
+                        np.abs(layers[name][role].numpy()-independent_x[role]).max())} for role in ROLES}}
         for role in ROLES:
             x, y = layers[name][role], labels[role].numpy()
             authority = F.log_softmax(x @ best["weight"].T + best["bias"], dim=1)
