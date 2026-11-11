@@ -208,7 +208,8 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
     device.require(all(expected[k] == v for k, v in actual.items()) and
                    expected['sequence_sha256'] == digest(sequence), 'Per-label exposure differs from the new scope')
     chosen = prior.chosen_event(state, result, scope['budget']['validation_steps'])
-    populations = {role: diag.fixed_population(release[role], allowed, role, scene.plan['shape'][1], budget)
+    populations = {role: registration.fixed_population(release[role], allowed, role, scene.plan['shape'][1], budget,
+                                                        scope.get('recovery_classes'))
                    for role, budget in (('train', case['k']), ('val', 5))}
     device.require({role: value[2] for role, value in populations.items()} == expected['populations'],
                    'Fixed train/devval population identity differs')

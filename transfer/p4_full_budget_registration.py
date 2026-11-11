@@ -170,6 +170,28 @@ def role_inputs(reg):
     return plan_guarded, allowed, roles
 
 
+def fixed_population(tiles, allowed, role, width, budget, recovery_classes=None):
+    if recovery_classes != 9:
+        return diag.fixed_population(tiles, allowed, role, width, budget)
+    permitted = {tile['id']: tile for tile in allowed[role]}
+    layout, labels, coordinates = [], [], []
+    for tile, local in tiles:
+        y0,y1,x0,x1 = tile['box']
+        device.require(permitted.get(tile['id']) == tile and tile['partition'] == role
+            and local.shape == (y1-y0,x1-x0) and np.all((local>=0)&(local<=9)),
+            'Nine-class recovery labels escape the authorized role')
+        rows = np.flatnonzero(local.ravel())
+        iy,ix = np.divmod(rows,x1-x0)
+        labels.extend(local.ravel()[rows].tolist())
+        coordinates.extend(((iy+y0)*width+ix+x0).tolist())
+        layout.append((tile,rows))
+    device.require(len(set(coordinates)) == 9*budget
+        and np.bincount(labels,minlength=10).tolist() == [0]+[budget]*9,
+        'Nine-class fixed support or coordinate uniqueness differs')
+    return layout, np.asarray(labels), {'sha256':digest({'coordinates':coordinates,'labels':labels}),
+        'labels':len(labels),'per_class':budget,'tiles':len(layout)}
+
+
 def per_label_exposure(raw, released, width, sequence, validation_steps):
     """Counts indexed by the ordered released support list, with no coordinates in the receipt."""
     ids = raw['support']['indices']
@@ -269,7 +291,7 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
         row = exposure.cohort(floor, reg, case, release['train'], steps=steps,
                               events=validation_steps, seed=SAMPLER_SEED)
         rows.append(row)
-        populations = {role: diag.fixed_population(release[role], allowed, role, guarded_plan['shape'][1], budget)[2]
+        populations = {role: fixed_population(release[role], allowed, role, guarded_plan['shape'][1], budget, recovery_classes)[2]
                        for role, budget in (('train', k), ('val', 5))}
         counts = per_label_exposure(raw, release, guarded_plan['shape'][1], row['tile_sequence'], validation_steps)
         evidence[cohort_id] = {'release_sha256': row['release_sha256'], 'populations': populations,
