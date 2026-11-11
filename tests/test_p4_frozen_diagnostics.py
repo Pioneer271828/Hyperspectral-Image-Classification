@@ -73,12 +73,15 @@ class FrozenDiagnosticsTests(unittest.TestCase):
                             for index in (0, 20)))
 
     def test_producer_runtime_and_consumer_code_are_separate(self):
-        self.assertNotEqual(diag.PRODUCER, self.code['commit'])
-        pinned = diag.runtime_blobs(diag.PRODUCER, self.code['commit'])
+        # The accepted consumer is immutable. A later runtime may legitimately
+        # add an opt-in execution path and must not claim the same blob identity.
+        consumer = '54c9fdd89173c6395472d558ea609ed8bbb295e8'
+        self.assertNotEqual(diag.PRODUCER, consumer)
+        pinned = diag.runtime_blobs(diag.PRODUCER, consumer)
         self.assertIn('model/VCASAHGCN.py', pinned)
         self.assertNotIn('transfer/p4_frozen_diagnostics.py', pinned)
         with self.assertRaisesRegex(ValueError, 'Producer runtime blobs differ'):
-            diag.runtime_blobs(self.code['commit'], diag.PRODUCER)
+            diag.runtime_blobs(consumer, diag.PRODUCER)
         with self.assertRaisesRegex(ValueError, 'Unaccepted real producer'):
             diag.parent_documents(self.links, self.code, synthetic=False)
         bad = deepcopy(self.links)

@@ -128,12 +128,12 @@ def load_release(release, plan, support_seed, k, development=None, *, guarded_ti
     return result
 
 
-def initialize(config, source_path=None, source_result=None, *, coverage_arm=None):
+def initialize(config, source_path=None, source_result=None, *, coverage_arm=None, model_seed=SEED):
     target = config.values['dataset']
     if target not in TARGETS:
         raise ValueError('Unknown P4 spatial target')
     with torch.random.fork_rng(devices=[]):
-        torch.manual_seed(SEED)
+        torch.manual_seed(model_seed)
         model = config.research.build_model({target: DATASETS[target][2]})
     backbone = model.backbone
     fresh = backbone.state_dict()
@@ -196,7 +196,7 @@ def validation(model, scene, tiles, allowed_tiles, view=None, *, metadata_missin
         truth.append(local[valid] - 1)
         heads = _forward(model, scene, tile, observation_view=view(tile) if view else None, **options)[:3]
         for name, head in zip(names, heads):
-            scores[name].append(head[valid].cpu())
+            scores[name].append(head[valid.to(head.device)].cpu())
     labels = torch.cat(truth)
     metrics, probabilities = {}, {}
     for name in names:
@@ -214,7 +214,9 @@ def validation(model, scene, tiles, allowed_tiles, view=None, *, metadata_missin
     return metrics, probabilities
 
 
-def run_case(registration, index, out, until, code, *, coverage_arm=None):
+def run_case(registration, index, out, until, code, *, coverage_arm=None, runtime=None):
+    if ('full_budget_policy' in registration) != (runtime is not None):
+        raise ValueError('Full budget cases require their explicit runtime contract')
     coverage_enabled = 'coverage' in registration
     if coverage_enabled != (coverage_arm is not None) or (coverage_enabled and coverage_arm not in p4_coverage.ARMS):
         raise ValueError('Coverage registration requires an explicitly registered coverage arm')
@@ -225,6 +227,9 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None):
                 or type(index) is not int or not 0 <= index < len(registration['cases'])):
             raise ValueError('Unregistered coverage code or case')
     case = registration['cases'][index]
+    if runtime is not None and (runtime['case']['index'] != index or runtime['case']['arm'] != coverage_arm
+                                or any(runtime['case'][key] != case[key] for key in ('support_seed', 'k', 'method'))):
+        raise ValueError('Full budget runtime case roles differ')
     pins = {Path(n): h for n, h in registration['pins'].items()}
     paths = [registration[x] for x in ('image', 'plan', 'statistics')]
     if 'development' in registration:
@@ -311,22 +316,37 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None):
     source = registration['source'] if case['method'] == 'shared_transfer' else None
     if case['method'] not in ('scratch', 'shared_transfer'):
         raise ValueError('Unknown initialization method')
+    model_seed = SEED if runtime is None else runtime['case']['model_seed']
+    device = CPU if runtime is None else torch.device(runtime['numeric']['device'])
     model, init = initialize(config, source['weight'] if source else None, source['result'] if source else None,
-                             coverage_arm=coverage_arm)
+                             coverage_arm=coverage_arm, model_seed=model_seed)
+    if runtime is not None:
+        if init != runtime['case']['initialization']:
+            raise ValueError('Full budget initialization differs from the registered CPU state')
+        model.to(device)
     coverage_parameters = ({n: p for n, p in model.named_parameters() if n.startswith(p4_coverage.PREFIX)}
                            if coverage is not None else {})
     forward_options = {'metadata_missing': True} if coverage is not None and coverage['metadata'] == 'missing' else {}
     optimizer = _optimizer(model, config)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=.5, patience=20)
-    identity = digest({'registration': registration, 'case': index, 'code': code['commit'], 'init': init})
+    binding = {'registration': registration, 'case': index, 'code': code['commit'], 'init': init}
+    if runtime is not None:
+        binding['runtime'] = runtime
+    identity = digest(binding)
     out.mkdir(parents=True, exist_ok=True)
     state_path = out/'state.pt'
-    with _run_lock(out):
+    if runtime is None:
+        lock = _run_lock(out)
+    else:
+        from transfer.p4_runtime_device import lease
+
+        lock = lease(out / '.worker.lock')
+    with lock:
         model.training_config = {'spatial_p4_identity': identity, 'plan_hash': scene.plan['plan_hash'],
                                  'statistics_hash': scene.stats['statistics_hash'], 'initialization': init}
         if state_path.exists():
             state = torch.load(state_path, map_location='cpu', weights_only=True)
-            if state['identity'] != identity:
+            if state['identity'] != identity or state.get('runtime') != runtime:
                 raise ValueError('Resume identity differs')
             fingerprints = state.pop('fingerprints')
             if fingerprints != {n: _tree_fingerprint(state[n]) for n in ('model', 'optimizer', 'scheduler', 'rng', 'trace', 'history', 'best')}:
@@ -334,7 +354,7 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None):
             model.load_state_dict(state['model'], strict=True)
             optimizer.load_state_dict(state['optimizer'])
             scheduler.load_state_dict(state['scheduler'])
-            _restore_rng(state['rng'], CPU)
+            _restore_rng(state['rng'], device)
             cursor, trace, history, best = (state[n] for n in ('cursor', 'trace', 'history', 'best'))
             if (not 0 <= cursor <= steps or [r['step'] for r in trace] != list(range(1, cursor+1))
                     or [r['tile'] for r in trace] != [tile['id'] for tile, _ in sequence[:cursor]]
@@ -342,9 +362,9 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None):
                     or bool(history) != (best is not None)):
                 raise ValueError('Resume cursor and event history differ')
         else:
-            torch.manual_seed(SEED)
-            random.seed(SEED)
-            np.random.seed(SEED)
+            torch.manual_seed(model_seed)
+            random.seed(model_seed)
+            np.random.seed(model_seed)
             cursor, trace, history, best = 0, [], [], None
         start = cursor
         if cursor > until:
@@ -383,7 +403,9 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None):
                             'model': {n: v.detach().clone() for n, v in model.state_dict().items()}}
             state = {'identity': identity, 'cursor': i+1, 'trace': trace, 'history': history, 'best': best,
                      'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(),
-                     'rng': _rng_state(CPU)}
+                     'rng': _rng_state(device)}
+            if runtime is not None:
+                state['runtime'] = runtime
             state['fingerprints'] = {n: _tree_fingerprint(state[n]) for n in ('model','optimizer','scheduler','rng','trace','history','best')}
             _atomic_torch_save(state, state_path)
         guard()
@@ -403,6 +425,9 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None):
                 report['coverage'] = {**coverage, 'arm': coverage_arm,
                                       'pair_sha256': digest({'registration': registration, 'case': index,
                                                              'base': init['base_initial_state_sha256']})}
+            if runtime is not None:
+                report['runtime'] = runtime
+                report['coverage']['pair_sha256'] = runtime['case']['pair_sha256']
             if (out/'result.json').exists():
                 if read(out/'result.json') != report:
                     raise ValueError('Completed result differs')
