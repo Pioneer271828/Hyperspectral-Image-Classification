@@ -13,11 +13,12 @@ from train_spatial import SpatialConfig
 from transfer import p4_coverage_batch as batch, p4_coverage_review as prior, p4_exposure
 from transfer import p4_frozen_diagnostic_metrics as independent, p4_frozen_diagnostics as diag
 from transfer import p4_full_budget_registration as registration, p4_runtime_device as device
+from transfer import p4_update_evidence as updates
 from transfer.g2_contract import read_pinned
 from transfer.g3_training import _optimizer, state_hash
 
 
-def ledger(folder, case, sha):
+def ledger(folder, case, sha, *, path_name=None, stops=None):
     """A checkpoint without a matching committed update receipt requires diagnosis."""
     folder = Path(folder)
     cursor, receipts = 0, []
@@ -26,7 +27,8 @@ def ledger(folder, case, sha):
         until = row['until']
         device.require(row['case'] == case['id'] and row['scope_sha256'] == sha and row['start'] == cursor
             and type(until) is int and until > cursor and row['new_optimizer_updates'] == until - cursor
-            and path.name == f'{cursor:06d}-{until:06d}.json',
+            and path.name == f'{cursor:06d}-{until:06d}.json' and row.get('path') == path_name
+            and (stops is None or (len(receipts) < len(stops) and until == stops[len(receipts)])),
             'Untrusted or overlapping worker update ledger')
         cursor = until
         receipts.append(row)
@@ -37,18 +39,53 @@ def ledger(folder, case, sha):
     return cursor, receipts
 
 
-def train_state(folder, scope, reg, case, sha, numeric):
-    start, receipts = ledger(folder, case, sha)
+def runtime_contract(sha, case, numeric, path_name=None):
+    result = {'scope_sha256': sha, 'case': case, 'numeric': numeric}
+    if path_name is not None:
+        result['path'] = path_name
+    return result
+
+
+def path_proof(proof):
+    return {key: value for key, value in proof.items() if key != 'timing'}
+
+
+def check_timing(cost, start, until, events, numeric):
+    device.require(isinstance(cost, dict) and set(cost) == {'startup_seconds', 'steps', 'reload_seconds', 'call_seconds'}
+        and all(type(cost[k]) is float and math.isfinite(cost[k]) and cost[k] >= 0
+                for k in ('startup_seconds', 'reload_seconds', 'call_seconds'))
+        and [row['step'] for row in cost['steps']] == list(range(start+1, until+1)),
+        'Worker phase timings do not match the update interval')
+    phases = ('preparation_seconds', 'train_with_hooks_seconds', 'trace_evidence_seconds',
+              'validation_seconds', 'checkpoint_seconds')
+    for row in cost['steps']:
+        memory = row['train_peak_memory']
+        device.require(all(type(row[key]) is float and math.isfinite(row[key]) and row[key] >= 0
+                           for key in (*phases, 'end_to_end_step_seconds'))
+            and row['train_with_hooks_seconds'] > 0 and row['checkpoint_seconds'] > 0
+            and (row['validation_seconds'] > 0) == (row['step'] in events)
+            and abs(row['end_to_end_step_seconds'] - sum(row[key] for key in phases)) < 1e-3
+            and ((memory is None and numeric['device'] == 'cpu') or (numeric['device'] != 'cpu'
+                and type(memory['allocated_bytes']) is int and type(memory['reserved_bytes']) is int
+                and 0 < memory['allocated_bytes'] <= memory['reserved_bytes'])),
+            'Invalid synchronized update, validation or memory measurements')
+    device.require(cost['call_seconds'] >= (cost['startup_seconds'] + cost['reload_seconds']
+        + sum(row['end_to_end_step_seconds'] for row in cost['steps'])), 'Worker phase totals exceed call time')
+
+
+def train_state(folder, scope, reg, case, sha, numeric, *, path_name=None):
+    stops = scope['paths'][path_name] if path_name is not None else None
+    start, receipts = ledger(folder, case, sha, path_name=path_name, stops=stops)
     steps = scope['budget']['steps']
     device.require(start == steps and all(r['numeric'] == numeric for r in receipts),
                    'Full budget or same-device numerical history is incomplete')
     checkpoint, result_path = (folder / name for name in ('state.pt', 'result.json'))
     result = read_pinned(result_path, hash_file(result_path))
     state = torch.load(checkpoint, map_location='cpu', weights_only=True)
-    runtime = {'scope_sha256': sha, 'case': case, 'numeric': numeric}
+    runtime = runtime_contract(sha, case, numeric, path_name)
     identity = digest({'registration': reg, 'case': case['index'], 'code': scope['commit'],
                        'init': case['initialization'], 'runtime': runtime})
-    fingerprints = {key: _tree_fingerprint(state[key]) for key in batch.FIELDS}
+    fingerprints = {key: _tree_fingerprint(state[key]) for key in updates.fields(reg)}
     device.require(state['runtime'] == result['runtime'] == runtime and
                    state['identity'] == result['identity'] == identity and
                    all(r['identity'] == identity for r in receipts) and
@@ -60,29 +97,42 @@ def train_state(folder, scope, reg, case, sha, numeric):
                    'Runtime, state fingerprint, coverage, seed or device identity differs')
     proof_path = folder / 'completed-resume.json'
     proof = read_pinned(proof_path, hash_file(proof_path))
-    device.require(proof == {'scope_sha256': sha, 'identity': identity, 'case': case['id'],
+    binding = {'scope_sha256': sha, 'identity': identity, 'case': case['id'],
             'new_optimizer_updates': 0, 'cursor': steps, 'numeric': numeric,
-            'state_sha256': hash_file(checkpoint), 'result_sha256': hash_file(result_path)},
-            'Completed zero-update resume proof differs')
-    return state, result, receipts
+            'state_sha256': hash_file(checkpoint), 'result_sha256': hash_file(result_path)}
+    if path_name is not None:
+        binding['path'] = path_name
+    device.require(path_proof(proof) == binding, 'Completed zero-update resume proof differs')
+    if reg.get('parameter_audit') == updates.SCHEMA:
+        events = scope['budget']['validation_steps']
+        for row in receipts:
+            check_timing(row.get('timing'), row['start'], row['until'], events, numeric)
+        check_timing(proof.get('timing'), steps, steps, events, numeric)
+    return state, result, receipts, proof
 
 
-def check_optimizer(model, config, state):
+def check_optimizer(model, config, state, *, layout_sha=None):
     """Reconstruct every scheduler update from validation, without optimizing."""
     optimizer = _optimizer(model, config)
+    summary = updates.check(model, optimizer, state, layout_sha) if layout_sha is not None else None
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=.5, patience=20)
     validation = {e['step']: e['metrics']['fused']['nll'] for e in state['history']}
     for trace in state['trace']:
         device.require(trace['lr'] == [g['lr'] for g in optimizer.param_groups]
             and all(math.isfinite(v) for v in trace['loss'].values())
-            and math.isfinite(trace['graph_gradient_l1']) and trace['graph_gradient_l1'] > 0
-            and trace['graph_changed_elements'] > 0, 'LR, finite loss or graph gradient/update evidence differs')
+            and math.isfinite(trace['graph_gradient_l1']) and trace['graph_gradient_l1'] >= 0
+            and trace['graph_changed_elements'] >= 0
+            and (layout_sha is not None or (trace['graph_gradient_l1'] > 0 and trace['graph_changed_elements'] > 0)),
+            'LR, finite loss or graph gradient/update evidence differs')
         if trace['step'] in validation:
             scheduler.step(validation[trace['step']])
     expected = optimizer.state_dict()
     actual = state['optimizer']
     device.require(state['scheduler'] == scheduler.state_dict() and actual['param_groups'] == expected['param_groups'],
                    'Adam or ReduceLROnPlateau state differs from the frozen schedule')
+    if summary is not None:
+        return summary
+    # Only legacy v1 states lack per-step named evidence.
     parameters = {key: parameter for group, spec in zip(optimizer.param_groups, expected['param_groups'])
                   for key, parameter in zip(spec['params'], group['params'])}
     device.require(bool(actual['state']) and set(actual['state']) <= parameters.keys(), 'Unregistered Adam moments')
@@ -106,13 +156,16 @@ def readout(model, scene, views, labels, arm):
     return scores, {'heads': metrics, 'graphs': graphs}
 
 
-def case_audit(folder, scope, reg, case, sha, numeric):
+def case_files(folder):
+    return [folder / name for name in ('state.pt', 'result.json', 'completed-resume.json')] + sorted(
+        (folder / 'calls').glob('*.json'))
+
+
+def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded=None):
     tick = perf_counter()
     folder = Path(folder)
-    known = [folder / name for name in ('state.pt', 'result.json', 'completed-resume.json')]
-    known.extend(sorted((folder / 'calls').glob('*.json')))
-    case_pins = {str(path): hash_file(path) for path in known}
-    state, result, receipts = train_state(folder, scope, reg, case, sha, numeric)
+    case_pins = {str(path): hash_file(path) for path in case_files(folder)}
+    state, result, receipts, proof = loaded or train_state(folder, scope, reg, case, sha, numeric, path_name=path_name)
     plan = read_pinned(Path(reg['plan']), reg['pins'][reg['plan']])
     exposure_path = reg['exposure']['plan']
     exposure = read_pinned(Path(exposure_path), reg['pins'][exposure_path])
@@ -143,7 +196,8 @@ def case_audit(folder, scope, reg, case, sha, numeric):
         model, initial = registration.initialize_case(reg, case)
     device.require(initial == case['initialization'], 'Audit initialization identity differs')
     model.to(target_device).eval()
-    check_optimizer(model, SpatialConfig(reg['config']), state)
+    parameter_summary = check_optimizer(model, SpatialConfig(reg['config']), state,
+                                        layout_sha=case.get('parameter_layout_sha256'))
     snapshots = {'initial': initial['initial_state_sha256']}
     readouts, cache, selected, forwards = {}, {}, None, 0
     for stage in ('initial', 'selected', 'last'):
@@ -168,6 +222,8 @@ def case_audit(folder, scope, reg, case, sha, numeric):
     observation_cache = {diag.REFERENCE: selected}
     observation_rows = {}
     for name, condition in conditions.items():
+        if scope.get('purpose') == registration.ADMISSION and name != diag.REFERENCE:
+            continue
         if condition['status'] != 'ready':
             observation_rows[name] = condition
             continue
@@ -183,7 +239,7 @@ def case_audit(folder, scope, reg, case, sha, numeric):
     device.require(state_hash(model) == snapshots['selected'] and _tree_fingerprint(_rng_state(target_device)) == rng,
                    'Frozen observation review changed model, DomainBN or RNG')
     batch.check_pins({**scope['protected_files'], **case_pins})
-    return {'status': 'passed', 'scope_sha256': sha, 'case': case, 'numeric': numeric,
+    row = {'status': 'passed', 'scope_sha256': sha, 'case': case, 'numeric': numeric,
         'optimizer_updates': sum(row['new_optimizer_updates'] for row in receipts),
         'completed_resume_updates': 0, 'validation_steps': scope['budget']['validation_steps'],
         'nonselected_event_probability_replays': 0, 'selected_step': chosen['step'],
@@ -195,3 +251,24 @@ def case_audit(folder, scope, reg, case, sha, numeric):
         'phases': [{'start': row['start'], 'until': row['until'], 'wall_seconds': row['wall_seconds']}
                    for row in receipts], 'audit_wall_seconds': perf_counter() - tick,
         'audit_optimizer_updates': 0, 'raw_gt_loaded': False, 'query_accessed': False}
+    if parameter_summary is not None:
+        row.update(parameter_audit=parameter_summary, synchronized_timing={
+            'advance': [call['timing'] for call in receipts], 'completed': proof['timing']})
+    return row
+
+
+def paired_case_audit(folder, scope, reg, case, sha, numeric):
+    started = perf_counter()
+    full_pins = {str(path): hash_file(path) for path in case_files(folder / 'full')}
+    paths = {name: train_state(folder / name, scope, reg, case, sha, numeric, path_name=name)
+             for name in registration.ADMISSION_PATHS}
+    fingerprints = {name: parts[0]['fingerprints'] for name, parts in paths.items()}
+    device.require(fingerprints['full'] == fingerprints['split'], 'Continuous and segmented CUDA fingerprints differ')
+    row = case_audit(folder / 'split', scope, reg, case, sha, numeric, path_name='split', loaded=paths['split'])
+    batch.check_pins(full_pins)
+    row.update(optimizer_updates=sum(call['new_optimizer_updates'] for parts in paths.values() for call in parts[2]),
+               artifact_pins={**row['artifact_pins'], **full_pins}, exact_path_fingerprints=fingerprints,
+               synchronized_timing={name: {'advance': [call['timing'] for call in parts[2]],
+                                            'completed': parts[3]['timing']} for name, parts in paths.items()},
+               audit_wall_seconds=perf_counter() - started)
+    return row

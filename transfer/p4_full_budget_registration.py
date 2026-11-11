@@ -12,11 +12,19 @@ from research_runtime import hash_file, require_frozen_code, write_json
 from train_spatial import SpatialConfig
 from transfer import p4_coverage as coverage, p4_coverage_batch as batch, p4_exposure as exposure
 from transfer import p4_frozen_diagnostics as diag, p4_guarded as guarded, p4_runtime_device as device
+from transfer import p4_update_evidence as updates
 from transfer.g2_contract import read_pinned
+from transfer.g3_training import _optimizer
 from transfer.p4_spatial import initialize, load_release
 
 
 POLICY = 'wp05_full_target_budget_v1'
+LEGACY = 'full_budget'
+AUDITED = 'audited_full_budget'
+ADMISSION = 'real_admission'
+POLICIES = {LEGACY: POLICY, AUDITED: 'wp05_full_target_budget_v2', ADMISSION: 'wp05_honghu_cuda_admission_v1'}
+ADMISSION_STEPS = 60
+ADMISSION_PATHS = {'full': [60], 'split': [2, 30, 60]}
 MODEL_SEEDS = (64, 512, 2048)
 SAMPLER_SEED = 64
 STEPS = 1500
@@ -31,22 +39,54 @@ def events(steps, interval):
     return list(range(interval, steps + 1, interval))
 
 
-def matrix(reg, protocol, gpus):
+def matrix(reg, protocol, gpus, purpose=LEGACY):
     slots = device.slots(protocol, gpus)
     keys = [(r['support_seed'], r['k'], r['method']) for r in reg['cases']]
     expected = {(seed, k, method) for seed, k in batch.COHORTS for method in batch.METHODS}
     device.require(len(keys) == len(expected) and set(keys) == expected, 'Exactly eight paired source/target roles required')
     cases = []
     for index, (support_seed, k, method) in enumerate(keys):
-        for ordinal, model_seed in enumerate(MODEL_SEEDS):
+        if purpose == ADMISSION and support_seed != 2048:
+            continue
+        seeds = (512,) if purpose == ADMISSION else MODEL_SEEDS
+        for ordinal, model_seed in enumerate(seeds):
             # All five arms of a comparison run on the same physical card.
-            gpu = slots[(index * len(MODEL_SEEDS) + ordinal) % len(slots)]
+            pair = (k == 5) + (method == 'shared_transfer') if purpose == ADMISSION else index * len(seeds) + ordinal
+            gpu = slots[pair % len(slots)]
             for arm in coverage.ARMS:
                 cases.append({'id': f's{support_seed}-k{k}-{method}-m{model_seed}-{arm}', 'index': index,
                     'support_seed': support_seed, 'k': k, 'method': method, 'model_seed': model_seed,
                     'sampler_seed': SAMPLER_SEED, 'arm': arm, 'physical_uuid': gpu, 'protocol': protocol,
                     'observation_sha256': reg['coverage']['records']['train']['record_hash']})
     return cases
+
+
+def check_budget(purpose, protocol, gpus, synthetic, steps, interval):
+    device.require(purpose in POLICIES, 'Unknown P4 registration purpose')
+    if purpose == ADMISSION:
+        device.require((steps, interval) == (ADMISSION_STEPS, INTERVAL)
+                       and (synthetic or (protocol == device.CUDA_V2 and len(gpus) == 2)),
+                       'Admission requires two registered CUDA v2 GPUs and the 60-step paired budget')
+    elif not synthetic:
+        device.require((steps, interval) == (STEPS, INTERVAL), 'Full research budget differs')
+    device.require(protocol != device.CUDA_V2 if purpose == LEGACY else protocol != device.CUDA,
+                   'Numerical protocol does not match the evidence schema')
+
+
+def qualification_bindings(paths, gpus, protocol, code, shape_contract):
+    from transfer.p4_cuda_qualification import check_receipt
+
+    receipts, pins = {}, {}
+    for path in paths:
+        path = Path(path).resolve()
+        checksum = hash_file(path)
+        row = read_pinned(path, checksum)
+        gpu = check_receipt(row, protocol, code, shape_contract)
+        device.require(gpu in gpus and gpu not in receipts, 'Duplicate or unregistered GPU qualification')
+        receipts[gpu] = str(path)
+        pins[str(path)] = checksum
+    device.require(set(receipts) == set(gpus), 'Every registered CUDA device needs its own qualification')
+    return receipts, pins
 
 
 def role_inputs(reg):
@@ -104,13 +144,15 @@ def initialize_case(reg, case):
 
 
 def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, synthetic=False,
-            steps=STEPS, interval=INTERVAL):
+            steps=None, interval=INTERVAL, purpose=LEGACY, qualifications=()):
     tick = perf_counter()
     require_frozen_code(code)
+    steps = (ADMISSION_STEPS if purpose == ADMISSION else STEPS) if steps is None else steps
+    check_budget(purpose, protocol, gpus, synthetic, steps, interval)
     parent, prior = Path(parent).resolve(), Path(prior).resolve()
     if not synthetic:
-        device.require((parent_sha, prior_sha, steps, interval) == (batch.PARENT_SHA, batch.PRIOR_SHA, STEPS, INTERVAL),
-                       'Unaccepted HongHu source or full research budget differs')
+        device.require((parent_sha, prior_sha) == (batch.PARENT_SHA, batch.PRIOR_SHA),
+                       'Unaccepted HongHu source')
     accepted = read_pinned(prior, prior_sha)
     device.require(accepted['status'] == 'passed' and accepted['query_accessed'] is False
                    and accepted['protected_files'].get(str(parent)) == parent_sha, 'Parent release was not accepted')
@@ -123,11 +165,22 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
                        'Original exposure or fixed seed-64 source differs')
     batch.check_pins(reg['pins'])
     guarded_plan, allowed, releases = role_inputs(reg)
+    requires_qualification = not synthetic and protocol == device.CUDA_V2
+    qualification, qualification_pins, shape_contract = {}, {}, None
+    if requires_qualification:
+        from transfer.p4_cuda_qualification import geometry_contract
+
+        shape_contract = geometry_contract(guarded_plan, allowed, reg['config'])
+        qualification, qualification_pins = qualification_bindings(qualifications, gpus, protocol, code, shape_contract)
+    else:
+        device.require(not qualifications, 'Qualification receipts apply only to real CUDA v2 scopes')
     floor_path = reg['exposure']['floor']
     floor = read_pinned(Path(floor_path), reg['pins'][floor_path])
     validation_steps = events(steps, interval)
     rows, evidence, seen = [], {}, set()
     for case in reg['cases']:
+        if purpose == ADMISSION and case['support_seed'] != 2048:
+            continue
         k, path = case['k'], case['release']
         cohort_id = f's{case["support_seed"]}-k{k}'
         if cohort_id in seen:
@@ -156,37 +209,48 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
     write_json(full_plan_path, plan)
     reg['exposure'] = {'plan': str(full_plan_path), 'floor': floor_path}
     reg['pins'][str(full_plan_path)] = hash_file(full_plan_path)
-    reg['full_budget_policy'] = POLICY
+    reg['full_budget_policy'] = POLICIES[purpose]
+    if purpose != LEGACY:
+        reg['parameter_audit'] = updates.SCHEMA
     stats = read_pinned(Path(reg['statistics']), reg['pins'][reg['statistics']])
     bands = read_band_metadata(guarded.SCENE, len(stats['minimum']))
     reg['coverage'] = coverage.freeze(reg, plan, bands, observation=batch.OBSERVATION, seed=3031, metadata='nominal')
     conditions = diag.freeze_conditions(bands, guarded_plan['plan_hash'], reg['coverage']['records']['val'])
-    cases = matrix(reg, protocol, gpus)
+    cases = matrix(reg, protocol, gpus, purpose)
     common = {}
     for case in cases:
-        _, init = initialize_case(reg, case)
+        model, init = initialize_case(reg, case)
         pair = pair_identity(reg, case, init)
         key = case['index'], case['model_seed']
         device.require(common.setdefault(key, pair) == pair, 'Coverage arms have different common initializations')
         case.update(initialization=init, pair_sha256=pair)
-    for index in range(len(reg['cases'])):
-        fresh = [r['initialization']['base_initial_state_sha256'] for r in cases if r['index'] == index and r['arm'] == 'none']
-        device.require(len(set(fresh)) == len(MODEL_SEEDS), 'Model seeds did not yield distinct initial states')
+        if purpose != LEGACY:
+            optimizer = _optimizer(model, SpatialConfig(reg['config']))
+            case['parameter_layout_sha256'] = digest(updates.layout(model, optimizer))
+    if purpose != ADMISSION:
+        for index in range(len(reg['cases'])):
+            fresh = [r['initialization']['base_initial_state_sha256'] for r in cases if r['index'] == index and r['arm'] == 'none']
+            device.require(len(set(fresh)) == len(MODEL_SEEDS), 'Model seeds did not yield distinct initial states')
     reg_path = out / 'registration.json'
     write_json(reg_path, reg)
-    pins = {**reg['pins'], str(reg_path): hash_file(reg_path), str(parent): parent_sha, str(prior): prior_sha}
+    pins = {**reg['pins'], str(reg_path): hash_file(reg_path), str(parent): parent_sha, str(prior): prior_sha,
+            **qualification_pins}
     batch.check_pins(pins)
     require_frozen_code(code)
-    scope = {'policy': POLICY, 'commit': code['commit'], 'source_hash': code['source_hash'],
+    paths = ADMISSION_PATHS if purpose == ADMISSION else None
+    scope = {'policy': POLICIES[purpose], 'commit': code['commit'], 'source_hash': code['source_hash'],
         'synthetic': synthetic, 'registration': str(reg_path), 'parent_registration': str(parent),
         'prior_receipt': str(prior), 'protected_files': pins, 'protocol': protocol, 'gpus': list(gpus),
         'source': {'fixed_seed': 64, 'producer_commit': None if synthetic else SOURCE_PRODUCER,
                    'weight_sha256': reg['pins'][reg['source']['weight']]},
         'budget': {'steps': steps, 'validation_steps': validation_steps, 'selection': coverage.SELECTION,
-                   'planned_optimizer_updates': steps * len(cases), 'checkpoint_interval': 1},
+            'planned_optimizer_updates': steps * len(cases) * (len(paths) if paths else 1), 'checkpoint_interval': 1},
         'cases': cases, 'exposure': evidence, 'observation_diagnostics': conditions,
         'preflight': {'optimizer_updates': 0, 'forward_calls': 0, 'query_accessed': False, 'raw_gt_loaded': False,
                       'initializations': len(cases), 'wall_seconds': perf_counter() - tick}}
+    if purpose != LEGACY:
+        scope.update(purpose=purpose, parameter_audit=updates.SCHEMA, paths=paths, qualifications=qualification,
+                     operator_geometry=shape_contract)
     scope['scope_hash'] = digest(scope)
     path = out / 'scope.json'
     write_json(path, scope)
@@ -197,7 +261,8 @@ def load(path, sha, code, *, check_files=True):
     require_frozen_code(code)
     path = Path(path).resolve()
     frozen = read_pinned(path, sha)
-    device.require(frozen['policy'] == POLICY and frozen['commit'] == code['commit']
+    purpose = frozen.get('purpose', LEGACY)
+    device.require(purpose in POLICIES and frozen['policy'] == POLICIES[purpose] and frozen['commit'] == code['commit']
                    and frozen['source_hash'] == code['source_hash']
                    and frozen['scope_hash'] == digest({k: v for k, v in frozen.items() if k != 'scope_hash'}),
                    'Full budget checkout or scope identity differs')
@@ -209,25 +274,41 @@ def load(path, sha, code, *, check_files=True):
     accepted = read_pinned(Path(prior), pins[prior])
     synthetic = frozen['synthetic']
     budget = frozen['budget']
-    expected_keys = matrix(reg, frozen['protocol'], frozen['gpus'])
+    expected_keys = matrix(reg, frozen['protocol'], frozen['gpus'], purpose)
+    validation = budget['validation_steps']
+    check_budget(purpose, frozen['protocol'], frozen['gpus'], synthetic, budget['steps'], validation[0])
+    paths = ADMISSION_PATHS if purpose == ADMISSION else None
+    schema = None if purpose == LEGACY else updates.SCHEMA
+    quals = frozen.get('qualifications', {})
+    if not synthetic and frozen['protocol'] == device.CUDA_V2:
+        from transfer.p4_cuda_qualification import check_receipt
+
+        device.require(set(quals) == set(frozen['gpus']) and all(
+            check_receipt(read_pinned(Path(path), pins[path]), frozen['protocol'], code, frozen['operator_geometry']) == gpu
+            for gpu, path in quals.items()), 'Registered GPU operator qualification differs')
+    else:
+        device.require(not quals, 'Unregistered GPU operator qualification')
     device.require(type(synthetic) is bool and accepted['status'] == 'passed'
         and accepted['query_accessed'] is False and accepted['protected_files'].get(parent) == pins[parent]
-        and set(pins) == set(reg['pins']) | {reg_path, parent, prior}
+        and set(pins) == set(reg['pins']) | {reg_path, parent, prior} | set(quals.values())
         and all(pins[k] == v for k, v in reg['pins'].items())
         and all(reg[k] == original[k] for k in ('image', 'plan', 'development', 'statistics', 'config', 'source', 'cases', 'guarded'))
         and all(reg['pins'].get(k) == v for k, v in original['pins'].items())
-        and reg['full_budget_policy'] == POLICY
+        and reg['full_budget_policy'] == frozen['policy'] and reg.get('parameter_audit') == frozen.get('parameter_audit') == schema
+        and frozen.get('paths') == paths and validation == events(budget['steps'], validation[0])
         and reg['coverage']['steps'] == budget['steps'] and reg['coverage']['validation_steps'] == budget['validation_steps']
         and reg['coverage']['selection'] == budget['selection'] == coverage.SELECTION
         and reg['coverage']['observation'] == batch.OBSERVATION and reg['coverage']['metadata'] == 'nominal'
         and reg['coverage']['observation_seed'] == 3031 and budget['checkpoint_interval'] == 1
-        and budget['planned_optimizer_updates'] == 120 * budget['steps']
-        and (synthetic or (pins[parent], pins[prior], budget['steps'], budget['validation_steps'])
-             == (batch.PARENT_SHA, batch.PRIOR_SHA, STEPS, events(STEPS, INTERVAL))),
+        and budget['planned_optimizer_updates'] == len(expected_keys) * budget['steps'] * (len(paths) if paths else 1)
+        and (synthetic or (pins[parent], pins[prior]) == (batch.PARENT_SHA, batch.PRIOR_SHA)),
         'Full budget input, observation or validation contract differs')
-    got = [{k: v for k, v in case.items() if k not in ('initialization', 'pair_sha256')} for case in frozen['cases']]
+    got = [{k: v for k, v in case.items() if k not in ('initialization', 'pair_sha256', 'parameter_layout_sha256')}
+           for case in frozen['cases']]
     device.require(got == expected_keys and all(case['pair_sha256'] == pair_identity(reg, case, case['initialization'])
-                                               for case in frozen['cases']), 'Full case identity matrix differs')
+           and (case.get('parameter_layout_sha256') is None if schema is None else
+                bool(re.fullmatch('[a-f0-9]{64}', case.get('parameter_layout_sha256', ''))))
+           for case in frozen['cases']), 'Full case identity matrix differs')
     if check_files:
         batch.check_pins(pins)
     return frozen, reg

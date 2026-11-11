@@ -12,8 +12,11 @@ from torch.overrides import TorchFunctionMode
 
 CPU = 'cpu_fp32_v1'
 CUDA = 'cuda_deterministic_fp32_v1'
+CUDA_V2 = 'cuda_deterministic_fp32_named_adam_v2'
+CUDA_PROTOCOLS = (CUDA, CUDA_V2)
 WORKSPACE = ':4096:8'
 UUID = re.compile(r'GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}')
+MIN_FREE_MIB, MAX_UTILIZATION = 12288, 60
 
 
 class ResourceUnavailable(RuntimeError):
@@ -26,7 +29,7 @@ def require(condition, message):
 
 
 def slots(protocol, gpus):
-    require(protocol in (CPU, CUDA), 'Unknown numerical protocol')
+    require(protocol in (CPU, *CUDA_PROTOCOLS), 'Unknown numerical protocol')
     if protocol == CPU:
         require(not gpus, 'CPU registration has no physical GPU assignment')
         return [None]
@@ -46,7 +49,20 @@ def snapshot(gpu):
 
 
 def eligible(row):
-    return row['free_mib'] >= 12288 and row['utilization'] <= 60
+    return row['free_mib'] >= MIN_FREE_MIB and row['utilization'] <= MAX_UTILIZATION
+
+
+def simultaneous_inventory(gpus):
+    result = subprocess.check_output(['nvidia-smi',
+        '--query-gpu=uuid,memory.free,utilization.gpu,driver_version', '--format=csv,noheader,nounits'],
+        text=True)
+    rows = {}
+    for line in result.splitlines():
+        gpu, free, utilization, driver = (value.strip() for value in line.split(','))
+        if gpu in gpus:
+            rows[gpu] = {'physical_uuid': gpu, 'free_mib': int(free), 'utilization': int(utilization), 'driver': driver}
+    require(set(rows) == set(gpus), 'Registered physical GPU missing from simultaneous inventory')
+    return rows
 
 
 def gate(gpu):
@@ -106,21 +122,29 @@ def sparse_row_product(left, right):
 class _CudaGraphKernels(TorchFunctionMode):
     """Use the registered FP32 graph operators only inside a P4 CUDA worker."""
 
+    def __init__(self, calls=None):
+        super().__init__()
+        self.calls = calls
+
     def __torch_function__(self, func, types, args=(), kwargs=None):
         options = kwargs or {}
         if len(args) == 2 and not options:
             if func is F.adaptive_avg_pool2d and args[0].is_cuda:
+                if self.calls is not None:
+                    self.calls['adaptive_avg_pool2d'] += 1
                 size = args[1]
                 return adaptive_bin_mean(args[0], (size, size) if isinstance(size, int) else size)
             if func is torch.sparse.mm and args[0].is_cuda and args[0].is_sparse:
+                if self.calls is not None:
+                    self.calls['sparse_mm'] += 1
                 return sparse_row_product(*args)
         return func(*args, **options)
 
 
 @contextmanager
-def arithmetic(protocol, gpu=None):
+def arithmetic(protocol, gpu=None, *, kernel_calls=None):
     """Apply a versioned FP32 protocol and restore process settings on exit."""
-    require(protocol in (CPU, CUDA) and (gpu is None) == (protocol == CPU), 'Device/protocol mismatch')
+    require(protocol in (CPU, *CUDA_PROTOCOLS) and (gpu is None) == (protocol == CPU), 'Device/protocol mismatch')
     details = {'protocol': protocol, 'physical_uuid': gpu, 'device': 'cpu' if gpu is None else 'cuda:0',
                'torch': str(torch.__version__), 'torch_threads': 1,
                'machine': platform.machine(), 'host': platform.node()}
@@ -154,7 +178,7 @@ def arithmetic(protocol, gpu=None):
         details['deterministic_algorithms'] = torch.are_deterministic_algorithms_enabled()
         details['deterministic_warn_only'] = torch.is_deterministic_algorithms_warn_only_enabled()
         details['float32_matmul_precision'] = torch.get_float32_matmul_precision()
-        with (_CudaGraphKernels() if gpu is not None else nullcontext()):
+        with (_CudaGraphKernels(kernel_calls) if gpu is not None else nullcontext()):
             yield details
     finally:
         torch.use_deterministic_algorithms(old_determinism[0], warn_only=old_determinism[1])

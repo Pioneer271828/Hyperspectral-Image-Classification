@@ -21,7 +21,7 @@ from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from train_spatial import SpatialConfig
 from transfer.g3_training import Scene, _forward, _optimizer, _update, state_hash
-from transfer import p4_coverage, p4_exposure, p4_guarded
+from transfer import p4_coverage, p4_exposure, p4_guarded, p4_update_evidence as updates
 
 TARGETS = {'paviaU', 'xuzhou', p4_guarded.SCENE}
 SOURCE_TASKS = TARGETS
@@ -217,6 +217,9 @@ def validation(model, scene, tiles, allowed_tiles, view=None, *, metadata_missin
 def run_case(registration, index, out, until, code, *, coverage_arm=None, runtime=None):
     if ('full_budget_policy' in registration) != (runtime is not None):
         raise ValueError('Full budget cases require their explicit runtime contract')
+    target = CPU if runtime is None else torch.device(runtime['numeric']['device'])
+    audited = registration.get('parameter_audit') == updates.SCHEMA
+    timing = updates.Timing(target) if audited else None
     coverage_enabled = 'coverage' in registration
     if coverage_enabled != (coverage_arm is not None) or (coverage_enabled and coverage_arm not in p4_coverage.ARMS):
         raise ValueError('Coverage registration requires an explicitly registered coverage arm')
@@ -317,7 +320,7 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
     if case['method'] not in ('scratch', 'shared_transfer'):
         raise ValueError('Unknown initialization method')
     model_seed = SEED if runtime is None else runtime['case']['model_seed']
-    device = CPU if runtime is None else torch.device(runtime['numeric']['device'])
+    device = target
     model, init = initialize(config, source['weight'] if source else None, source['result'] if source else None,
                              coverage_arm=coverage_arm, model_seed=model_seed)
     if runtime is not None:
@@ -328,6 +331,14 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
                            if coverage is not None else {})
     forward_options = {'metadata_missing': True} if coverage is not None and coverage['metadata'] == 'missing' else {}
     optimizer = _optimizer(model, config)
+    if audited:
+        layout = updates.layout(model, optimizer)
+        layout_sha = runtime['case']['parameter_layout_sha256']
+        if digest(layout) != layout_sha:
+            raise ValueError('Adam parameter layout differs from registration')
+        updates.bind_names(optimizer, layout)
+        recorder = updates.Recorder(model, optimizer, layout)
+    fields = updates.fields(registration)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=.5, patience=20)
     binding = {'registration': registration, 'case': index, 'code': code['commit'], 'init': init}
     if runtime is not None:
@@ -349,8 +360,11 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
             if state['identity'] != identity or state.get('runtime') != runtime:
                 raise ValueError('Resume identity differs')
             fingerprints = state.pop('fingerprints')
-            if fingerprints != {n: _tree_fingerprint(state[n]) for n in ('model', 'optimizer', 'scheduler', 'rng', 'trace', 'history', 'best')}:
+            if fingerprints != {n: _tree_fingerprint(state[n]) for n in fields}:
                 raise ValueError('Resume state integrity differs')
+            if audited:
+                updates.check(model, optimizer, state, layout_sha)
+                recorder.counts = state['parameter_audit']['counts']
             model.load_state_dict(state['model'], strict=True)
             optimizer.load_state_dict(state['optimizer'])
             scheduler.load_state_dict(state['scheduler'])
@@ -369,30 +383,41 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
         start = cursor
         if cursor > until:
             raise ValueError('Requested stop precedes authoritative state')
+        if timing:
+            timing.startup_seconds = timing.mark() - timing.started
         for i in range(cursor, until):
+            started = timing.mark() if timing else None
             tile, local = sequence[i]
             if tile['id'] not in train_ids:
                 raise ValueError('Optimization can only access training tiles')
             graph_before = {n: p.detach().clone() for n, p in model.backbone.learnable_graph.named_parameters()}
             observation = view(tile) if view else None
+            before = {n: p.detach().clone() for n, p in coverage_parameters.items()}
+            update_start = timing.begin_update() if timing else None
             if coverage is None:
                 loss = _update(model, scene, tile, local, config, optimizer, observation_view=observation)
             else:
-                before = {n: p.detach().clone() for n, p in coverage_parameters.items()}
                 loss, coverage_info = _update(model, scene, tile, local, config, optimizer,
                                               observation_view=observation, return_coverage_info=True,
                                               **forward_options)
+            if timing:
+                update_end = timing.mark()
+                memory = timing.update_memory()
+            if coverage is not None:
                 observed = p4_coverage.update_evidence(coverage_parameters, before, coverage_info,
                                                        observation, coverage)
             graph = dict(model.backbone.learnable_graph.named_parameters())
             changed = sum(int(torch.count_nonzero(p.detach() - graph_before[n])) for n, p in graph.items())
             grad = sum(float(p.grad.detach().abs().sum()) for p in graph.values() if p.grad is not None)
-            if not changed or not math.isfinite(grad) or grad <= 0:
+            if not math.isfinite(grad) or (not audited and (not changed or grad <= 0)):
                 raise ValueError('Learned graph did not participate in optimization')
             trace.append({'step': i+1, 'tile': tile['id'], 'loss': loss, 'graph_changed_elements': changed,
                           'graph_gradient_l1': grad, 'lr': [g['lr'] for g in optimizer.param_groups]})
             if coverage is not None:
                 trace[-1]['coverage'] = observed
+            if audited:
+                trace[-1]['parameter_flags'] = recorder.take_step()
+            validation_start = timing.mark() if timing else None
             if i+1 in events:
                 metrics, scores = validation(model, scene, role['val'], val_ids, view, **forward_options)
                 nll = metrics['fused']['nll']
@@ -401,15 +426,27 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
                 if best is None or nll < best['nll']:
                     best = {'step': i+1, 'nll': nll, 'scores': scores,
                             'model': {n: v.detach().clone() for n, v in model.state_dict().items()}}
+            checkpoint_start = timing.mark() if timing else None
             state = {'identity': identity, 'cursor': i+1, 'trace': trace, 'history': history, 'best': best,
                      'model': model.state_dict(), 'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(),
                      'rng': _rng_state(device)}
             if runtime is not None:
                 state['runtime'] = runtime
-            state['fingerprints'] = {n: _tree_fingerprint(state[n]) for n in ('model','optimizer','scheduler','rng','trace','history','best')}
+            if audited:
+                state['parameter_audit'] = recorder.snapshot()
+            state['fingerprints'] = {n: _tree_fingerprint(state[n]) for n in fields}
             _atomic_torch_save(state, state_path)
+            if timing:
+                end = timing.mark()
+                timing.steps.append({'step': i+1, 'preparation_seconds': update_start - started,
+                    'train_with_hooks_seconds': update_end - update_start,
+                    'trace_evidence_seconds': (validation_start if i+1 in events else checkpoint_start) - update_end,
+                    'validation_seconds': checkpoint_start - validation_start if i+1 in events else 0.0,
+                    'checkpoint_seconds': end - checkpoint_start, 'end_to_end_step_seconds': end - started,
+                    'train_peak_memory': memory})
         guard()
         if until == steps:
+            reload_start = timing.mark() if timing else None
             model.load_state_dict(best['model'], strict=True)
             metrics, scores = validation(model, scene, role['val'], val_ids, view, **forward_options)
             if (_tree_fingerprint(scores) != _tree_fingerprint(best['scores'])
@@ -433,7 +470,12 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
                     raise ValueError('Completed result differs')
             else:
                 write_json(out/'result.json', report)
-        return {'updates_this_call': until-start, 'cursor': until, 'identity': identity}
+            if timing:
+                timing.reload_seconds = timing.mark() - reload_start
+        result = {'updates_this_call': until-start, 'cursor': until, 'identity': identity}
+        if timing:
+            result['timing'] = timing.result()
+        return result
 
 
 def main():

@@ -32,9 +32,11 @@ def parent_fixture(root):
     return parent, prior
 
 
-def prepare(root, parent, prior, code, *, protocol=device.CPU, gpus=(), steps=6, interval=3):
+def prepare(root, parent, prior, code, *, protocol=device.CPU, gpus=(), steps=6, interval=3,
+            purpose=registration.LEGACY):
     return registration.prepare(parent, hash_file(parent), prior, hash_file(prior), root, code,
-                                protocol=protocol, gpus=gpus, synthetic=True, steps=steps, interval=interval)
+                                protocol=protocol, gpus=gpus, synthetic=True, steps=steps, interval=interval,
+                                purpose=purpose)
 
 
 def own(path, scope):
@@ -73,7 +75,8 @@ class FullBudgetTests(unittest.TestCase):
             self.assertEqual(len(cohort['per_label_counts_at_events']['6']), cohort['support_label_count'])
 
     def test_cpu_full_1500_actual_updates_and_strict_multi_boundary_resume(self):
-        path = prepare(self.root / 'long-scope', self.parent, self.prior, self.code, steps=1500, interval=30)
+        path = prepare(self.root / 'long-scope', self.parent, self.prior, self.code, steps=1500, interval=30,
+                       purpose=registration.AUDITED)
         sha = hash_file(path)
         scope, _ = registration.load(path, sha, self.code)
         case = next(row for row in scope['cases'] if row['method'] == 'shared_transfer'
@@ -104,6 +107,7 @@ class FullBudgetTests(unittest.TestCase):
         self.assertEqual(set(row['fit']), {'initial', 'selected', 'last'})
         self.assertEqual(len(row['observations']), 7)
         self.assertEqual(row['nonselected_event_probability_replays'], 0)
+        self.assertTrue(all(parameter['adam_steps'] == 1500 for parameter in row['parameter_audit']['parameters']))
 
     def test_cuda_graph_operator_math_on_cpu(self):
         image = torch.linspace(-2, 3, 70, dtype=torch.float64).reshape(1, 2, 5, 7).requires_grad_()
@@ -244,7 +248,8 @@ class FullBudgetCudaTests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             root = Path(temp)
             parent, prior = parent_fixture(root)
-            scope_path = prepare(root / 'scope', parent, prior, code, protocol=device.CUDA, gpus=(gpu, peer))
+            scope_path = prepare(root / 'scope', parent, prior, code, protocol=device.CUDA_V2, gpus=(gpu, peer),
+                                 purpose=registration.AUDITED)
             sha = hash_file(scope_path)
             scope, _ = registration.load(scope_path, sha, code)
             case = next(r for r in scope['cases'] if r['physical_uuid'] == gpu and r['arm'] == 'continuous'
@@ -276,3 +281,4 @@ class FullBudgetCudaTests(unittest.TestCase):
             self.assertEqual(states[0]['fingerprints'], states[1]['fingerprints'])
             receipt = campaign.accepted(campaign.bound_folder(roots[1], case), scope, case, sha)
             self.assertEqual(receipt['audit_optimizer_updates'], 0)
+            self.assertIn('parameter_audit', receipt)
