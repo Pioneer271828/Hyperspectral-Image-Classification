@@ -167,11 +167,15 @@ class RegisteredMatchedRouteTests(unittest.TestCase):
         self.assertFalse((self.root/"timeout-audit"/"acceptance.json").exists())
 
     def test_infeasible_training_tile_blocks_the_whole_review_arm(self):
+        registration = admission.read(self.candidate["registration"])
+        blocks = admission.read(registration["development"])["blocks"]
+        training_index = next(i for i,row in enumerate(blocks) if row["role"]=="devtrain")
+        failing_call = 4*training_index+1
         calls = 0
         def fail_first_training_control(*args,**kwargs):
             nonlocal calls
             calls += 1
-            if calls==1:
+            if calls==failing_call:
                 return SimpleNamespace(status=2)
             return milp(*args,**kwargs)
         with patch("evaluation.matched_edge_controls.milp",side_effect=fail_first_training_control):
