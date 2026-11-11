@@ -172,11 +172,16 @@ def _load_registration(pin):
     return v, run, [deepcopy(pin), v['source'], v['metadata'], *files, *([] if v['bank'] is None else [v['bank']])]
 
 
-def execute_route(registration, *, out, to_step, expected_commit, resume=None):
+def execute_route(registration, *, out, to_step, expected_commit, resume=None, measure_at=None, real_claim=None):
     """New attempt directory for each segment. Caller supplies exact resume bytes."""
     code = code_snapshot()
     if not training_container_kind() or sys.flags.optimize or code['dirty'] or code['commit'] != expected_commit:
         raise ValueError('Clean exact registered code in authorized Linux container required')
+    manifest = json.loads(_read(registration))
+    record = json.loads(_read(manifest['development']))['record']
+    if record['kind'] == WP02_SPATIAL_RECORD:
+        from transfer.xuzhou_route_campaign import verify_execution_claim
+        verify_execution_claim(real_claim, registration, out, to_step, resume, measure_at, code)
     v, run, files = _load_registration(registration)
     if v['expected_commit'] != expected_commit: raise ValueError('Registration/code commit mismatch')
     if type(to_step) is not int or not 0 <= to_step <= run.plan.updates: raise ValueError('Absolute target exceeds frozen budget')
@@ -185,6 +190,8 @@ def execute_route(registration, *, out, to_step, expected_commit, resume=None):
         run = GraphRouteRun.load(run.source, run.scene, run.record, resume['path'], plan=run.plan,
             bank=run.bank, expected_bank_hash=v['bank_hash'], expected_sha256=resume['sha256'], expected_contract_hash=v['contract_hash'])
     if to_step < run.completed: raise ValueError('Cannot rewind an accepted prefix')
+    if measure_at is not None and (type(measure_at) is not int or not run.completed < measure_at <= to_step):
+        raise ValueError('Measurement must be inside this registered update interval')
     out = external_directory(out)
     # Protect complete input directories, including the previous attempt if resuming.
     for pin in files:
@@ -209,6 +216,10 @@ def execute_route(registration, *, out, to_step, expected_commit, resume=None):
         checkpoint()
         while run.completed < to_step:
             run.step(); checkpoint()
+            if run.completed == measure_at:
+                _json_new(out/'measurement.json', dict(completed_updates=run.completed,
+                    new_updates=run.completed-initial, elapsed_seconds=time.monotonic()-started,
+                    includes_checkpoint_io=True, checkpoint=status['checkpoint']))
         for pin in files: _read(pin)
         require_frozen_code(code)
         status.update(status='completed' if run.completed == run.plan.updates else 'partial',
