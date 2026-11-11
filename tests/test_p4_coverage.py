@@ -27,23 +27,23 @@ CLASSES = 22
 STRIDE = {'mode': 'uniform_stride', 'stride': 2, 'offset': 0}
 
 
-def fixture(root):
+def fixture(root, *, classes=CLASSES):
     plan = make_tile_plan((96, 96), tile_size=32, gap=2)
     focus, left, right, *_ = [tile for tile in plan['tiles'] if tile['partition'] == 'train']
     y0, y1, x0, x1 = focus['box']
     cut = (x0 + x1 - plan['gap']) // 2
     first, second = [y0, y1, x0, cut], [y0, y1, cut + plan['gap'], x1]
-    blocker = {'only_tile': focus['id'], 'class_id': CLASSES, 'available': 10}
+    blocker = {'only_tile': focus['id'], 'class_id': classes, 'available': 10}
     witness = {'status': 'feasible', 'axis': 'column', 'cut': cut,
                'first_box': first, 'second_box': second, 'validation_blocks': ['second'],
-               'train_counts': [5] * CLASSES, 'validation_counts': [5] * CLASSES}
+               'train_counts': [5] * classes, 'validation_counts': [5] * classes}
     labels = np.zeros(plan['shape'], dtype=np.int16)
-    for box, classes in ((left['box'], range(1, 12)), (right['box'], range(12, CLASSES)),
-                         (first, [CLASSES]), (second, range(1, CLASSES + 1))):
+    for box, class_ids in ((left['box'], range(1, classes//2+1)), (right['box'], range(classes//2+1, classes)),
+                           (first, [classes]), (second, range(1, classes + 1))):
         yy, xx = np.mgrid[box[0]:box[1], box[2]:box[3]]
-        values = np.repeat(list(classes), 5)
+        values = np.repeat(list(class_ids), 5)
         labels[yy.ravel()[:len(values)], xx.ravel()[:len(values)]] = values
-    roles, supports, validation = prepare_labels(labels, plan, CLASSES, blocker, witness)
+    roles, supports, validation = prepare_labels(labels, plan, classes, blocker, witness)
     registration = {'pins': {}, 'cases': [], 'config': {
         'dataset': guarded.SCENE, 'model': {'graph_mode': 'learned', 'latent_channels': 16,
                                              'adapter_embed_dim': 8, 'learned_assignment_dim': 8},
@@ -120,7 +120,7 @@ def fixture(root):
     parent = root / 'parent.json'
     write_json(parent, registration)
     bands = read_band_metadata(guarded.SCENE, cube.shape[-1])
-    return parent, Scene(guarded.SCENE, cube, runtime, bands, CLASSES, stats), allowed
+    return parent, Scene(guarded.SCENE, cube, runtime, bands, classes, stats), allowed
 
 
 class MatchedCoverageTests(unittest.TestCase):

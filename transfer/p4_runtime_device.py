@@ -35,13 +35,13 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def slots(protocol, gpus):
+def slots(protocol, gpus, *, recovery=False):
     require(protocol in (CPU, *CUDA_PROTOCOLS), 'Unknown numerical protocol')
     if protocol == CPU:
         require(not gpus, 'CPU registration has no physical GPU assignment')
         return [None]
-    require(len(gpus) in (2, 3) and len(set(gpus)) == len(gpus)
-            and all(UUID.fullmatch(gpu) for gpu in gpus), 'Register two or three distinct physical GPU UUIDs')
+    require(len(gpus) in ((1,) if recovery else (2, 3)) and len(set(gpus)) == len(gpus)
+            and all(UUID.fullmatch(gpu) for gpu in gpus), 'Wrong number of distinct physical GPU UUIDs')
     return list(gpus)
 
 

@@ -6,6 +6,7 @@ import math
 import numpy as np
 import torch
 
+from evaluation.classification_metrics import metrics_from_confusion
 from joint_training import _rng_state, _tree_fingerprint
 from model.research_config import digest
 from research_runtime import hash_file
@@ -149,11 +150,28 @@ def readout(model, scene, views, labels, arm):
     scores, graphs = diag.forward_rows(model, scene, views, arm)
     metrics = {}
     for head, values in scores.items():
-        check = independent.recompute(values.numpy(), labels)
-        device.require(independent.equivalent(check, diag.score(values, labels)),
-                       'Independent fixed-point metrics differ')
+        if scene.classes == 22:
+            check = independent.recompute(values.numpy(), labels)
+            device.require(independent.equivalent(check, diag.score(values, labels)),
+                           'Independent fixed-point metrics differ')
+        else:
+            check = recovery_metrics(values.numpy(), labels, scene.classes)
         metrics[head] = check
     return scores, {'heads': metrics, 'graphs': graphs}
+
+
+def recovery_metrics(values, labels, classes):
+    p = values.astype(np.float64)
+    device.require(classes == 9 and p.shape == (len(labels), classes) and np.isfinite(p).all()
+        and (p >= 0).all() and np.allclose(p.sum(1), 1, rtol=0, atol=1e-6),
+        'Invalid nine-class recovery probabilities')
+    matrix = np.zeros((classes, classes), dtype=np.int64)
+    np.add.at(matrix, (labels-1, p.argmax(1)), 1)
+    metrics = metrics_from_confusion(matrix, range(1, classes+1))
+    device.require(not metrics['missing_class_ids'], 'Nine-class recovery is missing released support')
+    return {**{k: metrics[k] for k in ('oa','aa','kappa','macro_f1')}, 'confusion': matrix.tolist(),
+        'recall': [r['recall'] for r in metrics['per_class']],
+        'nll': float(-np.log(np.maximum(p[np.arange(len(p)), labels-1], 1e-8)).mean())}
 
 
 def case_files(folder):
@@ -170,14 +188,22 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
     exposure_path = reg['exposure']['plan']
     exposure = read_pinned(Path(exposure_path), reg['pins'][exposure_path])
     geometry, allowed, scene, frozen = prior.inputs(reg, plan, exposure)
+    if scope.get('purpose') == registration.RECOVERY:
+        device.require(scene.classes == scope['recovery_classes'], 'Recovery dataset and head class count differ')
     release = prior.released_roles(reg, plan, geometry, allowed, case)
     release_path = reg['cases'][case['index']]['release']
     raw = read_pinned(Path(release_path), reg['pins'][release_path])
     cohort = f's{case["support_seed"]}-k{case["k"]}'
     expected = scope['exposure'][cohort]
     _, exposure_row = p4_exposure.bind(reg, reg['cases'][case['index']], release['train'])
-    counts = prior.check_exposure(state, result, release, exposure_row, exposure)
     sequence = [row['tile'] for row in state['trace']]
+    if scope.get('recovery_classes') == 9:
+        counts = {key: exposure_row[key] for key in ('first_all_classes_step','label_exposure_at_events')}
+        device.require(result['exposure'] == counts and sequence == exposure_row['tile_sequence']
+            and [row['step'] for row in state['trace']] == list(range(1,exposure['steps']+1)),
+            'Nine-class recovery exposure or step sequence differs')
+    else:
+        counts = prior.check_exposure(state, result, release, exposure_row, exposure)
     actual = registration.per_label_exposure(raw, release, scene.plan['shape'][1], sequence, exposure['validation_steps'])
     device.require(all(expected[k] == v for k, v in actual.items()) and
                    expected['sequence_sha256'] == digest(sequence), 'Per-label exposure differs from the new scope')
@@ -215,14 +241,22 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
             selected = outputs['val']
             device.require(all(torch.equal(selected[0][head], state['best']['scores'][head]) for head in prior.HEADS),
                            'Selected probabilities differ after independent same-device reload')
-            prior.metrics(selected[0], populations['val'][1], chosen['metrics'])
+            if scope.get('recovery_classes') == 9:
+                for head, got in selected[1]['heads'].items():
+                    saved = chosen['metrics'][head]
+                    device.require(got['confusion'] == saved['confusion'] and got['recall'] == saved['recall']
+                        and all(abs(got[k]-saved[k]) <= 1e-12 for k in ('oa','aa'))
+                        and abs(got['nll']-saved['nll']) <= 1e-6,
+                        'Nine-class independent selected metrics differ')
+            else:
+                prior.metrics(selected[0], populations['val'][1], chosen['metrics'])
         readouts[stage] = {role: outcome[1] for role, outcome in outputs.items()}
         device.require(state_hash(model) == digest_before, 'Frozen fitting diagnostic changed model or DomainBN')
     model.load_state_dict(state['best']['model'], strict=True)
     observation_cache = {diag.REFERENCE: selected}
     observation_rows = {}
     for name, condition in conditions.items():
-        if scope.get('purpose') == registration.ADMISSION and name != diag.REFERENCE:
+        if scope.get('purpose') in registration.PAIRED and name != diag.REFERENCE:
             continue
         if condition['status'] != 'ready':
             observation_rows[name] = condition
@@ -254,6 +288,8 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
     if parameter_summary is not None:
         row.update(parameter_audit=parameter_summary, synchronized_timing={
             'advance': [call['timing'] for call in receipts], 'completed': proof['timing']})
+    if scope.get('purpose') == registration.RECOVERY:
+        row['class_count'] = scene.classes
     return row
 
 

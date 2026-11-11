@@ -263,6 +263,40 @@ def runtime_settings():
             torch.backends.cudnn.allow_tf32, torch.backends.cudnn.benchmark, torch.backends.cudnn.deterministic)
 
 
+def sparse_operator_cost(contract):
+    """Same-device forward/backward cost on fixed shapes, with zero optimizer updates."""
+    rng = np.random.default_rng(20261112)
+    _, cases = sparse_fixtures(contract, 28, 23)
+    rows = {}
+    kernels = {'v3_fp32_gemm': device.sparse_row_product_gemm, 'v4_edge_fp64': device.sparse_row_product_weight64}
+    for name, indices, shape, channels in (cases[0], cases[-1]):
+        coordinates = torch.tensor(indices, device='cuda:0')
+        weights = torch.tensor(rng.uniform(.2, 1, len(indices[0])).astype(np.float32),
+                               device='cuda:0', requires_grad=True)
+        x = torch.tensor(rng.standard_normal((channels,shape[1])).astype(np.float32),
+                         device='cuda:0').T.requires_grad_()
+        dy = torch.tensor(rng.standard_normal((shape[0],channels)).astype(np.float32), device='cuda:0')
+        rows[name] = {}
+        for label, operator in kernels.items():
+            def call():
+                graph = torch.sparse_coo_tensor(coordinates, weights, shape)
+                return torch.autograd.grad(operator(graph, x), (weights, x), dy)
+            for _ in range(3):
+                call()
+            torch.cuda.synchronize()
+            initial = torch.cuda.memory_allocated()
+            torch.cuda.reset_peak_memory_stats()
+            start, end = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+            start.record()
+            for _ in range(12):
+                call()
+            end.record()
+            end.synchronize()
+            rows[name][label] = {'gpu_ms_per_call': start.elapsed_time(end)/12,
+                'extra_peak_allocated_bytes': torch.cuda.max_memory_allocated()-initial}
+    return rows
+
+
 def qualify(parent, gpu, out, code, protocol=device.CUDA_AUDITED):
     from transfer.p4_full_budget_registration import role_inputs
 
@@ -277,7 +311,9 @@ def qualify(parent, gpu, out, code, protocol=device.CUDA_AUDITED):
     contract = geometry_contract(plan, allowed, reg['config'])
     calls = Counter()
     stable = protocol == device.CUDA_FP64_WEIGHT
-    before = runtime_settings()
+    settings = runtime_settings if stable else lambda: (torch.are_deterministic_algorithms_enabled(),torch.get_num_threads())
+    before = settings()
+    cost = None
     with device.arithmetic(protocol, gpu, kernel_calls=calls) as numeric:
         # A CPU pooling call and ordinary CUDA product must not affect interceptions.
         host = F.adaptive_avg_pool2d(torch.ones(1, 1, 2, 2), (1, 1))
@@ -285,8 +321,13 @@ def qualify(parent, gpu, out, code, protocol=device.CUDA_AUDITED):
         device.require(host.item() == 1 and bool((unrelated == 1).all()) and not calls,
                        'Unrelated CPU/CUDA operations changed')
         results, matrices = run_fixtures(contract, 'cuda:0', protocol)
+        if stable and all(check_comparisons(name, rows) for name, rows in results.items()):
+            try:
+                cost = sparse_operator_cost(contract)
+            except RuntimeError as error:
+                cost = {'status': 'measurement_failed', 'reason': str(error)}
     native = native_cuda_diagnostic()
-    after = runtime_settings()
+    after = settings()
     restored = before == after and calls == {'adaptive_avg_pool2d': len(contract['shapes']),
                                             'sparse_mm': 4*len(contract['shapes'])+2}
     passed = restored and all(proof['compatible'] for result in results.values()
@@ -300,6 +341,7 @@ def qualify(parent, gpu, out, code, protocol=device.CUDA_AUDITED):
            'wall_seconds': perf_counter() - started}
     if stable:
         row['fixture_seed'] = FIXTURE_SEED
+        row['same_device_sparse_operator_cost'] = cost
     require_frozen_code(code)
     write_json(path, row)
     check_receipt(row, protocol, code, contract)

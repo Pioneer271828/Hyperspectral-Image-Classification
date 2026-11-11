@@ -1,12 +1,20 @@
 """Fixed operator mathematics and qualification identity for FP64 edge accumulation."""
+import argparse
+from contextlib import contextmanager
 from copy import deepcopy
+from functools import partial
+import json
 import math
+from pathlib import Path
+import sys
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import torch
 
 from transfer import p4_coverage_batch as batch, p4_cuda_qualification as qual, p4_runtime_device as device
+from transfer import p4_full_budget_registration as registration
 
 
 class StableSparseWeightTests(unittest.TestCase):
@@ -92,3 +100,97 @@ class StableSparseWeightTests(unittest.TestCase):
             change(wrong)
             with self.assertRaises(ValueError):
                 qual.check_receipt(wrong,device.CUDA_FP64_WEIGHT,code,geometry)
+
+    def test_new_real_scope_requires_recovery_and_single_card_scope_is_synthetic(self):
+        gpu = 'GPU-11111111-1111-1111-1111-111111111111'
+        other = 'GPU-22222222-2222-2222-2222-222222222222'
+        registration.check_budget(registration.RECOVERY, device.CUDA_FP64_WEIGHT, [gpu], True, 60, 30)
+        for gpus, synthetic in (([gpu],False),([gpu,other],True)):
+            with self.assertRaises(ValueError):
+                registration.check_budget(registration.RECOVERY,device.CUDA_FP64_WEIGHT,gpus,synthetic,60,30)
+        with self.assertRaisesRegex(ValueError,'accepted physical recovery'):
+            registration.bind_recovery(None,registration.ADMISSION,device.CUDA_FP64_WEIGHT,False,{})
+
+
+@contextmanager
+def synthetic_schema(classes):
+    # Only this test process and its worker processes use synthetic class counts.
+    from loadData.dataset_registry import DATASETS
+    from transfer import p4_exposure, p4_guarded
+
+    scene = p4_guarded.SCENE
+    file, variable, _, sensor = DATASETS[scene]
+    schedule = partial(p4_exposure.schedule, classes=classes)
+    with patch.dict(DATASETS, {scene: (file, variable, classes, sensor)}), patch.object(p4_exposure,'schedule',schedule):
+        yield
+
+
+def bounded_recovery(out, code, gpu, qualification):
+    from research_runtime import external_directory, hash_file, write_json
+    from tests.test_p4_coverage import fixture
+    from transfer import p4_full_budget_campaign as campaign
+
+    out = external_directory(out)
+    out.mkdir(exist_ok=False)
+    protocol, gpus = (device.CUDA_FP64_WEIGHT,[gpu]) if gpu else (device.CPU,[])
+    cases = []
+    for classes in (9,22):
+        with synthetic_schema(classes):
+            inputs = out/f'classes-{classes}-inputs'
+            inputs.mkdir()
+            parent, _, _ = fixture(inputs, classes=classes)
+            prior = inputs/'prior.json'
+            write_json(prior, {'status':'passed','query_accessed':False,'protected_files':{str(parent):hash_file(parent)}})
+            scope = registration.prepare(parent,hash_file(parent),prior,hash_file(prior),
+                out/f'classes-{classes}-registration',code,protocol=protocol,gpus=gpus,
+                synthetic=True,purpose=registration.RECOVERY,recovery_classes=classes,
+                qualifications=(qualification,) if qualification else ())
+            sha = hash_file(scope)
+            execution = out/f'classes-{classes}-execution'
+
+            def launcher(command, log_dir, case, operation, locks):
+                wrapped = [*command[:2], 'tests.test_p4_stable_cuda', '--worker-classes', str(classes), *command[3:]]
+                return campaign.invoke(wrapped,log_dir,case,operation,locks)
+
+            state = campaign.run(scope,sha,execution,code,launcher=launcher)
+            if state['status'] != 'completed':
+                return {'status':state['status'],'classes':classes,'execution':str(execution),
+                        'optimizer_updates':120*len(cases)+state['optimizer_updates_this_invocation']}
+            acceptance = campaign.accept(scope,sha,execution,code)
+            cases.append({'classes':classes,'scope':str(scope),'scope_sha256':sha,
+                          'acceptance':str(acceptance),'acceptance_sha256':hash_file(acceptance)})
+    receipt = out/'recovery.json'
+    row = {'schema': registration.RECOVERY_SCHEMA, 'status':'passed','commit':code['commit'],
+        'source_hash':code['source_hash'],'physical_uuid':gpu,'protocol':protocol,
+        'optimizer_updates':240,'completed_resume_updates':0,'cases':cases}
+    write_json(receipt,row)
+    if gpu:
+        batch.check_pins(registration.bind_recovery(receipt,registration.ADMISSION,protocol,False,code))
+    return {**row,'path':str(receipt),'sha256':hash_file(receipt)}
+
+
+if __name__ == '__main__':
+    if sys.argv[1:2] == ['--worker-classes']:
+        from transfer import p4_full_budget_campaign as campaign
+
+        classes = int(sys.argv[2])
+        device.require(classes in (9,22), 'Unknown recovery fixture class count')
+        del sys.argv[1:3]
+        with synthetic_schema(classes):
+            campaign.main()
+    else:
+        from research_runtime import code_snapshot, require_frozen_code
+
+        parser = argparse.ArgumentParser(description='Run the registered synthetic paired recovery with one physical GPU or CPU.')
+        parser.add_argument('--expected-commit',required=True)
+        parser.add_argument('--out',type=Path,required=True)
+        parser.add_argument('--gpu')
+        parser.add_argument('--qualification',type=Path)
+        args = parser.parse_args()
+        code = code_snapshot()
+        require_frozen_code(code)
+        device.require(code['commit']==args.expected_commit and bool(args.gpu)==bool(args.qualification),
+                       'Exact source and physical qualification required')
+        result = bounded_recovery(args.out,code,args.gpu,args.qualification)
+        print(json.dumps(result),flush=True)
+        sys.exit(int(result['status'] != 'passed'))
