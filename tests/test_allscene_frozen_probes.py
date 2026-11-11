@@ -10,7 +10,7 @@ import torch
 from evaluation import allscene_probe_campaign as campaign, allscene_probe_registry as registry
 from evaluation import authenticated_probe_pack as packs, frozen_probe_audit as audit
 from evaluation import frozen_probe_campaign as pavia, frozen_probe_history as history, frozen_probe_registry as reg
-from evaluation.frozen_representation_capture import capture
+from evaluation.frozen_representation_capture import STAGES, capture
 from g4_matched_target_study import METHODS, initialize
 from g4_support_context import read
 from joint_baseline import _item_fingerprint
@@ -228,7 +228,7 @@ class AllSceneProbeTests(unittest.TestCase):
             plan, self.scope_sha, case, local)
         stages, evidence = self.model_stages["whu-honghu"]
         self.assertEqual(set(stages), {"stage1", "stage2"})
-        self.assertEqual(evidence["stage_calls"], {"stage1": 1, "stage2": 1})
+        self.assertEqual(evidence["stage_calls"], dict.fromkeys(STAGES, 1))
         self.assertEqual(stages["stage1"]["cnn"].shape, (576, 128))
         self.assertEqual(stages["stage2"]["graph"].shape, (6, 64))
         self.assertEqual((len(pack["labels"]["train"]), len(pack["labels"]["val"])), (220, 110))
@@ -289,3 +289,22 @@ class AllSceneProbeTests(unittest.TestCase):
         self.assertEqual((receipt["status"], receipt["accepted_cases"], receipt["reviewed_probes"], receipt["failed_probes"]),
                          ("incomplete_or_failed", 53, 216, 1))
         self.assertFalse(path.with_name("acceptance.json").exists())
+
+    def test_explicit_missing_scene_keeps_the_full_roster_and_blocks_acceptance(self):
+        folder = self.root/"partial-index"
+        folder.mkdir()
+        index = folder/"capture-index.json"
+        write_json(index, {"captures": [row for row in read(self.index)["captures"] if row["case"].startswith("paviaU")]})
+        scope = registry.prepare(self.freeze, hash_file(self.freeze), self.analysis, hash_file(self.analysis),
+            index, hash_file(index), self.history_paths, self.root/"partial-registration", self.code,
+            missing=("whu-honghu",), synthetic=True, steps=6)
+        sha = hash_file(scope)
+        execution = campaign.run(scope, sha, self.root/"partial-execution", self.code)
+        result = campaign.review(scope, sha, execution, hash_file(execution), self.root/"partial-review", self.code)
+        receipt = read(result)
+        self.assertEqual(len(receipt["cases"]), 54)
+        self.assertEqual(sum(row["status"] == "missing_capture" for row in receipt["cases"]), 18)
+        self.assertEqual((receipt["status"], receipt["accepted_cases"], receipt["reviewed_probes"]),
+                         ("incomplete_or_failed", 36, 144))
+        self.assertEqual(receipt["new_probe_updates"], 864)
+        self.assertFalse(result.with_name("acceptance.json").exists())
