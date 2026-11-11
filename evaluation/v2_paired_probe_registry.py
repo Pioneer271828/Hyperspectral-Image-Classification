@@ -143,6 +143,8 @@ def payload(evidence, code):
     expected = {(scene,seed,method,mode) for scene,seed,method,mode in
                 product(scenes.CLASSES,reg.SEEDS,METHODS[:2],MODES)}
     steps = evidence.paths["full"][0]
+    split = evidence.paths["split"]
+    columns = {stage:reg.probe_columns(64,64,width) for stage,width in (("stage1",128),("stage2",64))}
     reg.require(len(evidence.cases)==54 and set(evidence.plans)==set(scenes.CLASSES)
         and {(r["target"],r["seed"],r["method"],r["mode"]) for r in evidence.cases}==expected
         and all(r["name"]==case_name(r["target"],r["seed"],r["method"],r["mode"])
@@ -150,6 +152,9 @@ def payload(evidence, code):
         and len({r["stages"][stage]["pack"]["path"] for r in evidence.cases for stage in ROLES})==108
         and all(evidence.plans[scene]=={**reg.PLAN,"classes":classes,"steps":steps,"policy":linear_probe.POLICY_V2}
                 for scene,classes in scenes.CLASSES.items())
+        and evidence.columns==columns and set(evidence.paths)=={"full","split","completed"}
+        and evidence.paths["full"]==evidence.paths["completed"]==[steps]
+        and len(split)==3 and 0<split[0]<split[1]<split[2]==steps
         and (evidence.synthetic or (evidence.paths==reg.PATHS and steps==500)),
         "Exact v2 two-role matrix, plan and distinct archived packs required")
     updates = 54*len(reg.LAYERS)*steps

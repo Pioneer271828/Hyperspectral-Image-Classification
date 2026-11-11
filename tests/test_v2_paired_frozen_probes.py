@@ -124,7 +124,7 @@ class V2PairedProbeTests(unittest.TestCase):
                 ("stages",lambda d:d["cases"][0]["stages"].update(initial=d["cases"][0]["stages"]["terminal"])),
                 ("old-policy",lambda d:d["plans"]["paviaU"].update(policy=linear_probe.POLICY)),
                 ("budget",lambda d:d.update(planned_total_updates=4324)),
-                ("reuse",lambda d:d.update(historical_head_reuse=216)):
+                ("reuse",lambda d:d.update(historical_head_reuse=216))):
                 doc = json.loads(self.scope.read_text())
                 alter(doc)
                 path = self.root/f"scope-{label}.json"
