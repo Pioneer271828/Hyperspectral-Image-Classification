@@ -1,10 +1,11 @@
 """Bind guarded HongHu geometry, release files and observations to the P4 runner."""
+from dataclasses import replace
 import json
 from pathlib import Path
 
 import numpy as np
 
-from loadData.observation_sampling import sample
+from loadData.observation_sampling import ObservationView, sample, subset_statistics
 from loadData.spatial_protocol import PartitionObservation
 from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
@@ -93,3 +94,42 @@ def observation_provider(scene, allowed):
             views[tile['id']], _ = sample(observation, scene.bands, {'mode': 'none'})
         return views[tile['id']]
     return view
+
+
+def retained_view(scene, tile, condition):
+    """Construct a band-deleted view after the caller checks tile permission."""
+    record = condition['sampling']
+    if record['partition'] != tile['partition'] or record['plan_hash'] != scene.plan['plan_hash']:
+        raise ValueError('Spectral sampling record must bind the observation role')
+    statistics = subset_statistics(scene.stats, scene.bands, record)
+    positions = record['selected_positions']
+    metadata = scene.bands.subset(positions)
+    if (metadata.fingerprint != record['selected_metadata_hash']
+            or list(metadata.band_ids) != record['selected_band_ids']):
+        raise ValueError('Selected band metadata differs')
+    y0, y1, x0, x1 = tile['box']
+    tile_values = scene.cube[y0:y1, x0:x1]
+    retained = tile_values if len(positions) == tile_values.shape[-1] else tile_values[:, :, positions]
+    values = np.array(retained, dtype=np.float32, copy=True)
+    if not np.isfinite(values).all():
+        raise ValueError('Nonfinite retained observation')
+    low, high = (np.asarray(statistics[key], dtype=np.float32) for key in ('minimum', 'maximum'))
+    spectral = (values - low) / np.where(high > low, high - low, 1)
+    h, w = scene.plan['shape']
+    yy, xx = np.mgrid[y0:y1, x0:x1]
+    coordinates = np.stack((yy / max(h - 1, 1), xx / max(w - 1, 1)), axis=-1).astype(np.float32)
+    observation = PartitionObservation(tile['partition'], spectral, coordinates, yy * w + xx,
+                                       scene.plan['plan_hash'])
+    return ObservationView(observation, model_metadata(metadata, condition['metadata']))
+
+
+def model_metadata(metadata, mode):
+    if mode == 'shift10nm':
+        if metadata.wavelength_unit != 'nm':
+            raise ValueError('Wavelength shift requires physical coordinates')
+        return replace(metadata, wavelengths=tuple(value + 10 for value in metadata.wavelengths))
+    if mode not in ('nominal', 'missing'):
+        raise ValueError('Unknown metadata perturbation')
+    # Missing preserves the retained band identity internally. The forward
+    # call supplies neither wavelengths, FWHM nor an E1 descriptor.
+    return metadata

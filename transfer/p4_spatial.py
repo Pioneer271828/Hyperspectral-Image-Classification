@@ -13,6 +13,7 @@ import torch
 from evaluation.g4_target import independent_trainval
 from joint_training import _atomic_torch_save, _restore_rng, _rng_state, _run_lock, _tree_fingerprint
 from loadData.data_read import read_band_metadata
+from loadData.observation_sampling import subset_statistics
 from loadData.dataset_registry import DATASETS
 from loadData.spatial_tiles import tile_slice, validate_tile_plan
 from model.checkpoint_io import load_model_checkpoint
@@ -20,7 +21,7 @@ from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from train_spatial import SpatialConfig
 from transfer.g3_training import Scene, _forward, _optimizer, _update, state_hash
-from transfer import p4_exposure, p4_guarded
+from transfer import p4_coverage, p4_exposure, p4_guarded
 
 TARGETS = {'paviaU', 'xuzhou', p4_guarded.SCENE}
 SOURCE_TASKS = TARGETS
@@ -61,12 +62,15 @@ def fit_development_statistics(cube, plan, development):
     return fit_role_statistics(cube, plan, tiles, development['development_roles_hash'])
 
 
-def fit_role_statistics(cube, plan, tiles, roles_hash):
+def fit_role_statistics(cube, plan, tiles, roles_hash, *, positions=None):
     if cube.ndim != 3 or list(cube.shape[:2]) != plan['shape']:
         raise ValueError('Development observation shape differs')
     low, high = [], []
     for tile in tiles:
-        values = np.asarray(cube[tile_slice(tile)], dtype=np.float64)
+        values = cube[tile_slice(tile)]
+        if positions is not None:
+            values = values[:, :, positions]
+        values = np.asarray(values, dtype=np.float64)
         if not np.isfinite(values).all():
             raise ValueError('Nonfinite development training observation')
         low.append(values.min(axis=(0,1)))
@@ -124,7 +128,7 @@ def load_release(release, plan, support_seed, k, development=None, *, guarded_ti
     return result
 
 
-def initialize(config, source_path=None, source_result=None):
+def initialize(config, source_path=None, source_result=None, *, coverage_arm=None):
     target = config.values['dataset']
     if target not in TARGETS:
         raise ValueError('Unknown P4 spatial target')
@@ -142,6 +146,8 @@ def initialize(config, source_path=None, source_result=None):
     copied = []
     if source_path is not None:
         source = load_model_checkpoint(source_path, device='cpu')
+        if coverage_arm is not None and source.backbone.coverage_modulation is not None:
+            raise ValueError('Matched coverage requires an E1-off source checkpoint')
         result = read(source_result)
         tasks = SOURCE_TASKS - {target}
         if (source.backbone.graph_mode != 'static' or source.backbone.norm_type != 'domain_bn'
@@ -161,28 +167,34 @@ def initialize(config, source_path=None, source_result=None):
         backbone.load_state_dict(fresh, strict=True)
         if any(not torch.equal(backbone.state_dict()[n], old[n]) for n in copied):
             raise ValueError('Shared weights were not copied exactly')
-    return model, {
+    initialization = {
         'copied_keys': copied, 'fresh_graph_keys': sorted(graph),
         'graph_sha256': _tree_fingerprint(graph),
         'fresh_domain_sha256': _tree_fingerprint({n: v for n, v in fresh.items() if '.norms.' in n}),
         'fresh_heads_sha256': _tree_fingerprint({n: v for n, v in model.state_dict().items() if not n.startswith('backbone.')}),
         'initial_state_sha256': state_hash(model),
     }
+    if coverage_arm is not None:
+        model, coverage = p4_coverage.initialize(model, config, coverage_arm)
+        initialization.update(coverage=coverage, base_initial_state_sha256=initialization['initial_state_sha256'],
+                              initial_state_sha256=state_hash(model))
+    return model, initialization
 
 
 @torch.no_grad()
-def validation(model, scene, tiles, allowed_tiles, view=None):
+def validation(model, scene, tiles, allowed_tiles, view=None, *, metadata_missing=False):
     model.eval()
     names = ('fused', 'graph', 'cnn')
     scores = {n: [] for n in names}
     truth = []
+    options = {'metadata_missing': True} if metadata_missing else {}
     for tile, local in tiles:
         if tile['id'] not in allowed_tiles:
             raise ValueError('Validation can only access validation tiles')
         local = torch.from_numpy(local.reshape(-1))
         valid = local > 0
         truth.append(local[valid] - 1)
-        heads = _forward(model, scene, tile, observation_view=view(tile) if view else None)[:3]
+        heads = _forward(model, scene, tile, observation_view=view(tile) if view else None, **options)[:3]
         for name, head in zip(names, heads):
             scores[name].append(head[valid].cpu())
     labels = torch.cat(truth)
@@ -202,7 +214,16 @@ def validation(model, scene, tiles, allowed_tiles, view=None):
     return metrics, probabilities
 
 
-def run_case(registration, index, out, until, code):
+def run_case(registration, index, out, until, code, *, coverage_arm=None):
+    coverage_enabled = 'coverage' in registration
+    if coverage_enabled != (coverage_arm is not None) or (coverage_enabled and coverage_arm not in p4_coverage.ARMS):
+        raise ValueError('Coverage registration requires an explicitly registered coverage arm')
+    if coverage_enabled:
+        if 'exposure' not in registration:
+            raise ValueError('Matched coverage requires a guarded exposure plan')
+        if (registration.get('commit') != code['commit']
+                or type(index) is not int or not 0 <= index < len(registration['cases'])):
+            raise ValueError('Unregistered coverage code or case')
     case = registration['cases'][index]
     pins = {Path(n): h for n, h in registration['pins'].items()}
     paths = [registration[x] for x in ('image', 'plan', 'statistics')]
@@ -245,7 +266,7 @@ def run_case(registration, index, out, until, code):
         steps, events = frozen['steps'], frozen['validation_steps']
         lookup = {tile['id']: (tile, local) for tile, local in role['train']}
         sequence = [lookup[i] for i in exposure['tile_sequence']]
-        if not 1 <= until <= steps:
+        if type(until) is not int or not 1 <= until <= steps:
             raise ValueError('Requested stop exceeds the registered exposure budget')
     else:
         if until not in (2, STEPS):
@@ -256,7 +277,21 @@ def run_case(registration, index, out, until, code):
     cube = loadmat(registration['image'], variable_names=[variable])[variable]
     bands = read_band_metadata(target, cube.shape[-1])
     view = None
-    if guarded:
+    coverage = None
+    if coverage_enabled:
+        coverage = p4_coverage.bind(registration, frozen, bands, guarded_plan['plan_hash'], coverage_arm)
+        record = coverage['records']['train']
+        stats = read(registration['statistics'])
+        selected = subset_statistics(stats, bands, record)
+        allowed = guarded_tiles
+        actual = fit_role_statistics(cube, guarded_plan, allowed['train'], development['development_roles_hash'],
+                                     positions=record['selected_positions'])
+        if (stats.get('fit_role') != 'devtrain' or stats.get('development_roles_hash') != guarded_plan['plan_hash']
+                or any(actual[key] != selected[key] for key in ('minimum', 'maximum'))):
+            raise ValueError('Retained train-only statistics differ from frozen spatial preflight')
+        scene = Scene(target, cube, guarded_plan, bands, classes, stats)
+        view = p4_coverage.observation_provider(scene, allowed, coverage)
+    elif guarded:
         allowed = guarded_tiles
         stats = fit_role_statistics(cube, guarded_plan, allowed['train'], development['development_roles_hash'])
         scene = Scene(target, cube, guarded_plan, bands, classes, stats)
@@ -270,13 +305,17 @@ def run_case(registration, index, out, until, code):
         scene = Scene.prepare(target, cube, plan, bands, classes)
     train_ids = {t['id'] for t in allowed['train']}
     val_ids = {t['id'] for t in allowed['val']}
-    if scene.stats != read(registration['statistics']):
+    if coverage is None and scene.stats != read(registration['statistics']):
         raise ValueError('Train-only statistics differ from frozen spatial preflight')
     config = SpatialConfig(registration['config'])
     source = registration['source'] if case['method'] == 'shared_transfer' else None
     if case['method'] not in ('scratch', 'shared_transfer'):
         raise ValueError('Unknown initialization method')
-    model, init = initialize(config, source['weight'] if source else None, source['result'] if source else None)
+    model, init = initialize(config, source['weight'] if source else None, source['result'] if source else None,
+                             coverage_arm=coverage_arm)
+    coverage_parameters = ({n: p for n, p in model.named_parameters() if n.startswith(p4_coverage.PREFIX)}
+                           if coverage is not None else {})
+    forward_options = {'metadata_missing': True} if coverage is not None and coverage['metadata'] == 'missing' else {}
     optimizer = _optimizer(model, config)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=.5, patience=20)
     identity = digest({'registration': registration, 'case': index, 'code': code['commit'], 'init': init})
@@ -315,8 +354,16 @@ def run_case(registration, index, out, until, code):
             if tile['id'] not in train_ids:
                 raise ValueError('Optimization can only access training tiles')
             graph_before = {n: p.detach().clone() for n, p in model.backbone.learnable_graph.named_parameters()}
-            loss = _update(model, scene, tile, local, config, optimizer,
-                           observation_view=view(tile) if view else None)
+            observation = view(tile) if view else None
+            if coverage is None:
+                loss = _update(model, scene, tile, local, config, optimizer, observation_view=observation)
+            else:
+                before = {n: p.detach().clone() for n, p in coverage_parameters.items()}
+                loss, coverage_info = _update(model, scene, tile, local, config, optimizer,
+                                              observation_view=observation, return_coverage_info=True,
+                                              **forward_options)
+                observed = p4_coverage.update_evidence(coverage_parameters, before, coverage_info,
+                                                       observation, coverage)
             graph = dict(model.backbone.learnable_graph.named_parameters())
             changed = sum(int(torch.count_nonzero(p.detach() - graph_before[n])) for n, p in graph.items())
             grad = sum(float(p.grad.detach().abs().sum()) for p in graph.values() if p.grad is not None)
@@ -324,8 +371,10 @@ def run_case(registration, index, out, until, code):
                 raise ValueError('Learned graph did not participate in optimization')
             trace.append({'step': i+1, 'tile': tile['id'], 'loss': loss, 'graph_changed_elements': changed,
                           'graph_gradient_l1': grad, 'lr': [g['lr'] for g in optimizer.param_groups]})
+            if coverage is not None:
+                trace[-1]['coverage'] = observed
             if i+1 in events:
-                metrics, scores = validation(model, scene, role['val'], val_ids, view)
+                metrics, scores = validation(model, scene, role['val'], val_ids, view, **forward_options)
                 nll = metrics['fused']['nll']
                 scheduler.step(nll)
                 history.append({'step': i+1, 'metrics': metrics})
@@ -340,7 +389,7 @@ def run_case(registration, index, out, until, code):
         guard()
         if until == steps:
             model.load_state_dict(best['model'], strict=True)
-            metrics, scores = validation(model, scene, role['val'], val_ids, view)
+            metrics, scores = validation(model, scene, role['val'], val_ids, view, **forward_options)
             if (_tree_fingerprint(scores) != _tree_fingerprint(best['scores'])
                     or metrics != next(e['metrics'] for e in history if e['step'] == best['step'])):
                 raise ValueError('Selected checkpoint probabilities changed after strict reload')
@@ -350,6 +399,10 @@ def run_case(registration, index, out, until, code):
             if exposure is not None:
                 report['exposure'] = {key: exposure[key] for key in (
                     'first_all_classes_step', 'label_exposure_at_events')}
+            if coverage is not None:
+                report['coverage'] = {**coverage, 'arm': coverage_arm,
+                                      'pair_sha256': digest({'registration': registration, 'case': index,
+                                                             'base': init['base_initial_state_sha256']})}
             if (out/'result.json').exists():
                 if read(out/'result.json') != report:
                     raise ValueError('Completed result differs')
@@ -363,6 +416,7 @@ def main():
     p.add_argument('--registration', type=Path, required=True)
     p.add_argument('--sha256', required=True)
     p.add_argument('--case', type=int, required=True)
+    p.add_argument('--coverage-arm', choices=p4_coverage.ARMS)
     p.add_argument('--out', type=Path, required=True)
     p.add_argument('--until', type=int, required=True)
     args = p.parse_args()
@@ -372,7 +426,8 @@ def main():
     code = code_snapshot()
     if code['commit'] != registration['commit'] or not 0 <= args.case < len(registration['cases']):
         raise ValueError('Unregistered code or case')
-    print(json.dumps(run_case(registration, args.case, args.out, args.until, code)), flush=True)
+    result = run_case(registration, args.case, args.out, args.until, code, coverage_arm=args.coverage_arm)
+    print(json.dumps(result), flush=True)
 
 
 if __name__ == '__main__':

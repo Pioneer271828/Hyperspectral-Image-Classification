@@ -1,6 +1,5 @@
 """Read-only spectral perturbations of accepted guarded HongHu selected states."""
 import argparse
-from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
@@ -10,7 +9,7 @@ from scipy.io import loadmat
 
 from evaluation.classification_metrics import metrics_from_confusion
 from loadData.data_read import read_band_metadata
-from loadData.observation_sampling import ObservationView, sample, subset_statistics
+from loadData.observation_sampling import sample
 from loadData.spatial_protocol import PartitionObservation, forward_partition
 from model.observation_coverage import CoverageConfig, describe
 from model.research_config import digest
@@ -50,35 +49,7 @@ def freeze_conditions(scene):
 def selected_view(scene, tile, allowed, condition):
     if tile['partition'] != 'val' or allowed.get(tile['id']) != tile:
         raise ValueError('Spectral probe can access released validation tiles only')
-    record = condition['sampling']
-    if record['partition'] != 'val':
-        raise ValueError('Spectral sampling record must bind validation')
-    statistics = subset_statistics(scene.stats, scene.bands, record)
-    positions = record['selected_positions']
-    metadata = scene.bands.subset(positions)
-    if metadata.fingerprint != record['selected_metadata_hash']:
-        raise ValueError('Selected band metadata differs')
-    y0, y1, x0, x1 = tile['box']
-    # Slice raw retained columns first. Deleted values never enter normalization or graph building.
-    tile_values = scene.cube[y0:y1, x0:x1]
-    values = np.array(tile_values if len(positions) == tile_values.shape[-1] else tile_values[:, :, positions],
-                      dtype=np.float32, copy=True)
-    if not np.isfinite(values).all():
-        raise ValueError('Nonfinite retained observation')
-    low, high = (np.asarray(statistics[key], dtype=np.float32) for key in ('minimum', 'maximum'))
-    spectral = (values - low) / np.where(high > low, high - low, 1)
-    h, w = scene.plan['shape']
-    yy, xx = np.mgrid[y0:y1, x0:x1]
-    coordinates = np.stack((yy / max(h - 1, 1), xx / max(w - 1, 1)), axis=-1).astype(np.float32)
-    observation = PartitionObservation('val', spectral, coordinates, yy * w + xx, scene.plan['plan_hash'])
-    mode = condition['metadata']
-    if mode == 'shift10nm':
-        if metadata.wavelength_unit != 'nm':
-            raise ValueError('Wavelength shift requires physical coordinates')
-        metadata = replace(metadata, wavelengths=tuple(value + 10 for value in metadata.wavelengths))
-    elif mode not in ('nominal', 'missing'):
-        raise ValueError('Unknown metadata perturbation')
-    return ObservationView(observation, metadata)
+    return p4_guarded.retained_view(scene, tile, condition)
 
 
 def capture(model, scene, tile, view, *, missing):

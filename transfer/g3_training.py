@@ -85,7 +85,7 @@ def _optimizer(model,config):
     return torch.optim.Adam(groups,weight_decay=config.training.weight_decay)
 
 
-def _forward(model,scene,tile,*,observation_view=None):
+def _forward(model,scene,tile,*,observation_view=None,metadata_missing=False):
     if observation_view is None:
         obs=observe_tile(scene.cube,scene.plan,scene.stats,tile)
         view,_=sample(obs,scene.bands,{'mode':'none'})
@@ -97,6 +97,9 @@ def _forward(model,scene,tile,*,observation_view=None):
                 or obs.partition!=tile['partition'] or not np.array_equal(obs.global_ids,yy*scene.plan['shape'][1]+xx)
                 or view.bands.source_id!=scene.bands.source_id or len(view.bands.wavelengths)!=obs.spectral.shape[-1]):
             raise ValueError('Preselected observation identity/geometry mismatch')
+    if metadata_missing:
+        return forward_partition(model,scene.dataset,view.observation,None,
+                                 50 if scene.dataset=='paviaU' else 100)
     extra = {} if observation_view is None or view.bands.fwhm is None else {'fwhm': np.asarray(view.bands.fwhm,dtype=np.float32)}
     if observation_view is not None:
         extra.update(wavelength_unit=view.bands.wavelength_unit, fwhm_unit=view.bands.fwhm_unit or 'auto')
@@ -107,11 +110,15 @@ def _forward(model,scene,tile,*,observation_view=None):
                              50 if scene.dataset=='paviaU' else 100,**extra)
 
 
-def _update(model,scene,tile,local_labels,config,optimizer,head_only=False,*,observation_view=None):
+def _update(model,scene,tile,local_labels,config,optimizer,head_only=False,*,observation_view=None,
+            metadata_missing=False,return_coverage_info=False):
     model.train()
     if head_only:model.backbone.eval()
     optimizer.zero_grad(set_to_none=True)
-    outputs=_forward(model,scene,tile,**({} if observation_view is None else {'observation_view':observation_view}))
+    view_args = {} if observation_view is None else {'observation_view':observation_view}
+    if metadata_missing:
+        view_args['metadata_missing'] = True
+    outputs=_forward(model,scene,tile,**view_args)
     local=torch.as_tensor(np.array(local_labels,copy=True).reshape(-1),device=next(model.parameters()).device,dtype=torch.long)
     valid=local>0
     if not valid.any() or (local[valid]>scene.classes).any():raise ValueError('Training tile needs valid released labels')
@@ -124,7 +131,8 @@ def _update(model,scene,tile,local_labels,config,optimizer,head_only=False,*,obs
                             'balance':cfg.loss.graph_balance_weight},return_components=True)
     if not torch.isfinite(components['total']):raise ValueError('Nonfinite training loss')
     components['total'].backward();optimizer.step()
-    return detached_loss_values(components)
+    losses = detached_loss_values(components)
+    return (losses, outputs[3].get('coverage')) if return_coverage_info else losses
 
 
 def source_train_counts(scene,labels):
