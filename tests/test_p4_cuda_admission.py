@@ -123,7 +123,7 @@ class AdmissionTests(unittest.TestCase):
         self.assertEqual({row['support_seed'] for row in cases}, {2048})
         self.assertEqual({row['model_seed'] for row in cases}, {512})
         self.assertEqual(self.scope['paths'], {'full': [60], 'split': [2, 30, 60]})
-        with self.assertRaisesRegex(ValueError, 'two registered CUDA'):
+        with self.assertRaisesRegex(ValueError, 'two registered audited CUDA GPUs'):
             registration.check_budget(registration.ADMISSION, device.CPU, [], False, 60, 30)
         rows = registration.matrix(self.reg, device.CUDA_AUDITED, [GPU_A, GPU_B], registration.ADMISSION)
         for gpu in (GPU_A, GPU_B):
