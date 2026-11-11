@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 from evaluation import frozen_probe_audit as audit, frozen_probe_campaign as campaign
 from evaluation import frozen_probe_registry as reg, linear_probe, probe_decimal_reference as reference
+from evaluation import probe_pair_audit_status as pair_status
 from g4_support_context import check_files
 from research_runtime import external_directory, hash_file, require_frozen_code, write_json
 
@@ -71,9 +72,8 @@ def compare_layer(pack, name, columns, plan, v1, v2, v2_meta, best, recorded, hi
     scale_t, scale_n = np.where(sd_t > floor, sd_t, 1), np.where(sd_n > floor, sd_n, 1)
     contiguous = np.ascontiguousarray(selected["train"])
     c_mu, c_sd = contiguous.mean(0), contiguous.std(0)
-    exact, exact_stats = reference.standardize(selected, floor)
-    reg.require(v2_meta["scaled_columns"] == exact_stats["scaled_columns"],
-                "v2 train-only scale-floor branches differ from Decimal")
+    exact, exact_stats = reference.standardize(selected, floor, exact_roles=high_precision_roles)
+    floor_agrees = v2_meta["scaled_columns"] == exact_stats["scaled_columns"]
     w, b = best["weight"], best["bias"]
     w_np, b_np = w.numpy(), b.numpy()
     fixed_w, fixed_b = fixed_head(plan)
@@ -117,12 +117,13 @@ def compare_layer(pack, name, columns, plan, v1, v2, v2_meta, best, recorded, hi
             "hybrids":{key:{**errors(t_prob,alt),**tolerance(t_prob,alt)} for key,alt in hybrids.items()},
             "torch_x_to_decimal":errors(t_x.numpy(),exact[role]),
             "numpy_x_to_decimal":errors(n_x,exact[role]),
-            "v2_x_to_decimal":{**errors(v2_x.numpy(),exact[role]),**tolerance(v2_x.numpy(),exact[role])},
+            "v2_x_to_decimal":{**errors(v2_x.numpy(),exact[role]),**tolerance(v2_x.numpy(),exact[role]),
+                               "floor_agrees":floor_agrees},
             "v2_fixed_head_to_decimal_features":v2_fixed,
             "amplified_feature_columns":[columns[j] for j in np.flatnonzero(np.max(np.abs(t_x.numpy()-n_x),0)>1e-12)],
         }
         if role in high_precision_roles:
-            dl, dlog, dp = reference.head(exact[role],w_np,b_np)
+            dl, dlog, dp = reference.head(exact_stats["exact_rows"][role],w_np,b_np)
             tl, _, tp = reference.head(t_x.numpy(),w_np,b_np)
             roles[role]["decimal_head"] = {
                 "torch_logits_to_decimal":errors(t_l,dl), "numpy_logits_to_decimal":errors(n_l,dl),
@@ -234,6 +235,25 @@ def worst_cases(cases):
     return worst
 
 
+def registration_draft(out, scope, roster):
+    steps = scope["paths"]["full"][0]
+    side_updates = len(roster)*len(reg.LAYERS)*steps
+    filename = "paired-v2-registration-draft.json"
+    write_json(out/filename,{
+        "policy":"wp06_stable_standardization_matched_initial_terminal_plan_v2",
+        "status":"planning_only", "source_scope_sha256":V1_SHA["scope"],
+        "source_v1_review_sha256":V1_SHA["review"], "selection":scope["validation"],
+        "paths":scope["paths"], "columns":scope["columns"], "layers":scope["layers"],
+        "plans":{scene:{**plan,"policy":linear_probe.POLICY_V2} for scene,plan in scope["probe_plans"].items()},
+        "cases":roster, "planned_heads_per_backbone_stage":len(roster)*len(reg.LAYERS),
+        "planned_updates_per_backbone_stage":{"full":side_updates,"split":side_updates,"completed":0},
+        "planned_total_new_probe_updates":4*side_updates,"planned_historical_head_reuse":0,
+        "actual_new_probe_updates":0,"estimated_wall_minutes_cpu":[30,45],
+        "estimate_basis":"Previous 54-case single-stage v1 fitting command 766.77 s; two stages plus v2 audit and archive checks.",
+        "evidence_scope":"Same-scene frozen K10/V5 development features at both stages. New v2 heads required on both stages."})
+    return filename
+
+
 def diagnose(scope_path, execution_path, review_path, out, code):
     started = time.monotonic()
     require_frozen_code(code)
@@ -241,15 +261,27 @@ def diagnose(scope_path, execution_path, review_path, out, code):
     out = fresh_output(out,paths,pins)
     prior = terminal_index(scope,pins)
     worst = worst_cases(cases)
-    counters, maxima, result_files = {}, {}, []
+    counters, maxima, result_files, roster = {}, {}, [], []
     for item in execution["cases"]:
         name,scene = item["case"],item["scene"]
         plan = scope["probe_plans"][scene]
+        role = cases[name]["role"]
+        pair = {key:role[key] for key in ("seed","method","mode","initial_step","terminal_step")}
+        pair.update(case=name,scene=scene)
+        shared_roles = None
         for source,(root,sha) in (("initial",(paths["execution"].parent,item["execution_sha256"])),
                                   ("terminal",prior[name])):
             precise = [tuple(value[2:]) for value in worst.values() if value[1]==name and source=="initial"]
-            data = diagnose_case(source,scene,plan,scope["columns"],archived_case(root,name,sha,pins,plan["steps"]),
-                                 cases[name][source],precise)
+            archived = archived_case(root,name,sha,pins,plan["steps"])
+            pack = archived[0]
+            labels_and_rows = {key:linear_probe.fingerprint(pack[key]) for key in ("labels","row_ids")}
+            if shared_roles is None:
+                shared_roles = labels_and_rows
+            reg.require(labels_and_rows==shared_roles,"Initial and terminal authorized labels or row order differ")
+            pack_path = str(root/name/"pack.pt")
+            pair[source] = {"pack_path":pack_path,"pack_sha256":pins[pack_path],
+                            "feature_pack_fingerprint":linear_probe.fingerprint(pack)}
+            data = diagnose_case(source,scene,plan,scope["columns"],archived,cases[name][source],precise)
             tally = counters.setdefault(f"{source}/{scene}",Counter())
             peak = maxima.setdefault(f"{source}/{scene}",Counter())
             for layer in data["layers"].values():
@@ -257,7 +289,8 @@ def diagnose(scope_path, execution_path, review_path, out, code):
                     tally["endpoints"]+=1
                     tally["v1_probability_failures"]+=not endpoint["probability"]["passes"]
                     tally["v1_decision_disagreements"]+=endpoint["v1_classification_disagreements"]
-                    tally["v2_standardization_failures"]+=not endpoint["v2_x_to_decimal"]["passes"]
+                    tally["v2_standardization_failures"]+=not (endpoint["v2_x_to_decimal"]["passes"]
+                                                                and endpoint["v2_x_to_decimal"]["floor_agrees"])
                     fixed = endpoint["v2_fixed_head_to_decimal_features"]
                     tally["v2_fixed_head_failures"]+=not (fixed["probabilities_close"] and fixed["strict_decisions"])
                     for key in ("probability","x","logits","logp","v2_x_to_decimal"):
@@ -267,6 +300,11 @@ def diagnose(scope_path, execution_path, review_path, out, code):
             filename = f"{name}-{source}.json"
             write_json(out/filename,data)
             result_files.append(filename)
+        roster.append({**pair,"authorized_roles_fingerprints":shared_roles})
+    result_files.append(registration_draft(out,scope,roster))
+    status_dir = out/"paired-status-v2"
+    result_files.extend(str(Path(status_dir.name)/name)
+                        for name in pair_status.write_outputs(status_dir,list(cases.values()),V1_SHA["review"]))
     check_files(pins)
     require_frozen_code(code)
     observed = {name:count["v1_probability_failures"] for name,count in counters.items()}
