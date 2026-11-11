@@ -16,7 +16,7 @@ POLICY = 'authenticated_full54_train_val_probe_pack_v1'
 OUTPUTS = {f'stage{s}-{kind}.{ext}' for s in (1,2) for kind,ext in (('features','pt'),('summary','json'))}
 
 
-def _authenticate(capture_path, capture_sha256, freeze_path, analysis_path):
+def read_capture_receipt(capture_path, capture_sha256):
     path = Path(capture_path).resolve(strict=True)
     if file_hash(path) != capture_sha256: raise ValueError('Capture receipt changed')
     receipt = read(path);producer = receipt['code']
@@ -29,26 +29,47 @@ def _authenticate(capture_path, capture_sha256, freeze_path, analysis_path):
             or receipt['channel_selection'] is not False
             or receipt['evidence']['registered_state_flags_rng_inputs_unchanged'] is not True):
         raise ValueError('Accepted single-case historical capture required')
+    return path, receipt
+
+
+def _authenticate(capture_path, capture_sha256, freeze_path, analysis_path):
+    path, receipt = read_capture_receipt(capture_path, capture_sha256)
     # Validate the HISTORICAL artifact producer. No claim that current model code
     # matches it, and no model is loaded or executed by this consumer.
     frozen, _, _, case, record, _, pins = authenticate(freeze_path, receipt['freeze_sha256'],
-        analysis_path, receipt['analysis_sha256'], receipt['case'], producer)
+        analysis_path, receipt['analysis_sha256'], receipt['case'], receipt['code'])
+    return bind_capture(path, capture_sha256, receipt, frozen, case, record, pins)
+
+
+def capture_files(bound):
+    path, receipt, _, _, _, _, _, pins = bound
+    names = {str(path), *(str((path.parent / name).resolve(strict=True)) for name in receipt['outputs'])}
+    return {name: pins[name] for name in names}
+
+
+def bind_capture(path, capture_sha256, receipt, frozen, case, record, boundary_pins, *, local_pins=None):
+    """Bind one receipt to a boundary already authenticated by the calling entry point."""
     selected = next(m for m in frozen['models'] if m['name']==case['name'])
     if type(selected.get('selected_step')) is not int or not 1 <= selected['selected_step'] <= 1500:
         raise ValueError('Explicit frozen selected step required')
-    if receipt['protected_files'] != pins: raise ValueError('Capture does not bind complete accepted inputs')
+    if receipt['protected_files'] != boundary_pins: raise ValueError('Capture does not bind complete accepted inputs')
     if receipt['evidence']['observation'] != {k:record['prepared_fields'][k] for k in OBS_KEYS}:
         raise ValueError('Captured observation differs from accepted case')
+    pins = dict(boundary_pins)
+    stage_pins = {}
     def pin(p, sha):
         key = str(Path(p).resolve(strict=True))
         if key in pins and pins[key] != sha: raise ValueError('Conflicting input identity')
         pins[key] = sha
+        stage_pins[key] = sha
     pin(path, capture_sha256)
     for name, sha in receipt['outputs'].items(): pin(path.parent/name, sha)
-    check_files(pins)  # All stage bytes, including the second stage, before decode.
     family_path = Path(case['inputs']['family']).resolve(strict=True)
     if pins.get(str(family_path)) != case['inputs']['family_sha256']:
         raise ValueError('Label family is outside accepted frozen inputs')
+    # Batch callers bracket all cases with full checks and verify the local files
+    # before either label release or stage decoding.
+    check_files(pins if local_pins is None else {**local_pins, **stage_pins, str(family_path): pins[str(family_path)]})
     family = read(family_path);target = case['target'];classes = DATASETS[target][2]
     if (family['target'] != target or family['seed'] != 64 or family['classes'] != list(range(1,classes+1))
             or family['shape'] != [record['prepared_fields'][k] for k in ('height','width')]):
@@ -62,7 +83,7 @@ def _authenticate(capture_path, capture_sha256, freeze_path, analysis_path):
     return path, receipt, record, family, releases, overlay, selected, pins
 
 
-def _pack(bound):
+def _pack(bound, *, local_only=False):
     path, receipt, record, family, releases, overlay, selected, pins = bound
     features = {};pixels = family['shape'][0]*family['shape'][1]
     for stage,width in (('stage1',128),('stage2',64)):
@@ -79,7 +100,7 @@ def _pack(bound):
             aligned = x if branch=='cnn' else broadcast_regions(q,x)
             if not torch.isfinite(aligned).all(): raise ValueError('Nonfinite aligned features')
             features[stage+'_'+branch] = {role:aligned[overlay[role+'_indices']].detach().clone() for role in ('train','val')}
-    check_files(pins)
+    check_files(capture_files(bound) if local_only else pins)
     return {'features':features,'labels':{r:overlay[r+'_labels'] for r in ('train','val')},
         'row_ids':{r:overlay[r+'_indices'] for r in ('train','val')},
         'identity':{'policy':POLICY,'capture_receipt_sha256':file_hash(path),'case':receipt['case'],
