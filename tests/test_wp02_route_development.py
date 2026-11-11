@@ -14,9 +14,10 @@ from transfer.wp02_route_development import development_observations, released_r
 
 class WP02RouteDevelopmentTests(unittest.TestCase):
     def setUp(self):
-        self.plan = make_tile_plan((64,64),8,2,2026)
+        self.plan = make_tile_plan((64,64),12,2,2026)
         plan = self.plan
-        held = next(tile['id'] for tile in plan['tiles'] if tile['partition']=='train')
+        held = next(tile['id'] for tile in plan['tiles'] if tile['partition']=='train'
+                    and tile['box'][1]-tile['box'][0]==8 and tile['box'][3]-tile['box'][2]==8)
         roles = [dict(tile, role=('devval' if tile['id']==held else 'devtrain')
                       if tile['partition']=='train' else 'unused' if tile['partition']=='val' else 'test')
                  for tile in plan['tiles']]
@@ -27,9 +28,9 @@ class WP02RouteDevelopmentTests(unittest.TestCase):
         self.geometry['development_roles_hash'] = digest(self.geometry)
         self.release = dict(scene='xuzhou', development_roles_hash=self.geometry['development_roles_hash'])
         for key,role,seed in (('support','devtrain',512),('validation','devval',3031)):
-            tile = next(t for t in roles if t['role']==role)
-            y0,y1,x0,x1 = tile['box']
-            indices = [y*64+x for y in range(y0,y1) for x in range(x0,x1)][:45]
+            indices = sorted(y*64+x for tile in roles if tile['role']==role
+                             for y0,y1,x0,x1 in (tile['box'],)
+                             for y in range(y0,y1) for x in range(x0,x1))[:45]
             self.release[key] = dict(seed=seed, per_class=5, indices=indices, labels=list(range(1,10))*5)
         self.release['release_hash'] = digest(self.release)
 
@@ -82,7 +83,8 @@ class WP02RouteDevelopmentTests(unittest.TestCase):
                 pairs = sorted([(index,support['labels'][0]), *zip(support['indices'][1:],support['labels'][1:])])
                 support['indices'], support['labels'] = [list(values) for values in zip(*pairs)]
                 altered['release_hash'] = digest({k:v for k,v in altered.items() if k!='release_hash'})
-                with self.assertRaises(ValueError):
+                reason = 'coordinates differ' if index==64*64 else 'escapes'
+                with self.assertRaisesRegex(ValueError,reason):
                     released_record(self.plan,self.geometry,altered,{})
         for altered in ({**self.release,'scene':'paviaU'}, deepcopy(self.release)):
             if altered['scene']=='xuzhou':
