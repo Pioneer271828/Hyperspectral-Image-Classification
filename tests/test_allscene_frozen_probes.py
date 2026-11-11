@@ -40,7 +40,7 @@ def scene_inputs(root, scene, count, template):
     return item, (obs, record, family)
 
 
-def make_grid(root):
+def make_grid(root, *, configure_launch=None):
     source, freeze, analysis, _, initial = fixture(root)
     template = torch.load(initial[0], map_location="cpu", weights_only=True)
     accepted = read(analysis)
@@ -56,6 +56,8 @@ def make_grid(root):
         model_stages[scene] = stages, evidence
         frozen["protected_files"].update({str(path): hash_file(path) for path in files})
     models = {row["name"]: row for row in frozen["models"]}
+    if configure_launch is not None:
+        configure_launch(launch)
     for row in launch["cases"]:
         obs, record, family = records[row["target"]]
         row["inputs"] = {"observation": str(obs), "record": str(record), "family": str(family),

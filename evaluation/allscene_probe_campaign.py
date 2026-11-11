@@ -22,11 +22,11 @@ def ledger_rows(cases, reused):
                "historical_probe_updates": reused[name]["probe_updates"] if name in reused else 0, "new_probe_updates": 0}
 
 
-def run(scope_path, scope_sha, out, code):
+def run(scope_path, scope_sha, out, code, *, authority=registry, run_case=campaign.run_case):
     started = time.monotonic()
     scope_path = Path(scope_path).resolve(strict=True)
-    scope, launch, cases, pins, reused, elapsed = registry.load(scope_path, scope_sha, code)
-    out = registry.output(out, launch, scope, scope_path.parent)
+    scope, launch, cases, pins, reused, elapsed = authority.load(scope_path, scope_sha, code)
+    out = authority.output(out, launch, scope, scope_path.parent)
     reg.require(not out.exists(), "Fresh external execution required")
     owner = scope_path.with_name("execution-owner.json")
     with owner.open("x", encoding="utf-8") as stream:
@@ -35,7 +35,7 @@ def run(scope_path, scope_sha, out, code):
     owner_sha = hash_file(owner)
     out.mkdir(exist_ok=False)
     rows = list(ledger_rows(cases, reused))
-    state = {"policy": registry.POLICY, "scope_sha256": scope_sha, "commit": code["commit"], "cases": rows,
+    state = {"policy": scope["policy"], "scope_sha256": scope_sha, "commit": code["commit"], "cases": rows,
              "status": "running", "history": scope["history"], "input_authentication_seconds": elapsed,
              "allocation_sha256": owner_sha, "backbone_updates": 0, "bn_updates": 0, "query_labels_accessed": False}
     status_file = out/"execution.json"
@@ -50,7 +50,7 @@ def run(scope_path, scope_sha, out, code):
             write_json(status_file, state)
 
         try:
-            sha = campaign.run_case(campaign.folder_at(out, case["name"]), bound, case, local,
+            sha = run_case(campaign.folder_at(out, case["name"]), bound, case, local,
                                     registry.case_scope(scope, case), scope_sha, record_update)
             row.update(status="executed", execution_sha256=sha)
         except Exception as error:
@@ -74,7 +74,7 @@ def validate_run(run_path, run_sha, scope_path, scope_sha, scope, cases, reused,
     owner = scope_path.with_name("execution-owner.json")
     reg.require(reg.pinned_json(owner, run["allocation_sha256"]) == allocation(scope_path, scope_sha, run_path.parent, code),
                 "Execution differs from the once-only registered allocation")
-    reg.require(run_path.name == "execution.json" and run["policy"] == registry.POLICY
+    reg.require(run_path.name == "execution.json" and run["policy"] == scope["policy"]
                 and run["commit"] == code["commit"] and run["scope_sha256"] == scope_sha
                 and run["status"] in ("executed", "incomplete_or_failed")
                 and run["history"] == scope["history"] and run["protected_files_unchanged"] is True
