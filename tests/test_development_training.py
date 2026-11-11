@@ -6,11 +6,13 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import numpy as np
+import torch
 from loadData.spatial_tiles import make_tile_plan,tile_slice
 from loadData.spatial_development import make_development
 from loadData.observation_sampling import BandMetadata
-from transfer.development_training import prepare_scene,adapt,validate
+from transfer.development_training import prepare_scene,adapt,validate,evaluate_validation
 from transfer.g3_training import _update
+from transfer.multiscale_training import MultiscaleTrial, load_multiscale_checkpoint
 from model.research_config import digest
 
 
@@ -52,3 +54,37 @@ class DevelopmentTrainingTests(unittest.TestCase):
                     self.assertEqual(result['sampler']['mode'],mode)
                     self.assertNotEqual(result['initial_backbone_hash'],result['final_backbone_hash'])
                     if mode=='class_first':self.assertTrue(all('anchor_class' in x for x in result['trace']))
+
+    def test_multiscale_variants_train_and_reload_under_matched_spatial_protocol(self):
+        plan, record, cube, approximate = self.fixture()
+        bands = BandMetadata(approximate.source_id, approximate.band_ids, approximate.wavelengths,
+                             "nm", "verified", approximate.valid)
+        scene = prepare_scene(cube, bands, plan, record)
+        base = json.loads((Path(__file__).resolve().parents[1] / 'configs/experiments/screen_m6_none.json').read_text())
+        base['model'].update(latent_channels=8, adapter_embed_dim=8, adapter_checkpoint_chunks=False)
+        updated = []
+
+        def record_update(model, *args, **kwargs):
+            selector = getattr(model.backbone, 'range_metadata', None)
+            previous = selector.weight.detach().clone() if selector is not None else None
+            result = _update(model, *args, **kwargs)
+            if selector is not None:
+                updated.append(not torch.equal(previous, selector.weight.detach()))
+            return result
+
+        with tempfile.TemporaryDirectory() as root, patch('transfer.development_training._update', side_effect=record_update):
+            baseline = adapt(scene, record, base, Path(root) / 'baseline', steps=2)
+            control = adapt(scene, record, base, Path(root) / 'control', steps=2, multiscale=MultiscaleTrial())
+            self.assertEqual(baseline['trace'], control['trace'])
+            self.assertEqual(baseline['validation'], control['validation'])
+            candidate_dir = Path(root) / 'candidate'
+            candidate = adapt(scene, record, base, candidate_dir, steps=2,
+                              multiscale=MultiscaleTrial(cnn_multiscale='joint', graph_multiscale='joint'))
+            self.assertTrue(any(updated))
+            self.assertEqual(candidate['initial_head_hash'], baseline['initial_head_hash'])
+            self.assertEqual([row['tile_id'] for row in candidate['trace']], [row['tile_id'] for row in baseline['trace']])
+            self.assertFalse(candidate['test_evaluated'])
+            selected = load_multiscale_checkpoint(candidate_dir / 'model.pt')
+            selected_row = min(candidate['validation'], key=lambda row: row['nll'])
+            self.assertEqual(candidate['selected_step'], selected_row['step'])
+            self.assertEqual(evaluate_validation(selected, scene, record), {k: v for k, v in selected_row.items() if k != 'step'})
