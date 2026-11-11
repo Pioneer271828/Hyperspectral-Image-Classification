@@ -17,6 +17,8 @@ from transfer.g2_contract import read_pinned
 
 
 SCHEMA = 'p4_cuda_fp32_operator_qualification_v1'
+WEIGHT64_SCHEMA = 'p4_cuda_fp64_sparse_weight_operator_qualification_v1'
+FIXTURE_SEED = 20261111
 RTOL, ATOL = 1e-5, 1e-6
 GRADIENTS = {'pool': ('input',), 'sparse': ('weights', 'features')}
 
@@ -123,7 +125,7 @@ def evaluate_pool(rng, height, width, channels, size, target):
     return comparisons('pool', reference, *results)
 
 
-def evaluate_sparse(rng, indices, shape, channels, target):
+def evaluate_sparse(rng, indices, shape, channels, target, protocol=device.CUDA_AUDITED):
     raw = rng.uniform(.2, 1, indices.shape[1]).astype(np.float32)
     counts = np.bincount(indices[0], weights=raw, minlength=shape[0])
     weights = (raw / counts[indices[0]]).astype(np.float32)
@@ -135,7 +137,9 @@ def evaluate_sparse(rng, indices, shape, channels, target):
         values = torch.tensor(weights, device=where, requires_grad=True)
         features = torch.tensor(raw_features, device=where).T.requires_grad_()
         graph = torch.sparse_coo_tensor(torch.tensor(indices, device=where), values, shape)
-        result = (device.sparse_row_product_gemm(graph, features) if use_registered and where == 'cpu'
+        replacement = (device.sparse_row_product_weight64 if protocol == device.CUDA_FP64_WEIGHT
+                       else device.sparse_row_product_gemm)
+        result = (replacement(graph, features) if use_registered and where == 'cpu'
                   else torch.sparse.mm(graph, features))
         results.append(outputs(result, (values, features), torch.tensor(sensitivity, device=where)))
     return comparisons('sparse', reference, *results)
@@ -148,31 +152,53 @@ def comparisons(operator, reference, native, replacement):
             for name, ref, old, new in zip(names, reference, native, replacement, strict=True)}
 
 
-def run_fixtures(contract, target):
-    rng = np.random.default_rng(20261111)
-    results, matrices = {}, {}
+def sparse_pattern(indices, shape, channels):
+    return {'shape': list(shape), 'stored_entries': indices.shape[1], 'channels': channels,
+            'indices_sha256': digest(indices.tolist())}
+
+
+def sparse_fixtures(contract, height, width):
     stride = contract['token_stride']
+    grid = (math.ceil(height / stride), math.ceil(width / stride))
+    pixels, tokens = height*width, math.prod(grid)
+    q = neighbor_indices(height, width, *grid, contract['assignment_radius'])
+    a = neighbor_indices(*grid, *grid, contract['adjacency_radius'])
+    return grid, (
+        ('assignment', q, (pixels, tokens), 64), ('assignment_transposed', q[::-1].copy(), (tokens, pixels), 64),
+        ('adjacency64', a, (tokens, tokens), 64), ('adjacency128', a, (tokens, tokens), 128))
+
+
+def adversarial_fixtures():
+    indices = np.array([[0, 0, 0, 2, 2, 3], [0, 1, 1, 3, 3, 4]])
+    return (('coo_duplicate_empty_row', indices, (5, 6), 64),
+            ('coo_duplicate_empty_row_transposed', indices[::-1].copy(), (6, 5), 64))
+
+
+def expected_patterns(contract):
+    patterns = {}
+    for height, width in contract['shapes']:
+        _, fixtures = sparse_fixtures(contract, height, width)
+        for label, indices, shape, channels in fixtures:
+            patterns[f'{height}x{width}/{label}'] = sparse_pattern(indices, shape, channels)
+    for key, indices, shape, channels in adversarial_fixtures():
+        patterns[key] = sparse_pattern(indices, shape, channels)
+    return patterns
+
+
+def run_fixtures(contract, target, protocol=device.CUDA_AUDITED):
+    rng = np.random.default_rng(FIXTURE_SEED)
+    results, matrices = {}, {}
     for height, width in contract['shapes']:
         name = f'{height}x{width}'
-        grid = (math.ceil(height / stride), math.ceil(width / stride))
-        pixels, tokens = height*width, math.prod(grid)
-        q = neighbor_indices(height, width, *grid, contract['assignment_radius'])
-        a = neighbor_indices(*grid, *grid, contract['adjacency_radius'])
+        grid, fixtures = sparse_fixtures(contract, height, width)
         results[f'{name}/adaptive_pool'] = evaluate_pool(rng, height, width, contract['pool_channels'], grid, target)
-        for label, indices, shape, channels in (
-            ('assignment', q, (pixels, tokens), 64), ('assignment_transposed', q[::-1].copy(), (tokens, pixels), 64),
-            ('adjacency64', a, (tokens, tokens), 64), ('adjacency128', a, (tokens, tokens), 128),
-        ):
+        for label, indices, shape, channels in fixtures:
             key = f'{name}/{label}'
-            matrices[key] = {'shape': list(shape), 'stored_entries': indices.shape[1], 'channels': channels,
-                             'indices_sha256': digest(indices.tolist())}
-            results[key] = evaluate_sparse(rng, indices, shape, channels, target)
-    adversarial = np.array([[0, 0, 0, 2, 2, 3], [0, 1, 1, 3, 3, 4]])
-    for suffix, indices, shape in (('', adversarial, (5, 6)), ('_transposed', adversarial[::-1].copy(), (6, 5))):
-        key = 'coo_duplicate_empty_row' + suffix
-        matrices[key] = {'shape': list(shape), 'stored_entries': indices.shape[1], 'channels': 64,
-                         'indices_sha256': digest(indices.tolist())}
-        results[key] = evaluate_sparse(rng, indices, shape, 64, target)
+            matrices[key] = sparse_pattern(indices, shape, channels)
+            results[key] = evaluate_sparse(rng, indices, shape, channels, target, protocol)
+    for key, indices, shape, channels in adversarial_fixtures():
+        matrices[key] = sparse_pattern(indices, shape, channels)
+        results[key] = evaluate_sparse(rng, indices, shape, channels, target, protocol)
     return results, matrices
 
 
@@ -195,11 +221,12 @@ def native_cuda_diagnostic():
 
 
 def check_receipt(row, protocol, code, contract):
-    device.require(row.get('schema') == SCHEMA and row.get('status') == 'passed'
+    stable = protocol == device.CUDA_FP64_WEIGHT
+    device.require(row.get('schema') == (WEIGHT64_SCHEMA if stable else SCHEMA) and row.get('status') == 'passed'
         and row['commit'] == code['commit'] and row['source_hash'] == code['source_hash']
         and row['parent_sha256'] == batch.PARENT_SHA and row['geometry'] == contract
         and row['tolerances'] == {'rtol': RTOL, 'atol': ATOL}
-        and row['numeric']['protocol'] == protocol == device.CUDA_AUDITED
+        and protocol in device.CUDA_QUALIFIED and row['numeric']['protocol'] == protocol
         and row['numeric']['device'] == 'cuda:0' and row['numeric']['deterministic_algorithms']
         and not row['numeric']['deterministic_warn_only'] and row['optimizer_updates'] == 0
         and row['query_accessed'] is row['raw_gt_loaded'] is False and row['scope_restored']
@@ -208,6 +235,15 @@ def check_receipt(row, protocol, code, contract):
                                     'sparse_mm': 4*len(contract['shapes'])+2}
         and all(check_comparisons(name, results) for name, results in row['results'].items()),
         'Missing or failed CUDA FP32 forward/gradient qualification')
+    if stable:
+        numeric = row['numeric']
+        device.require(numeric.get('sparse_weight_contract') == device.FP64_WEIGHT_CONTRACT
+            and numeric.get('tf32') is False
+            and numeric.get('float32_matmul_precision') == 'highest'
+            and numeric.get('graph_kernels') == 'adaptive_bin_mean_and_sparse_row_product_weight64_v4'
+            and device.UUID.fullmatch(numeric['physical_uuid'])
+            and row.get('fixture_seed') == FIXTURE_SEED and row['coo_patterns'] == expected_patterns(contract),
+            'FP64 sparse weight qualification dtype, device or fixture identity differs')
     return row['numeric']['physical_uuid']
 
 
@@ -221,7 +257,13 @@ def check_comparisons(name, results):
             for proof in output.values()) for output in results.values())
 
 
-def qualify(parent, gpu, out, code):
+def runtime_settings():
+    return (torch.are_deterministic_algorithms_enabled(), torch.is_deterministic_algorithms_warn_only_enabled(),
+            torch.get_num_threads(), torch.get_float32_matmul_precision(), torch.backends.cuda.matmul.allow_tf32,
+            torch.backends.cudnn.allow_tf32, torch.backends.cudnn.benchmark, torch.backends.cudnn.deterministic)
+
+
+def qualify(parent, gpu, out, code, protocol=device.CUDA_AUDITED):
     from transfer.p4_full_budget_registration import role_inputs
 
     started = perf_counter()
@@ -234,30 +276,33 @@ def qualify(parent, gpu, out, code):
     plan, allowed, _ = role_inputs(reg)
     contract = geometry_contract(plan, allowed, reg['config'])
     calls = Counter()
-    before = torch.are_deterministic_algorithms_enabled(), torch.get_num_threads()
-    with device.arithmetic(device.CUDA_AUDITED, gpu, kernel_calls=calls) as numeric:
+    stable = protocol == device.CUDA_FP64_WEIGHT
+    before = runtime_settings()
+    with device.arithmetic(protocol, gpu, kernel_calls=calls) as numeric:
         # A CPU pooling call and ordinary CUDA product must not affect interceptions.
         host = F.adaptive_avg_pool2d(torch.ones(1, 1, 2, 2), (1, 1))
         unrelated = torch.eye(2, device='cuda:0') @ torch.ones((2, 2), device='cuda:0')
         device.require(host.item() == 1 and bool((unrelated == 1).all()) and not calls,
                        'Unrelated CPU/CUDA operations changed')
-        results, matrices = run_fixtures(contract, 'cuda:0')
+        results, matrices = run_fixtures(contract, 'cuda:0', protocol)
     native = native_cuda_diagnostic()
-    after = torch.are_deterministic_algorithms_enabled(), torch.get_num_threads()
+    after = runtime_settings()
     restored = before == after and calls == {'adaptive_avg_pool2d': len(contract['shapes']),
                                             'sparse_mm': 4*len(contract['shapes'])+2}
     passed = restored and all(proof['compatible'] for result in results.values()
                               for output in result.values() for proof in output.values())
     path = out / 'qualification.json'
-    row = {'schema': SCHEMA, 'status': 'passed' if passed else 'failed', 'commit': code['commit'],
+    row = {'schema': WEIGHT64_SCHEMA if stable else SCHEMA, 'status': 'passed' if passed else 'failed', 'commit': code['commit'],
            'source_hash': code['source_hash'], 'parent_sha256': hash_file(parent), 'geometry': contract,
            'numeric': numeric, 'tolerances': {'rtol': RTOL, 'atol': ATOL}, 'interceptions': dict(calls),
            'scope_restored': restored, 'results': results, 'coo_patterns': matrices, 'native_cuda_diagnostic': native,
            'optimizer_updates': 0, 'raw_gt_loaded': False, 'query_accessed': False,
            'wall_seconds': perf_counter() - started}
+    if stable:
+        row['fixture_seed'] = FIXTURE_SEED
     require_frozen_code(code)
     write_json(path, row)
-    check_receipt(row, device.CUDA_AUDITED, code, contract)
+    check_receipt(row, protocol, code, contract)
     return path
 
 
@@ -266,11 +311,12 @@ def main():
     parser.add_argument('--parent', type=Path, required=True)
     parser.add_argument('--expected-commit', required=True)
     parser.add_argument('--gpu', required=True)
+    parser.add_argument('--protocol', choices=device.CUDA_QUALIFIED, default=device.CUDA_AUDITED)
     parser.add_argument('--out', type=Path, required=True)
     args = parser.parse_args()
     code = code_snapshot()
     device.require(code['commit'] == args.expected_commit, 'Unexpected CUDA qualification source commit')
-    path = qualify(args.parent, args.gpu, args.out, code)
+    path = qualify(args.parent, args.gpu, args.out, code, args.protocol)
     print(json.dumps({'path': str(path), 'sha256': hash_file(path)}))
 
 

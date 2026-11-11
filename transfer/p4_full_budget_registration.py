@@ -63,6 +63,7 @@ def matrix(reg, protocol, gpus, purpose=LEGACY):
 
 def check_budget(purpose, protocol, gpus, synthetic, steps, interval):
     device.require(purpose in POLICIES, 'Unknown P4 registration purpose')
+    device.require(protocol != device.CUDA_FP64_WEIGHT, 'FP64 sparse weight admission requires an engineering receipt')
     if purpose == ADMISSION:
         device.require((steps, interval) == (ADMISSION_STEPS, INTERVAL)
                        and (synthetic or (protocol == device.CUDA_AUDITED and len(gpus) == 2)),

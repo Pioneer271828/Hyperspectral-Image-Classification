@@ -13,7 +13,14 @@ from torch.overrides import TorchFunctionMode
 CPU = 'cpu_fp32_v1'
 CUDA = 'cuda_deterministic_fp32_v1'
 CUDA_AUDITED = 'cuda_deterministic_fp32_named_adam_gemm_v3'
-CUDA_PROTOCOLS = (CUDA, CUDA_AUDITED)
+CUDA_FP64_WEIGHT = 'cuda_deterministic_fp64_sparse_weight_accum_v4'
+CUDA_QUALIFIED = (CUDA_AUDITED, CUDA_FP64_WEIGHT)
+CUDA_PROTOCOLS = (CUDA, *CUDA_QUALIFIED)
+WEIGHT_CHUNK = 4096
+FP64_WEIGHT_CONTRACT = {'operand_dtype': 'torch.float32', 'forward_dtype': 'torch.float32',
+    'feature_gradient_dtype': 'torch.float32', 'weight_gradient_accumulation_dtype': 'torch.float64',
+    'weight_gradient_return_dtype': 'torch.float32', 'reduction': 'coalesced_coo_channel_sum',
+    'max_edges_per_chunk': WEIGHT_CHUNK}
 WORKSPACE = ':4096:8'
 UUID = re.compile(r'GPU-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}')
 MIN_FREE_MIB, MAX_UTILIZATION = 12288, 60
@@ -144,6 +151,36 @@ def sparse_row_product_gemm(left, right):
     return _SparseRowProductGemm.apply(graph.values(), right, rows, columns, graph.shape[0])
 
 
+def sparse_weight_gradient64(sensitivity, features, rows, columns):
+    """Compute only registered edge dots in bounded FP64 channel reductions."""
+    result = features.new_empty(rows.shape, dtype=torch.float64)
+    for start in range(0, rows.numel(), WEIGHT_CHUNK):
+        edges = slice(start, start + WEIGHT_CHUNK)
+        source = features[columns[edges]].to(torch.float64)
+        upstream = sensitivity[rows[edges]].to(torch.float64)
+        result[edges] = (source * upstream).sum(dim=1)
+    return result
+
+
+class _SparseRowProductWeight64(_SparseRowProductGemm):
+    @staticmethod
+    def backward(ctx, sensitivity):
+        weights, features, rows, columns = ctx.saved_tensors
+        weight_grad = None
+        if ctx.needs_input_grad[0]:
+            weight_grad = sparse_weight_gradient64(sensitivity, features, rows, columns).to(weights.dtype)
+        feature_grad = (features.new_zeros(features.shape).index_add(0, columns, weights[:, None] * sensitivity[rows])
+                        if ctx.needs_input_grad[1] else None)
+        return weight_grad, feature_grad, None, None, None
+
+
+def sparse_row_product_weight64(left, right):
+    require(left.dtype == right.dtype == torch.float32, 'The FP64 edge accumulation protocol requires FP32 operands')
+    graph = left.coalesce()
+    rows, columns = graph.indices()
+    return _SparseRowProductWeight64.apply(graph.values(), right, rows, columns, graph.shape[0])
+
+
 class _CudaGraphKernels(TorchFunctionMode):
     """Use the registered FP32 graph operators only inside a P4 CUDA worker."""
 
@@ -169,7 +206,7 @@ class _CudaGraphKernels(TorchFunctionMode):
 
 @contextmanager
 def arithmetic(protocol, gpu=None, *, kernel_calls=None):
-    """Apply a versioned FP32 protocol and restore process settings on exit."""
+    """Apply a versioned arithmetic protocol and restore process settings on exit."""
     require(protocol in (CPU, *CUDA_PROTOCOLS) and (gpu is None) == (protocol == CPU), 'Device/protocol mismatch')
     details = {'protocol': protocol, 'physical_uuid': gpu, 'device': 'cpu' if gpu is None else 'cuda:0',
                'torch': str(torch.__version__), 'torch_threads': 1,
@@ -184,11 +221,15 @@ def arithmetic(protocol, gpu=None, *, kernel_calls=None):
                 'Expected one visible logical CUDA device')
         torch.cuda.set_device(0)
         props = torch.cuda.get_device_properties(0)
-        graph_kernels = ('adaptive_bin_mean_and_sparse_row_product_weight_gemm_v3' if protocol == CUDA_AUDITED
-                         else 'adaptive_bin_mean_and_sparse_row_product_v1')
+        graph_kernels = {
+            CUDA: 'adaptive_bin_mean_and_sparse_row_product_v1',
+            CUDA_AUDITED: 'adaptive_bin_mean_and_sparse_row_product_weight_gemm_v3',
+            CUDA_FP64_WEIGHT: 'adaptive_bin_mean_and_sparse_row_product_weight64_v4'}[protocol]
         details.update(driver=row['driver'], cuda=torch.version.cuda, cudnn=torch.backends.cudnn.version(),
                        gpu_name=props.name, compute_capability=[props.major, props.minor],
                        graph_kernels=graph_kernels)
+        if protocol == CUDA_FP64_WEIGHT:
+            details.update(sparse_weight_contract=dict(FP64_WEIGHT_CONTRACT), tf32=False)
     old_threads = torch.get_num_threads()
     old_precision = torch.get_float32_matmul_precision()
     old_determinism = torch.are_deterministic_algorithms_enabled(), torch.is_deterministic_algorithms_warn_only_enabled()
@@ -206,7 +247,8 @@ def arithmetic(protocol, gpu=None, *, kernel_calls=None):
         details['deterministic_algorithms'] = torch.are_deterministic_algorithms_enabled()
         details['deterministic_warn_only'] = torch.is_deterministic_algorithms_warn_only_enabled()
         details['float32_matmul_precision'] = torch.get_float32_matmul_precision()
-        sparse_product = sparse_row_product_gemm if protocol == CUDA_AUDITED else sparse_row_product
+        sparse_product = {CUDA_AUDITED: sparse_row_product_gemm,
+                          CUDA_FP64_WEIGHT: sparse_row_product_weight64}.get(protocol, sparse_row_product)
         with (_CudaGraphKernels(sparse_product, kernel_calls) if gpu is not None else nullcontext()):
             yield details
     finally:
