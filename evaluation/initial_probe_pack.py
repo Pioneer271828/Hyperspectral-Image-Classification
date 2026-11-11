@@ -11,7 +11,7 @@ from research_runtime import hash_file
 CAPTURE_POLICY = "e0_frozen_full54_pre_adaptation_capture_v1"
 POLICY = "authenticated_full54_pre_adaptation_train_val_probe_pack_v1"
 PRODUCER = "77242952ded4fdbaf0a566a59fa5cd52a9ab6c51"
-SOURCE = "865407faf7b10c188a3a44de47fdf4ab51012f47479870dd8ba47a029ca03b524"
+SOURCE = "865407faf7b10c18a3a44de47fdf4ab51012f47479870dd8ba47a029ca03b524"
 OPTIONS = {"maximum_regions":1024,"seed":64,"variance_floor":1e-24}
 
 
