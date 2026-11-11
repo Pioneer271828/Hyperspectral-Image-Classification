@@ -89,7 +89,8 @@ def write_outputs(out,results):
             (OUTPUTS[1],classes,(*METRIC_KEYS,"class_id","support","recall","f1")),
             (OUTPUTS[2],paired,(*PAIR_KEYS,*base.METRICS)),
             (OUTPUTS[3],paired_classes,(*PAIR_KEYS,"class_id","support","recall","f1")),
-            (OUTPUTS[4],dimensions,("scene","case","seed","method","mode","layer","regions","initial","terminal","terminal_minus_initial"))):
+            (OUTPUTS[4],dimensions,("scene","case","seed","method","mode","layer","regions","initial","terminal",
+                                  "sample_alignment","terminal_minus_initial"))):
         base.write_csv(out/filename,[{key:row[key] for key in keys} for row in rows],keys)
     statuses = Counter(row["initial"]["status"] for row in results)
     write_json(out/OUTPUTS[5],{"cases":dict(statuses),"endpoint_rows":len(metrics),"class_rows":len(classes),

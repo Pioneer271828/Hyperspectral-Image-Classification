@@ -25,11 +25,12 @@ def spectrum(bound, terminal):
     for stage in ("stage1","stage2"):
         initial, selected = [read(pack[0].parent/(stage+"-summary.json")) for pack in (bound,terminal)]
         keys = ("maximum_regions","seed","sampled_region_indices","sampled_region_masses")
-        reg.require(all(initial[k] == selected[k] for k in keys), "Initial and terminal regional samples differ")
+        matched = all(initial[k] == selected[k] for k in keys)
         for branch in ("cnn","graph"):
             before, after = (x[branch]["effective_dimension"] for x in (initial,selected))
-            rows[stage+"_"+branch] = {"regions":initial["sampled_regions"],"initial":before,"terminal":after,
-                "terminal_minus_initial":after-before if before is not None and after is not None else None}
+            rows[stage+"_"+branch] = {"regions":initial["sampled_regions"] if matched else None,
+                "initial":before,"terminal":after,"sample_alignment":"matched" if matched else "different",
+                "terminal_minus_initial":after-before if matched and before is not None and after is not None else None}
     return rows
 
 

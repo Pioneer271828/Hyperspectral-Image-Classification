@@ -178,3 +178,19 @@ class InitialFinalTests(unittest.TestCase):
                          ("incomplete_or_failed",53,432))
         self.assertEqual(result["failed_initial_probes"],1)
         self.assertFalse(path.with_name("acceptance.json").exists())
+
+    def test_spectrum_change_requires_same_regional_sample(self):
+        folder = self.root/"sample-check"
+        folder.mkdir()
+        paths = [folder/x for x in ("initial","terminal")]
+        for i, root in enumerate(paths):
+            root.mkdir()
+            for stage in ("stage1","stage2"):
+                write_json(root/(stage+"-summary.json"),{"maximum_regions":1024,"seed":64,
+                    "sampled_region_indices":[0] if stage=="stage1" else [i],
+                    "sampled_region_masses":[1.],"sampled_regions":1,
+                    "cnn":{"effective_dimension":2+i},"graph":{"effective_dimension":3+i}})
+        result = pack.spectrum((paths[0]/"receipt.json",),(paths[1]/"receipt.json",))
+        self.assertEqual(result["stage1_cnn"]["terminal_minus_initial"],1)
+        self.assertEqual(result["stage2_cnn"]["sample_alignment"],"different")
+        self.assertIsNone(result["stage2_cnn"]["terminal_minus_initial"])
