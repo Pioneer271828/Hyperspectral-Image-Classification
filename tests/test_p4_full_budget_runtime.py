@@ -105,6 +105,25 @@ class FullBudgetTests(unittest.TestCase):
         self.assertEqual(len(row['observations']), 7)
         self.assertEqual(row['nonselected_event_probability_replays'], 0)
 
+    def test_cuda_graph_operator_math_on_cpu(self):
+        image = torch.linspace(-2, 3, 70, dtype=torch.float64).reshape(1, 2, 5, 7).requires_grad_()
+        for size in ((2, 3), (1, 1), (5, 7)):
+            self.compare_operator(device.adaptive_bin_mean(image, size),
+                                  torch.nn.functional.adaptive_avg_pool2d(image, size), (image,))
+        coordinates = torch.tensor([[0, 0, 2, 2, 3], [0, 1, 1, 1, 2]])
+        weights = torch.linspace(-1, 1, 5, dtype=torch.float64).requires_grad_()
+        features = torch.linspace(-2, 2, 12, dtype=torch.float64).reshape(3, 4).requires_grad_()
+        graph = torch.sparse_coo_tensor(coordinates, weights, (4, 3))
+        self.compare_operator(device.sparse_row_product(graph, features), torch.sparse.mm(graph, features),
+                              (weights, features))
+
+    def compare_operator(self, got, expected, inputs):
+        torch.testing.assert_close(got, expected, rtol=1e-12, atol=1e-12)
+        sensitivity = torch.linspace(.1, 1.3, got.numel(), dtype=got.dtype).reshape_as(got)
+        got_grad = torch.autograd.grad(got, inputs, sensitivity, retain_graph=True)
+        expected_grad = torch.autograd.grad(expected, inputs, sensitivity)
+        torch.testing.assert_close(got_grad, expected_grad, rtol=1e-12, atol=1e-12)
+
     def test_small_matrix_actual_acceptance_and_no_replay_after_completion(self):
         out = self.root / 'all-cases'
         calls = []
@@ -228,15 +247,32 @@ class FullBudgetCudaTests(unittest.TestCase):
             scope_path = prepare(root / 'scope', parent, prior, code, protocol=device.CUDA, gpus=(gpu, peer))
             sha = hash_file(scope_path)
             scope, _ = registration.load(scope_path, sha, code)
-            case = next(r for r in scope['cases'] if r['physical_uuid'] == gpu and r['arm'] == 'continuous')
+            case = next(r for r in scope['cases'] if r['physical_uuid'] == gpu and r['arm'] == 'continuous'
+                        and r['method'] == 'shared_transfer' and r['model_seed'] == 512)
             roots = [root / 'full', root / 'split']
+            campaign.slot_lock(roots[0], gpu).parent.mkdir()
             for out, stops in zip(roots, ((6,), (2, 3, 6))):
                 own(out, scope_path)
-                for stop in stops:
-                    campaign.worker(scope_path, sha, out, case['id'], 'advance', stop, code)
-                self.assertEqual(campaign.worker(scope_path, sha, out, case['id'], 'completed', None, code)['updates'], 0)
+                operations = [('advance', stop) for stop in stops] + [('completed', None)]
+                if out == roots[1]:
+                    operations.append(('audit', None))
+                with device.lease(out / '.coordinator.lock') as coordinator, device.lease(campaign.slot_lock(out, gpu)) as slot:
+                    cursor = 0
+                    for operation, stop in operations:
+                        try:
+                            result = campaign.invoke_operation(scope_path, sha, out, code, case, operation, stop,
+                                                               (coordinator, slot), campaign.invoke)
+                        except device.ResourceUnavailable:
+                            raise
+                        except RuntimeError as error:
+                            logs = '\n'.join(path.read_text() for path in sorted((out / 'logs').glob('*.log')))
+                            self.fail(f'{error}\n{logs}')
+                        self.assertEqual(result['updates'], stop - cursor if stop is not None else 0)
+                        if stop is not None:
+                            cursor = stop
             states = [torch.load(campaign.bound_folder(out, case) / 'state.pt', map_location='cpu', weights_only=True)
                       for out in roots]
             self.assertIsNotNone(states[0]['rng']['cuda'])
             self.assertEqual(states[0]['fingerprints'], states[1]['fingerprints'])
-            self.assertEqual(campaign.worker(scope_path, sha, roots[1], case['id'], 'audit', None, code)['updates'], 0)
+            receipt = campaign.accepted(campaign.bound_folder(roots[1], case), scope, case, sha)
+            self.assertEqual(receipt['audit_optimizer_updates'], 0)

@@ -1,11 +1,13 @@
 """Explicit CPU/CUDA arithmetic, resource admission and worker leases for P4."""
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import os
 import platform
 import re
 import subprocess
 
 import torch
+from torch.nn import functional as F
+from torch.overrides import TorchFunctionMode
 
 
 CPU = 'cpu_fp32_v1'
@@ -77,6 +79,44 @@ def check_inherited_lease(fd, path):
         raise ResourceUnavailable(f'Worker did not inherit the active lease: {path}') from error
 
 
+def _bin_weights(value, size, count):
+    cells = torch.arange(count, device=value.device)
+    indices = torch.arange(size, device=value.device)
+    start = cells * size // count
+    end = ((cells + 1) * size + count - 1) // count
+    inside = (indices >= start[:, None]) & (indices < end[:, None])
+    return inside.to(value.dtype) / (end - start)[:, None]
+
+
+def adaptive_bin_mean(value, shape):
+    """Average the same possibly overlapping bins as adaptive_avg_pool2d."""
+    vertical = _bin_weights(value, value.shape[-2], shape[0])
+    horizontal = _bin_weights(value, value.shape[-1], shape[1])
+    return (vertical @ value) @ horizontal.T
+
+
+def sparse_row_product(left, right):
+    """Multiply a COO graph by dense features using deterministic index_add."""
+    graph = left.coalesce()
+    rows, columns = graph.indices()
+    terms = graph.values()[:, None] * right[columns]
+    return right.new_zeros((left.shape[0], right.shape[1])).index_add(0, rows, terms)
+
+
+class _CudaGraphKernels(TorchFunctionMode):
+    """Use the registered FP32 graph operators only inside a P4 CUDA worker."""
+
+    def __torch_function__(self, func, types, args=(), kwargs=None):
+        options = kwargs or {}
+        if len(args) == 2 and not options:
+            if func is F.adaptive_avg_pool2d and args[0].is_cuda:
+                size = args[1]
+                return adaptive_bin_mean(args[0], (size, size) if isinstance(size, int) else size)
+            if func is torch.sparse.mm and args[0].is_cuda and args[0].is_sparse:
+                return sparse_row_product(*args)
+        return func(*args, **options)
+
+
 @contextmanager
 def arithmetic(protocol, gpu=None):
     """Apply a versioned FP32 protocol and restore process settings on exit."""
@@ -95,7 +135,8 @@ def arithmetic(protocol, gpu=None):
         torch.cuda.set_device(0)
         props = torch.cuda.get_device_properties(0)
         details.update(driver=row['driver'], cuda=torch.version.cuda, cudnn=torch.backends.cudnn.version(),
-                       gpu_name=props.name, compute_capability=[props.major, props.minor])
+                       gpu_name=props.name, compute_capability=[props.major, props.minor],
+                       graph_kernels='adaptive_bin_mean_and_sparse_row_product_v1')
     old_threads = torch.get_num_threads()
     old_precision = torch.get_float32_matmul_precision()
     old_determinism = torch.are_deterministic_algorithms_enabled(), torch.is_deterministic_algorithms_warn_only_enabled()
@@ -113,7 +154,8 @@ def arithmetic(protocol, gpu=None):
         details['deterministic_algorithms'] = torch.are_deterministic_algorithms_enabled()
         details['deterministic_warn_only'] = torch.is_deterministic_algorithms_warn_only_enabled()
         details['float32_matmul_precision'] = torch.get_float32_matmul_precision()
-        yield details
+        with (_CudaGraphKernels() if gpu is not None else nullcontext()):
+            yield details
     finally:
         torch.use_deterministic_algorithms(old_determinism[0], warn_only=old_determinism[1])
         (torch.backends.cuda.matmul.allow_tf32, torch.backends.cudnn.allow_tf32,
