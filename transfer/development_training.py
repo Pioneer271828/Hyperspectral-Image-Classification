@@ -12,13 +12,20 @@ from transfer.tile_sampling import SupportTileSampler
 from transfer.run_provenance import resolve_budget,run_fields,verify_run_artifacts
 
 
+WP02_SPATIAL_RECORD = 'wp02_accepted_xuzhou_k5_v5_v1'
+
+
 def development_counts(record):
-    """Fixed per-class 10/5 contract; totals vary only with declared classes."""
+    """Preserve K10/V5 and the separate WP02 K5/V5 release."""
     classes=record['classes']
     if (not isinstance(classes,list) or not 1<=len(classes)<=256 or
             any(type(c) is not int for c in classes) or classes!=list(range(1,len(classes)+1))):
         raise ValueError('Bounded contiguous positive classes required')
-    training,validation=10*len(classes),5*len(classes)
+    wp02 = record.get('kind') == WP02_SPATIAL_RECORD
+    if wp02 and (classes != list(range(1, 10)) or record['train_support']['seed'] != 512
+                 or record['validation_support']['seed'] != 3031):
+        raise ValueError('WP02 Xuzhou release requires nine classes and its original support seeds')
+    training,validation=(5 if wp02 else 10)*len(classes),5*len(classes)
     for key,expected in (('training_labels',training),('validation_labels',validation),
                          ('total_training_selection_labels',training+validation)):
         if type(record.get(key)) is not int or record[key]!=expected:
@@ -35,9 +42,11 @@ def validate(record,plan):
         if {k:v for k,v in role.items() if k!='role'}!=tile:raise ValueError('Role geometry altered')
         allowed=('devtrain','devval') if tile['partition']=='train' else ('test',) if tile['partition']=='test' else ('unused',)
         if role['role'] not in allowed:raise ValueError('Invalid role')
-    development_counts(record)
+    training, validation = development_counts(record)
     width=plan['shape'][1];seen=set()
-    for name,role,budget in [('train_support','devtrain',10),('validation_support','devval',5)]:
+    classes = len(record['classes'])
+    for name,role,budget in [('train_support','devtrain',training//classes),
+                             ('validation_support','devval',validation//classes)]:
         support=record[name];ids=support['indices'];labels=support['labels']
         if ids!=sorted(set(ids)) or len(ids)!=len(labels) or seen.intersection(ids):raise ValueError('Support overlap/order')
         seen.update(ids)
