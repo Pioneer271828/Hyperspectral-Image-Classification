@@ -159,9 +159,13 @@ class V2PairedProbeTests(unittest.TestCase):
                 registry.load_pack(changed,"initial",classes)
 
     def test_duplicate_allocation_and_over_budget_ledger(self):
+        alternate = registry.prepare((),self.root/"another-scope",self.code)
+        self.assertEqual(hash_file(alternate),self.scope_sha)
         with patch.object(registry,"preflight",side_effect=AssertionError("must not re-preflight")):
             with self.assertRaisesRegex(ValueError,"already has"):
                 campaign.run(self.scope,self.scope_sha,self.root/"second-run",self.code)
+            with self.assertRaisesRegex(ValueError,"already has"):
+                campaign.run(alternate,self.scope_sha,self.root/"second-run",self.code)
         original = reg.pinned_json
         def read(path,sha):
             result = original(path,sha)
@@ -172,6 +176,20 @@ class V2PairedProbeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"Execution interval"):
                 campaign.checked_ledger(self.execution,self.execution_sha,self.scope,self.scope_sha,
                                         json.loads(self.scope.read_text()),self.code)
+
+    def test_missing_stage_probability_file_blocks_independent_review(self):
+        scope = json.loads(self.scope.read_text())
+        recorded = json.loads(self.execution.read_text())["cases"][0]
+        case = scope["cases"][0]
+        path = self.execution.parent/case["name"]/"terminal"/"selected-logp.pt"
+        backup = path.with_suffix(".saved")
+        path.rename(backup)
+        try:
+            with self.assertRaises(FileNotFoundError):
+                campaign.audit_stage(self.execution.parent,case,"terminal",recorded["stages"]["terminal"],
+                                     scope,self.scope_sha,self.evidence.legacy[case["name"]]["terminal"])
+        finally:
+            backup.rename(path)
 
     def test_one_probability_failure_propagates_without_acceptance(self):
         original = audit.audit_probes

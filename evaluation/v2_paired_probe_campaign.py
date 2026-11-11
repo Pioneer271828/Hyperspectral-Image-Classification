@@ -35,6 +35,14 @@ def allocation(scope_path,scope_sha,out,code):
             "execution":str(out/"execution.json"),"commit":code["commit"],"source_hash":code["source_hash"]}
 
 
+def owner_path(scope_path,scope):
+    draft = scope["sources"]["draft"]["sha256"]
+    reg.require(len(draft)==64 and all(char in "0123456789abcdef" for char in draft),"Pinned draft SHA256 required")
+    path = scope_path.parent.parent/".wp06-v2-paired-allocations"/(draft+".json")
+    reg.require(path.resolve()==path,"Execution allocation cannot traverse a symlink")
+    return path
+
+
 def total_updates(cases):
     return {stage:sum(case["stages"][stage]["verified_updates"] for case in cases) for stage in registry.ROLES}
 
@@ -50,13 +58,14 @@ def run(scope_path,scope_sha,out,code):
     scope_path = Path(scope_path).resolve(strict=True)
     scope,evidence = registry.load(scope_path,scope_sha,code)
     out = output_location(out,evidence)
-    owner = scope_path.with_name("execution-owner.json")
+    owner = owner_path(scope_path,scope)
     reg.require(not owner.exists(),"This v2 scope already has an execution allocation")
     check_files(evidence.pins)
     registry.preflight(scope)
     require_frozen_code(code)
     preflight_seconds = time.monotonic()-started
     # A filesystem-exclusive claim also prevents two simultaneous processes from fitting the same scope.
+    owner.parent.mkdir(exist_ok=True)
     with owner.open("x",encoding="utf-8") as stream:
         json.dump(allocation(scope_path,scope_sha,out,code),stream,indent=2)
         stream.write("\n")
@@ -114,7 +123,7 @@ def run(scope_path,scope_sha,out,code):
 
 def checked_ledger(path,sha,scope_path,scope_sha,scope,code):
     state = reg.pinned_json(path,sha)
-    owner = scope_path.with_name("execution-owner.json")
+    owner = owner_path(scope_path,scope)
     owner_sha = state["owner_sha256"]
     reg.require(path.name=="execution.json" and reg.pinned_json(owner,owner_sha)==allocation(scope_path,scope_sha,path.parent,code)
         and state["status"] in ("executed","incomplete_or_failed") and state["policy"]==registry.POLICY
