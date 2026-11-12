@@ -117,8 +117,8 @@ def probe(out, wp07, wp08, curator, code):
                 source=prior["source"], sidecar=prior["sidecar"], source_state=original_state,
                 actual_forwards=16, rows=result, wavelength_quality=scene.bands.wavelength_quality,
                 metadata_fallback="mean", joint_fallback="content", state_unchanged=True),
-            "paviaU": dict(status="BLOCKED", reason="No pinned compatible development tile manifest and source pair located",
+            "paviaU": dict(status="BLOCKED", reason="Accepted fixed spatial roles exist; no independently pinned development-only tile package and compatible source pair located",
                            role_arrays=[], actual_forwards=0),
-            "whu-honghu": dict(status="BLOCKED", reason="WP02 release blocked in the accepted curator receipt",
+            "whu-honghu": dict(status="BLOCKED", reason="Initial WP02 release blocked; the later guarded role release has no independently pinned two-block array package for this entry",
                                role_arrays=[], actual_forwards=0)},
         provenance=[wp07, wp08, curator], wall_seconds=perf_counter() - started))
