@@ -16,7 +16,7 @@ from transfer.multiscale_training import MultiscaleTrial
 
 
 @contextmanager
-def _measure_graph_build(model, samples):
+def _measure_graph_build(model, samples, on_state=None):
     """Time the existing bound builder on this run's private CPU model."""
     builder = model.backbone.learnable_graph
     if "build_graph" in vars(builder):
@@ -27,6 +27,8 @@ def _measure_graph_build(model, samples):
         started = perf_counter()
         result = build(*args, **kwargs)
         samples.append(perf_counter() - started)
+        if on_state is not None:
+            on_state(result)
         return result
 
     builder.build_graph = measured

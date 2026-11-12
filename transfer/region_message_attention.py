@@ -1,7 +1,9 @@
 """Optional regional cross-branch messages inspired by MiTA v6, section 3.2."""
 
+from contextlib import contextmanager
 from contextvars import ContextVar
 import math
+from time import perf_counter
 
 import torch
 from torch import nn
@@ -12,7 +14,32 @@ from model.region_pixel_alignment import pool_regions
 
 
 _block = ContextVar("region_message_block", default=None)
+_timings = ContextVar("region_message_timings", default=None)
 ATTENTION_MODES = ("local", "dense", "compress", "route", "combined")
+TRACE_FIELDS = ("regions", "valid_regions", "landmarks", "k", "raw_query_kv_pairs",
+                "compressed_query_kv_pairs", "probe_pairs", "compression_raw_value_pairs", "route_score_pairs")
+
+
+@contextmanager
+def profile_region_messages(samples):
+    token = _timings.set(samples)
+    try:
+        yield
+    finally:
+        _timings.reset(token)
+
+
+@contextmanager
+def _timed(name):
+    samples = _timings.get()
+    if samples is None:
+        yield
+        return
+    started = perf_counter()
+    try:
+        yield
+    finally:
+        samples.setdefault(name, []).append(perf_counter() - started)
 
 
 class RegionMessageAttention(nn.Module):
@@ -20,10 +47,10 @@ class RegionMessageAttention(nn.Module):
 
     def __init__(self, channels, width, mode, landmark_grid, top_k, query_chunk):
         super().__init__()
-        if mode not in ATTENTION_MODES or len(landmark_grid) != 2:
+        if mode not in ATTENTION_MODES or not isinstance(landmark_grid, (list, tuple)) or len(landmark_grid) != 2:
             raise ValueError("Expected a region attention mode and a 2D landmark grid")
-        if any(type(value) is not int or value < 1 for value in (*landmark_grid, top_k, query_chunk, width)):
-            raise ValueError("Landmark dimensions, top-k, query chunk and projection width must be positive integers")
+        if any(type(value) is not int or value < 1 for value in (*landmark_grid, top_k, query_chunk, width, channels)):
+            raise ValueError("Landmark dimensions, top-k, query chunk and channel widths must be positive integers")
         self.mode, self.landmark_grid = mode, tuple(landmark_grid)
         self.top_k, self.query_chunk = top_k, query_chunk
         self.query = nn.Linear(channels, width, bias=False)
@@ -44,45 +71,87 @@ class RegionMessageAttention(nn.Module):
     def _routed_attention(self, queries, keys, values, landmarks, expert_ids, compressed):
         messages = []
         for chunk in queries.split(self.query_chunk):
-            landmark_logits = (chunk @ landmarks.T) * self.scale
-            selected = expert_ids[landmark_logits.argmax(dim=1)]
-            logits = (chunk[:, None] * keys[selected]).sum(dim=-1) * self.scale
-            routed_values = values[selected]
-            if compressed is not None:
-                logits = torch.cat((landmark_logits, logits), dim=1)
-                routed_values = torch.cat((compressed.expand(len(chunk), -1, -1), routed_values), dim=1)
-            messages.append((logits.softmax(dim=1)[:, :, None] * routed_values).sum(dim=1))
+            with _timed("scoring"):
+                landmark_logits = (chunk @ landmarks.T) * self.scale
+            with _timed("selection"):
+                expert = landmark_logits.argmax(dim=1)
+            with _timed("gather"):
+                selected = expert_ids[expert]
+                routed_keys, routed_values = keys[selected], values[selected]
+            with _timed("scoring"):
+                logits = (chunk[:, None] * routed_keys).sum(dim=-1) * self.scale
+            with _timed("mix"):
+                if compressed is not None:
+                    logits = torch.cat((landmark_logits, logits), dim=1)
+                    routed_values = torch.cat((compressed.expand(len(chunk), -1, -1), routed_values), dim=1)
+                messages.append((logits.softmax(dim=1)[:, :, None] * routed_values).sum(dim=1))
         return torch.cat(messages)
 
-    def forward(self, target, source, positions, valid):
-        if target.ndim != 2 or target.shape != source.shape:
+    def _attention(self, queries, keys, values):
+        result = []
+        for chunk in queries.split(self.query_chunk):
+            with _timed("scoring"):
+                logits = (chunk @ keys.T) * self.scale
+            with _timed("mix"):
+                result.append(logits.softmax(dim=1) @ values)
+        return torch.cat(result)
+
+    def forward(self, target, source, positions, valid, *, trace=None):
+        if (target.ndim != 2 or target.shape != source.shape or target.shape[1] != self.query.in_features
+                or target.dtype != source.dtype or target.device != source.device or not target.is_floating_point()):
             raise ValueError("Expected matched region features")
         size = target.shape[0]
-        if positions.shape != (size, 2) or valid.shape != (size,):
+        if (positions.shape != (size, 2) or valid.shape != (size,)
+                or positions.device != target.device or valid.device != target.device):
             raise ValueError("Expected matched region features, y/x positions and a region mask")
         if valid.dtype != torch.bool or not torch.isfinite(positions).all() or ((positions < 0) | (positions > 1)).any():
             raise ValueError("Expected a boolean region mask and finite normalized positions")
         ids = valid.nonzero(as_tuple=True)[0]
-        if ids.numel() == 0:
+        count = ids.numel()
+        if trace is not None:
+            trace.update(dict.fromkeys(TRACE_FIELDS, 0), regions=size, valid_regions=count)
+        if count == 0:
             return target.new_zeros(target.shape)
-        queries, keys, values = self.query(target[ids]), self.key(source[ids]), self.value(source[ids])
+        target_valid, source_valid = target[ids], source[ids]
+        if not torch.isfinite(target_valid).all() or not torch.isfinite(source_valid).all():
+            raise ValueError("Valid region features must be finite")
+        with _timed("projection"):
+            queries, keys, values = self.query(target_valid), self.key(source_valid), self.value(source_valid)
         if self.mode == "local":
-            messages = (queries + keys).tanh() * values
+            with _timed("mix"):
+                messages = (queries + keys).tanh() * values
+            if trace is not None:
+                trace["raw_query_kv_pairs"] = count
         elif self.mode == "dense":
-            messages = torch.cat([((q @ keys.T) * self.scale).softmax(dim=1) @ values
-                                  for q in queries.split(self.query_chunk)])
+            messages = self._attention(queries, keys, values)
+            if trace is not None:
+                trace["raw_query_kv_pairs"] = count * count
         else:
-            landmarks = self._landmarks(queries, positions[ids])
-            probe = (landmarks @ keys.T) * self.scale
-            compressed = probe.softmax(dim=1) @ values if self.mode != "route" else None
+            with _timed("landmarks"):
+                landmarks = self._landmarks(queries, positions[ids])
+            with _timed("scoring"):
+                probe = (landmarks @ keys.T) * self.scale
+            compressed = None
+            if self.mode != "route":
+                with _timed("compression"):
+                    compressed = probe.softmax(dim=1) @ values
+            actual_k = 0
             if self.mode == "compress":
-                messages = torch.cat([((q @ landmarks.T) * self.scale).softmax(dim=1) @ compressed
-                                      for q in queries.split(self.query_chunk)])
+                messages = self._attention(queries, landmarks, compressed)
             else:
                 # Equal scores retain the original ascending source-region order.
-                experts = probe.argsort(dim=1, descending=True, stable=True)[:, :min(self.top_k, ids.numel())]
+                actual_k = min(self.top_k, count)
+                with _timed("selection"):
+                    experts = probe.argsort(dim=1, descending=True, stable=True)[:, :actual_k]
                 messages = self._routed_attention(queries, keys, values, landmarks, experts, compressed)
-        return target.new_zeros(target.shape).index_copy(0, ids, self.output(messages).to(target.dtype))
+            if trace is not None:
+                pairs = len(landmarks) * count
+                trace.update(landmarks=len(landmarks), k=actual_k, raw_query_kv_pairs=count * actual_k,
+                             compressed_query_kv_pairs=pairs if compressed is not None else 0,
+                             probe_pairs=pairs, compression_raw_value_pairs=pairs if compressed is not None else 0,
+                             route_score_pairs=pairs if actual_k else 0)
+        with _timed("projection"):
+            return target.new_zeros(target.shape).index_copy(0, ids, self.output(messages).to(target.dtype))
 
 
 def _region_geometry(assignment, shape):
@@ -109,17 +178,27 @@ class _RegionAttentionExchange(nn.Module):
         bound = _block.get()
         if bound is None or bound[0] is not self or alignment.mode != "region":
             raise ValueError("Region messages require the current image block and Q alignment")
-        positions, valid = _region_geometry(assignment, bound[1])
-        pixels_pooled = alignment.to_regions(pixels, assignment)
+        with _timed("geometry"):
+            positions, valid = _region_geometry(assignment, bound[1])
+        with _timed("alignment"):
+            pixels_pooled = alignment.to_regions(pixels, assignment)
+        traces = {}
         to_pixels = None
         if self.to_pixels is not None:
-            to_pixels = alignment.to_pixels(self.to_pixels(pixels_pooled, regions, positions, valid), assignment)
+            trace = traces.setdefault("graph_to_cnn", {}) if collect_stats else None
+            projected = self.to_pixels(pixels_pooled, regions, positions, valid, trace=trace)
+            with _timed("alignment"):
+                to_pixels = alignment.to_pixels(projected, assignment)
         to_regions = None
         if self.to_regions is not None:
-            to_regions = self.to_regions(regions, pixels_pooled, positions, valid)
-        updated_pixels, updated_regions, info = self.exchange(
-            pixels, regions, to_pixels, to_regions, collect_stats=collect_stats, return_diagnostics=return_diagnostics,
-        )
+            trace = traces.setdefault("cnn_to_graph", {}) if collect_stats else None
+            to_regions = self.to_regions(regions, pixels_pooled, positions, valid, trace=trace)
+        with _timed("outer_exchange"):
+            updated_pixels, updated_regions, info = self.exchange(
+                pixels, regions, to_pixels, to_regions, collect_stats=collect_stats, return_diagnostics=return_diagnostics,
+            )
+        if collect_stats:
+            info["region_message"] = traces
         return updated_pixels, torch.where(valid[:, None], updated_regions, regions), info
 
 

@@ -188,8 +188,8 @@ def load_registration(pin, code):
     return root, value, baseline, scene, record, plan
 
 
-def _stage_paths(root, arm, name):
-    if arm not in ARMS or name not in STAGES:
+def _stage_paths(root, arm, name, arms, stages):
+    if arm not in arms or name not in stages:
         raise ValueError("Unknown registered arm or interval")
     folder = root / "attempts" / arm / name
     claim = root / "claims" / arm / (name + ".json")
@@ -198,9 +198,11 @@ def _stage_paths(root, arm, name):
     return folder, claim
 
 
-def read_stage(root, registration, arm, name, prior):
-    folder, claim = _stage_paths(root, arm, name)
-    start, end, _ = STAGES[name]
+def read_stage(root, registration, arm, name, prior, *, arms=None, stages=None):
+    arms = ARMS if arms is None else arms
+    stages = STAGES if stages is None else stages
+    folder, claim = _stage_paths(root, arm, name, arms, stages)
+    start, end, _ = stages[name]
     expected = dict(registration=registration, arm=arm, stage=name, start=start, stop=end, prior=prior)
     claim_pin = dev._pin(claim)
     if admission.read(claim_pin) != expected:
@@ -213,10 +215,14 @@ def read_stage(root, registration, arm, name, prior):
     return status, receipt
 
 
-def execute_stage(root, registration, arm, name, prior, *, value, baseline, scene, record, plan):
-    start, end, previous = STAGES[name]
-    folder, claim = _stage_paths(root, arm, name)
-    if plan.updates != value["budget"] or value["budget"] != BUDGET:
+def execute_stage(root, registration, arm, name, prior, *, value, baseline, scene, record, plan,
+                  arms=None, stages=None, run_factory=new_run, run_type=MultiscaleRun):
+    arms = ARMS if arms is None else arms
+    stages = STAGES if stages is None else stages
+    folder, claim = _stage_paths(root, arm, name, arms, stages)
+    start, end, previous = stages[name]
+    budget = stages["full"][1] if stages is not STAGES else BUDGET
+    if plan.updates != value["budget"] or value["budget"] != budget:
         raise ValueError("Plan cannot spend another registered budget")
     if folder.exists() or claim.exists():
         raise FileExistsError("Registered arm interval already consumed")
@@ -225,12 +231,12 @@ def execute_stage(root, registration, arm, name, prior, *, value, baseline, scen
         if prior is not None:
             raise ValueError("Fresh interval cannot consume a prefix")
     else:
-        prev_folder, prev_claim = _stage_paths(root, arm, previous)
+        prev_folder, prev_claim = _stage_paths(root, arm, previous, arms, stages)
         if prior is None or prior["path"] != str(prev_folder / "status.json"):
             raise ValueError("Cross-arm or cross-interval resume rejected")
         old = admission.read(prior)
         previous_claim = admission.read(dev._pin(prev_claim))
-        verified, checked = read_stage(root, registration, arm, previous, previous_claim["prior"])
+        verified, checked = read_stage(root, registration, arm, previous, previous_claim["prior"], arms=arms, stages=stages)
         if checked != prior or verified != old:
             raise ValueError("Wrong preceding checkpoint receipt")
         packet = old["checkpoint"]
@@ -242,11 +248,11 @@ def execute_stage(root, registration, arm, name, prior, *, value, baseline, scen
     run = None
     try:
         if packet is None:
-            run = new_run(baseline, scene, record, plan, ARMS[arm])
+            run = run_factory(baseline, scene, record, plan, arms[arm])
         else:
-            run = MultiscaleRun.load(baseline, scene, record, packet["path"], plan=plan, trial=ARMS[arm],
-                                     selector_seed=SEED, expected_sha256=packet["sha256"],
-                                     expected_contract_hash=value["contracts"][arm])
+            run = run_type.load(baseline, scene, record, packet["path"], plan=plan, trial=arms[arm],
+                                selector_seed=SEED, expected_sha256=packet["sha256"],
+                                expected_contract_hash=value["contracts"][arm])
         if run.contract_hash != value["contracts"][arm] or run.completed != start:
             raise ValueError("Arm checkpoint contract or registered update start differs")
         ready = perf_counter()
@@ -259,7 +265,7 @@ def execute_stage(root, registration, arm, name, prior, *, value, baseline, scen
         trained = perf_counter()
         checkpoint = folder / f"step-{end}.pt"
         checksum = run.save(checkpoint)
-        finish = run.finish() if end == BUDGET else None
+        finish = run.finish() if end == budget else None
         return dev._json_new(folder / "status.json", dict(status="passed", claim=claim_pin, new_updates=end - start,
             checkpoint=dict(path=str(checkpoint), sha256=checksum), finish=finish, contract=run.contract_hash,
             restore_or_prepare_seconds=ready - started, update_loop_seconds=trained - ready,

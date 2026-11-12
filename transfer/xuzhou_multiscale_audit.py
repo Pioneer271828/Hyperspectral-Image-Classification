@@ -37,9 +37,9 @@ def _exact(left, right):
     return left == right
 
 
-def _packet(status, contract, stop):
+def _packet(status, contract, stop, *, packet_format=MultiscaleRun.FORMAT):
     packet = torch.load(io.BytesIO(dev._read(status["checkpoint"])), map_location="cpu", weights_only=True)
-    if (packet["format"] != MultiscaleRun.FORMAT or packet["contract_hash"] != contract
+    if (packet["format"] != packet_format or packet["contract_hash"] != contract
             or status["contract"] != contract or len(packet["history"]) != stop):
         raise ValueError("Checkpoint identity differs from the registered interval")
     return packet
@@ -96,9 +96,28 @@ def _distribution(values):
     return dict(min=min(values), max=max(values), mean=fmean(values))
 
 
-def _summarize(history, plan, selected):
+def _summarize_training(history, plan, selected):
     losses = [row["loss"] for row in history]
     validation = [row["validation"]["nll"] for row in history]
+    coverage = {}
+    for step in (1, selected, plan.updates):
+        exposure = plan.exposure(step)
+        coverage[str(step)] = dict(visited_support=sum(n > 0 for n in exposure["support_visits"].values()),
+                                   minimum_visits=min(exposure["support_visits"].values()),
+                                   visited_classes=sum(n > 0 for n in exposure["class_blocks"].values()),
+                                   visited_blocks=sum(n > 0 for n in exposure["tile_counts"].values()))
+    return dict(loss=dict(first=losses[0], last=losses[-1], first16_mean=fmean(losses[:16]),
+                          last16_mean=fmean(losses[-16:])),
+                validation_nll=dict(first=validation[0], last=validation[-1], selected=validation[selected - 1],
+                                    first16_mean=fmean(validation[:16]), last16_mean=fmean(validation[-16:])),
+                coverage=coverage,
+                gradient_l1={key: _distribution([r["gradient_l1"][key] for r in history])
+                             for key in history[0]["gradient_l1"]},
+                changed_elements={key: _distribution([r["changed_parameters"][key] for r in history])
+                                  for key in history[0]["changed_parameters"]})
+
+
+def _summarize(history, plan, selected):
     selectors = {}
     for name in history[0]["selectors"]:
         values = [row["selectors"][name] for row in history]
@@ -115,27 +134,13 @@ def _summarize(history, plan, selected):
         scales[key] = _distribution([r["scales"][key] for r in history])
     scales["cnn_dilations"] = history[0]["scales"]["cnn_dilations"]
     scales["graph_radii"] = history[0]["scales"]["graph_radii"]
-    coverage = {}
-    for step in (1, selected, BUDGET):
-        exposure = plan.exposure(step)
-        coverage[str(step)] = dict(visited_support=sum(n > 0 for n in exposure["support_visits"].values()),
-                                   minimum_visits=min(exposure["support_visits"].values()),
-                                   visited_classes=sum(n > 0 for n in exposure["class_blocks"].values()),
-                                   visited_blocks=sum(n > 0 for n in exposure["tile_counts"].values()))
-    return dict(loss=dict(first=losses[0], last=losses[-1], first16_mean=fmean(losses[:16]),
-                          last16_mean=fmean(losses[-16:])),
-                validation_nll=dict(first=validation[0], last=validation[-1], selected=validation[selected - 1],
-                                    first16_mean=fmean(validation[:16]), last16_mean=fmean(validation[-16:])),
-                coverage=coverage, selectors=selectors, scales=scales,
-                gradient_l1={key: _distribution([r["gradient_l1"][key] for r in history])
-                             for key in history[0]["gradient_l1"]},
-                changed_elements={key: _distribution([r["changed_parameters"][key] for r in history])
-                                  for key in history[0]["changed_parameters"]})
+    return dict(**_summarize_training(history, plan, selected), selectors=selectors, scales=scales)
 
 
 def _verify_history(packet, plan):
+    budget = plan.updates
     hist = packet["history"]
-    if len(hist) != BUDGET:
+    if len(hist) != budget:
         raise ValueError("Incomplete production update history")
     seen = Counter()
     for number, row in enumerate(hist, 1):
@@ -143,7 +148,7 @@ def _verify_history(packet, plan):
         if any(row[k] != v for k, v in event.items()) or not math.isfinite(row["loss"]):
             raise ValueError("Independent event sequence differs")
         seen.update(row["gradient_parameters"])
-    if packet["progress"] != plan.progress(BUDGET):
+    if packet["progress"] != plan.progress(budget):
         raise ValueError("Independent terminal exposure differs")
     order = packet["spec"]["parameters"]
     optimizer = packet["optimizer"]
@@ -151,7 +156,7 @@ def _verify_history(packet, plan):
     actual = {slots[i]: int(s["step"].item()) for i, s in optimizer["state"].items()}
     if actual != seen:
         raise ValueError("Adam update accounting differs from gradient participation")
-    expected = min(range(BUDGET), key=lambda i: hist[i]["validation"]["nll"]) + 1
+    expected = min(range(budget), key=lambda i: hist[i]["validation"]["nll"]) + 1
     if packet["selected_step"] != expected:
         raise ValueError("Independent first-min selected step differs")
     return expected
