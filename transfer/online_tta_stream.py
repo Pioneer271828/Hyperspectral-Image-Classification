@@ -20,6 +20,19 @@ from transfer.registered_development import _load_source, _read
 VERSION = 'wp09_online_tta_v1'
 SETTINGS = ('task', 'mode', 'reset', 'scale', 'lr', 'rank', 'seed')
 ORDERS = ('original', 'reverse', 'seed64')
+ADMITTED_SOURCE = 'wp09_known_source_admitted_v1'
+ADMISSION_HASHES = ('authority_sha256', 'source_receipt_sha256', 'preparation_sha256',
+                    'context_registration_sha256', 'dataset_evidence_sha256')
+PROVENANCE_FIELDS = ('kind source producer_commit exporter_commit selected_step class_ids bands_hash '
+                     'observations baseline_hashes')
+
+
+def optional_pin(path, checksum):
+    if path is None and checksum is None:
+        return None
+    if path is None or checksum is None:
+        raise ValueError('Supply both the independently approved path and SHA-256')
+    return dict(path=str(Path(path).resolve()), sha256=checksum)
 
 
 def fields_are(value, names):
@@ -98,7 +111,7 @@ def load_observation(pin, bands):
 
 
 class StreamRegistration:
-    def __init__(self, pin):
+    def __init__(self, pin, *, admission=None):
         self.pin = pin
         reg = parse_json(read_pin(pin))
         fields_are(reg, 'version commit source_hash runtime source provenance settings class_ids '
@@ -109,18 +122,28 @@ class StreamRegistration:
         require_hash(reg['source_hash'])
         fields_are(reg['runtime'], 'python numpy torch threads interop deterministic mkldnn cpu')
         fields_are(reg['source'], 'weights sidecar')
-        if reg['source']['sidecar']['path'] != reg['source']['weights']['path'] + '.json':
-            raise ValueError('Source sidecar does not belong to source weights')
-        read_pin(reg['source']['weights'])
-        metadata = parse_json(read_pin(reg['source']['sidecar']))
+        if admission is not None and admission != reg['provenance']:
+            raise ValueError('Registration does not bind the independently approved source admission')
         provenance = parse_json(read_pin(reg['provenance']))
-        fields_are(provenance, 'kind source producer_commit exporter_commit origin_hash '
-                               'selected_step class_ids bands_hash observations baseline_hashes')
-        if provenance['kind'] not in ('synthetic', 'e4b_pavia_development', 'registered_development'):
-            raise ValueError('Unsupported source provenance')
+        kind = provenance.get('kind')
+        self.admission = None
+        if kind == ADMITTED_SOURCE:
+            if admission is None:
+                raise ValueError('Supply the operator-approved source admission path and SHA-256')
+            fields_are(provenance, PROVENANCE_FIELDS + ' ' + ' '.join(ADMISSION_HASHES)
+                       + ' scope task norm scale windows sample_ids training_class_counts annotation_costs')
+            for name in ADMISSION_HASHES:
+                require_hash(provenance[name])
+            if provenance['scope'] not in ('synthetic', 'registered_development') or provenance['norm'] != 'group_norm':
+                raise ValueError('Unsupported admitted known-source scope or normalization')
+            self.admission = provenance
+        else:
+            if kind not in ('synthetic', 'e4b_pavia_development') or admission is not None:
+                raise ValueError('Unsupported source provenance; registered development needs a verified source admission')
+            fields_are(provenance, PROVENANCE_FIELDS + ' origin_hash')
+            require_hash(provenance['origin_hash'])
         for name in ('producer_commit', 'exporter_commit'):
             require_hash(provenance[name], 40)
-        require_hash(provenance['origin_hash'])
         if type(provenance['selected_step']) is not int or provenance['selected_step'] < 0:
             raise ValueError('Invalid source selection step')
         fields_are(reg['settings'], ' '.join(SETTINGS))
@@ -137,26 +160,46 @@ class StreamRegistration:
         if not isinstance(reg['class_ids'], list):
             raise ValueError('Explicit ordered head classes required')
         ids = class_order(reg['class_ids'])
-        if (metadata['class_counts'].get(task) != len(ids)
-                or provenance['class_ids'] != reg['class_ids']):
+        if provenance['class_ids'] != reg['class_ids']:
             raise ValueError('Head class order differs from provenance')
         fields_are(reg['bands'], ' '.join(field.name for field in fields(BandMetadata)))
         self.bands = BandMetadata(**reg['bands'])
         if self.bands.wavelength_unit != 'nm' or not all(self.bands.valid):
             raise ValueError('E4b requires registered physical bands with no invalid channels')
-        if provenance['kind'] == 'e4b_pavia_development':
+        if kind == 'e4b_pavia_development':
             if (task != 'paviaU' or tuple(ids) != tuple(range(1, 10))
                     or self.bands != read_band_metadata(task, 103)):
                 raise ValueError('E4b PaviaU physical-band provenance differs')
         if (provenance['source'] != reg['source'] or provenance['bands_hash'] != self.bands.fingerprint
                 or provenance['observations'] != reg['observations']):
             raise ValueError('Source or observation provenance differs')
+        if self.admission is not None:
+            if (provenance['task'] != task or provenance['scale'] != settings['scale']
+                    or provenance['selected_step'] < 1):
+                raise ValueError('Task, scale or fixed-final-step source admission differs')
+            if settings['mode'] == 'statistics':
+                raise ValueError('An admitted GroupNorm source has no supported running statistics')
+        for item in reg['source'].values():
+            validate_pin(item)
+        if reg['source']['sidecar']['path'] != reg['source']['weights']['path'] + '.json':
+            raise ValueError('Source sidecar does not belong to source weights')
+        metadata = parse_json(read_pin(reg['source']['sidecar']))
+        if metadata['class_counts'].get(task) != len(ids):
+            raise ValueError('Head class order differs from checkpoint')
+        if self.admission is not None and (metadata['class_counts'] != {task: len(ids)}
+                or metadata['backbone_kwargs']['norm_type'] != provenance['norm']
+                or metadata['training_config']['selected_step'] != provenance['selected_step']):
+            raise ValueError('Admitted model architecture or selection step differs')
+        read_pin(reg['source']['weights'])
         observations = reg['observations']
         if not isinstance(observations, dict) or not observations:
             raise ValueError('Registered observation table required')
         for key, item in observations.items():
             identifier(key)
             validate_pin(item)
+        if self.admission is not None and (not isinstance(provenance['windows'], dict)
+                or provenance['windows'].keys() != observations.keys()):
+            raise ValueError('Observations must match admitted development windows')
         baseline = provenance['baseline_hashes']
         if not isinstance(baseline, dict) or (provenance['kind'] != 'synthetic' and set(baseline) != set(observations)):
             raise ValueError('Physical development observations need an independent frozen baseline')
@@ -174,7 +217,14 @@ class StreamRegistration:
                 identifier(frame[name])
             if frame['frame_id'] in seen or frame['observation'] not in observations:
                 raise ValueError('Duplicate frame ID or unknown observation')
+            if self.admission is not None:
+                window = provenance['windows'][frame['observation']]
+                if (window['role'] != 'development_evaluation' or window['scene'] != frame['scene']
+                        or frame['segment'] != frame['observation']):
+                    raise ValueError('Frame lies outside its admitted development scene or segment')
             seen.add(frame['frame_id'])
+        if self.admission is not None and {f['observation'] for f in frames} != observations.keys():
+            raise ValueError('Registered stream must use every admitted window')
         self.frames = order_frames(frames, reg['order'])
         budget = frame_budget(settings['mode'], len(frames))
         if (reg['budget'] != budget or any(type(v) is not int for v in reg['budget'].values())):

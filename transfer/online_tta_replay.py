@@ -8,11 +8,11 @@ from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code
 from transfer.online_tta_run import (committed_history, isolated_rng, load_checkpoint, new_session, predict,
                                      restore, runtime_identity, _json, _sync_dir, _write)
-from transfer.online_tta_stream import StreamRegistration
+from transfer.online_tta_stream import StreamRegistration, optional_pin
 
 
-def replay(registration, run, out):
-    reg = StreamRegistration(registration)
+def replay(registration, run, out, *, admission=None):
+    reg = StreamRegistration(registration, admission=admission)
     code = code_snapshot()
     require_frozen_code(code)
     if ((code['commit'], code['source_hash'], runtime_identity())
@@ -60,8 +60,11 @@ def main():
     parser.add_argument('--registration-sha256', required=True)
     parser.add_argument('--run', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--admission', type=Path)
+    parser.add_argument('--admission-sha256')
     args = parser.parse_args()
-    replay(dict(path=str(args.registration.resolve()), sha256=args.registration_sha256), args.run, args.out)
+    replay(dict(path=str(args.registration.resolve()), sha256=args.registration_sha256), args.run, args.out,
+           admission=optional_pin(args.admission, args.admission_sha256))
 
 
 if __name__ == '__main__':

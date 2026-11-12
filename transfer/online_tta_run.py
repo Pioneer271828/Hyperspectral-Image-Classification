@@ -61,6 +61,8 @@ def _journal(path, value):
 
 
 def _load(path):
+    if path.is_symlink():
+        raise ValueError('Committed receipt may not be a symbolic link')
     return parse_json(path.read_bytes())
 
 
@@ -216,7 +218,7 @@ def committed_history(reg, root, *, complete=False):
             if path.is_symlink() or hash_file(path) != expected:
                 raise ValueError('Committed prediction or checkpoint bytes changed')
         gradients = folder / 'gradients.pt'
-        if (event['gradients'] is None and gradients.exists()
+        if (gradients.is_symlink() or event['gradients'] is None and gradients.exists()
                 or event['gradients'] is not None and hash_file(gradients) != event['gradients']):
             raise ValueError('Committed gradient evidence changed')
         events.append(event)
@@ -307,13 +309,13 @@ def _frame(reg, source, session, root, index, previous):
     return event, hash_file(root / f'frame-{cursor:06d}' / 'event.json')
 
 
-def execute(registration, out, *, to_frame=None):
+def execute(registration, out, *, to_frame=None, admission=None):
     """Resume only from fully committed frames. A pending attempt remains terminal."""
     import fcntl
 
     snapshot = code_snapshot()
     require_frozen_code(snapshot)
-    reg = StreamRegistration(registration)
+    reg = StreamRegistration(registration, admission=admission)
     if (reg.value['commit'] != snapshot['commit'] or reg.value['source_hash'] != snapshot['source_hash']
             or reg.value['runtime'] != runtime_identity()):
         raise ValueError('Registered code or CPU runtime differs')
@@ -366,7 +368,7 @@ def execute(registration, out, *, to_frame=None):
                         event, tip = _frame(reg, source, session, root, index, tip)
                     events.append(event)
                     _journal(root / 'progress.json', _progress(index + 1, tip))
-        StreamRegistration(registration)
+        StreamRegistration(registration, admission=admission)
         for key in {frame['observation'] for frame in reg.frames[start:stop]}:
             read_pin(reg.value['observations'][key])
         require_frozen_code(snapshot)
