@@ -61,7 +61,7 @@ class ConditionalSpatialConv(nn.Module):
         if mode not in MODES or type(dilation) is not int or dilation not in DILATIONS:
             raise ValueError("Explicit multiscale mode and dilation 1, 2 or 3 required")
         self.mode, self.dilation = mode, dilation
-        self.norm, self.point_conv, self.depth_conv = source.norm, source.point_conv, source.depth_conv
+        self.norm, self.depth_conv, self.point_conv = source.norm, source.depth_conv, source.point_conv
         self.act1, self.act2 = source.act1, source.act2
         self.content_selector = nn.Linear(self.point_conv.out_channels, 3, bias=False) if mode in ("content", "joint") else None
         self.condition_encoder = ObservationConditionEncoder() if mode in ("metadata", "joint") else None
