@@ -73,7 +73,7 @@ def _state_identity(model):
     return digest(describe(model.state_dict()))
 
 
-def _arms(models, dataset):
+def _arms(models, dataset, recovered=None):
     if 'fp32' not in models or not 2 <= len(models) <= 3 or not set(models) <= {'fp32', 'ptq', 'ternary'}:
         raise ValueError('Expected FP32 and at least one selected precision variant')
     reference = models['fp32']
@@ -84,6 +84,9 @@ def _arms(models, dataset):
     initial = state_hash(reference)
     initial_state = reference.state_dict()
     details = {}
+    if recovered is not None and (set(recovered) != {'common_dense_state', 'package_states'}
+            or set(recovered['package_states']) != set(models)):
+        raise ValueError('Expected exact independently recovered package identities')
     for arm, model in models.items():
         if (model.export_config() != config or any(module.training for module in model.modules()) or
                 any(value.device.type != 'cpu' for value in (*model.parameters(), *model.buffers())) or
@@ -94,18 +97,21 @@ def _arms(models, dataset):
         if arm != 'fp32':
             plan = validate_plan(model) if arm == 'ptq' else validate_model(model)
             phase, spec = ('integer', 'contract') if arm == 'ptq' else ('packed', 'spec')
-            if (plan['phase'] != phase or plan[spec]['source_state'] != initial or
-                    (arm == 'ptq' and plan[spec]['qat'] is not False)):
+            expected_source = initial if recovered is None else recovered['common_dense_state']
+            if (plan['phase'] != phase or plan[spec]['source_state'] != expected_source or
+                    (arm == 'ptq' and plan[spec]['qat'] is not (recovered is not None))):
                 raise ValueError('Precision variant must derive from the exact frozen FP32 model')
             paths = list(plan[spec]['paths'])
             prefixes = tuple(path + '.' for path in paths)
             unchanged = {name: value for name, value in model.state_dict().items() if not name.startswith(prefixes)}
             expected = {name: value for name, value in initial_state.items() if not name.startswith(prefixes)}
-            if set(unchanged) != set(expected) or any(not torch.equal(value, expected[name])
-                                                     for name, value in unchanged.items()):
+            if (set(unchanged) != set(expected) or (recovered is None
+                    and any(not torch.equal(value, expected[name]) for name, value in unchanged.items()))):
                 raise ValueError('Precision variant changed a layer outside its declared assignment')
         details[arm] = {'state_sha256': _state_identity(model), 'precision_paths': paths,
                         'parameter_count': sum(value.numel() for value in model.parameters())}
+        if recovered is not None and details[arm]['state_sha256'] != recovered['package_states'][arm]:
+            raise ValueError('Cost package differs from the independently audited recovery state')
     return config['class_counts'][dataset], details
 
 
@@ -115,10 +121,10 @@ def _tile_identity(tiles):
             for tile in tiles]
 
 
-def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12):
+def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, recovered=None):
     """Measure full resident-input model forwards in balanced order on one CPU thread."""
     models = {arm: models[arm] for arm in sorted(models)}
-    class_count, details = _arms(models, dataset)
+    class_count, details = _arms(models, dataset, recovered)
     orders = tuple(permutations(models))
     if (not tiles or len({tile.tile_id for tile in tiles}) != len(tiles) or
             type(warmups) is not int or warmups < 1 or type(repeats) is not int or

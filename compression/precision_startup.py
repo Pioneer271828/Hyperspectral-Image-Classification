@@ -8,7 +8,7 @@ import torch
 
 from compression.int8_checkpoint import load_int8
 from compression.int8_model import validate_plan
-from compression.precision_cost import _tile_identity
+from compression.precision_cost import _state_identity, _tile_identity
 from compression.ternary_checkpoint import load_ternary
 from compression.ternary_model import validate_model
 from model.checkpoint_io import load_model_checkpoint
@@ -30,7 +30,8 @@ def _memory_kib():
     return {'rss_kib': fields['VmRSS'], 'peak_rss_kib': fields['VmHWM']}
 
 
-def measure_precision_startup(arm, checkpoint, tiles, dataset, *, expected_sha256, expected_sidecar_sha256=None):
+def measure_precision_startup(arm, checkpoint, tiles, dataset, *, expected_sha256, expected_sidecar_sha256=None,
+                              expected_recovered_state=None):
     """Load one pinned package, then time its first full resident-input sweep.
 
     Run one arm per process. Peak RSS includes imports and input preparation.
@@ -56,12 +57,14 @@ def measure_precision_startup(arm, checkpoint, tiles, dataset, *, expected_sha25
     load_ns = time.perf_counter_ns() - start
     loaded = _memory_kib()
     model.backbone.adapter.cache_attention = False
+    if expected_recovered_state is not None and _state_identity(model) != expected_recovered_state:
+        raise ValueError('Startup package differs from the audited recovery state')
     if model.backbone.graph_mode != 'learned' or model.backbone.coverage_modulation is not None:
         raise ValueError('Expected the learned-graph model without a coverage override')
     if arm == 'ptq':
         plan = validate_plan(model)
-        if plan['phase'] != 'integer' or plan['contract']['qat'] is not False:
-            raise ValueError('Expected converted post-training integer weights')
+        if plan['phase'] != 'integer' or plan['contract']['qat'] is not (expected_recovered_state is not None):
+            raise ValueError('Integer package does not match the registered PTQ/QAT mode')
     elif arm == 'ternary' and validate_model(model)['phase'] != 'packed':
         raise ValueError('Expected packed ternary weights')
     scale = 50 if dataset == 'paviaU' else 100
