@@ -10,7 +10,7 @@ from torch import nn
 
 from evaluation.controlled_signal import _distances
 from model.VCASAHGCN import SharedHGCN
-from model.regional_support_evolution import Schedule, SupportEvolution, development_context
+from transfer.regional_support_evolution import Schedule, SupportEvolution, development_context
 from model.research_config import digest
 from research_runtime import tensor_hash
 

@@ -6,7 +6,7 @@ import unittest
 import torch
 
 from evaluation.controlled_signal_learning import Trajectory, adjacency, geometry, model, predict, support, topology
-from model.regional_support_evolution import Schedule, SupportEvolution, development_context
+from transfer.regional_support_evolution import Schedule, SupportEvolution, development_context
 from model.research_config import digest
 from transfer.xuzhou_multiscale_audit import _exact
 
