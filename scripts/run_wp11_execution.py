@@ -23,6 +23,7 @@ def main():
         stage.add_argument("--out", required=True)
         if name == "run":
             stage.add_argument("--mode", choices=MODES, required=True)
+            stage.add_argument("--save-predictions", action="store_true")
     args = parser.parse_args()
     code = code_snapshot()
     torch.set_num_threads(1)
@@ -34,7 +35,7 @@ def main():
     if args.command == "register":
         build(pin, code, out)
     else:
-        execute(pin, code, args.mode, out)
+        execute(pin, code, args.mode, out, export=args.save_predictions)
 
 
 if __name__ == "__main__":

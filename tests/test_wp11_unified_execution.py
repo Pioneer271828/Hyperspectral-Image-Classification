@@ -66,7 +66,20 @@ class UnifiedWP11Tests(unittest.TestCase):
                                                      receipt=pin(source / "confirmed/receipt.json"))))
                     manifest = workflow.build(pin(request), code, target / "registered")
                     identity = pin(target / "registered/manifest.json")
-                    results = {mode: workflow.execute(identity, code, mode, target / mode) for mode in MODES}
+                    label_path = source / "confirmation/labels.json"
+                    read_bytes = Path.read_bytes
+
+                    def no_labels(path):
+                        if path == label_path:
+                            raise AssertionError("Unified execution must not reopen confirmation labels")
+                        return read_bytes(path)
+
+                    with patch.object(Path, "read_bytes", new=no_labels):
+                        results = {mode: workflow.execute(identity, code, mode, target / mode,
+                                                          export=mode == "full_matched") for mode in MODES}
+                    output = torch.load(results["full_matched"]["prediction_package"]["path"], weights_only=True)
+                    self.assertEqual(output["input_hash"], manifest["static_input"])
+                    self.assertTrue(all(set(row["probabilities"]) == {"fused", "graph", "cnn"} for row in output["rows"]))
                     self.assertEqual(len(manifest["classes"]), classes)
                     self.assertEqual(results["light"]["instrumentation"]["graph_calls"], 0)
                     self.assertEqual(results["all_fallback"]["output_hashes"]["probabilities"],
