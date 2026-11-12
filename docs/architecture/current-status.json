@@ -1259,6 +1259,14 @@
       "report": "research/reports/WP01_Xuzhou_K5V5真实观测课程四排列_20261112.md",
       "chat_report": "真实CUR-O已交付，待主审；默认结构与选模入口照旧"
     }
+    ,{
+      "id": "WP01 样本与观测课程双因素合成恢复",
+      "state": "3/9/22类四臂、精确续接和原单因素对照通过",
+      "evidence": "Issue437/PR441，实际 01aacab2a8744879c0313c97d60db2aedd82dca3。登记内448次合成更新、12个独立恢复进程、168次旧实现合成对照。45组效应算式，真实0次更新。",
+      "remaining": "真实组合保留冻结前提和预算草案，须另行授权",
+      "report": "research/reports/WP01_样本与观测课程双因素合成恢复_20261112.md",
+      "chat_report": "双因素为显式工程入口，旧默认保持单因素合同，待主审"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
