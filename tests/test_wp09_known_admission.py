@@ -35,6 +35,8 @@ CLASSES = [2, 7, 19]
 WINDOWS = {'A': [0, 4, 0, 3], 'B': [0, 4, 3, 6]}
 FRAMES = [('A1', 'A'), ('B1', 'B'), ('A2', 'A'), ('B2', 'B')]
 MODES = ('frozen', 'affine', 'adapter')
+DEVELOPMENT_INDICES = np.arange(0, 24, 2, dtype=np.int32)
+DEVELOPMENT_LABELS = np.array([2, 7, 2, 0, 7, 2, 2, 7, 0, 7, 2, 7], dtype=np.int64)
 SENTINEL = """import os
 import sys
 
@@ -68,8 +70,7 @@ def _fixture(root, sha):
     inputs.mkdir()
     rng = np.random.default_rng(192)
     waves = np.linspace(450, 900, 7, dtype=np.float32)
-    dev_indices = np.arange(0, 24, 2, dtype=np.int32)
-    targets = np.array([2, 7, 2, 0, 7, 2, 2, 7, 0, 7, 2, 7], dtype=np.int64)
+    dev_indices, targets = DEVELOPMENT_INDICES, DEVELOPMENT_LABELS
     observations = []
     for i, role in enumerate(ROLES):
         shape = (8, 12) if i == 0 else (4, 6)
@@ -132,6 +133,7 @@ class Pipeline:
         result = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, text=True)
         (self.log / f'{tag}.log').write_text(result.stdout + result.stderr)
         self.commands.append(dict(tag=tag, argv=command, exit_code=result.returncode, seconds=perf_counter() - start))
+        _json_new(self.log / f'{tag}.command.json', self.commands[-1])
         if result.returncode:
             raise AssertionError(f'{tag}: {result.stderr}')
         if allow:
@@ -255,17 +257,18 @@ class Pipeline:
             else:
                 raise AssertionError(f'{name} was accepted')
 
-    def failures(self):
-        probes = self.root / 'probes'
+    def failures(self, directory='probes'):
+        probes = self.root / directory
         probes.mkdir()
         original = _read(self.cases[0]['registration'])
+        label_pin = _read(self.context)['labels']
         for name, edits, error in (
             ('class-order', {'class_ids': [7, 2, 19]}, 'Head class order'),
             ('band-order', {'bands': dict(original['bands'], band_ids=list(reversed(original['bands']['band_ids'])))},
              'Source or observation provenance'),
             ('frame-region', {'frames': [dict(original['frames'][0], scene='other-scene'), *original['frames'][1:]]},
              'admitted development scene'),
-            ('weight-alias', {'source': dict(original['source'], weights=_pin(self.label_path))},
+            ('weight-alias', {'source': dict(original['source'], weights=label_pin)},
              'Source or observation provenance'),
             ('groupnorm-statistics', {'settings': dict(original['settings'], mode='statistics'),
                                       'budget': frame_budget('statistics', 4)}, 'GroupNorm'),
@@ -279,7 +282,7 @@ class Pipeline:
         fabricated = _json_new(probes / 'self-declared-real.json', dict(kind='registered_development', origin_hash='f' * 64))
         reg = _json_new(probes / 'forged.json', dict(original, provenance=fabricated))
         self.deny('self-declared-real', lambda: StreamRegistration(reg), 'Unsupported source provenance')
-        self.deny('historical-pavia', lambda: _labels(_pin(self.label_path),
+        self.deny('historical-pavia', lambda: _labels(label_pin,
                   SimpleNamespace(provenance={'kind': 'e4b_pavia_development'})), 'no scoring authorization')
 
         source_receipt = _read(self.source)
@@ -287,7 +290,7 @@ class Pipeline:
             ('wrong-final-step', {'selected_step': 1}, 'fixed final step'),
             ('wrong-source-count', {'source_supervised_pixels': 56}, 'support counts'),
             ('wrong-weight-state', {'final_state_sha256': '0' * 64}, 'Actual source weight state'),
-            ('source-as-label', {'checkpoint': _pin(self.label_path)}, 'must be distinct'),
+            ('source-as-label', {'checkpoint': label_pin}, 'must be distinct'),
             ('forged-producer', {'code': dict(source_receipt['code'], commit='f' * 40)}, 'code identity'),
         ):
             pin = _json_new(probes / f'{name}.json', dict(source_receipt, **edits))
@@ -328,7 +331,7 @@ class Pipeline:
                          label_release=dict(_pin(self.release), sha256='9' * 64)))
         self.deny('arbitrary-release-hash', lambda: score(plan, **self.trust), 'Input file identity changed')
         plan = _json_new(probes / 'early-label-plan.json', dict(_read(self.plan),
-                         runs=[dict(self.cases[0], replay=_pin(self.label_path)), *self.cases[1:]]))
+                         runs=[dict(self.cases[0], replay=label_pin), *self.cases[1:]]))
         self.deny('label-as-replay', lambda: score(plan, **self.trust), 'cannot be used as pre-scoring')
         last = Path(self.cases[-1]['directory'])
         self._deny_missing_or_corrupt(last / 'completion.json', None, 'incomplete-run', 'before scoring')
