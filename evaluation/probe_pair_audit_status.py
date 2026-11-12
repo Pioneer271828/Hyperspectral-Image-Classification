@@ -99,7 +99,7 @@ def build(results):
     return contrasts,classes,groups,class_groups,protection
 
 
-def write_outputs(out, results, source_receipt_sha):
+def write_outputs(out, results, source_receipt_sha, *, source_v2_execution=False):
     contrasts,classes,groups,class_groups,protection = build(results)
     out.mkdir(exist_ok=False)
     keys = (*pairs.PAIR_KEYS,*GATE_FIELDS,"endpoint_audits")
@@ -108,12 +108,15 @@ def write_outputs(out, results, source_receipt_sha):
         base.write_csv(out/filename,[{key:json.dumps(row[key],ensure_ascii=False,separators=(",",":"))
                                       if key=="endpoint_audits" else row[key] for key in fields}
                                      for row in rows],fields)
+    source = ("source_v2_execution_sha256" if source_v2_execution else "source_v1_review_sha256")
     write_json(out/"summary.json",{"policy":POLICY,"schema_version":2,
-        "source_v1_review_sha256":source_receipt_sha,
+        source:source_receipt_sha,
         "contrast_rows":len(contrasts),"class_contrast_rows":len(classes),
         "contrast_status_counts":dict(Counter(row["audit_status"] for row in contrasts)),
         "class_protection_status_counts":dict(Counter(row["audit_status"] for row in protection)),
         "three_seed_contrasts":groups,"three_seed_class_contrasts":class_groups,
         "class_protection":protection,"new_probe_updates":0,
-        "scope":"Original v1 development metrics and numerical lineage; budget-end endpoints were not independently audited."})
+        "scope":("Both stages use newly fitted v2 heads on fixed development labels. Budget-end endpoints were not independently audited."
+                 if source_v2_execution else
+                 "Original v1 development metrics and numerical lineage; budget-end endpoints were not independently audited.")})
     return ("contrasts.csv","class-contrasts.csv","summary.json")

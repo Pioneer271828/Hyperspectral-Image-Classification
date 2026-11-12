@@ -75,15 +75,16 @@ def protection(rows):
             "passes_2pp":delta>=Fraction(-2,100) if len({row["seed"] for row in group})==3 else None}
 
 
-def write_outputs(out,results):
+def write_outputs(out,results,*,scope_text=None,include_contrasts=True):
     initial,terminal = (list(endpoints(results,name)) for name in ("initial","terminal"))
     metrics = initial+terminal
-    paired = list(contrasts(initial,terminal))
+    paired = list(contrasts(initial,terminal)) if include_contrasts else []
     classes = list(class_rows(metrics,METRIC_KEYS))
     paired_classes = list(class_rows(paired,PAIR_KEYS,paired=True))
     dimensions = [{"scene":pair["role"]["target"],"case":pair["case"],"seed":pair["role"]["seed"],
         "method":pair["role"]["method"],"mode":pair["role"]["mode"],"layer":layer,**row}
         for pair in results for layer,row in pair["role"].get("regional_effective_dimensions",{}).items()]
+    output_names = []
     for filename, rows,keys in (
             (OUTPUTS[0],metrics,(*METRIC_KEYS,*base.METRICS)),
             (OUTPUTS[1],classes,(*METRIC_KEYS,"class_id","support","recall","f1")),
@@ -91,7 +92,9 @@ def write_outputs(out,results):
             (OUTPUTS[3],paired_classes,(*PAIR_KEYS,"class_id","support","recall","f1")),
             (OUTPUTS[4],dimensions,("scene","case","seed","method","mode","layer","regions","initial","terminal",
                                   "sample_alignment","terminal_minus_initial"))):
-        base.write_csv(out/filename,[{key:row[key] for key in keys} for row in rows],keys)
+        if include_contrasts or filename not in OUTPUTS[2:4]:
+            base.write_csv(out/filename,[{key:row[key] for key in keys} for row in rows],keys)
+            output_names.append(filename)
     statuses = Counter(row["initial"]["status"] for row in results)
     write_json(out/OUTPUTS[5],{"cases":dict(statuses),"endpoint_rows":len(metrics),"class_rows":len(classes),
         "contrast_rows":len(paired),"class_contrast_rows":len(paired_classes),"regional_dimension_rows":len(dimensions),
@@ -103,5 +106,5 @@ def write_outputs(out,results):
         "three_seed_class_contrasts":base.summarize(paired_classes,
             (*GROUP,"contrast","baseline_mode","baseline_layer","stage_comparison","class_id","support"),("recall","f1")),
         "class_protection":list(protection(paired_classes)),
-        "scope":"Same-scene fixed development labels. Step-zero target model and selected terminal model; historical terminal probabilities reused."})
-    return OUTPUTS
+        "scope":scope_text or "Same-scene fixed development labels. Step-zero target model and selected terminal model; historical terminal probabilities reused."})
+    return (*output_names,OUTPUTS[-1])
