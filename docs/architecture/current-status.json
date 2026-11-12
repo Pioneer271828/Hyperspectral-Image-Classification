@@ -1179,6 +1179,14 @@
       "report": "research/reports/WP10_INT8QAT三值等预算恢复与部署_20261112.md",
       "chat_report": "主审接受工程、单Xuzhou单seed同V5真实短恢复与CPU有限成本。CNN第4类新增错与OA下降、三值回退均保留。原64步执行0，每臂155步首次全覆盖。Issue417按本轮范围完成，PR418 ready、未合并"
     }
+    ,{
+      "id": "WP11 徐州轻重模型等预算恢复与冻结发布",
+      "state": "同划分两臂真实短恢复、冻结与静态 CPU 成本通过，真实独立确认待托管",
+      "evidence": "Issue419/PR420，训练与独审 ab0a169d6e8121484f892e443dca7f23de056508，静态成本 5d2265c73e7c38450341a3b9a5d7150660593553。合成9/22类32更新，回归93/93。徐州90/45，512步90/90覆盖，两臂2048更新，连续与7+505精确，完成重入0。轻第1步84.44%，零步同OA且NLL略低。完整第347步融合77.78%，原75.56%，第1类召回仍0。轻/源完整/恢复完整常驻p50 173.71/177.01/181.31ms。",
+      "remaining": "独立校准与确认各待可信托管授权和标签释放。单场景单种子同V5，完整收敛、跨场景、真实动态和GPU成本待验。保留完整FP32默认",
+      "report": "research/reports/WP11_Xuzhou轻重等预算恢复与冻结发布_20261112.md",
+      "chat_report": "主审接受单Xuzhou固定开发集轻重等更新恢复与CPU成本。轻选1且零步NLL略好，完整第1类零召回。保留工程失败。Issue419按工程范围完成，PR420 ready、未合并"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",

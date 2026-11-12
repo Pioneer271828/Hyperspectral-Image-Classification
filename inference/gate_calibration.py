@@ -14,6 +14,9 @@ from inference.tile_cascade import gate_score
 from model.research_config import digest
 
 
+SPARSE_PROTOCOL = 'dy-gate-protocol-sparse-v2'
+
+
 def _require(ok,message):
     if not ok:raise ValueError(message)
 
@@ -22,12 +25,25 @@ def _hash(x):return isinstance(x,str) and len(x)==64 and all(c in '0123456789abc
 def _unit(x):return type(x) in (int,float) and math.isfinite(x) and 0<=x<=1
 
 
+def observed_records_hash(rows):
+    """Bind the observed probabilities separately from a sparse label commitment."""
+    return digest([dict(id=r['block']['id'], labels=r['labels'].tolist(), fast=r['fast'].tolist(),
+                        full=r['full'].tolist(), coverage_known=r['known'], coverage_fraction=r['coverage'])
+                   for r in rows])
+
+
 class GateProtocol:
     def __init__(self,spec,expected_hash):
         _require(isinstance(spec,dict) and digest(spec)==expected_hash,'External protocol hash mismatch')
-        _require(set(spec)=={'schema','name','full_state','light_artifact','criterion','thresholds','min_coverage',
-                             'classes','min_class_support','max_drop','blocks','data_hashes'},'Exact protocol fields required')
-        _require(spec['schema']=='dy-gate-protocol-v1' and isinstance(spec['name'],str) and spec['name'],'Named protocol required')
+        fields = {'schema','name','full_state','light_artifact','criterion','thresholds','min_coverage',
+                  'classes','min_class_support','max_drop','blocks','data_hashes'}
+        schema = spec.get('schema')
+        if schema == SPARSE_PROTOCOL:
+            fields |= {'admission_hash', 'calibration_request_hash'}
+            _require(all(_hash(spec.get(k)) for k in ('admission_hash', 'calibration_request_hash')),
+                     'Pinned admission and calibration requests required')
+        _require(set(spec)==fields,'Exact protocol fields required')
+        _require(schema in ('dy-gate-protocol-v1', SPARSE_PROTOCOL) and isinstance(spec['name'],str) and spec['name'],'Named protocol required')
         _require(_hash(spec['full_state']) and _hash(spec['light_artifact']),'Frozen model identities required')
         _require(type(spec['classes']) is int and spec['classes']>=2,'At least two classes required')
         _require(type(spec['min_class_support']) is int and spec['min_class_support']>=1,'Explicit positive support floor required')
@@ -64,7 +80,8 @@ class GateProtocol:
         self._check();_require(role in ('calibration','confirmation'),'Only permitted development roles accepted')
         _require(isinstance(records,list),'Materialized aligned records required')
         blocks=[b for b in self._spec['blocks'] if b['role']==role];byid={b['id']:b for b in blocks}
-        _require(len(records)==len(blocks),'Complete registered phase required');seen=set();rows=[];canonical=[];classes=self._spec['classes']
+        _require(len(records)==len(blocks),'Complete registered phase required');seen=set();rows=[];classes=self._spec['classes']
+        sparse = self._spec['schema'] == SPARSE_PROTOCOL
         for r in records:
             _require(isinstance(r,dict) and set(r)=={'id','labels','fast','full','coverage_known','coverage_fraction'},'Exact aligned input fields required')
             _require(r['id'] in byid and r['id'] not in seen,'Wrong role or repeated block');seen.add(r['id']);b=byid[r['id']]
@@ -77,10 +94,14 @@ class GateProtocol:
                     and np.allclose(p.sum(1),1,rtol=0,atol=1e-6),'Finite aligned full-context FP32 probabilities required')
                 probs.append(p.copy())
             _require(type(r['coverage_known']) is bool and _unit(r['coverage_fraction']),'Explicit finite coverage required')
-            item=dict(id=b['id'],labels=y.tolist(),fast=probs[0].tolist(),full=probs[1].tolist(),coverage_known=r['coverage_known'],coverage_fraction=r['coverage_fraction'])
-            canonical.append(item);rows.append(dict(block=b,labels=y,indices=indices,fast=probs[0],full=probs[1],known=r['coverage_known'],coverage=r['coverage_fraction']))
-        pin=digest(sorted(canonical,key=lambda r:r['id']));_require(pin==self._spec['data_hashes'][role],'Frozen development data changed')
-        return sorted(rows,key=lambda r:r['block']['id']),pin
+            rows.append(dict(block=b,labels=y,indices=indices,fast=probs[0],full=probs[1],known=r['coverage_known'],coverage=r['coverage_fraction']))
+        rows.sort(key=lambda r: r['block']['id'])
+        if sparse:
+            pin = digest({r['block']['id']: r['labels'].tolist() for r in rows})
+        else:
+            pin = observed_records_hash(rows)
+        _require(pin==self._spec['data_hashes'][role],'Frozen development data changed')
+        return rows,pin
 
 
 def _metrics(y,pred,classes):
@@ -146,11 +167,14 @@ def confirm(protocol,frozen,records,*,expected_freeze_hash):
     """Confirm only the preselected candidate; failure never searches alternatives."""
     _validate_freeze(protocol,frozen,expected_freeze_hash);rows,pin=protocol.records(records,'confirmation');c=frozen['candidates'][frozen['selected']]
     tested=_evaluate(protocol,rows,c['kind'],c['threshold']);use_fast=c['kind']=='adaptive' and c['accepted_tiles']>0 and tested['passes_empirical_protection']
-    return dict(format='dy-gate-confirmation-v1',protocol_hash=protocol.protocol_hash,freeze_hash=expected_freeze_hash,confirmation_hash=pin,
+    result = dict(format='dy-gate-confirmation-v1',protocol_hash=protocol.protocol_hash,freeze_hash=expected_freeze_hash,confirmation_hash=pin,
                 selected=frozen['selected'],tested=tested,status='empirical_pass' if use_fast else 'keep_full',
                 inference_kwargs=dict(mode='adaptive',criterion=protocol.specification['criterion'],threshold=c['threshold'],min_coverage=protocol.specification['min_coverage']) if use_fast else dict(mode='full'),
                 full_endpoint=_evaluate(protocol,rows,'full'),fast_endpoint=_evaluate(protocol,rows,'fast'),
                 statistical_noninferiority=False,deployment_speed_verified=False,optimizer_updates=0)
+    if protocol.specification['schema'] == SPARSE_PROTOCOL:
+        result['observed_records_hash'] = observed_records_hash(rows)
+    return result
 
 
 def save_freeze(protocol,frozen,path):
