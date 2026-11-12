@@ -1,7 +1,6 @@
 """A single registered CPU queue for the native support and WP07 matrices."""
 
 from dataclasses import asdict
-from functools import partial
 import io
 import json
 from pathlib import Path
@@ -282,7 +281,18 @@ def open_case(root, pin, registration, key, arm):
 
 
 def execute(pin, code, key, arm, phase, prior):
+    import fcntl
+
     root, registration = read_registration(pin, code)
+    with (root / "cpu-queue.lock").open("ab") as queue:
+        try:
+            fcntl.flock(queue, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ValueError("This registration already has a CPU stage running") from error
+        return _execute_locked(root, registration, pin, key, arm, phase, prior)
+
+
+def _execute_locked(root, registration, pin, key, arm, phase, prior):
     if not (root / "preflight.json").exists():
         raise ValueError("Synthetic preflight must succeed before the first optimizer step")
     evidence = json.loads(dev._read(dev._pin(root / "preflight.json")))

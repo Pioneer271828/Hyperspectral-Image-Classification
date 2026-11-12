@@ -16,7 +16,7 @@ from research_runtime import tensor_hash
 from transfer import native_support_campaign as campaign, registered_development as dev
 from transfer.curriculum_training import CurriculumRun
 from transfer.g3_training import _forward, state_hash
-from transfer.native_support import native_forward
+from transfer.native_support import make_selector, native_forward
 from transfer.xuzhou_multiscale_audit import HEADS, SCIENCE, _exact
 
 
@@ -111,6 +111,14 @@ def _history(packet, data, case, arm):
     activity = Counter()
     settings = packet["spec"].get("regional_support", {}).get("trial")
     reference = _reference(bank, settings, case["budget"]) if settings is not None else {}
+    for key, history_reference in reference.items():
+        selector = make_selector(bank[key], settings, settings["support_seed"])
+        for step, row in enumerate(history_reference):
+            selector.advance(step)
+            actual = selector.snapshot()
+            if any(actual[name] != value for name, value in row.items()):
+                raise ValueError(f"Independent global support schedule differs at {key}:{step}")
+            support_counts["schedule_states"] += 1
     previous = {}
     for event, row in zip(_sample_stream(scene, record, case), history, strict=True):
         if any(row[key] != value for key, value in event.items()):
@@ -152,7 +160,8 @@ def _history(packet, data, case, arm):
     step = min(history, key=lambda row: row["validation"]["nll"])["step"]
     if step != packet["selected_step"]:
         raise ValueError("Independent first-min selection differs")
-    return dict(support_steps=support_counts["rows"], scorer_activity=selectors, support_geometry=range_rows,
+    return dict(support_steps=support_counts["rows"], schedule_states_checked=support_counts["schedule_states"],
+                scorer_activity=selectors, support_geometry=range_rows,
                 source_groups=packet["spec"].get("regional_support", {}).get("parameters"),
                 scales=[row["scales"] for row in history] if case["work_package"] == "WP07" else None,
                 parameter_order=order, exposure=packet["progress"]["exposure"])
