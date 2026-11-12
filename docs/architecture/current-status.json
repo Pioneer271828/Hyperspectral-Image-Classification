@@ -1187,6 +1187,14 @@
       "report": "research/reports/WP11_Xuzhou轻重等预算恢复与冻结发布_20261112.md",
       "chat_report": "真实工作包待主审。首启计时和首次成本输出哈希失败保留，成本仅沿冻结模型修复复验，更新预算不变"
     }
+    ,{
+      "id": "WP11 冻结轻重模型统一执行与完整成本",
+      "state": "统一清单、静态及全回退真实通过，合成自适应与随机对照通过",
+      "evidence": "Issue421/PR423，实测 a4ec7c4dc14811b5b536fa0970ee2fcc6a16711c。9/22各六路，专项2/2。自适应与随机各轻3、回退1。真实3920像素三静态加全回退，轻建图0，完整各5，输出哈希与A包成本一致，真实adaptive/random拒绝。",
+      "remaining": "真实动态待12/13块各自可信托管和冻结独立确认。共享CPU的单次诊断与原重复成本各保留范围，GPU待测，保留FP32完整默认",
+      "report": "research/reports/WP11_冻结模型统一执行与成本接入_20261112.md",
+      "chat_report": "本轮待主审。混合块哈希与测试夹具失败保留，修复后沿原冻结模型验收"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
