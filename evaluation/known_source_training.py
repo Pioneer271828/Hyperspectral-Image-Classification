@@ -11,7 +11,9 @@ from research_runtime import require_frozen_code
 from train_vca_multidataset import supervised_loss
 from transfer.g3_training import _optimizer, build_model, state_hash
 from transfer.registered_development import _json_new, _pin, _read
+from transfer.online_tta_stream import parse_json
 from .known_context_preparation import _raw
+from .known_development_authority import read_authority, verify_producer
 from .open_set import _semantics, digest
 from .open_set_producer import ROLES, _observation
 from .registered_open_set import _code, _deferred, _output
@@ -68,14 +70,33 @@ def _source_inputs(prepared):
 
 def train_known_source(registration, *, out, expected_commit):
     code = _code(expected_commit)
-    trial = json.loads(_read(registration))
-    if (set(trial) != {'version', 'kind', 'prepared', 'config', 'seed', 'updates'} or
-            trial['version'] != 1 or trial['kind'] != 'known_source_fixed_budget_v1' or
+    trial = parse_json(_read(registration))
+    if not isinstance(trial, dict):
+        raise ValueError('Explicit source training registration required')
+    protocol = trial.get('kind')
+    authorized = protocol == 'known_source_authorized_v2'
+    fields = {'version', 'kind', 'prepared', 'config', 'seed', 'updates'}
+    if authorized:
+        fields.add('authority')
+    if (set(trial) != fields or
+            (trial['version'], protocol) not in ((1, 'known_source_fixed_budget_v1'), (2, 'known_source_authorized_v2')) or
             type(trial['updates']) is not int or trial['updates'] <= 0 or
             type(trial['seed']) is not int or not 0 <= trial['seed'] < 2**32):
         raise ValueError('Explicit positive update budget and uint32 seed required')
+    if authorized:
+        authority, _, bands = read_authority(trial['authority'])
+        receipt = parse_json(_read(trial['prepared']))
+        if (authority['training_commit'] != expected_commit
+                or receipt.get('registration') != authority['context_registration']):
+            raise ValueError('Source training must bind the authorized preparation and producer')
+        verify_producer(receipt['code'], authority['preparation_commit'],
+                        ('evaluation/known_context_preparation.py', 'scripts/prepare_open_set_contexts.py'))
     prepared, known, observation, data, used, reserved = _source_inputs(trial['prepared'])
     used += [registration, trial['config']]
+    if authorized:
+        if not np.array_equal(data['wavelengths_nm'], np.asarray(bands.wavelengths, dtype=np.float32)):
+            raise ValueError('Source training physical bands differ from the authority')
+        used += [trial['authority'], authority['dataset_evidence']]
     if {pin['path'] for pin in used} & {pin['path'] for pin in reserved}:
         raise ValueError('Training registration and config may not alias reserved role files')
     output = _output(out, used + reserved)
