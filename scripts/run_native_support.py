@@ -35,6 +35,7 @@ def main():
         action.add_argument("--registration", nargs=2, required=True, metavar=("PATH", "SHA256"))
         if name in ("audit", "cost"):
             action.add_argument("--producer-commit")
+            action.add_argument("--out")
         if name == "supplement":
             action.add_argument("--previous-tables", required=True)
             for flag in ("audit", "cost", "real", "freeze"):
@@ -75,10 +76,10 @@ def main():
         elif args.action == "audit":
             registration = pin(args.registration)
             producer = campaign.pinned_producer(registration, args.producer_commit or code["commit"])
-            result = audit.audit(registration, pin(args.freeze), code, producer)
+            result = audit.audit(registration, pin(args.freeze), code, producer, output=args.out)
         else:
             from inference.native_support_cost import measure
-            result = measure(pin(args.registration), pin(args.freeze), code, args.producer_commit or code["commit"])
+            result = measure(pin(args.registration), pin(args.freeze), code, args.producer_commit or code["commit"], output=args.out)
     print(json.dumps(result), flush=True)
 
 

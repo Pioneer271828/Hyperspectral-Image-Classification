@@ -1,5 +1,7 @@
 """Load published native, WP07, or original CPU endpoints by explicit pins."""
 
+from copy import deepcopy
+
 import torch
 
 from loadData.spatial_tiles import tile_slice
@@ -29,11 +31,11 @@ def load_endpoint(pin, registration, case, data, *, device="cpu"):
         with torch.random.fork_rng(devices=[]):
             model = ConditionalMultiscaleVCASAHGCN(config["class_counts"], **config["backbone_kwargs"])
     else:
-        model = baseline
+        model = deepcopy(baseline)
     if value["endpoint"] not in ("selected", "last") or not 1 <= value["step"] <= case["budget"]:
         raise ValueError("Invalid published endpoint identity")
     model.load_state_dict(value["state"], strict=True)
-    model.training_config = value["training_config"]
+    model.training_config = deepcopy(value["training_config"])
     model.backbone.adapter.cache_attention = False
     if state_hash(model) != value["state_hash"] or model.export_config() != config:
         raise ValueError("Endpoint tensors or architecture differ")

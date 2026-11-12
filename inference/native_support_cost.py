@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from inference.native_support_checkpoint import load_endpoint, predict_registered_tile
-from research_runtime import ROOT, tensor_hash
+from research_runtime import ROOT, external_directory, tensor_hash
 from transfer import native_support_audit as audit, native_support_campaign as campaign, registered_development as dev
 from transfer.native_support import NativeSupportModel, _measure, make_selector, native_forward
 
@@ -102,7 +102,7 @@ def _train_tile_replay(model, state, scene, record, tile, bank):
                 selection_seconds=None if selector is None else selector.cost["selection_seconds"])
 
 
-def measure(registration, frozen, code, producer_commit):
+def measure(registration, frozen, code, producer_commit, *, output=None):
     producer = campaign.pinned_producer(registration, producer_commit)
     root, reg, publication = audit.load_frozen(registration, frozen, producer)
     key = "wp08-nine8-64"
@@ -167,7 +167,8 @@ def measure(registration, frozen, code, producer_commit):
             ["construction_seconds"] if arm == "fixed" else 0.)
         row["amortized_once_seconds_per_forward"] = {
             str(n): (row["one_time_bank_seconds"] + row["one_time_donor_seconds"]) / n for n in (1, 10, 100)}
-    return dev._json_new(root / "cost.json", dict(version=2, scope="cpu_fp32_development_only", case=key,
+    target = root / "cost.json" if output is None else external_directory(output)
+    return dev._json_new(target, dict(version=2, scope="cpu_fp32_development_only", case=key,
         registration=registration, freeze=frozen, producer=producer, consumer=code["commit"], roles=["devval"], query=0, optimization=0, repeats=rows,
         source_data_bank_read_seconds=read_seconds, bank_capture_timing=case["bank_capture_timing"],
         training_diagnostic_role="devtrain", training_diagnostic_tile=training_tile["id"],

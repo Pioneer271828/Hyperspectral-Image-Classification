@@ -29,6 +29,9 @@ def adapt(out, previous, registration, freeze, audit, cost, real, adapter_commit
             or assessed["updates"] != 6624 or assessed["audit_updates"] or assessed["query"]
             or assessed["registration"] != frozen["registration"] or assessed["registration"] != registration
             or assessed["freeze"] != freeze or latency["registration"] != registration or latency["freeze"] != freeze
+            or assessed["consumer"] != adapter_commit or latency["consumer"] != adapter_commit
+            or assessed["producer"] != reg["code"] or latency["producer"] != reg["code"]
+            or assessed["synthetic_recall_floor"]["candidate_admission"] is not False
             or latency["optimization"] or latency["query"] or latency["roles"] != ["devval"]
             or set(latency["repeats"]) != {"off", "local", "joint", "fixed"}
             or probe["scope"] != "authorized_development_zero_update" or any(

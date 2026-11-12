@@ -12,7 +12,7 @@ from evaluation.classification_metrics import metrics_from_confusion
 from evaluation.native_support_reference import sparse_forward, support_trace
 from inference.native_support_checkpoint import load_endpoint, predict_registered_tile
 from model.research_config import digest
-from research_runtime import tensor_hash
+from research_runtime import external_directory, tensor_hash
 from transfer import native_support_campaign as campaign, registered_development as dev
 from transfer.curriculum_training import CurriculumRun
 from transfer.g3_training import _forward, state_hash
@@ -240,7 +240,7 @@ def load_frozen(pin, frozen, code):
     return root, reg, value
 
 
-def audit(pin, frozen, code, producer=None):
+def audit(pin, frozen, code, producer=None, *, output=None):
     started = perf_counter()
     root, reg, value = load_frozen(pin, frozen, code if producer is None else producer)
     results = {}
@@ -268,9 +268,15 @@ def audit(pin, frozen, code, producer=None):
         if row["work_package"] != "WP08":
             continue
         control = results[f"{key}/off"]["endpoints"]
-        row["development_recall_protection"] = {
-            endpoint: {head: all(a["recall"] - b["recall"] >= -.02 for a, b in zip(
-                metrics["per_class"], control[endpoint]["metrics"][head]["per_class"], strict=True))
+        row["synthetic_recall_delta_vs_off"] = {
+            endpoint: {head: dict(
+                delta_pp_by_class={str(a["class_id"]): 100 * (a["recall"] - b["recall"]) for a, b in zip(
+                    metrics["per_class"], control[endpoint]["metrics"][head]["per_class"], strict=True)},
+                meets_descriptive_floor=all(a["recall"] - b["recall"] >= -.02 for a, b in zip(
+                    metrics["per_class"], control[endpoint]["metrics"][head]["per_class"], strict=True)))
                 for head, metrics in data["metrics"].items()} for endpoint, data in row["endpoints"].items()}
-    return dev._json_new(root / "audit.json", dict(version=2, registration=pin, freeze=frozen, results=results,
-        producer=reg["code"], consumer=code["commit"], updates=value["updates"], audit_updates=0, query=0, wall_seconds=perf_counter() - started))
+    target = root / "audit.json" if output is None else external_directory(output)
+    return dev._json_new(target, dict(version=2, registration=pin, freeze=frozen, results=results,
+        producer=reg["code"], consumer=code["commit"], updates=value["updates"], audit_updates=0, query=0,
+        synthetic_recall_floor=dict(delta_pp=-2., source="Issue411/PR412 per-class development recall floor used descriptively",
+                                    scope="per_class_recall_only", candidate_admission=False), wall_seconds=perf_counter() - started))

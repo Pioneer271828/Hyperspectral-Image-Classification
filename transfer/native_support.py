@@ -31,8 +31,23 @@ def _elapsed(timings, name, function, *args, **kwargs):
         timings.setdefault(name, []).append(perf_counter() - started)
 
 
+def _require_backbone_contract(kwargs):
+    expected = {
+        "graph_mode": "learned", "graph_assignment_mode": "learned", "graph_adjacency_mode": "learned",
+        "learned_graph_radius": 1, "interaction_mode": "none", "graph_update_mode": "none",
+        "graph_route": None, "region_residual_mode": "none", "coverage_mode": "none",
+        "extra_channels": 2, "norm_type": "group_norm",
+    }
+    required = {"graph_mode", "norm_type"}
+    for name, allowed in expected.items():
+        value = kwargs.get(name, None if name in required else allowed)
+        if value != allowed or type(value) is not type(allowed):
+            raise ValueError(f"Native support requires {name}={allowed!r}; received {value!r}")
+
+
 class NativeSupportBackbone(VCASAHGCNBackbone):
     def __init__(self, **kwargs):
+        _require_backbone_contract(kwargs)
         super().__init__(**kwargs)
         self.spectrum_score = nn.Linear(128, SCORE_WIDTH, bias=False)
         self.graph_score = nn.Linear(128, SCORE_WIDTH, bias=False)
@@ -76,6 +91,7 @@ class NativeSupportBackbone(VCASAHGCNBackbone):
 
 class NativeSupportModel(MultiDatasetVCASAHGCN):
     def __init__(self, class_counts, *, scorer_seed, **kwargs):
+        _require_backbone_contract(kwargs)
         if type(scorer_seed) is not int or not 0 <= scorer_seed < 2**32:
             raise ValueError("Explicit uint32 scorer seed required")
         with torch.random.fork_rng(devices=[]):
@@ -113,11 +129,11 @@ class NativeSupportModel(MultiDatasetVCASAHGCN):
     def forward(self, dataset_name, x, *args, **kwargs):
         frame = _active.get()
         if (frame is None or frame["backbone"] is not self.backbone or x.device.type != "cpu"
-                or x.dtype != torch.float32 or kwargs.get("graph_state") is not None or args):
+                or x.dtype != torch.float32 or any(kwargs.get(key) is not None for key in ("Q", "A", "graph_state")) or args):
             raise ValueError("Native support requires registered CPU FP32 spatial input")
         if frame["capture"]:
-            frame["spectral"] = x[..., :-self.backbone.extra_channels].reshape(-1, x.shape[-1] -
-                                                                               self.backbone.extra_channels)
+            spectral, _ = self.backbone._split_spectral_extra(x, kwargs.get("wavelengths"))
+            frame["spectral"] = spectral.flatten(0, 1)
         return super().forward(dataset_name, x, **kwargs)
 
 
