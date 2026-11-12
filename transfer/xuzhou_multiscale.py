@@ -39,7 +39,7 @@ STAGES = {"full": (0, BUDGET, None), "prefix": (0, SPLIT, None),
           "resume": (SPLIT, BUDGET, "prefix"), "completed": (BUDGET, BUDGET, "resume")}
 
 
-def baseline_from_config(config):
+def baseline_from_config(config, *, scene=wp02.SCENE, classes=len(wp02.CLASSES)):
     kwargs = SpatialConfig(config).research.model_kwargs()
     if (kwargs["latent_channels"], kwargs["adapter_embed_dim"], kwargs["norm_type"], kwargs["graph_mode"]) != (
             128, 64, "domain_bn", "learned"):
@@ -47,7 +47,7 @@ def baseline_from_config(config):
     kwargs.update(norm_type="group_norm", graph_route=None)
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(SEED)
-        model = MultiDatasetVCASAHGCN({wp02.SCENE: len(wp02.CLASSES)}, **kwargs).eval()
+        model = MultiDatasetVCASAHGCN({scene: classes}, **kwargs).eval()
     model.backbone.adapter.cache_attention = False
     model.training_config = {"initialization": "fresh_group_norm", "model_seed": SEED,
                              "shared_pretrained_tensors": 0, "architecture_ancestor": wp02.REGISTRATION}

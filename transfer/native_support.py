@@ -156,7 +156,7 @@ def _measure(module, attribute, timing, name, observer=None):
         delattr(module, attribute)
 
 
-def native_forward(model, scene, tile, *, selector=None, capture=False, detail=False, timing=None):
+def native_forward(model, scene, tile, *, selector=None, capture=False, detail=False, timing=None, observation_view=None):
     """Call the same registered block materializer and original native classifier."""
     if not isinstance(model, NativeSupportModel) or (selector is None) != capture or _active.get() is not None:
         raise ValueError("Explicit source capture or bound selector required")
@@ -175,7 +175,7 @@ def native_forward(model, scene, tile, *, selector=None, capture=False, detail=F
     try:
         with _measure(model.backbone.adapter, "forward", timing, "vca"), _measure(
                 model.backbone.learnable_graph, "build_graph", timing, "q_a0_build", observe_graph):
-            result = _elapsed(timing, "forward", _forward, model, scene, tile)
+            result = _elapsed(timing, "forward", _forward, model, scene, tile, observation_view=observation_view)
         if selector is not None and frame["grid"] != selector.identity["grid"]:
             raise ValueError("Current graph grid differs from source capture")
         return result, frame
@@ -183,13 +183,14 @@ def native_forward(model, scene, tile, *, selector=None, capture=False, detail=F
         _active.reset(token)
 
 
-def capture_context(model, scene, role, admission, source_state, timing=None):
+def capture_context(model, scene, role, admission, source_state, timing=None, *, observation_view=None):
     """Capture source descriptions from a previously admitted development tile."""
     tile = scene.plan["tiles"][role["id"]]
-    if role["role"] not in ("devtrain", "devval") or tile["partition"] != "train":
+    expected_partitions = ("train", "val") if role["role"] == "devval" and observation_view is not None else ("train",)
+    if role["role"] not in ("devtrain", "devval") or tile["partition"] not in expected_partitions:
         raise ValueError("Only admitted development blocks can be captured")
     with torch.no_grad():
-        _, frame = native_forward(model, scene, tile, capture=True, timing=timing)
+        _, frame = native_forward(model, scene, tile, capture=True, timing=timing, observation_view=observation_view)
     height, width = frame["grid"]
     # Stable region IDs live in their own namespace inside this block.
     ids = [tile["id"] * 65536 + y * 256 + x for y in range(height) for x in range(width)]
