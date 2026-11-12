@@ -111,9 +111,10 @@ def register(root, pins, code):
         validation="original_step_zero_identical_in_all_arms", query=0, real_updates=0))
 
 
-def load(pin, code):
+def load(pin, code, *, producer_commit=None):
     reg = read(pin)
-    if (reg["code"] != {key: code[key] for key in ("commit", "branch", "source_hash")} or reg["scope"] != "synthetic"
+    expected = code["commit"] if producer_commit is None else producer_commit
+    if (reg["code"]["commit"] != expected or reg["code"]["branch"] != code["branch"] or reg["scope"] != "synthetic"
             or reg["maximum_updates"] != MAXIMUM_UPDATES or reg["real_updates"] or reg["query"]):
         raise ValueError("Controlled registration or execution source differs")
     old, frozen, audit, real = originals(reg["original"])

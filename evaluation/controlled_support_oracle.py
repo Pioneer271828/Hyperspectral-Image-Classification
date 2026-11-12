@@ -28,6 +28,9 @@ def audit(receipt):
     if result["constraints"] != population(original, points):
         raise ValueError("Recorded invariants differ")
     must = {tuple(pair) for pair in receipt["mandatory"]} if "mandatory" in receipt else {(i, i) for i in range(len(points))}
+    partitions = receipt.get("partitions", [0] * len(points))
+    if any(partitions[a] != partitions[b] for a, b in allowed):
+        raise ValueError("Independent candidate partition check failed")
     if not must <= proposed:
         raise ValueError("Protected edges missing")
     if len(original - proposed) != result["changed_edges"] or (proposed != original) != (result["status"] == "MATCHED"):

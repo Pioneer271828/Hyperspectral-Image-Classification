@@ -95,6 +95,10 @@ class BoundIntervention:
 
 
 def forward_intervention(model, scene, record, tile, bound, *, detail=False, timing=None):
+    from transfer.g3_training import state_hash
+    owner_state = bound.receipt["owner"].get("state")
+    if owner_state is not None and state_hash(model) != owner_state:
+        raise ValueError("Intervention endpoint weights differ from the frozen model")
     key = tile["id"]
     roles = record["roles"]
     if (type(key) is not int or not 0 <= key < len(roles) or scene.plan["tiles"][key] != tile

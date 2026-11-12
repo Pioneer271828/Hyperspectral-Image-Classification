@@ -39,6 +39,12 @@ def main():
             action.add_argument("--previous", required=True)
         if name in ("audit", "intervene", "cost", "supplement"):
             action.add_argument("--output", required=True)
+            action.add_argument("--producer-commit")
+        if name in ("cost", "supplement"):
+            action.add_argument("--intervention", nargs=2, required=True)
+        if name == "supplement":
+            action.add_argument("--recovery-audit", nargs=2, required=True)
+            action.add_argument("--cost-evidence", nargs=2, required=True)
     args = parser.parse_args()
     code = code_snapshot()
     if (not training_container_kind() or not __debug__ or code["commit"] != args.expected_commit
@@ -53,10 +59,16 @@ def main():
                                 pin(args.prior) if args.prior else None)
     else:
         from transfer import controlled_support_evidence as evidence
+        options = dict(producer_commit=args.producer_commit)
+        registration = pin(args.registration)
         if args.action == "supplement":
-            result = evidence.supplement(pin(args.registration), code, args.output, args.previous)
+            result = evidence.supplement(registration, code, args.output, args.previous, pin(args.intervention),
+                                         pin(args.recovery_audit), pin(args.cost_evidence), **options)
+        elif args.action == "cost":
+            from inference.controlled_support_cost import cost
+            result = cost(registration, code, args.output, pin(args.intervention), **options)
         else:
-            result = getattr(evidence, args.action)(pin(args.registration), code, args.output)
+            result = getattr(evidence, args.action)(registration, code, args.output, **options)
     print(json.dumps(result), flush=True)
 
 
