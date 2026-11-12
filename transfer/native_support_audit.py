@@ -15,6 +15,8 @@ from model.research_config import digest
 from research_runtime import tensor_hash
 from transfer import native_support_campaign as campaign, registered_development as dev
 from transfer.curriculum_training import CurriculumRun
+from transfer.g3_training import _forward, state_hash
+from transfer.native_support import native_forward
 from transfer.xuzhou_multiscale_audit import HEADS, SCIENCE, _exact
 
 
@@ -131,6 +133,7 @@ def _history(packet, data, case, arm):
         range_rows.append(dict(step=event["step"], tile=event["tile_id"], nnz=len(pairs),
             remote=len(pairs - original), receive_degree=[in_deg[i] for i in range(len(ids))],
             send_degree=[out_deg[i] for i in range(len(ids))], distances=dict(Counter(map(str, distance))),
+            support_sha256=digest(state["selected"]), pool_sha256=digest(state["pool"]),
             changed_since_visit=None if key not in previous else pairs != previous[key],
             refresh_step=state["refresh_step"], budget=state["budget"], pool=len(state["pool"])))
         previous[key] = pairs
@@ -155,7 +158,7 @@ def _history(packet, data, case, arm):
                 parameter_order=order, exposure=packet["progress"]["exposure"])
 
 
-def _endpoint(package, pin, case, data, training):
+def _endpoint(package, pin, case, data, training, *, original=None):
     _, scene, record, _, bank = data
     model, value = load_endpoint(package, pin, case, data)
     release = record["validation_support"]
@@ -179,6 +182,18 @@ def _endpoint(package, pin, case, data, training):
             targets = np.asarray([labels[i] - 1 for i in ids])
             output, detail = predict_registered_tile(model, value, scene, record, tile["id"], bank, detail=True)
             probabilities.append([tensor_hash(p) for p in output[:3]])
+            if original is not None:
+                if value["trial"] is not None:
+                    replay, _ = native_forward(original.model, scene, scene.plan["tiles"][tile["id"]],
+                                               selector=original.devval[str(tile["id"])])
+                elif case["work_package"] == "WP07":
+                    with original._conditions(original.model):
+                        replay = _forward(original.model, scene, scene.plan["tiles"][tile["id"]],
+                                          multiscale_condition_only=True)
+                else:
+                    replay = _forward(original.model, scene, scene.plan["tiles"][tile["id"]])
+                if any(not torch.equal(a, b) for a, b in zip(output[:3], replay[:3], strict=True)):
+                    raise ValueError("Published three-head probabilities differ from the original runner")
             for i, pred in enumerate(output[:3]):
                 probs = pred.numpy()[position]
                 np.add.at(matrices[i], (targets, probs.argmax(1)), 1)
@@ -201,7 +216,8 @@ def _endpoint(package, pin, case, data, training):
             or training["validation"]["nll"] != metrics["fused"]["nll"]):
         raise ValueError("Independent endpoint differs from actual production validation")
     return dict(step=value["step"], probability_hashes=probabilities, metrics=metrics, sparse_oracle=check,
-                package=package, bytes=Path(package["path"]).stat().st_size)
+                package=package, bytes=Path(package["path"]).stat().st_size,
+                runner_probability_replay=original is not None)
 
 
 def load_frozen(pin, frozen, code):
@@ -215,20 +231,26 @@ def load_frozen(pin, frozen, code):
     return root, reg, value
 
 
-def audit(pin, frozen, code):
+def audit(pin, frozen, code, producer=None):
     started = perf_counter()
-    root, reg, value = load_frozen(pin, frozen, code)
+    root, reg, value = load_frozen(pin, frozen, code if producer is None else producer)
     results = {}
     for identity, row in value["rows"].items():
         key, arm = identity.split("/")
-        folder, case, data, _ = campaign.open_case(root, pin, reg, key, arm)
+        folder, case, data, donor = campaign.open_case(root, pin, reg, key, arm)
         receipts, packet = _attempts(folder, pin, case, arm)
         if receipts != row["attempts"]:
             raise ValueError("Audit stage pins differ from publication")
         endpoints = {}
+        original = campaign._factory(case, data, arm, donor=donor)[0]()
         for name, package in row["endpoints"].items():
             step = packet["selected_step"] if name == "selected" else case["budget"]
-            endpoints[name] = _endpoint(package, pin, case, data, packet["history"][step - 1])
+            state = packet["selected_state" if name == "selected" else "state"]
+            original.model.load_state_dict(state, strict=True)
+            original.model.eval()
+            if state_hash(original.model) != packet["history"][step - 1]["state_hash"]:
+                raise ValueError("Original runner endpoint tensors differ")
+            endpoints[name] = _endpoint(package, pin, case, data, packet["history"][step - 1], original=original)
         results[identity] = dict(work_package=case["work_package"], endpoints=endpoints,
             history=_history(packet, data, case, arm), recovery_exact_fields=list(SCIENCE), updates=row["updates"])
         print(f"audited {identity}", flush=True)
@@ -242,4 +264,4 @@ def audit(pin, frozen, code):
                 metrics["per_class"], control[endpoint]["metrics"][head]["per_class"], strict=True))
                 for head, metrics in data["metrics"].items()} for endpoint, data in row["endpoints"].items()}
     return dev._json_new(root / "audit.json", dict(version=2, registration=pin, freeze=frozen, results=results,
-        updates=value["updates"], audit_updates=0, query=0, wall_seconds=perf_counter() - started))
+        producer=reg["code"], consumer=code["commit"], updates=value["updates"], audit_updates=0, query=0, wall_seconds=perf_counter() - started))

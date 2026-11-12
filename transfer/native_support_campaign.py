@@ -219,6 +219,13 @@ def register(root, code):
         cpu_workers=1, maximum_updates=declared, prefix=RECOVERY_PREFIX, query_accesses=0, real_updates=0))
 
 
+def pinned_producer(pin, expected_commit):
+    value = json.loads(dev._read(pin))["code"]
+    if value["commit"] != expected_commit:
+        raise ValueError("Evidence source differs from the frozen producer")
+    return value
+
+
 def read_registration(pin, code):
     value = json.loads(dev._read(pin))
     if (value["version"] != 2 or value["scope"] != "synthetic" or value["maximum_updates"] != MAXIMUM_UPDATES

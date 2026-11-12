@@ -69,15 +69,8 @@ def _cold(registration, case, package):
                 details=details, stages=timing)
 
 
-def _producer(registration, expected_commit):
-    value = json.loads(dev._read(registration))["code"]
-    if value["commit"] != expected_commit:
-        raise ValueError("Cost source differs from the frozen producer")
-    return value
-
-
 def measure(registration, frozen, code, producer_commit):
-    producer = _producer(registration, producer_commit)
+    producer = campaign.pinned_producer(registration, producer_commit)
     root, reg, publication = audit.load_frozen(registration, frozen, producer)
     key = "wp08-nine8-64"
     case = reg["cases"][key]
@@ -146,5 +139,5 @@ if __name__ == "__main__":
         raise ValueError("Cold worker checkout changed")
     registration = dict(path=registration_path, sha256=registration_sha)
     frozen = dict(path=freeze_path, sha256=freeze_sha)
-    _, reg, pub = audit.load_frozen(registration, frozen, _producer(registration, producer_commit))
+    _, reg, pub = audit.load_frozen(registration, frozen, campaign.pinned_producer(registration, producer_commit))
     print(json.dumps(_cold(registration, reg["cases"][key], pub["rows"][f"{key}/{arm}"]["endpoints"]["selected"])))
