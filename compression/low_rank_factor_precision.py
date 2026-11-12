@@ -219,11 +219,16 @@ def fallback(dense, factors, candidates, accepted, *, low_rank_passed, expected_
     if (type(low_rank_passed) is not bool or not set(accepted) <= set(candidates) or not set(candidates) <= set(LAYOUTS)
             or any(type(value) is not bool for value in accepted.values())):
         raise ValueError("Explicit registered candidate guards required")
+    calibration = None
     for name, model in candidates.items():
         plan = validate(model)
-        if (plan["phase"] != "integer" or plan["contract"]["layout"] != name
-                or plan["contract"]["source_state"] != state_hash(factors)):
+        spec = plan["contract"]
+        if (plan["phase"] != "integer" or spec["layout"] != name or spec["source_state"] != expected_factor_state):
             raise ValueError("Fallback candidate was calibrated under a different upstream layout")
+        context = (spec["identity"], spec["inputs"], spec["qat"])
+        if calibration is not None and calibration != context:
+            raise ValueError("Fallback layouts must use the same calibration scope")
+        calibration = context
     if not low_rank_passed:
         return "dense", deepcopy(dense)
     for name in ("both", "right", "left"):
