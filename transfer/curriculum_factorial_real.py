@@ -22,7 +22,7 @@ NEW_UPDATES, REFERENCED_UPDATES = 1068, 3204
 ACCEPTED = {
     "sample": {
         "registration": "3faa32ceb295008133e8dcd2fa9fa2d5e75da4b0aa5997b6f9f4755350dd6da0",
-        "completion": "cc44f9b9a378f31fc764b64d8538334ed88198f381e2b29539b94db1077e1f905",
+        "completion": "cc44f9b9a378f31fc764b64d8538334ed8198f381e2b29539b94db1077e1f905",
         "audit": "ebb4eb24d7ef24542fd08e8b3ca8fa87ecba55f80fd855d8e7d7ecd90746590b"
     },
     "observation": {
