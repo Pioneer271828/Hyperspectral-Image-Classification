@@ -26,6 +26,7 @@ class NativeSupportRun(CurriculumRun):
 
     def __init__(self, baseline, scene, record, *, trial, selector_seed, bank, donor=None, **kwargs):
         validate_source(baseline)
+        validate(record, scene.plan)
         if (any(kwargs.get(name) is not None for name in ("policy", "expected_policy_hash",
                 "observation_policy", "expected_observation_hash")) or not _positive_seed(selector_seed)
                 or set(trial) != {"mode", "schedule", "support_seed", "fixed"} or
@@ -52,7 +53,8 @@ class NativeSupportRun(CurriculumRun):
             identity, context = entry["identity"], entry["context"]
             if (identity["source"] != self.baseline_hash or identity["bands"] != scene.bands.fingerprint
                     or identity["scene"] != scene.dataset or key != context["block"]
-                    or context["role"] != roles[key]["role"]):
+                    or context["role"] != roles[key]["role"]
+                    or identity["block_input"] != tensor_hash(torch.from_numpy(scene.cube[tile_slice(roles[key])].copy()))):
                 raise ValueError("Bank source, observation or role differs")
             selector = make_selector(entry, trial, trial["support_seed"])
             if selector.schedule.updates != plan.updates:
@@ -74,7 +76,6 @@ class NativeSupportRun(CurriculumRun):
                 self.fixed[key] = selector.authenticate(snapshot)
         self.validation_labels = sparse_labels(record, scene.plan, "validation_support")
         self.validation_tiles = [scene.plan["tiles"][int(key)] for key in self.devval]
-        validate(record, scene.plan)
         self.added = {name: tensor_hash(p) for name, p in source.named_parameters() if name not in baseline.state_dict()}
         kwargs.setdefault("expected_source_state", state_hash(source))
         kwargs.setdefault("policy", None)

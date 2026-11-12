@@ -2,6 +2,9 @@
 
 import torch
 
+from loadData.spatial_tiles import tile_slice
+from research_runtime import tensor_hash
+
 from transfer.conditional_multiscale import ConditionalMultiscaleVCASAHGCN
 from transfer.g3_training import state_hash
 from transfer.native_support import NativeSupportModel, bank_digest, make_selector, native_forward
@@ -44,7 +47,12 @@ def predict_registered_tile(model, value, scene, record, tile_id, bank, *, detai
     from transfer.g3_training import _forward
     if isinstance(model, NativeSupportModel):
         settings = value["trial"]
-        selector = make_selector(bank[str(tile_id)], settings, settings["support_seed"])
+        entry = bank[str(tile_id)]
+        block_hash = tensor_hash(torch.from_numpy(scene.cube[tile_slice(tile)].copy()))
+        if (entry["identity"]["block_input"] != block_hash or entry["context"]["role"] != "devval"
+                or entry["identity"]["admission"] != value["development"]["sha256"]):
+            raise ValueError("Published endpoint block array, role or custody changed")
+        selector = make_selector(entry, settings, settings["support_seed"])
         return native_forward(model, scene, tile, selector=selector, detail=detail, timing=timing)
     if isinstance(model, ConditionalMultiscaleVCASAHGCN):
         with model.physical_conditions(**(value["conditions"] or {"coverage_fraction": None, "gsd_m": None})):
