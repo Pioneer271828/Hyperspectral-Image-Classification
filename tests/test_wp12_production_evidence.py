@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from evaluation.wp12_production_evidence import WP10_MANIFEST, adapt_wp10, metrics, wp11_cost
+from evaluation.wp12_production_evidence import WP10_MANIFEST, adapt_wp10, metrics, provenance, wp11_cost
 
 
 class WP12ProductionEvidenceTests(unittest.TestCase):
@@ -20,6 +20,19 @@ class WP12ProductionEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "timed outputs"):
             wp11_cost(dict(summary={"light": {"weights": "a"*64}}, startup={"light": []}, resident=[]),
                       "light", "b"*64)
+
+    def test_source_and_recovery_producers_cannot_be_interchanged(self):
+        evidence = {"path": "/tmp/producer.json", "sha256": "a"*64}
+        source, recovery = "b"*40, "c"*40
+        for wrong in ({"metrics": {}}, "d"*40, recovery):
+            with self.assertRaisesRegex(ValueError, "Original source producer"):
+                provenance(wrong, source, source_evidence=evidence, source_steps=256,
+                           recovery_commit=recovery, recovery_steps=155)
+        with self.assertRaisesRegex(ValueError, "inconsistent"):
+            provenance(source, source, source_evidence=evidence, source_steps=256,
+                       recovery_commit=source, recovery_steps=155)
+        result = provenance(source, source, source_evidence=evidence, source_steps=256)
+        self.assertIsNone(result["recovery_producer_commit"])
 
     def test_refuses_unreviewed_archive(self):
         with TemporaryDirectory() as name:
