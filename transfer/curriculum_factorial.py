@@ -29,11 +29,16 @@ class FactorialRun(RegisteredSampleRun):
     FORMAT = "vca-wp01-explicit-synthetic-factorial-v1"
     FAILURE_FORMAT = "vca-wp01-synthetic-factorial-failure-v1"
 
+    CONTRACT_SCOPE = FORMAT
+
+    def _scene_allowed(self, scene):
+        return len(scene.bands.band_ids) <= 16 and max(scene.plan["shape"]) <= 160
+
     def __init__(self, source, scene, record, *, trial, teacher_hash, policy, expected_policy_hash,
                  observation_policy=None, expected_observation_hash=None, **kwargs):
         both = policy is not None and observation_policy is not None
         if (trial not in ARMS or ARMS[trial] != (policy is not None, observation_policy is not None)
-                or len(scene.bands.band_ids) > 16 or max(scene.plan["shape"]) > 160):
+                or not self._scene_allowed(scene)):
             raise ValueError("Explicit bounded synthetic factorial arm required")
         super().__init__(source,scene,record,trial=trial,teacher_hash=teacher_hash,
             policy=None if both else policy,expected_policy_hash=None if both else expected_policy_hash,
@@ -52,7 +57,7 @@ class FactorialRun(RegisteredSampleRun):
             self.frozen_observations = self.observation_policy.to_dict()["training"]
 
     def _contract_extensions(self):
-        return dict(super()._contract_extensions(), factorial_scope=FORMAT, factor_switches=list(ARMS[self.trial]))
+        return dict(super()._contract_extensions(), factorial_scope=self.CONTRACT_SCOPE, factor_switches=list(ARMS[self.trial]))
 
     def _training_forward(self,tile,step,extra):
         if self.observation_policy is None:
