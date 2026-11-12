@@ -1305,7 +1305,7 @@
       "evidence": "Issue449/PR450。6/9格合格，1,728合成更新、18臂72阶段，完成重入0。54冻态端点，60训练块匹配、36开发验证块穷举仅原图。定向17/17、集成20/20、负例5/5，七份WP12旧表字节一致",
       "remaining": "3格在冻结约束及预算内未找到。真实Xuzhou两块无非平凡解，PaviaU/HongHu BLOCKED；真实收益、小类准入及GPU待验。WP05双卡待资格，WP11独立标签BLOCKED，WP04暂缓",
       "report": "research/reports/WP06_WP08_WP12_度数距离受控区域支持干预与固定图恢复_20261113.md",
-      "chat_report": "沿用Issue447已审CPU工程，默认off；本包主审待验"
+      "chat_report": "主审复核两份ZIP 360成员和新增实现、定向/集成/负例原日志，接受CPU工程、冻结干预和登记合成恢复。Issue449 completed，PR450 ready未合并。joint开发训练按端点全局步补推进属于反事实，3格因有界搜索未获运行资格"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
