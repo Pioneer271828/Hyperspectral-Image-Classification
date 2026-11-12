@@ -1235,6 +1235,14 @@
       "report": "research/reports/WP01_Xuzhou_K5V5真实样本课程六臂恢复_20261112.md",
       "chat_report": "本批待主审。冻结教师、原始和有效监督、小类保护及旧dense跨实现参考留存"
     }
+    ,{
+      "id": "WP06 课程逐支持机制复盘与 CUR-O 真实零更新准入",
+      "state": "真实逐支持复盘、观测排列准入及实际前向核对通过",
+      "evidence": "Issue433/PR435，实际 4e1187a7d76575273f0bfd3d451e35abe3674c47。18例36端点，1620训练支持、4860逐头V5点。观测12计划例、48真实前向、优化0，边际相同且联合曝光不同。b0cb5997753deace7ee01198cbc8f704a844a869de7bc694770457d271c94157。",
+      "remaining": "描述性固定开发证据。真实CUR-O、S×O、空间确认及GPU待验",
+      "report": "research/reports/WP06_课程逐支持复盘与观测课程真实准入_20261112.md",
+      "chat_report": "本批待主审。真实近似带元数据、原统计和选列至图输入逐层核对"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
