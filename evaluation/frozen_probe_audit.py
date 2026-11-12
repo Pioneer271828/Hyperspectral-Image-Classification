@@ -7,7 +7,8 @@ import torch.nn.functional as F
 
 from evaluation.classification_metrics import metrics_from_confusion
 from evaluation import frozen_probe_registry as registry
-from evaluation.linear_probe import fingerprint, prepare
+from evaluation import probe_decimal_reference
+from evaluation.linear_probe import POLICY_V2, fingerprint, prepare
 from g4_support_context import check_files
 from model.research_config import digest
 from research_runtime import tensor_hash
@@ -150,8 +151,16 @@ def audit_probes(pack, scope, state, report, recorded):
             and saved["normalization"]["columns"] == metadata[name]["columns"] == columns,
             "Probe width/columns or first-minimum selected step differs")
         raw = {role: pack["features"][name][role].numpy().astype(np.float64)[:, columns] for role in ROLES}
-        mean, sd = raw["train"].mean(0), raw["train"].std(0)
-        scale = np.where(sd > plan["scale_floor"], sd, 1)
+        if plan["policy"] == POLICY_V2:
+            independent_x, oracle = probe_decimal_reference.standardize(raw,plan["scale_floor"])
+            mean, scale = oracle["mean"], oracle["scale"]
+            registry.require(saved["normalization"]["scaled_columns"]==oracle["scaled_columns"]
+                and all(np.allclose(layers[name][role].numpy(),independent_x[role],rtol=PROB_RTOL,atol=PROB_ATOL)
+                        for role in ROLES), "Independent v2 standardization or scale-floor branch differs")
+        else:
+            mean, sd = raw["train"].mean(0), raw["train"].std(0)
+            scale = np.where(sd > plan["scale_floor"], sd, 1)
+            independent_x = {role:(values-mean)/scale for role,values in raw.items()}
         registry.require(np.allclose(mean, saved["normalization"]["mean"], rtol=PROB_RTOL, atol=PROB_ATOL)
             and np.allclose(scale, saved["normalization"]["scale"], rtol=PROB_RTOL, atol=PROB_ATOL),
             "Independent train-only centering or scale differs")
@@ -163,7 +172,7 @@ def audit_probes(pack, scope, state, report, recorded):
             authority = F.log_softmax(x @ best["weight"].T + best["bias"], dim=1)
             registry.require(torch.equal(authority, recorded[name][role]), "Saved authoritative probabilities differ")
             authority = authority.numpy()
-            alternate = numpy_logp((raw[role]-mean)/scale, best["weight"].numpy(), best["bias"].numpy())
+            alternate = numpy_logp(independent_x[role], best["weight"].numpy(), best["bias"].numpy())
             cmp = comparison(authority, alternate)
             observed = class_metrics(authority, y)
             independent = class_metrics(alternate, y)
