@@ -112,7 +112,7 @@ def _forward(model,scene,tile,*,observation_view=None,metadata_missing=False):
         if view.bands.fwhm is not None:
             extra['fwhm'] = np.asarray(view.bands.fwhm, dtype=np.float32)
         with model.partition_bands(view.bands):
-            return forward_partition(model,scene.dataset,obs,np.asarray(view.bands.wavelengths,dtype=np.float32),
+            return forward_partition(model,scene.dataset,view.observation,np.asarray(view.bands.wavelengths,dtype=np.float32),
                                      50 if scene.dataset=='paviaU' else 100,**extra)
     return forward_partition(model,scene.dataset,view.observation,np.asarray(view.bands.wavelengths,dtype=np.float32),
                              50 if scene.dataset=='paviaU' else 100,**extra)

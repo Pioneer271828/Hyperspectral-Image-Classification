@@ -76,19 +76,24 @@ class ConditionalSpatialConv(nn.Module):
 
     def forward(self, x, dataset_name=None):
         features = self.act1(self.point_conv(self.norm(x, dataset_name)))
+        observation = _observation.get()
+        trace = observation[1] if observation is not None and observation[0] is self else None
         if self.mode == "fixed":
+            if trace is not None:
+                trace.update(dilations=(self.dilation,), weights=features.new_ones((features.shape[0], 1)))
             return self.act2(self._filter(features, self.dilation))
         logits = features.new_zeros((features.shape[0], 3))
         if self.content_selector is not None:
             logits = self.content_selector(features.mean(dim=(2, 3)))
-        observation = _observation.get()
         if self.condition_encoder is not None and observation is not None and observation[0] is self:
-            encoded = self.condition_encoder(*observation[1:], reference=features)
+            encoded = self.condition_encoder(*observation[2:], reference=features)
             if encoded is not None:
                 logits = logits + self.condition_selector(encoded)
-        weights = logits.softmax(dim=-1).unbind(dim=-1)
+        weights = logits.softmax(dim=-1)
+        if trace is not None:
+            trace.update(dilations=DILATIONS, weights=weights.detach())
         combined = sum(self._filter(features, dilation) * weight[:, None, None, None]
-                       for dilation, weight in zip(DILATIONS, weights, strict=True))
+                       for dilation, weight in zip(DILATIONS, weights.unbind(dim=-1), strict=True))
         return self.act2(combined)
 
 
@@ -147,15 +152,19 @@ class ConditionalMultiscaleVCASAHGCN(MultiDatasetVCASAHGCN):
         if bound is not None and bound[0] is self and band_metadata is None:
             band_metadata = bound[1]
         observation = (band_metadata, coverage_fraction, gsd_m)
-        token = _observation.set((first, *observation))
+        cnn_trace = {} if return_graph_info else None
+        token = _observation.set((first, cnn_trace, *observation))
         args = (dataset_name, x, Q, A, wavelengths, fwhm, superpixel_scale)
         kwargs = dict(return_graph_info=return_graph_info, return_diagnostics=return_diagnostics,
                       graph_state=graph_state, return_logits=return_logits, wavelength_unit=wavelength_unit,
                       fwhm_unit=fwhm_unit, coverage_metadata=coverage_metadata, coverage_reference_nm=coverage_reference_nm)
         try:
             if isinstance(self.backbone, MultiRangeBackbone):
-                return self.backbone.forward_observed(observation, super().forward, *args, **kwargs)
-            output = super().forward(*args, **kwargs)
+                output = self.backbone.forward_observed(observation, super().forward, *args, **kwargs)
+            else:
+                output = super().forward(*args, **kwargs)
+            if return_graph_info:
+                output[-1]["multiscale_cnn"] = cnn_trace
             if self.graph_multiscale == "fixed" and return_graph_info:
                 output[-1]["multiscale_graph"] = {"radii": (self.graph_radius,), "weights": x.new_ones(1),
                                                  "nnz": (output[-1]["graph_nnz"],)}

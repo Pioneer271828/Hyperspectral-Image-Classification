@@ -1,10 +1,26 @@
 import math
+from contextlib import contextmanager
+from contextvars import ContextVar
+from time import perf_counter
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from .graph_state import GraphState, graph_diagnostics
+
+
+_build_times = ContextVar("learned_graph_build_times", default=None)
+
+
+@contextmanager
+def measure_graph_build(samples):
+    """Collect synchronous CPU graph-build times separately from model outputs."""
+    token = _build_times.set(samples)
+    try:
+        yield
+    finally:
+        _build_times.reset(token)
 
 
 class LearnableSuperpixelGraph(nn.Module):
@@ -298,6 +314,8 @@ class LearnableSuperpixelGraph(nn.Module):
             return graph_state.validate(features)
         if assignment_mode not in ('learned', 'fixed_grid') or adjacency_mode not in ('learned', 'fixed_local'):
             raise ValueError('Unknown assignment/adjacency control')
+        samples = _build_times.get()
+        started = perf_counter() if samples is not None else None
         if assignment_mode == 'learned':
             Q, tokens, auxiliary = self._build_assignment(features, superpixel_scale)
         else:
@@ -312,5 +330,8 @@ class LearnableSuperpixelGraph(nn.Module):
                                         adjacency_mode=adjacency_mode, position_kind='grid_seed_centers',
                                         assignment_candidates=self.assignment_offsets.shape[0],
                                         graph_candidates=self.graph_offsets.shape[0])
-        return GraphState(Q, A0, positions, tuple(features.shape[:2]), grid_shape,
-                          regularizers, diagnostics).validate(features)
+        state = GraphState(Q, A0, positions, tuple(features.shape[:2]), grid_shape,
+                           regularizers, diagnostics).validate(features)
+        if samples is not None:
+            samples.append(perf_counter() - started)
+        return state
