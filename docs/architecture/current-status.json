@@ -1195,6 +1195,14 @@
       "report": "research/reports/WP11_冻结模型统一执行与成本接入_20261112.md",
       "chat_report": "本轮待主审。混合块哈希与测试夹具失败保留，修复后沿原冻结模型验收"
     }
+    ,{
+      "id": "WP12 WP10与WP11真实生产质量和CPU成本统一适配",
+      "state": "真实工件统一 JSON/CSV、独立算术与拒绝核查通过",
+      "evidence": "Issue422/PR424，实测 17680d8c93ffb71d66f4062d7906068c7b12cf5e。完整回归115/115，11模型31头279逐类记录144计时/RSS样本，7拒绝。WP10 CNN失败与三值回退、WP11轻选步1及完整类1零召回保留。证据 fd0c75f737e58c55231a140fbcb150f2fae063c8707eb63bf84376f3c15c53e0。",
+      "remaining": "仅真实开发证据适配。真实独立确认BLOCKED，GPU NOT_RUN，冻结54硬件成本和完整WP12研究待后续。保留两协议预算、角色和计时边界",
+      "report": "research/reports/WP12_WP10与WP11真实生产证据适配_20261112.md",
+      "chat_report": "本轮待主审。历史汇总CLI依赖补齐，旧失败与最终真实表、独立回执均归档"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
