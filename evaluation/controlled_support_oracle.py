@@ -8,7 +8,7 @@ import numpy as np
 
 def population(pairs, coordinates):
     n = len(coordinates)
-    edges = np.asarray(pairs, dtype=np.int64).reshape(-1, 2)
+    edges = np.asarray(list(pairs), dtype=np.int64).reshape(-1, 2)
     points = np.asarray(coordinates, dtype=np.int64)
     delta = points[edges[:, 0]] - points[edges[:, 1]]
     lengths, counts = np.unique(np.einsum("ij,ij->i", delta, delta), return_counts=True)
