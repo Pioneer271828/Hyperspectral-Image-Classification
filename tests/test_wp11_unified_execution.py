@@ -77,9 +77,9 @@ class UnifiedWP11Tests(unittest.TestCase):
                     with patch.object(Path, "read_bytes", new=no_labels):
                         results = {mode: workflow.execute(identity, code, mode, target / mode,
                                                           export=mode == "full_matched") for mode in MODES}
-                    output = torch.load(results["full_matched"]["prediction_package"]["path"], weights_only=True)
-                    self.assertEqual(output["input_hash"], manifest["static_input"])
-                    self.assertTrue(all(set(row["probabilities"]) == {"fused", "graph", "cnn"} for row in output["rows"]))
+                    predictions = torch.load(results["full_matched"]["prediction_package"]["path"], weights_only=True)
+                    self.assertEqual(predictions["input_hash"], manifest["static_input"])
+                    self.assertTrue(all(set(row["probabilities"]) == {"fused", "graph", "cnn"} for row in predictions["rows"]))
                     self.assertEqual(len(manifest["classes"]), classes)
                     self.assertEqual(results["light"]["instrumentation"]["graph_calls"], 0)
                     self.assertEqual(results["all_fallback"]["output_hashes"]["probabilities"],
