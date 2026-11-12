@@ -216,7 +216,7 @@ def read_stage(root, registration, arm, name, prior, *, arms=None, stages=None):
 
 
 def execute_stage(root, registration, arm, name, prior, *, value, baseline, scene, record, plan,
-                  arms=None, stages=None, run_factory=new_run, run_type=MultiscaleRun):
+                  arms=None, stages=None, run_factory=new_run, run_type=MultiscaleRun, selector_seed=SEED):
     arms = ARMS if arms is None else arms
     stages = STAGES if stages is None else stages
     folder, claim = _stage_paths(root, arm, name, arms, stages)
@@ -251,7 +251,7 @@ def execute_stage(root, registration, arm, name, prior, *, value, baseline, scen
             run = run_factory(baseline, scene, record, plan, arms[arm])
         else:
             run = run_type.load(baseline, scene, record, packet["path"], plan=plan, trial=arms[arm],
-                                selector_seed=SEED, expected_sha256=packet["sha256"],
+                                selector_seed=selector_seed, expected_sha256=packet["sha256"],
                                 expected_contract_hash=value["contracts"][arm])
         if run.contract_hash != value["contracts"][arm] or run.completed != start:
             raise ValueError("Arm checkpoint contract or registered update start differs")
