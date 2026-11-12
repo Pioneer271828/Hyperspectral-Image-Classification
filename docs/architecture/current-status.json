@@ -1267,6 +1267,14 @@
       "report": "research/reports/WP01_样本与观测课程双因素合成恢复_20261112.md",
       "chat_report": "双因素为显式工程入口，旧默认保持单因素合同，待主审"
     }
+    ,{
+      "id": "WP12 真实观测课程与双因素工程证据",
+      "state": "真实表与四条件表重导、独立复算通过",
+      "evidence": "Issue439/PR442，适配 b20c3b0ed2e58721a07c71230c0bb6193bd02a74。原49真实行逐项保留；共62模型184头，条件表300头。16项回归及7项真实工件篡改拒绝，独审 999edf314cf34463e3b42e57354d666edbdd2e21df24f88a317ce3eb8d4fa5d2。",
+      "remaining": "部署与GPU NOT_RUN，WP11独立确认 BLOCKED，真实S×O NOT_RUN",
+      "report": "research/reports/WP12_真实观测课程与双因素工程证据_20261112.md",
+      "chat_report": "WP12真实及工程汇总已交付，待主审；适配和独立复算均为零更新"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
