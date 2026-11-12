@@ -1233,12 +1233,12 @@
       "evidence": "Issue432/PR434，实际 9e27e88e0d3631ea6d8f557b6d3127353d768f32。6408次更新，72阶段，off/balanced三组逐位一致。5个非退化个例三头保护通过，融合OA均持平。独审 ebb4eb24d7ef24542fd08e8b3ca8fa87ecba55f80fd855d8e7d7ecd90746590b。",
       "remaining": "单源三个恢复采样与Torch RNG重复。独立空间、模型种子和GPU待验，默认off",
       "report": "research/reports/WP01_Xuzhou_K5V5真实样本课程六臂恢复_20261112.md",
-      "chat_report": "本批待主审。冻结教师、原始和有效监督、小类保护及旧dense跨实现参考留存"
+      "chat_report": "主审接受固定K5/V5同源三组恢复、6408次更新、精确恢复和小类保护。Issue432完成，PR434可审阅"
     }
     ,{
       "id": "WP06 课程逐支持机制复盘与 CUR-O 真实零更新准入",
       "state": "真实逐支持复盘、观测排列准入及实际前向核对通过",
-      "evidence": "Issue433/PR435，实际 4e1187a7d76575273f0bfd3d451e35abe3674c47。18例36端点，1620训练支持、4860逐头V5点。观测12计划例、48真实前向、优化0，边际相同且联合曝光不同。b0cb5997753deace7ee01198cbc8f704a844a869de7bc694770457d271c94157。",
+      "evidence": "Issue433/PR435，零更新端点修订 2dedf5f64dd67b0a609a10aaa1f26d527b8578d6。逐端点前缀复算，7个选中点修正、11个选中点及18个末态一致。旧观测12例、48前向及准入身份沿用。修订复盘 9bf307260ecd07f087db35c26e276930c22aa417d10687e58ed7b8bb758d2782。",
       "remaining": "描述性固定开发证据。真实CUR-O、S×O、空间确认及GPU待验",
       "report": "research/reports/WP06_课程逐支持复盘与观测课程真实准入_20261112.md",
       "chat_report": "本批待主审。真实近似带元数据、原统计和选列至图输入逐层核对"
@@ -1246,10 +1246,18 @@
     ,{
       "id": "WP12 真实课程质量、教师和有效监督证据接入",
       "state": "49模型统一表与独立复算通过",
-      "evidence": "Issue431/PR436，实际 5d93543214a77b2562ae69ff692dfd8296f92972。49模型145头1305逐类，原30模型和成本逐项一致。教师、训练与部署边界分开。独审 77cf80ddf764b749325dcb8d5a3564eea8022070d3133bb32eaa5e5a441b1a95。",
+      "evidence": "Issue431/PR436，修订适配 ee181cf052fb21cb08784487d642d8507387ba19。49模型145头，区分整轨与端点累计监督；7个选中点修正，质量成本及原30模型一致。独立复算 d66ed7b84dee50c61598e262429ab26c7e9c13d7c68b944f80cf65a9284f19d9。",
       "remaining": "课程部署与GPU NOT_RUN，WP11独立确认 BLOCKED。真实CUR-O仅关联零更新准入",
       "report": "research/reports/WP12_真实课程质量教师与有效曝光证据_20261112.md",
       "chat_report": "本批待主审。保留有效监督、教师执行、逐头小类和实际阶段预算"
+    }
+    ,{
+      "id": "WP01 Xuzhou K5/V5 真实观测课程四排列",
+      "state": "真实12例恢复、精确续接及四条件冻结复盘通过",
+      "evidence": "Issue438/PR440，实际 e3a3c74b287bc024514a03a04cd9ae4f9a6c2c9f。4,272次更新，48阶段，独审88.09秒。选中full融合OA较同种子fixed升1/平7/降1，无同时通过三头保护且融合提升的个例。独审 1ccf81149b4fcc17d9e95cd5515368e4cfff8565e65871e480a2158f28a43eaf。",
+      "remaining": "固定开发V5与单源三恢复种子。空间独立、GPU及部署耗时未测",
+      "report": "research/reports/WP01_Xuzhou_K5V5真实观测课程四排列_20261112.md",
+      "chat_report": "真实CUR-O已交付，待主审；默认结构与选模入口照旧"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",

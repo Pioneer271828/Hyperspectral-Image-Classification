@@ -1,6 +1,7 @@
 """Adapt reviewed WP10 and WP11 artifacts into a single production evidence table."""
 
 import csv
+import math
 from pathlib import Path
 
 from evaluation.unified_cohort import _counts
@@ -341,12 +342,15 @@ def write_table(out, report):
               "teacher_score_kind", "curriculum_policy_sha256", "curriculum_pacing_seed",
               "teacher_seconds", "teacher_forward_calls", "teacher_label_accesses", "raw_support_visits",
               "effective_support_mass", "minimum_applied_weight", "training_scope", "update_loop_seconds",
-              "training_label_accesses", "stage_v5_label_accesses", "support_review_sha256")
+              "training_label_accesses", "stage_v5_label_accesses", "support_review_sha256",
+              "exposure_scope", "selected_exposure_step", "selected_exposure_sha256", "selected_raw_support_visits",
+              "selected_effective_support_mass")
     with (out / "production-table.csv").open("x", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for row in report["rows"]:
             cost, identity = row["cost"], row["identity"]
+            selected_mass = row.get("endpoint_supervision", {}).get("selected", {})
             teacher, exposure, training, curriculum = (row.get(k, {}) for k in ("teacher", "exposure", "training_cost", "curriculum"))
 
             def quantile(key, fraction):
@@ -369,6 +373,10 @@ def write_table(out, report):
                      training_scope=training.get("scope"), update_loop_seconds=training.get("update_loop_seconds"),
                      training_label_accesses=training.get("label_accesses"), stage_v5_label_accesses=training.get("stage_v5_label_accesses"),
                      support_review_sha256=row.get("support_review", {}).get("sha256"),
+                     exposure_scope=row.get("exposure_scope"), selected_exposure_step=selected_mass.get("step"),
+                     selected_exposure_sha256=selected_mass.get("history_sha256"),
+                     selected_raw_support_visits=sum(v["raw"] for v in selected_mass["exposure"].values()) if selected_mass else None,
+                     selected_effective_support_mass=math.fsum(v["effective"] for v in selected_mass["exposure"].values()) if selected_mass else None,
                      data_protocol=identity["data_protocol"], model_seed=identity["model_seed"],
                      sampler_seed=identity["sampler_seed"], state_sha256=row["state"], package_sha256=row["package"],
                      split_sha256=digest(identity["split"]), support_sha256=identity["support_sha256"],
