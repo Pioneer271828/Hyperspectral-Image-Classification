@@ -296,7 +296,7 @@ def adapt_wp11(spec):
 
 
 def build(spec):
-    if set(spec) not in ({"wp10", "wp11"}, {"wp10", "wp11", "low_rank"}):
+    if not {"wp10", "wp11"} <= set(spec) <= {"wp10", "wp11", "low_rank", "curriculum"}:
         raise ValueError("Exact WP10 and WP11 evidence references required")
     rows, comparison = adapt_wp10(spec["wp10"])
     if "blocked_source" in spec["wp11"]:
@@ -307,18 +307,24 @@ def build(spec):
     else:
         rows.extend(adapt_wp11(spec["wp11"]))
         wp11 = missing("BLOCKED", "Independent calibration and confirmation require both authorized custody packages")
-    low_rank = {}
+    supplements = {}
     if "low_rank" in spec:
         from evaluation.wp12_low_rank_evidence import adapt
 
         added, summary = adapt(spec["low_rank"])
         rows.extend(added)
-        low_rank["low_rank"] = summary
+        supplements["low_rank"] = summary
+    if "curriculum" in spec:
+        from evaluation.wp12_curriculum_evidence import adapt
+
+        added, summary = adapt(spec["curriculum"])
+        rows.extend(added)
+        supplements["curriculum"] = summary
     return dict(policy=POLICY, status="production_development_evidence", rows=rows, wp10_comparison=comparison,
                 wp11_independent=wp11, gpu=missing("NOT_RUN", "The supplied evidence measures CPU only"),
                 cross_protocol_benefit=missing("NOT_RUN", "WP10 K5/V5 and WP11 K10/V5 use distinct training evidence"),
                 synthetic="Engineering receipts are outside the real production table",
-                raw_label_reads=0, query_reads=0, optimizer_updates=0, **low_rank)
+                raw_label_reads=0, query_reads=0, optimizer_updates=0, **supplements)
 
 
 def write_table(out, report):
@@ -330,12 +336,17 @@ def write_table(out, report):
               "selected_step", "precision", "head", "oa", "aa", "kappa", "macro_f1", "nll", "guard_passed", "small_new_errors",
               "parameters", "package_bytes", "cost_status", "device", "resident_scope", "resident_group",
               "resident_p50_ms", "resident_p95_ms", "load_p50_ms", "load_p95_ms", "first_p50_ms", "first_p95_ms",
-              "end_to_end_p50_ms", "end_to_end_p95_ms", "peak_rss_p50_kib", "peak_rss_p95_kib")
+              "end_to_end_p50_ms", "end_to_end_p95_ms", "peak_rss_p50_kib", "peak_rss_p95_kib",
+              "teacher_producer_commit", "teacher_state_sha256", "teacher_evidence_sha256", "teacher_scope",
+              "teacher_seconds", "teacher_forward_calls", "teacher_label_accesses", "raw_support_visits",
+              "effective_support_mass", "minimum_applied_weight", "training_scope", "update_loop_seconds",
+              "training_label_accesses", "stage_v5_label_accesses", "support_review_sha256")
     with (out / "production-table.csv").open("x", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for row in report["rows"]:
             cost, identity = row["cost"], row["identity"]
+            teacher, exposure, training = (row.get(k, {}) for k in ("teacher", "exposure", "training_cost"))
 
             def quantile(key, fraction):
                 return cost.get(key, {}).get(fraction)
@@ -347,6 +358,14 @@ def write_table(out, report):
                      scene=identity["scene"], actual_optimizer_calls=row.get("actual_optimizer_calls"),
                      guard_passed=guard.get("passes_metric_guards"),
                      small_new_errors=sum(guard["new_small_class_errors"].values()) if guard else None,
+                     teacher_producer_commit=teacher.get("producer"), teacher_state_sha256=teacher.get("state"),
+                     teacher_evidence_sha256=teacher.get("evidence", {}).get("sha256"), teacher_scope=teacher.get("scope"),
+                     teacher_seconds=teacher.get("seconds"), teacher_forward_calls=teacher.get("forwards"),
+                     teacher_label_accesses=teacher.get("label_accesses"), raw_support_visits=exposure.get("raw_support_visits"),
+                     effective_support_mass=exposure.get("effective_support_mass"), minimum_applied_weight=exposure.get("minimum_applied_weight"),
+                     training_scope=training.get("scope"), update_loop_seconds=training.get("update_loop_seconds"),
+                     training_label_accesses=training.get("label_accesses"), stage_v5_label_accesses=training.get("stage_v5_label_accesses"),
+                     support_review_sha256=row.get("support_review", {}).get("sha256"),
                      data_protocol=identity["data_protocol"], model_seed=identity["model_seed"],
                      sampler_seed=identity["sampler_seed"], state_sha256=row["state"], package_sha256=row["package"],
                      split_sha256=digest(identity["split"]), support_sha256=identity["support_sha256"],
