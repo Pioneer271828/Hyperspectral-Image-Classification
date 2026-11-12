@@ -16,7 +16,7 @@ from transfer import controlled_support_campaign as campaign, native_support_cam
 from transfer import registered_development as dev, xuzhou_multiscale as stages
 from transfer.controlled_regional_support import ARMS
 from transfer.g3_training import _forward, state_hash
-from transfer.native_support import NativeSupportModel, capture_context, make_selector
+from transfer.native_support import NativeSupportModel, capture_context, native_forward
 from transfer.native_support_intervention import BoundIntervention, forward_intervention, prepare_block
 from transfer.native_support_real import _two_blocks
 from transfer.xuzhou_multiscale_audit import SCIENCE, _exact
@@ -148,7 +148,7 @@ def _real_probe(real):
 
 
 def audit(pin, code, output, *, producer_commit=None):
-    root, reg, old, _, _, _ = campaign.load(pin, code, producer_commit=producer_commit)
+    root, reg, old, frozen, _, _ = campaign.load(pin, code, producer_commit=producer_commit)
     rows = {}
     observed_updates = 0
     for key, package in reg["cases"].items():
@@ -196,7 +196,6 @@ def audit(pin, code, output, *, producer_commit=None):
                     run.model.eval()
                     for role in record["roles"]:
                         if role["role"] == "devval":
-                            from transfer.native_support import native_forward
                             outputs, frame = native_forward(run.model, scene, scene.plan["tiles"][role["id"]],
                                 selector=run.devval[str(role["id"])])
                             endpoints[end] = dict(step=index, sha256=state_hash(run.model),
@@ -212,7 +211,20 @@ def audit(pin, code, output, *, producer_commit=None):
                 source_state=starts[arm], exact_fields=list(SCIENCE))
         if len(set(starts.values())) != 1:
             raise ValueError("Controlled arms do not share initial weights")
-        rows[key] = dict(status="PASSED", arms=by_arm, oracle_subsets=oracle)
+        old_row = frozen["rows"][f"{key}/fixed"]
+        old_receipt = campaign.read(old_row["attempts"]["full"])
+        old_full = native._load_pt(old_receipt["checkpoint"])
+        ref_receipt = campaign.read(by_arm["reference"]["attempts"]["full"])
+        ref_full = native._load_pt(ref_receipt["checkpoint"])
+        shared = tuple(field for field in SCIENCE if field != "history")
+        if any(not _exact(old_full[field], ref_full[field]) for field in shared):
+            raise ValueError("New reference differs from the reviewed Issue447 fixed donor training")
+        fields = ("step", "tile_id", "anchor", "support_ids", "loss", "state_hash", "validation", "train_probabilities", "scorers")
+        if any(any(not _exact(a[field], b[field]) for field in fields)
+               for a, b in zip(old_full["history"], ref_full["history"], strict=True)):
+            raise ValueError("Reference update history differs from the reviewed Issue447 fixed arm")
+        rows[key] = dict(status="PASSED", arms=by_arm, oracle_subsets=oracle,
+                         historical_reference_exact=dict(fields=shared, history_fields=fields, attempt=old_row["attempts"]["full"]))
     if observed_updates != reg["registered_updates"]:
         raise ValueError("Controlled optimization accounting differs")
     return dev._json_new(external_directory(output), dict(registration=pin, code=code["commit"], rows=rows,
