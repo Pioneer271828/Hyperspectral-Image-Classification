@@ -27,13 +27,15 @@ def _summary(values):
 
 
 @torch.no_grad()
-def _repeat(model, state, scene, record, tile, bank, timings):
+def _repeat(model, state, scene, record, tile, bank, timings, *, selector=None):
     if isinstance(model, NativeSupportModel):
         settings = state["trial"]
-        selector = make_selector(bank[str(tile["id"])], settings, settings["support_seed"])
+        if selector is None:
+            selector = make_selector(bank[str(tile["id"])], settings, settings["support_seed"])
+        before = selector.cost.copy()
         output, frame = native_forward(model, scene, scene.plan["tiles"][tile["id"]], selector=selector,
                                        detail=True, timing=timings)
-        timings.update({name: [seconds] for name, seconds in selector.cost.items()})
+        timings.update({name: [seconds - before[name]] for name, seconds in selector.cost.items()})
     else:
         backbone = model.backbone
         with ExitStack() as stack:
@@ -69,6 +71,37 @@ def _cold(registration, case, package):
                 details=details, stages=timing)
 
 
+def _train_tile_replay(model, state, scene, record, tile, bank):
+    timing = {}
+    selector = None
+    started = perf_counter()
+    if isinstance(model, NativeSupportModel):
+        settings = state["trial"]
+        key = str(tile["id"])
+        selector = make_selector(bank[key], settings, settings["support_seed"])
+        if state["donor"] is not None:
+            selector = selector.authenticate(state["donor"]["snapshots"][key])
+        else:
+            selector.advance(state["step"])
+    prepared = perf_counter()
+    # The original endpoint API admits validation only. The cost probe obtains
+    # its diagnostic training tile from the already authenticated release.
+    if selector is None:
+        from transfer.g3_training import _forward
+        with torch.no_grad():
+            outputs = _forward(model, scene, scene.plan["tiles"][tile["id"]])
+        details = dict(stage2_nnz=outputs[3]["graph_nnz"], nodes=outputs[3]["token_count"],
+                       probability_hashes=[tensor_hash(head) for head in outputs[:3]])
+    else:
+        details = _repeat(model, state, scene, record, tile, bank, timing, selector=selector)
+    finished = perf_counter()
+    return dict(prepare_seconds=prepared - started, forward_seconds=finished - prepared,
+                end_to_end_seconds=finished - started, details=details, stages=timing,
+                replay=None if selector is None else selector.snapshot(),
+                retrieval_seconds=None if selector is None else selector.cost["retrieval_seconds"],
+                selection_seconds=None if selector is None else selector.cost["selection_seconds"])
+
+
 def measure(registration, frozen, code, producer_commit):
     producer = campaign.pinned_producer(registration, producer_commit)
     root, reg, publication = audit.load_frozen(registration, frozen, producer)
@@ -79,6 +112,8 @@ def measure(registration, frozen, code, producer_commit):
     read_seconds = perf_counter() - started
     _, scene, record, _, bank = data
     tile = next(row for row in record["roles"] if row["role"] == "devval")
+    training_tile = next(row for row in record["roles"] if row["role"] == "devtrain"
+                         and str(row["id"]) in bank)
     rows = {}
     for arm in ARMS:
         package = publication["rows"][f"{key}/{arm}"]["endpoints"]["selected"]
@@ -105,6 +140,12 @@ def measure(registration, frozen, code, producer_commit):
             proc = subprocess.run(command + [arm], cwd=ROOT, capture_output=True, text=True, check=True)
             elapsed = perf_counter() - begin
             rows[arm]["cold"].append(dict(json.loads(proc.stdout), process_seconds=elapsed, pair=index + 1))
+    for index in range(WARM_REPEATS):
+        order = ARMS[index % len(ARMS):] + ARMS[:index % len(ARMS)]
+        for arm in order:
+            row = rows[arm]
+            sample = _train_tile_replay(row["model"], row["state"], scene, record, training_tile, bank)
+            row.setdefault("paired_train_role_replay", []).append(dict(sample, pair=index + 1))
     for arm, row in rows.items():
         state = row.pop("state")
         model = row.pop("model")
@@ -116,13 +157,21 @@ def measure(registration, frozen, code, producer_commit):
                                                    for a, b in zip(row["warm"], rows["off"]["warm"], strict=True)])
         if any(x["details"] != row["warm"][0]["details"] for x in row["warm"] + row["cold"]):
             raise ValueError("Paired endpoint inference changed across cached and cold loads")
-        row["scorer_seed"] = case["scorer_seed"] if state["trial"] is not None else None
+        if any(x["details"] != row["paired_train_role_replay"][0]["details"]
+               for x in row["paired_train_role_replay"]):
+            raise ValueError("Training role cost probe changed its predictions")
+        row["train_role_total_summary"] = _summary([x["end_to_end_seconds"] for x in row["paired_train_role_replay"]])
+        row["scorer_seed"] =  case["scorer_seed"] if state["trial"] is not None else None
         row["one_time_bank_seconds"] = case["bank_build_seconds"] if state["trial"] is not None else 0.
         row["one_time_donor_seconds"] = (json.loads(dev._read(dev._pin(root / "matrix" / key / "donor.json")))
             ["construction_seconds"] if arm == "fixed" else 0.)
+        row["amortized_once_seconds_per_forward"] = {
+            str(n): (row["one_time_bank_seconds"] + row["one_time_donor_seconds"]) / n for n in (1, 10, 100)}
     return dev._json_new(root / "cost.json", dict(version=2, scope="cpu_fp32_development_only", case=key,
         registration=registration, freeze=frozen, producer=producer, consumer=code["commit"], roles=["devval"], query=0, optimization=0, repeats=rows,
         source_data_bank_read_seconds=read_seconds, bank_capture_timing=case["bank_capture_timing"],
+        training_diagnostic_role="devtrain", training_diagnostic_tile=training_tile["id"],
+        amortized_once_over=[1, 10, 100],
         notes=["Stage measurements are nested and cannot be summed to obtain wall time.",
                "Cold starts include Python, imports, process launch and exit. OS cache was not flushed.",
                "Warm uses a resident endpoint and source bank. Q/A0 and supported values are rebuilt.",

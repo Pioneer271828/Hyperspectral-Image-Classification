@@ -27,6 +27,8 @@ def load_endpoint(pin, registration, case, data, *, device="cpu"):
             model = ConditionalMultiscaleVCASAHGCN(config["class_counts"], **config["backbone_kwargs"])
     else:
         model = baseline
+    if value["endpoint"] not in ("selected", "last") or not 1 <= value["step"] <= case["budget"]:
+        raise ValueError("Invalid published endpoint identity")
     model.load_state_dict(value["state"], strict=True)
     model.training_config = value["training_config"]
     model.backbone.adapter.cache_attention = False
@@ -36,9 +38,9 @@ def load_endpoint(pin, registration, case, data, *, device="cpu"):
 
 
 def predict_registered_tile(model, value, scene, record, tile_id, bank, *, detail=False, timing=None):
-    tile = scene.plan["tiles"][tile_id]
-    if record["roles"][tile_id]["role"] != "devval":
+    if type(tile_id) is not int or not 0 <= tile_id < len(record["roles"]) or record["roles"][tile_id]["role"] != "devval":
         raise ValueError("Published endpoint accepts registered development validation blocks only")
+    tile = scene.plan["tiles"][tile_id]
     from transfer.g3_training import _forward
     if isinstance(model, NativeSupportModel):
         settings = value["trial"]
