@@ -73,7 +73,7 @@ def fallback_check(baseline, scene, record, plan):
         hashes = []
         with torch.no_grad():
             for tile in validation:
-                left, right = [_forward(model, scene, tile) for model in variants]
+                left, right = [_forward(model, scene, tile, multiscale_condition_only=True) for model in variants]
                 if any(not torch.equal(a, b) for a, b in zip(left[:3], right[:3], strict=True)):
                     raise ValueError("Missing-metadata V5 fallback differs")
                 for key in ("multiscale_cnn", "multiscale_graph"):
@@ -85,7 +85,7 @@ def fallback_check(baseline, scene, record, plan):
             with torch.random.fork_rng(devices=[]):
                 torch.manual_seed(SEED)
                 model.train()
-                outputs = _forward(model, scene, train)
+                outputs = _forward(model, scene, train, multiscale_condition_only=True)
                 loss = curriculum_loss(outputs, scene, record, train, policy=None, step=None,
                                        class_balance=True)["total"]
                 loss.backward()

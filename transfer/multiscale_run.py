@@ -10,6 +10,7 @@ from inference.light_cnn import validate_source
 from model.learnable_superpixel_graph import measure_graph_build
 from transfer.conditional_multiscale import ConditionalMultiscaleVCASAHGCN
 from transfer.curriculum_training import CurriculumRun
+from transfer.development_training import evaluate_validation
 from transfer.g3_training import _forward, state_hash
 from transfer.multiscale_training import MultiscaleTrial
 
@@ -32,6 +33,7 @@ def metadata_contract(scene):
     return dict(bands_sha256=bands.fingerprint, wavelength_quality=bands.wavelength_quality,
                 wavelength_unit=bands.wavelength_unit, verified_wavelength_condition=verified,
                 fwhm_condition=verified and bands.fwhm is not None, gsd_m=None, coverage_fraction=None,
+                adapter_metadata="original_development_forward",
                 metadata_fallback=None if verified else "mean", joint_fallback=None if verified else "content")
 
 
@@ -99,14 +101,14 @@ class MultiscaleRun(CurriculumRun):
     def _training_forward(self, tile, step, extra):
         started = perf_counter()
         with measure_graph_build(self.timings["train_graph_build"]):
-            result = _forward(self.model, self.scene, tile, **extra)
+            result = _forward(self.model, self.scene, tile, multiscale_condition_only=True, **extra)
         self.timings["train_forward"].append(perf_counter() - started)
         return result
 
     def _evaluate(self, model):
         started = perf_counter()
         with measure_graph_build(self.timings["validation_graph_build"]):
-            result = super()._evaluate(model)
+            result = evaluate_validation(model, self.scene, self.record, multiscale_condition_only=True)
         self.timings["validation"].append(perf_counter() - started)
         return result
 

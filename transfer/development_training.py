@@ -81,7 +81,7 @@ def sparse_labels(record,plan,name):
     return result
 
 
-def evaluate_validation(model,scene,record,*,observation_policy=None,condition='full'):
+def evaluate_validation(model,scene,record,*,observation_policy=None,condition='full',multiscale_condition_only=False):
     validate(record,scene.plan)
     _,validation_count=development_counts(record)
     if scene.classes!=len(record['classes']):raise ValueError('Scene/record class counts differ')
@@ -103,6 +103,8 @@ def evaluate_validation(model,scene,record,*,observation_policy=None,condition='
             if not valid.any():continue
             original=scene.plan['tiles'][tile['id']]
             extra={} if observation_policy is None else {'observation_view':observation_policy.view(scene,record,original,phase='validation',condition=condition)}
+            if multiscale_condition_only:
+                extra['multiscale_condition_only'] = True
             output=_forward(model,scene,original,**extra)[0].detach().cpu().numpy()
             target=target[valid]-1;probs=output[valid]
             prediction=probs.argmax(1)
