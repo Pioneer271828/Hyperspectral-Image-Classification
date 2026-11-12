@@ -17,6 +17,9 @@ from transfer.g3_training import state_hash
 from transfer.xuzhou_multiscale_audit import _packet
 from transfer.curriculum_real import RegisteredSampleRun
 
+VERSION = "wp06_endpoint_supervision_v2"
+SUPERVISION_SCOPE = "through_the_frozen_endpoint_step"
+
 
 def _ranks(values):
     result = [0.] * len(values)
@@ -56,6 +59,12 @@ def _training_exposure(history, plan, support):
             mass[index].append(value)
     return {str(i): dict(raw=counts[i], effective=math.fsum(mass[i])) for i in support}
 
+
+def supervision_prefix(history, plan, support, step):
+    if len(history) != plan.updates or type(step) is not int or not 0 <= step <= plan.updates:
+        raise ValueError("Endpoint step or complete history is outside the frozen curriculum budget")
+    prefix = history[:step]
+    return dict(step=step, history_sha256=digest(prefix), exposure=_training_exposure(prefix, plan, support))
 
 def _stratify(teacher, actual, exposure):
     result = {}
@@ -160,11 +169,13 @@ def review(sample_pin, audit_pin, output, code):
         if history_hash != digest(row["history"]):
             raise ValueError("Historical record differs from the authenticated full trajectory")
         pins.extend((full_pin, receipt["checkpoint"]))
-        exposed = _training_exposure(packet["history"], plans[str(case["seed"])], teacher)
-        if exposed != row["exposure"]["by_support"]:
+        plan = plans[str(case["seed"])]
+        full_run = supervision_prefix(packet["history"], plan, teacher, reg["budget"])
+        if full_run["exposure"] != row["exposure"]["by_support"]:
             raise ValueError("Independent cumulative applied supervision differs")
-        result = dict(case=case, history_sha256=history_hash, steps=len(packet["history"]),
-                      exposure=exposed, train_support={}, devval={})
+        initial = supervision_prefix(packet["history"], plan, teacher, 0)
+        initial["train_support"] = _stratify(teacher, teacher, initial["exposure"])
+        result = dict(case=case, full_run=full_run, endpoints={"initial": initial}, devval={})
         for point in ("selected", "last"):
             endpoint = row[point]
             package = endpoint["package"]
@@ -180,7 +191,9 @@ def review(sample_pin, audit_pin, output, code):
             val_calls += v5["forwards"]
             if any(v5[k] != endpoint[k] for k in ("scores", "metrics", "predictions", "targets")):
                 raise ValueError("Development endpoint predictions changed during review")
-            result["train_support"][point] = _stratify(teacher, final, exposed)
+            prefix = supervision_prefix(packet["history"], plan, teacher, endpoint["step"])
+            prefix["train_support"] = _stratify(teacher, final, prefix["exposure"])
+            result["endpoints"][point] = prefix
             result["devval"][point] = _paired(members, a["cases"][f"s{case['seed']}-off"][point], v5,
                                              a["guards"][name][point], a["small_classes"])
         rows[name] = result
@@ -188,10 +201,11 @@ def review(sample_pin, audit_pin, output, code):
     admission.check_pins(pins)
     require_frozen_code(code)
     output.mkdir()
-    return dev._json_new(output/"review.json", dict(status="passed_frozen_support_review", commit=code["commit"],
+    return dev._json_new(output/"review.json", dict(status="passed_frozen_support_review", version=VERSION, supervision_scope=SUPERVISION_SCOPE,
+        commit=code["commit"],
         source_hash=code["source_hash"], sample_registration=sample_pin, sample_audit=audit_pin, teacher=reg["teacher"],
         protocol=reg["protocol"], rule=REVIEW, cases=rows, train_forwards=train_calls, teacher_forwards=teacher_forwards,
         devval_forwards=val_calls, train_support_per_endpoint=len(teacher), devval_support_per_endpoint=len(members),
-        source_v5_hash=digest(initial_v5["scores"]), history_scope="frozen_full_packet_hash_and_event_weight_reconciliation",
+        source_v5_hash=digest(initial_v5["scores"]), history_scope="frozen_full_packet_and_endpoint_prefix_hash_with_event_weight_reconciliation",
         probability_replay_scope="original_source_selected_and_last_only", gt=0, query=0, optimizer_updates=0,
         elapsed_seconds=perf_counter()-started))

@@ -9,6 +9,7 @@ from model.research_config import digest
 from research_runtime import hash_file
 from transfer.curriculum_observation_admission import FORMAT as OBSERVATION_FORMAT
 from transfer.curriculum_real import ARMS, FORMAT, REAL, REVIEW
+from transfer.curriculum_support_review import SUPERVISION_SCOPE, VERSION
 from transfer.registered_wp11_learning import read
 
 
@@ -39,6 +40,54 @@ def exposure_totals(exposure, history, support):
                 minimum_applied_weight=min(weight for values in effective.values() for weight in values))
 
 
+def endpoint_supervision(diagnostic, item, support, budget):
+    history = item["history"]
+    endpoints = diagnostic.get("endpoints")
+    full = diagnostic.get("full_run")
+    if (len(history) != budget or not isinstance(endpoints, dict) or set(endpoints) != {"initial","selected","last"}
+            or not isinstance(full, dict) or set(full) != {"step","history_sha256","exposure"}):
+        raise ValueError("Versioned endpoint and full-run supervision required")
+    labels = {str(s["index"]):s["label"] for s in support}
+
+    def verify(payload, step):
+        if type(step) is not int or not 0 <= step <= budget or type(payload.get("step")) is not int or payload["step"] != step:
+            raise ValueError("Endpoint supervision step differs from its frozen checkpoint")
+        prefix = history[:step]
+        weights = {i: [] for i in labels}
+        for row in prefix:
+            for i,w in zip(row["support_ids"],row["applied_weights"],strict=True):
+                weights[str(i)].append(w)
+        expected = {i:dict(raw=len(values),effective=math.fsum(values)) for i,values in weights.items()}
+        if payload.get("history_sha256") != digest(prefix) or payload.get("exposure") != expected:
+            raise ValueError("Endpoint supervision prefix hash or applied exposure differs")
+        return dict(step=step, history_sha256=payload["history_sha256"], exposure=expected)
+
+    full_result = verify(full,budget)
+    if full_result["exposure"] != item["exposure"]["by_support"]:
+        raise ValueError("Full-run exposure differs from the sample audit")
+    results = {}
+    for point in ("initial","selected","last"):
+        payload = endpoints[point]
+        if not isinstance(payload, dict) or set(payload) != {"step","history_sha256","exposure","train_support"}:
+            raise ValueError("Incomplete endpoint supervision record")
+        step = item[point]["step"]
+        if point == "initial" and step != 0 or point == "last" and step != budget or point == "selected" and step == 0:
+            raise ValueError("Invalid frozen endpoint cursor")
+        verified = verify(payload,step)
+        seen = set()
+        for cls, group in payload["train_support"].items():
+            for row in group["samples"]:
+                key = str(row["index"])
+                if (key in seen or key not in labels or row["class_id"] != labels[key] or str(labels[key]) != cls
+                        or {k:row[k] for k in ("raw","effective")} != verified["exposure"][key]):
+                    raise ValueError("Endpoint strata use a different exposure prefix")
+                seen.add(key)
+        if seen != labels.keys():
+            raise ValueError("Endpoint strata omit released support")
+        results[point] = verified
+    return results
+
+
 def _evidence(spec):
     if set(spec) != {"registration", "audit", "mechanism", "observation"}:
         raise ValueError("Explicit CUR-S registration, audit and both WP06 artifacts required")
@@ -53,11 +102,12 @@ def _evidence(spec):
             or any(audit[k] != 0 for k in ("original_gt_reads", "query", "optimizer_updates"))
             or mechanism["status"] != "passed_frozen_support_review" or mechanism["sample_registration"] != spec["registration"]
             or mechanism["sample_audit"] != spec["audit"] or mechanism["teacher"] != reg["teacher"]
+            or mechanism.get("version") != VERSION or mechanism.get("supervision_scope") != SUPERVISION_SCOPE
             or mechanism["protocol"] != reg["protocol"] or mechanism["rule"] != reg["review"] or reg["review"] != REVIEW
             or mechanism["source_v5_hash"] != digest(audit["source"]["scores"])
             or any(mechanism[k] != 0 for k in ("gt", "query", "optimizer_updates"))
             or observation["format"] != OBSERVATION_FORMAT or observation["sample_registration"] != spec["registration"]
-            or observation["source_commit"] != reg["commit"] or observation["commit"] != mechanism["commit"]
+            or observation["source_commit"] != reg["commit"]
             or observation["protocol"] != reg["protocol"] or observation["state"] != reg["teacher_state"]
             or observation["real_training"] != "NOT_RUN" or observation["marginal_match"] is not True
             or any(observation[k] != 0 for k in ("original_gt_reads", "query", "optimizer_updates"))):
@@ -124,15 +174,14 @@ def adapt(spec):
                 or item["steps"] != reg["budget"] or item["updates"] != 2 * reg["budget"]
                 or not 1 <= chosen["step"] <= reg["budget"] or item["last"]["step"] != reg["budget"]
                 or chosen["state"] != package["state"] or package["format"] != "fp32"
-                or any(hash_file(package[k]["path"]) != package[k]["sha256"] for k in ("weights", "sidecar"))
-                or digest(item["history"]) != diagnostic["history_sha256"]
-                or diagnostic["exposure"] != item["exposure"]["by_support"]):
+                or any(hash_file(package[k]["path"]) != package[k]["sha256"] for k in ("weights", "sidecar"))):
             raise ValueError("Curriculum endpoint, recovery trajectory or WP06 join differs")
         reference = audit["cases"][f"s{case['seed']}-off"]
         guards = {point: verify_guard(reference[point], item[point], classes, audit["small_classes"], reg["protection"]["limits"])
                   for point in ("initial", "selected", "last")}
         if guards != audit["guards"][name]:
             raise ValueError("Recorded curriculum per-head protection differs")
+        endpoint_mass = endpoint_supervision(diagnostic,item,support,reg["budget"])
         e = exposure_totals(item["exposure"], item["history"], support)
         if e["minimum_applied_weight"] != item["exposure"]["minimum_applied_weight"]:
             raise ValueError("Recorded minimum applied curriculum weight differs")
@@ -155,11 +204,13 @@ def adapt(spec):
                          teacher=teacher_cost, curriculum=dict(policy_hash=item["policy_hash"], pacing=reg["pacing"]),
                          exposure=dict(**e, by_support=item["exposure"]["by_support"], by_class=item["exposure"]["by_class"],
                                        maximum_class_mass_roundoff=item["exposure"]["maximum_class_mass_roundoff"]),
-                         training_cost=training, support_review=spec["mechanism"], cost=no_cost))
+                         training_cost=training, support_review=spec["mechanism"], cost=no_cost,
+                         exposure_scope="full_run", endpoint_supervision=endpoint_mass))
     return rows, dict(producer=reg["commit"], registration=spec["registration"], independent_audit=spec["audit"],
                       cases=len(cases), recovery_seeds=reg["seeds"], source_model_seed=reg["model_seed"], budget=reg["budget"],
                       actual_optimizer_calls=reg["maximum_updates"], off_balanced_exact=True, default="off",
                       teacher=teacher_cost, support_review=spec["mechanism"], review_scope=mechanism["history_scope"],
+                      review_version=mechanism["version"],
                       observation_registration=spec["observation"], observation_probes=observation["preflight_forwards"],
                       observation_joint_match=observation["joint_match"], observation_training=missing("NOT_RUN", "Zero-update admission only"),
                       deployment=missing("NOT_RUN", "No registered deployment timing"),
