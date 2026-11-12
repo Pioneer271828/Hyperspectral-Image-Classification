@@ -1,6 +1,6 @@
 """A single registered CPU queue for the native support and WP07 matrices."""
 
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from functools import partial
 import io
 import json
@@ -16,7 +16,6 @@ from loadData.spatial_development import make_development
 from loadData.spatial_tiles import make_tile_plan, tile_slice
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.checkpoint_io import save_model_checkpoint
-from model.research_config import digest
 from research_runtime import external_directory, tensor_hash
 from transfer import registered_development as dev, xuzhou_multiscale as stages
 from transfer.curriculum_exposure import ExposurePlan
@@ -89,6 +88,7 @@ def _fixture(root, classes, bands, model_seed, *, trusted):
         sl = tile_slice(tile)
         cube[sl][..., 0] += labels[sl] / classes
     scene = prepare_scene(cube, metadata, plan, record)
+    scene.dataset = "synthetic"
     with torch.random.fork_rng(devices=[]):
         torch.random.default_generator.manual_seed(model_seed)
         baseline = MultiDatasetVCASAHGCN({scene.dataset: classes}, latent_channels=8, adapter_embed_dim=8,

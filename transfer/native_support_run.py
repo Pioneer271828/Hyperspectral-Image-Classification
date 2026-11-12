@@ -106,9 +106,13 @@ class NativeSupportRun(CurriculumRun):
     def _training_forward(self, tile, step, extra):
         key = str(tile["id"])
         started = perf_counter()
+        active = self.fixed[key] if key in self.fixed else self.train[key]
+        previous = active.cost.copy()
         selector = self.selector_at(key, step)
         self.timings.setdefault("schedule_replay", []).append(perf_counter() - started)
         output, frame = native_forward(self.model, self.scene, tile, selector=selector, timing=self.timings)
+        for name, total in selector.cost.items():
+            self.timings.setdefault(name, []).append(total - previous[name])
         output[-1]["regional_support"] = frame["trace"]
         return output
 
