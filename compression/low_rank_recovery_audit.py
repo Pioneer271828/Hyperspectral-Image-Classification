@@ -20,7 +20,7 @@ from transfer.xuzhou_multiscale_audit import SCIENCE, _exact, _packet, _verify_h
 def package_model(model, case, initial, path):
     if case["assignment"]["rank"] is None:
         package = save_package(model, "fp32", path)
-        package["parameters"] = sum(p.numel() for p in model.parameters())
+        package.update(state=state_hash(model), parameters=sum(p.numel() for p in model.parameters()))
         return package
     weight = dict(path=str(path), sha256=save_low_rank(model, path))
     metadata = dict(format="wp10_low_rank_deployment_v1", weights=weight, state=state_hash(model),
