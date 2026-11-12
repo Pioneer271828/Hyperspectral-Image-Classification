@@ -121,11 +121,47 @@ def _tile_identity(tiles):
             for tile in tiles]
 
 
-def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, recovered=None):
+def _low_rank_arms(models, dataset, expected):
+    from compression.low_rank import LowRankMatrix
+
+    if "dense" not in models or not 2 <= len(models) <= 3 or set(models) != set(expected):
+        raise ValueError("Registered dense and factor deployment models required")
+    _dense(models["dense"])
+    config = models["dense"].export_config()
+    details = {}
+    for arm, model in models.items():
+        identity = expected[arm]
+        plan = getattr(model, "_low_rank_plan", None)
+        if (model.export_config() != config or model.backbone.graph_mode != "learned"
+                or model.backbone.adapter.cache_attention or model.backbone.coverage_modulation is not None
+                or any(m.training for m in model.modules())
+                or any(p.device.type != "cpu" or (p.is_floating_point() and p.dtype != torch.float32)
+                       for p in (*model.parameters(), *model.buffers()))
+                or state_hash(model) != identity["state"] or plan != identity["plan"]):
+            raise ValueError("Frozen low-rank cost state or execution contract differs")
+        paths = [] if plan is None else list(plan["ranks"])
+        if (arm == "dense") != (plan is None) or any(type(model.get_submodule(path)) is not LowRankMatrix for path in paths):
+            raise ValueError("Expected actual factor execution with the registered topology")
+        details[arm] = dict(state_sha256=identity["state"], precision_paths=paths,
+                            parameter_count=sum(p.numel() for p in model.parameters()))
+        if details[arm]["parameter_count"] != identity["parameters"]:
+            raise ValueError("Low-rank parameter count differs")
+    return config["class_counts"][dataset], details
+
+
+def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, recovered=None, low_rank=None):
     """Measure full resident-input model forwards in balanced order on one CPU thread."""
     models = {arm: models[arm] for arm in sorted(models)}
-    class_count, details = _arms(models, dataset, recovered)
-    orders = tuple(permutations(models))
+    reference = "fp32"
+    if low_rank is None:
+        class_count, details = _arms(models, dataset, recovered)
+        orders = tuple(permutations(models))
+    else:
+        if recovered is not None:
+            raise ValueError("INT8/ternary and low-rank cost admissions are distinct")
+        class_count, details = _low_rank_arms(models, dataset, low_rank)
+        reference = "dense"
+        orders = tuple(permutations(models))
     if (not tiles or len({tile.tile_id for tile in tiles}) != len(tiles) or
             type(warmups) is not int or warmups < 1 or type(repeats) is not int or
             repeats < 2 * len(orders) or repeats % len(orders) or torch.get_num_threads() != 1):
@@ -133,7 +169,7 @@ def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, r
     if any(tile.image.device.type != 'cpu' or tile.wavelengths.device.type != 'cpu' or
            tile.image.dtype != torch.float32 or tile.wavelengths.dtype != torch.float32 or
            tile.image.ndim != 3 or min(tile.image.shape) < 1 or tile.wavelengths.ndim != 1 or
-           tile.image.shape[-1] != len(tile.wavelengths) + models['fp32'].backbone.extra_channels or
+           tile.image.shape[-1] != len(tile.wavelengths) + models[reference].backbone.extra_channels or
            not torch.isfinite(tile.image).all() or not torch.isfinite(tile.wavelengths).all() for tile in tiles):
         raise ValueError('Expected finite, matched resident FP32 input tensors')
     inputs = _tile_identity(tiles)
@@ -154,6 +190,7 @@ def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, r
             result.append({head: tensor_hash(value) for head, value in zip(HEADS, values, strict=True)})
         return result
 
+    identity = _state_identity if low_rank is None else state_hash
     samples = []
     with torch.inference_mode():
         before = {arm: validate_outputs(model) for arm, model in models.items()}
@@ -177,7 +214,7 @@ def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, r
             samples.append({'order': list(order), 'timings': sweep})
         after = {arm: validate_outputs(model) for arm, model in models.items()}
     if before != after or _tile_identity(tiles) != inputs or any(
-        _state_identity(model) != details[arm]['state_sha256'] for arm, model in models.items()
+        identity(model) != details[arm]['state_sha256'] for arm, model in models.items()
     ):
         raise RuntimeError('Frozen precision cost states, inputs or outputs changed')
     summary = {}
@@ -188,7 +225,7 @@ def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, r
                         'process_cpu_p50_ms': statistics.median(row['timings'][arm]['process_cpu_ms'] for row in samples),
                         'pixels_per_second_at_p50': 1000 * pixels / median,
                         'median_paired_fp32_over_arm': statistics.median(
-                            row['timings']['fp32']['wall_ms'] / row['timings'][arm]['wall_ms'] for row in samples)}
+                            row['timings'][reference]['wall_ms'] / row['timings'][arm]['wall_ms'] for row in samples)}
     return {'status': 'passed', 'scope': 'cpu_resident_full_model_forward', 'dataset': dataset,
             'tiles': inputs, 'pixels_per_sweep': pixels, 'models': details, 'output_hashes': before,
             'warmups_per_arm': warmups, 'repeats': repeats, 'threads': torch.get_num_threads(),

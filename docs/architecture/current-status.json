@@ -1211,6 +1211,14 @@
       "report": "research/reports/WP10_Xuzhou真实低秩秩阶梯与三种子恢复_20261112.md",
       "chat_report": "主审接受同一源三组恢复和独立审计。Issue425完成，PR428可审阅"
     }
+    ,{
+      "id": "WP10 低秩冻结部署 CPU 实测与两因子 INT8 组合",
+      "state": "真实 18 包全模型 CPU 成本与合成组合验收通过",
+      "evidence": "Issue427/PR429，运行 2e5807e46d1c37163fbe8aed4fe54cd62eed139c。五块3920像素，9个常驻配对组，54个独立启动进程，实际因子算子和 V5 概率哈希一致。组合 9/22 类，回归56/56。成本 2d4b0618e6c5548f68ce1b3a9c3b8076ba4b2688512a8211482264f1882c2e9d。",
+      "remaining": "真实组合 NOT_RUN。端到端、GPU、剪枝组合及独立确认待验，默认完整 FP32",
+      "report": "research/reports/WP10_低秩部署CPU实测与两因子INT8组合_20261112.md",
+      "chat_report": "主审接受真实固定CPU成本和合成两因子INT8。Issue427完成，PR429可审阅"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
