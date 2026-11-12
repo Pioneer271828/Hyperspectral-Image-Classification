@@ -1203,6 +1203,14 @@
       "report": "research/reports/WP12_WP10与WP11真实生产证据适配_20261112.md",
       "chat_report": "本轮待主审。历史汇总CLI依赖补齐，旧失败与最终真实表、独立回执均归档"
     }
+    ,{
+      "id": "WP10 Xuzhou 首层低秩秩阶梯与三组等预算恢复",
+      "state": "真实 CPU 三组连续与跨进程恢复、独立三头审计通过",
+      "evidence": "Issue425/PR428，实际运行 01b99515156694b09c250723b89277f475700897，三种子各6臂，178步×两轨，共6,408更新，72阶段、455独审前向，完成重入0。三个种子均无三头保护通过的减参SVD。独审 0eceb1e01657acc960860969d2360d2399f9d25987e03973e802d73c99ad400b。",
+      "remaining": "同一源模型、同一固定开发 V5。独立空间和 GPU 待验，完整 FP32 默认保留",
+      "report": "research/reports/WP10_Xuzhou真实低秩秩阶梯与三种子恢复_20261112.md",
+      "chat_report": "本批待主审。当前证据含初始、选中与末态、全秩和随机控制、小类失败"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
