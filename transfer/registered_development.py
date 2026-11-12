@@ -18,7 +18,7 @@ from model.research_config import canonical_json, digest
 from research_runtime import external_directory, code_snapshot, require_frozen_code
 from transfer.container_runtime import training_container_kind
 from transfer.curriculum_exposure import ExposurePlan
-from transfer.development_training import prepare_scene, validate, development_counts
+from transfer.development_training import WP02_SPATIAL_RECORD, prepare_scene, validate, development_counts
 from transfer.graph_route_context import RouteContextBank, route_state_hash
 from transfer.graph_route_training import GraphRouteRun
 from transfer.observation_policy import scene_identity
@@ -55,16 +55,27 @@ def _released_record(record):
               'training_candidates','validation_candidates','train_support','validation_support','training_labels',
               'validation_labels','total_training_selection_labels','selection','test_unchanged','rule',
               'oracle_disclosure','normalization_contract','runner_compatible','validation_hash'}
-    if set(record) != fields or record['schema_version'] != 1 or record['kind'] != 'oracle_spatial_development_v1':
+    if record.get('kind') == WP02_SPATIAL_RECORD:
+        fields.add('wp02')
+    if (set(record) != fields or record['schema_version'] != 1
+            or record['kind'] not in ('oracle_spatial_development_v1', WP02_SPATIAL_RECORD)):
         raise ValueError('Only the released development record may be packaged')
     development_counts(record)
     for name in ('train_support', 'validation_support'):
         if set(record[name]) != {'indices','labels','seed'}:
             raise ValueError('Unregistered support payload')
 
+def _verify_record_origin(record, plan, dataset):
+    if record['kind'] == WP02_SPATIAL_RECORD:
+        from transfer.wp02_route_development import verify_record
+        return verify_record(record, plan, dataset)
+    return None
+
+
 def export_development(scene, record, out):
     """Never index or serialize non-development observations or original GT."""
     _released_record(record)
+    _verify_record_origin(record, scene.plan, scene.dataset)
     identity = scene_identity(scene, record)
     out = external_directory(out); out.mkdir(parents=True, exist_ok=False); rows = []
     for tile in record['roles']:
@@ -86,6 +97,7 @@ def load_development(pin):
             or v['version'] != 1 or v['excluded'] != 'all_non_development_observations_and_original_GT'):
         raise ValueError('Unsupported development package')
     _released_record(v['record'])
+    original_statistics = _verify_record_origin(v['record'], v['plan'], v['dataset'])
     validate(v['record'], v['plan']); bands = BandMetadata(**v['bands'])
     permitted = [r for r in v['record']['roles'] if r['role'] in ('devtrain', 'devval')]
     if len(v['blocks']) != len(permitted): raise ValueError('Development block coverage differs')
@@ -106,6 +118,9 @@ def load_development(pin):
     scene = prepare_scene(cube, bands, v['plan'], v['record']); scene.dataset = v['dataset']
     if scene.stats != v['statistics'] or scene_identity(scene, v['record']) != v['identity']:
         raise ValueError('Development normalization/identity changed')
+    if original_statistics is not None:
+        from transfer.wp02_route_development import verify_scene
+        verify_scene(scene, original_statistics)
     return scene, v['record'], files
 
 
