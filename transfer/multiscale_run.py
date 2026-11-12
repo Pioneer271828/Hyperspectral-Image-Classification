@@ -1,5 +1,6 @@
 """Registered spatial updates for an uncoupled WP07 model."""
 
+from contextlib import contextmanager
 from dataclasses import asdict
 import math
 from time import perf_counter
@@ -7,12 +8,32 @@ from time import perf_counter
 import torch
 
 from inference.light_cnn import validate_source
-from model.learnable_superpixel_graph import measure_graph_build
 from transfer.conditional_multiscale import ConditionalMultiscaleVCASAHGCN
 from transfer.curriculum_training import CurriculumRun
 from transfer.development_training import evaluate_validation
 from transfer.g3_training import _forward, state_hash
 from transfer.multiscale_training import MultiscaleTrial
+
+
+@contextmanager
+def _measure_graph_build(model, samples):
+    """Time the existing bound builder on this run's private CPU model."""
+    builder = model.backbone.learnable_graph
+    if "build_graph" in vars(builder):
+        raise ValueError("Graph build timing is already bound")
+    build = builder.build_graph
+
+    def measured(*args, **kwargs):
+        started = perf_counter()
+        result = build(*args, **kwargs)
+        samples.append(perf_counter() - started)
+        return result
+
+    builder.build_graph = measured
+    try:
+        yield
+    finally:
+        del builder.build_graph
 
 
 def selector_group(name):
@@ -100,14 +121,14 @@ class MultiscaleRun(CurriculumRun):
 
     def _training_forward(self, tile, step, extra):
         started = perf_counter()
-        with measure_graph_build(self.timings["train_graph_build"]):
+        with _measure_graph_build(self.model, self.timings["train_graph_build"]):
             result = _forward(self.model, self.scene, tile, multiscale_condition_only=True, **extra)
         self.timings["train_forward"].append(perf_counter() - started)
         return result
 
     def _evaluate(self, model):
         started = perf_counter()
-        with measure_graph_build(self.timings["validation_graph_build"]):
+        with _measure_graph_build(model, self.timings["validation_graph_build"]):
             result = evaluate_validation(model, self.scene, self.record, multiscale_condition_only=True)
         self.timings["validation"].append(perf_counter() - started)
         return result
