@@ -3,6 +3,7 @@
 from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 import unittest
 
 import torch
@@ -80,10 +81,14 @@ class NativePublicationReviewTests(unittest.TestCase):
         model = NativeSupportModel({"synthetic": 9}, scorer_seed=7321, **self.options).eval()
         config = model.export_config()
         config["backbone_kwargs"]["interaction_mode"] = "gated"
+        coupled = MultiDatasetVCASAHGCN({"synthetic": 9}, **self.options, interaction_mode="gated").eval()
+        coupled.backbone.spectrum_score = deepcopy(model.backbone.spectrum_score)
+        coupled.backbone.graph_score = deepcopy(model.backbone.graph_score)
         with TemporaryDirectory() as name:
-            pin = self.package(Path(name), model, "selected", config=config)
-            with self.assertRaisesRegex(ValueError, "Native support requires"):
-                load_endpoint(pin, self.registration, self.case, (self.baseline, None, None, None, {}))
+            pin = self.package(Path(name), coupled, "selected", config=config)
+            with patch.object(NativeSupportModel, "load_state_dict", side_effect=AssertionError("Loaded coupled state")):
+                with self.assertRaisesRegex(ValueError, "Native support requires"):
+                    load_endpoint(pin, self.registration, self.case, (self.baseline, None, None, None, {}))
 
 
 if __name__ == "__main__":
