@@ -1291,6 +1291,14 @@
       "report": "research/reports/WP06_WP08_WP12_受控信号学习与区域支持演化_20261113.md",
       "chat_report": "待主审。已知可达正控改善，联合再生与仅收紧同支持同MSE，保留随机结果"
     }
+    ,{
+      "id": "WP08/WP07/WP12 原生区域支持演化与多尺度补充",
+      "state": "CPU合成矩阵和恢复、冻结、独审、成本及Xuzhou开发零更新通过，真实收益与GPU待验",
+      "evidence": "Issue447/PR448。生产 ac5d5663b1ce992183ea36ce7cb570ea3a7d742c。75臂300阶段6,624合成更新，另28关闭臂工程补测；150端点三头逐位，支持调度5,346状态，NumPy 9,079,344值。Xuzhou两块16次零更新前向；5份WP12旧CSV逐字节，65模型193头。首次统一回归历史4子项错误，恢复固定执行文件后17/17及4例完成重入0",
+      "remaining": "PaviaU/HongHu开发影像块包待核验；真实候选准入、固定图同度数距离、独立空间、GPU待验。WP05长训暂停，WP11独立标签BLOCKED，WP04暂缓",
+      "report": "research/reports/WP08_WP07_WP12_原生区域支持演化与多尺度补充_20261113.md",
+      "chat_report": "Issue445已completed，PR446已ready且未合并；Issue447整包保留初次完整回归日志，修复后完成受影响用例和跨进程恢复验证"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
