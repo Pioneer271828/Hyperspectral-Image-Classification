@@ -96,6 +96,26 @@ def wp10_cost(resident, receipt, arm, entry, samples):
                 threads=resident["threads"], affinity=resident["affinity"], cache="uncontrolled")
 
 
+def provenance(source_commit, witness_commit, *, source_evidence, source_steps,
+               recovery_commit=None, recovery_steps=0, release_commit=None, release_evidence=None):
+    if (type(source_commit) is not str or len(source_commit) != 40 or any(c not in "0123456789abcdef" for c in source_commit)
+            or source_commit != witness_commit or type(source_steps) is not int or source_steps <= 0):
+        raise ValueError("Original source producer SHA or training steps differ from its witness")
+    for commit in (recovery_commit, release_commit):
+        if commit is not None and (type(commit) is not str or len(commit) != 40
+                                   or any(c not in "0123456789abcdef" for c in commit)):
+            raise ValueError("Expected complete recovery and release commit SHA")
+    if (type(recovery_steps) is not int or recovery_steps < 0 or bool(recovery_steps) != bool(recovery_commit)
+            or recovery_commit == source_commit or (release_commit is None) != (release_evidence is None)):
+        raise ValueError("Original and recovery producer identities or budgets are inconsistent")
+    for evidence in [source_evidence] + ([] if release_evidence is None else [release_evidence]):
+        if set(evidence) != {"path", "sha256"} or not Path(evidence["path"]).is_absolute() or not pin(evidence["sha256"]):
+            raise ValueError("Pinned producer evidence link required")
+    return dict(source_producer_commit=source_commit, source_producer_evidence=source_evidence,
+                original_training_steps=source_steps, recovery_producer_commit=recovery_commit,
+                recovery_updates=recovery_steps, release_commit=release_commit, release_evidence=release_evidence)
+
+
 def adapt_wp10(spec):
     load, pins = archive(spec)
     reg, audit, end, receipt, resident = (load(name) for name in
@@ -114,9 +134,19 @@ def adapt_wp10(spec):
             or resident["query_labels_accessed"] is not False or resident["dataset"] != "xuzhou"
             or resident["repeats"] != len(resident["samples"])):
         raise ValueError("Reviewed WP10 model, evaluation or CPU timing identity differs")
+    origin = load("origin/origin.json")
+    historical, old_stage = read(origin["registration"]), read(origin["off_full"])
+    if (reg["source"]["origin"]["sha256"] != pins["origin/origin.json"]
+            or origin["source"] != reg["source"]["weights"] or origin["sidecar"] != reg["source"]["sidecar"]
+            or origin["selected_step"] != reg["source"]["historical_selected_step"]
+            or old_stage["new_updates"] != historical["budget"] or old_stage["finish"]["selected_state_hash"] != origin["selected_state"]):
+        raise ValueError("WP10 original source and historical registration differ")
+    source_identity = dict(source_commit=origin["producer_commit"], witness_commit=historical["commit"],
+                           source_evidence=origin["registration"], source_steps=historical["budget"])
+    recovery_evidence = audit["registration"]
     classes = reg["validation"]["class_ids"]
     support = reg["exposure"]["support"]
-    family = dict(scene="xuzhou", sampler_seed=reg["seed"], model_seed=reg["seed"],
+    family = dict(scene="xuzhou", sampler_seed=reg["seed"], model_seed=reg["seed"], data_protocol="wp10_xuzhou_k5_v5",
                   support_sha256=digest(support), train_labels=len(support["indices"]),
                   validation_labels=45, class_ids=classes,
                   split=reg["validation"]["identity"], validation_role="repeated_development_v5",
@@ -128,13 +158,15 @@ def adapt_wp10(spec):
         selected = audit["report"][arm]["selected"]
         cost = (wp10_cost(resident, receipt, measured[arm], selected, resident["samples"])
                 if arm in measured else missing("NOT_RUN", "This candidate had no registered CPU deployment measurement"))
-        results.append(dict(module="WP10", arm=arm, identity=family, producer=reg["commit"],
+        lineage = provenance(**source_identity, recovery_commit=reg["commit"], recovery_steps=reg["budget"],
+                             release_commit=reg["commit"], release_evidence=recovery_evidence)
+        results.append(dict(module="WP10", arm=arm, identity=family, **lineage,
                             state=selected["package"]["state"], package=selected["package"]["weights"]["sha256"],
                             precision=selected["package"]["format"], package_bytes=selected["package"]["bytes"],
                             budget=reg["budget"], selected_step=selected["step"], selection=reg["selection"],
                             quality=metrics(selected["metrics"], classes, FULL_HEADS, matrix_key="confusion_matrix"),
                             protection=guards.get(arm), cost=cost))
-    results.append(dict(module="WP10", arm="original_fp32", identity=family, producer=reg["source"]["historical_baseline"],
+    results.append(dict(module="WP10", arm="original_fp32", identity=dict(family, sampler_seed=None), **provenance(**source_identity),
                         state=reg["initial"]["fp32"]["evidence"]["dense_state"],
                         package=reg["source"]["weights"]["sha256"], precision="fp32", package_bytes=None,
                         budget=0, selected_step=reg["source"]["historical_selected_step"],
@@ -202,6 +234,17 @@ def adapt_wp11(spec):
     audit, reg = read(release["history_evidence"]), read(release["registration"])
     origin = read(release["source_evidence"])
     source_config = read(release["source_metadata"])["training_config"]
+    campaign = read(origin["inputs"]["campaign.json"])
+    source_result = read(origin["inputs"]["result.json"])
+    if (origin["inputs"]["model.pt"] != release["source_weights"]
+            or origin["inputs"]["model.pt.json"] != release["source_metadata"]
+            or origin["full_state"] != release["source_state"]
+            or source_result["steps"] != origin["steps"]
+            or source_result["checkpoint_sha256"] != release["source_weights"]["sha256"]
+            or source_result["selected_step"] != origin["selected"]["step"]):
+        raise ValueError("WP11 original source identity differs from its production artifacts")
+    source_identity = dict(source_commit=origin["producer_commit"], witness_commit=campaign["code"]["commit"],
+                           source_evidence=origin["inputs"]["campaign.json"], source_steps=origin["steps"])
     request = read(reg["request"])
     use = audit["label_use"]
     if (release["commit"] != WP11_TRAINED or reg["commit"] != release["commit"] or audit["commit"] != release["commit"]
@@ -222,7 +265,7 @@ def adapt_wp11(spec):
         raise ValueError("WP11 model, development role, independent status or CPU timing scope differs")
     classes = unified["classes"]
     family = dict(scene=use["scene"], sampler_seed=request["inputs"]["training"]["seed"],
-                  source_model_seed=source_config["model_seed"], support_sha256=use["training_support_hash"], train_labels=90,
+                  model_seed=source_config["model_seed"], data_protocol="wp11_xuzhou_k10_v5", support_sha256=use["training_support_hash"], train_labels=90,
                   validation_labels=45, class_ids=classes, split=unified["preprocessing"],
                   validation_role="repeated_development_v5", evaluation_sha256=use["selection_support_hash"])
     endpoints = audit["endpoints"]
@@ -240,10 +283,12 @@ def adapt_wp11(spec):
                 or (mode in full_states and model["state"] != full_states[mode])):
             raise ValueError("WP11 execution manifest uses another classifier")
         cost_row = wp11_cost(cost, mode, model["state"])
-        rows.append(dict(module="WP11", arm=mode, identity=family, producer=release["commit"],
+        lineage = provenance(**source_identity, recovery_commit=reg["commit"] if updates else None,
+                             recovery_steps=updates, release_commit=release["commit"], release_evidence=spec["release"])
+        rows.append(dict(module="WP11", arm=mode, identity=family if updates else dict(family, sampler_seed=None), **lineage,
                          state=model["state"], package=model["package"]["sha256"],
                          package_bytes=cost_row["package_bytes"], precision=model["precision"],
-                         budget=updates, historical_source_updates=origin["steps"], selection=model["selection"],
+                         budget=updates, selection=model["selection"],
                          selected_step=model["selected_step"], quality=metrics(values, classes, names, matrix_key="confusion"),
                          protection=missing("BLOCKED", "Independent role-scoped label authorization is absent"),
                          cost=cost_row))
@@ -271,7 +316,10 @@ def build(spec):
 
 def write_table(out, report):
     write_json(out / "production-evidence.json", report)
-    fields = ("module", "arm", "scene", "sampler_seed", "train_labels", "validation_labels", "role", "updates",
+    fields = ("module", "arm", "scene", "data_protocol", "model_seed", "sampler_seed", "state_sha256", "package_sha256",
+              "split_sha256", "support_sha256", "evaluation_sha256", "source_producer_commit", "recovery_producer_commit",
+              "release_commit", "adapter_commit", "source_evidence_sha256", "release_evidence_sha256",
+              "original_training_steps", "train_labels", "validation_labels", "role", "updates",
               "selected_step", "precision", "head", "oa", "aa", "kappa", "macro_f1", "nll",
               "parameters", "package_bytes", "cost_status", "device", "resident_scope",
               "resident_p50_ms", "resident_p95_ms", "load_p50_ms", "load_p95_ms", "first_p50_ms", "first_p95_ms",
@@ -287,7 +335,14 @@ def write_table(out, report):
 
             for head, metrics in row["quality"].items():
                 writer.writerow(dict(module=row["module"], arm=row["arm"], scene=identity["scene"],
-                     sampler_seed=identity["sampler_seed"], train_labels=identity["train_labels"],
+                     data_protocol=identity["data_protocol"], model_seed=identity["model_seed"],
+                     sampler_seed=identity["sampler_seed"], state_sha256=row["state"], package_sha256=row["package"],
+                     split_sha256=digest(identity["split"]), support_sha256=identity["support_sha256"],
+                     evaluation_sha256=identity["evaluation_sha256"], source_producer_commit=row["source_producer_commit"],
+                     recovery_producer_commit=row["recovery_producer_commit"], release_commit=row["release_commit"],
+                     adapter_commit=report["adapter_commit"], source_evidence_sha256=row["source_producer_evidence"]["sha256"],
+                     release_evidence_sha256=(row["release_evidence"] or {}).get("sha256"),
+                     original_training_steps=row["original_training_steps"], train_labels=identity["train_labels"],
                      validation_labels=identity["validation_labels"], role=identity["validation_role"], updates=row["budget"],
                      selected_step=row["selected_step"], precision=row["precision"], head=head,
                      **{key: metrics[key] for key in ("oa", "aa", "kappa", "macro_f1", "nll")},
