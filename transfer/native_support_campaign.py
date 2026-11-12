@@ -142,12 +142,11 @@ def _factory(case, data, arm, *, donor=None):
             return cls(baseline, scene, record, expected_source_state=state_hash(baseline), **settings)
         return cls(baseline, scene, record, trial=trial, selector_seed=scorer_seed, **extras, **settings)
 
-    def load(baseline, scene, record, path, **kwargs):
+    def load(baseline, scene, record, path, *, selector_seed, **kwargs):
         if cls is OriginalControl:
             kwargs.pop("trial")
-            kwargs.pop("selector_seed")
             return cls.load(baseline, scene, record, path, policy=None, **kwargs)
-        return cls.load(baseline, scene, record, path, **extras, **kwargs)
+        return cls.load(baseline, scene, record, path, selector_seed=scorer_seed, **extras, **kwargs)
 
     return create, SimpleNamespace(load=load)
 
@@ -303,7 +302,7 @@ def _execute_locked(root, registration, pin, key, arm, phase, prior):
     create, load = _factory(case, data, arm, donor=donor)
     return stages.execute_stage(folder, pin, arm, phase, prior, value=case, baseline=baseline,
         scene=scene, record=record, plan=plan, arms=_arms(case), stages=_stages(case["budget"]),
-        run_factory=create, run_type=load, selector_seed=case["scorer_seed"])
+        run_factory=create, run_type=load)
 
 
 def preflight(pin, code):
