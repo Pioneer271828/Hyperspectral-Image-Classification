@@ -18,9 +18,12 @@ from tests.test_wp11_confirmation import file_pin, synthetic_package
 from transfer.g3_training import state_hash
 
 
-def synthetic_registration(root, code, *, with_design=False):
-    base, (full, light, scene, record, _, _, _, _) = synthetic_package(root)
-    source = read(base)
+def synthetic_registration(root, code, *, with_design=False, prepared=None):
+    if prepared is None:
+        base, (full, light, scene, record, _, _, _, _) = synthetic_package(root)
+        source = read(base)
+    else:
+        source, full, light, scene, record = prepared
     tiles = {t['tile_id']: t['file'] for t in source['tiles']}
     available = unused_tiles(scene.plan, record)
     for i in available:
@@ -37,13 +40,16 @@ def synthetic_registration(root, code, *, with_design=False):
     plan = plan_roles(plan_spec, root / 'plan', code)
     role_plan = file_pin(root / 'plan/role-plan.json')
     spec = {k: source[k] for k in (*MODEL_FILES, *LIGHT_PINS)}
+    if "matched_release" in source:
+        spec["matched_release"] = source["matched_release"]
+    classes = len(record["classes"])
     spec.update(role_plan=role_plan, scale=12, benchmark=dict(seed=64, warmups=1, pairs=20),
                 settings=dict(name='synthetic custody handoff', criterion='max_probability', thresholds=[0.],
                               min_coverage=1., min_class_support=1, max_drop=dict(oa=1., aa=1., recall=1.)))
     for role in ROLES:
         ids = [b['tile_id'] for b in plan['blocks'] if b['role'] == role]
-        released = [dict(tile_id=i, indices=list(range(9)) if i == ids[0] else [],
-                         labels=list(range(1, 10)) if i == ids[0] else []) for i in ids]
+        released = [dict(tile_id=i, indices=list(range(classes)) if prepared is not None or i == ids[0] else [],
+                         labels=list(range(1, classes + 1)) if prepared is not None or i == ids[0] else []) for i in ids]
         sparse = save(root, f'{role}-source', dict(policy=RELEASE, role=role, plan_sha256=role_plan['sha256'], blocks=released))
         authority = save(root, f'{role}-authority', dict(policy=AUTHORITY, status='authorized', role=role,
                          plan_sha256=role_plan['sha256'], source_sha256=sparse['sha256'],

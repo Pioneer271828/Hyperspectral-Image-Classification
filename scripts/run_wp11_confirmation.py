@@ -10,11 +10,11 @@ from evaluation.dynamic_cost_pairs import matched_cost_pairs
 from evaluation.dynamic_curve import CurveProtocol
 from evaluation.wp11_confirmation import confirmation_environment, layout, load_held_aside_tiles, run_confirmation
 from inference.gate_calibration import GateProtocol
-from inference.trained_light import load_trained_light
+from evaluation.wp11_model_pair import MATCHED, forbid_aliases, load_pair
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
 from scripts.prepare_wp11_confirmation import resolve_confirmation
-from transfer.registered_development import _load_source, _read, load_development
+from transfer.registered_development import _read, load_development
 
 
 def run(registration, out, code):
@@ -22,7 +22,7 @@ def run(registration, out, code):
     fields = {"development", "full_weights", "full_metadata", "full_history", "history_evidence", "light",
               "light_training_sha256", "light_contract_hash", "admission", "tiles", "gate_protocol",
               "gate_freeze", "fixed", "confirmation_labels", "curve_protocol", "comparison"}
-    if set(spec) not in (fields, fields | {"confirmation_binding"}):
+    if set(spec) not in (fields, fields | {"confirmation_binding"}, fields | {"confirmation_binding", MATCHED}):
         raise ValueError("Exact confirmation campaign artifacts required")
 
     def read(name):
@@ -37,6 +37,8 @@ def run(registration, out, code):
     if out.exists() or any(out == Path(p["path"]).resolve() or out in Path(p["path"]).resolve().parents for p in pins):
         raise ValueError("New external output outside all input packages required")
     admission = read("admission")
+    if spec.get(MATCHED, {}).get("sha256") != admission.get("matched_release_sha256"):
+        raise ValueError("Matched release differs from admission")
     committed = "confirmation_design_sha256" in admission
     if committed != ("confirmation_binding" in spec):
         raise ValueError("Precommitted confirmation requires its calibration freeze binding")
@@ -52,6 +54,7 @@ def run(registration, out, code):
                 read("comparison") != resolved["comparison"]):
             raise ValueError("Confirmation inputs or controls differ from the precommitted design")
         pins.extend(resolved["pins"])
+    forbid_aliases([spec["development"]], [spec["confirmation_labels"]])
     scene, record, development_files = load_development(spec["development"])
     if any(Path(p["path"]).resolve() == label_path for p in development_files):
         raise ValueError("Confirmation labels cannot be part of the training package")
@@ -62,16 +65,13 @@ def run(registration, out, code):
     if len(tiles) != len(spec["tiles"]) or tiles.keys() != {b["tile_id"] for b in blocks}:
         raise ValueError("Exactly the registered held-aside tile files required")
     load_held_aside_tiles(scene, tiles)
-    history = read("full_history")
-    if history["history_evidence_sha256"] != spec["history_evidence"]["sha256"]:
-        raise ValueError("Full history evidence differs")
-    _read(spec["history_evidence"])
+
     if admission["light_artifact_sha256"] != spec["light"]["sha256"]:
         raise ValueError("Light artifact differs from admission")
-    full = _load_source(spec["full_weights"], spec["full_metadata"])
-    light = load_trained_light(full, spec["light"]["path"], expected_sha256=spec["light"]["sha256"],
-                               expected_training_sha256=spec["light_training_sha256"],
-                               expected_contract_hash=spec["light_contract_hash"])
+    full, light, history, pair_pins = load_pair(spec, scene, record, forbidden=[spec["confirmation_labels"]])
+    pins.extend(pair_pins)
+    if any(out == Path(p["path"]).resolve() or out in Path(p["path"]).resolve().parents for p in pair_pins):
+        raise ValueError("New external output outside model packages required")
     gate, frozen, fixed, curve_plan, pairs = (read(k) for k in
         ("gate_protocol", "gate_freeze", "fixed", "curve_protocol", "comparison"))
     protocol = GateProtocol(gate, digest(gate))

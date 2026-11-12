@@ -57,9 +57,24 @@ class TrainedLight:
     @property
     def specification(self):return deepcopy(self._spec)
 
+    def bind_fallback(self, source, fallback, *, expected_fallback_state):
+        """Keep the trained prefix bound to its source while pinning a matched full route."""
+        self.validate(source)
+        validate_source(fallback)
+        if state_hash(fallback) != expected_fallback_state or fallback.export_config() != source.export_config():
+            raise ValueError("Matched full fallback differs from its frozen state or source architecture")
+        self._training_source = source
+        self._fallback_state = expected_fallback_state
+        return self
+
     def validate(self,full):
         if digest(self._spec)!=self._spec_hash:raise ValueError('Trained-light provenance changed')
-        return _validate(full,self.model,self._spec)
+        if not hasattr(self, "_training_source"):
+            return _validate(full,self.model,self._spec)
+        validate_source(full)
+        if state_hash(full) != self._fallback_state or full.export_config() != self._training_source.export_config():
+            raise ValueError("Matched full fallback state or architecture changed")
+        return _validate(self._training_source,self.model,self._spec)
 
 
 def export_trained_light(full,scene,record,checkpoint,path,*,expected_training_sha256,expected_contract_hash):

@@ -1,12 +1,15 @@
 """Admit held-aside development tiles and run frozen confirmation controls."""
 
 import io
+import os
+from pathlib import Path
+import platform
 
 import numpy as np
 import torch
 
 from evaluation.dynamic_curve import pin, require
-from evaluation.wp12_resident_cost import environment
+
 from inference.gate_calibration import SPARSE_PROTOCOL, _validate_freeze, confirm
 from inference.route_controls import _fixed_routes, _output_hash, benchmark_controls, fixed_cascade, request_hash
 from inference.trained_light import trained_cascade
@@ -23,14 +26,25 @@ POLICY = "dy-independent-development-v1"
 HISTORY_POLICY = "dy-audited-devtrain-devval-footprint-v1"
 TIMING_SCOPE = "resident_cpu_batch_public_api_validation_and_compute"
 DESIGN_PINS = {"confirmation_design_sha256", "confirmation_labels_file_sha256"}
+MATCHED_PIN = {"matched_release_sha256"}
 
 
 def confirmation_environment():
-    value = environment("cpu", "native")
-    for key in ("memory", "package", "excluded"):
-        del value[key]
-    value["scope"] = TIMING_SCOPE
-    return value
+    """Retain the reviewed WP11 timing environment schema without the WP12 worker."""
+    if torch.get_num_threads() != 1:
+        raise ValueError("Registered confirmation requires one CPU thread")
+    cpu = {line.strip() for line in Path("/proc/cpuinfo").read_text().splitlines()
+           if line.startswith("model name")}
+    return dict(host=platform.node(), kernel=platform.release(), cpu=sorted(cpu),
+                affinity=sorted(os.sched_getaffinity(0)), python=platform.python_version(),
+                torch=str(torch.__version__), cuda_runtime=torch.version.cuda,
+                threads=torch.get_num_threads(), interop_threads=torch.get_num_interop_threads(),
+                device="cpu", arithmetic="native", scope=TIMING_SCOPE,
+                deterministic=torch.are_deterministic_algorithms_enabled(),
+                cudnn_benchmark=torch.backends.cudnn.benchmark,
+                cudnn_deterministic=torch.backends.cudnn.deterministic,
+                cudnn_tf32=torch.backends.cudnn.allow_tf32,
+                matmul_tf32=torch.backends.cuda.matmul.allow_tf32)
 
 
 def unused_tiles(plan, record):
@@ -113,10 +127,10 @@ def validate_admission(full, published, scene, record, history, registration, *,
             "Pinned confirmation registration required")
     fields = {"policy", "history_sha256", "light_spec_sha256", "light_artifact_sha256",
               "blocks", "request_sha256", "labels_sha256", "scale", "benchmark"}
-    require(set(registration) in (fields, fields | DESIGN_PINS)
+    require(set(registration) in (fields, fields | DESIGN_PINS, fields | DESIGN_PINS | MATCHED_PIN)
             and registration["policy"] == POLICY
             and all(pin(registration[key]) for key in ({"labels_sha256", "light_artifact_sha256"} |
-                                                       (DESIGN_PINS & registration.keys()))),
+                                                       ((DESIGN_PINS | MATCHED_PIN) & registration.keys()))),
             "Exact confirmation registration required")
     require(digest(history) == registration["history_sha256"], "Full history registration differs")
     identity = validate_full_history(full, scene, record, history)
