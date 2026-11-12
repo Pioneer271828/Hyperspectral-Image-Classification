@@ -15,6 +15,7 @@ WP10_COMMIT = "9dea199653079c9c430264b72ac968f1fefd7d7e"
 WP10_MANIFEST = "025b4175bd7fd725dd9fdcde57632f8188eee950d89b31f99e608b2d3c172cfe"
 WP11_TRAINED = "ab0a169d6e8121484f892e443dca7f23de056508"
 WP11_STATIC = "5d2265c73e7c38450341a3b9a5d7150660593553"
+WP11_UNIFIED = "e0a8dd012a7c58457b4548e03dd216416841835b"
 FULL_HEADS = ("fused", "graph", "cnn")
 
 
@@ -189,6 +190,14 @@ def wp11_cost(receipt, mode, state):
 
 
 def adapt_wp11(spec):
+    if set(spec) != {"release", "cost", "unified", "custody"}:
+        raise ValueError("Exact WP11 release, static cost, execution manifest and custody evidence required")
+    custody = read(spec["custody"])
+    if (custody["status"] != "blocked_independent_custody" or custody["scene"] != "xuzhou"
+            or custody["held_aside_labels_read"] is not False or custody["query"] != 0
+            or {k: (v["authorization"], v["blocks"]) for k, v in custody["roles"].items()}
+            != {"calibration": ("not_released", 12), "confirmation": ("not_released", 13)}):
+        raise ValueError("WP11 independent confirmation status differs from the original custody record")
     release, cost, unified = (read(spec[key]) for key in ("release", "cost", "unified"))
     audit, reg = read(release["history_evidence"]), read(release["registration"])
     origin = read(release["source_evidence"])
@@ -207,7 +216,7 @@ def adapt_wp11(spec):
             or cost["release"] != spec["release"] or cost["scope"] != "existing_devval_image_only"
             or cost["environment"]["device"] != "cpu" or cost["environment"]["threads"] != 1
             or cost["environment"]["scope"] != "static_cpu_resident_requests"
-            or unified["release"] != spec["release"] or unified["scope"] != request["scope"]
+            or unified["commit"] != WP11_UNIFIED or unified["release"] != spec["release"] or unified["scope"] != request["scope"]
             or unified["static_input"] != cost["input_hash"] or unified["archived_cost"]["file"] != spec["cost"]
             or unified["routing"] is not None or unified["observation_role"] != "devval_image_only"):
         raise ValueError("WP11 model, development role, independent status or CPU timing scope differs")
@@ -221,10 +230,14 @@ def adapt_wp11(spec):
                  "full_source": (endpoints["full"]["initial"], FULL_HEADS, 0),
                  "full_matched": (endpoints["full"]["selected"], FULL_HEADS, reg["updates_per_arm"])}
     rows = []
+    package_keys = {"light": "light", "full_source": "source_weights", "full_matched": "full_weights"}
+    full_states = {"full_source": release["source_state"], "full_matched": release["full_state"]}
     for mode, (values, names, updates) in available.items():
         model = unified["models"][mode]
-        if (model["heads"] != list(names) or model["precision"] != "fp32"
-                or (mode != "light" and model["state"] != release["source_state" if mode == "full_source" else "full_state"])):
+        package = release[package_keys[mode]]
+        if (model["heads"] != list(names) or model["precision"] != "fp32" or model["package"] != package
+                or hash_file(package["path"]) != package["sha256"]
+                or (mode in full_states and model["state"] != full_states[mode])):
             raise ValueError("WP11 execution manifest uses another classifier")
         cost_row = wp11_cost(cost, mode, model["state"])
         rows.append(dict(module="WP11", arm=mode, identity=family, producer=release["commit"],
@@ -261,15 +274,16 @@ def write_table(out, report):
     fields = ("module", "arm", "scene", "sampler_seed", "train_labels", "validation_labels", "role", "updates",
               "selected_step", "precision", "head", "oa", "aa", "kappa", "macro_f1", "nll",
               "parameters", "package_bytes", "cost_status", "device", "resident_scope",
-              "resident_p50_ms", "load_p50_ms", "first_p50_ms", "end_to_end_p50_ms", "peak_rss_p50_kib")
+              "resident_p50_ms", "resident_p95_ms", "load_p50_ms", "load_p95_ms", "first_p50_ms", "first_p95_ms",
+              "end_to_end_p50_ms", "end_to_end_p95_ms", "peak_rss_p50_kib", "peak_rss_p95_kib")
     with (out / "production-table.csv").open("x", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for row in report["rows"]:
             cost, identity = row["cost"], row["identity"]
 
-            def p50(key):
-                return cost.get(key, {}).get("p50")
+            def quantile(key, fraction):
+                return cost.get(key, {}).get(fraction)
 
             for head, metrics in row["quality"].items():
                 writer.writerow(dict(module=row["module"], arm=row["arm"], scene=identity["scene"],
@@ -279,5 +293,8 @@ def write_table(out, report):
                      **{key: metrics[key] for key in ("oa", "aa", "kappa", "macro_f1", "nll")},
                      parameters=cost.get("parameters"), package_bytes=row["package_bytes"], cost_status=cost["status"],
                      device=cost.get("device"), resident_scope=cost.get("resident_scope"),
-                     resident_p50_ms=p50("resident_ms"), load_p50_ms=p50("load_ms"), first_p50_ms=p50("first_ms"),
-                     end_to_end_p50_ms=p50("end_to_end_ms"), peak_rss_p50_kib=p50("peak_rss_kib")))
+                     resident_p50_ms=quantile("resident_ms", "p50"), resident_p95_ms=quantile("resident_ms", "p95"),
+                     load_p50_ms=quantile("load_ms", "p50"), load_p95_ms=quantile("load_ms", "p95"),
+                     first_p50_ms=quantile("first_ms", "p50"), first_p95_ms=quantile("first_ms", "p95"),
+                     end_to_end_p50_ms=quantile("end_to_end_ms", "p50"), end_to_end_p95_ms=quantile("end_to_end_ms", "p95"),
+                     peak_rss_p50_kib=quantile("peak_rss_kib", "p50"), peak_rss_p95_kib=quantile("peak_rss_kib", "p95")))
