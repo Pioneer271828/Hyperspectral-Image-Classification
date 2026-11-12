@@ -24,9 +24,21 @@ def main():
     actions = parser.add_subparsers(dest="action", required=True)
     registration = actions.add_parser("register")
     registration.add_argument("--root", required=True)
-    for name in ("preflight", "stage", "freeze", "audit", "cost"):
+    for name in ("preflight", "stage", "freeze", "audit", "cost", "real-probe", "supplement"):
         action = actions.add_parser(name)
+        if name in ("real-probe", "supplement"):
+            action.add_argument("--out", required=True)
+        if name == "real-probe":
+            for flag in ("prior-wp07", "prior-wp08", "curator"):
+                action.add_argument("--" + flag, nargs=2, required=True, metavar=("PATH", "SHA256"))
+            continue
         action.add_argument("--registration", nargs=2, required=True, metavar=("PATH", "SHA256"))
+        if name == "cost":
+            action.add_argument("--producer-commit", required=True)
+        if name == "supplement":
+            action.add_argument("--previous-tables", required=True)
+            for flag in ("audit", "cost", "real", "freeze"):
+                action.add_argument("--" + flag, nargs=2, required=True, metavar=("PATH", "SHA256"))
         if name in ("audit", "cost"):
             action.add_argument("--freeze", nargs=2, required=True, metavar=("PATH", "SHA256"))
         if name == "stage":
@@ -46,6 +58,13 @@ def main():
         result = campaign.register(args.root, code)
     elif args.action == "preflight":
         result = campaign.preflight(pin(args.registration), code)
+    elif args.action == "real-probe":
+        from transfer.native_support_real import probe
+        result = probe(args.out, pin(args.prior_wp07), pin(args.prior_wp08), pin(args.curator), code)
+    elif args.action == "supplement":
+        from evaluation.wp12_native_support_evidence import adapt
+        result = adapt(args.out, args.previous_tables, pin(args.registration), pin(args.freeze),
+                       pin(args.audit), pin(args.cost), pin(args.real), code["commit"])
     elif args.action == "stage":
         result = campaign.execute(pin(args.registration), code, args.case, args.arm, args.phase,
                                   None if args.prior is None else pin(args.prior))
@@ -57,7 +76,7 @@ def main():
             result = audit.audit(pin(args.registration), pin(args.freeze), code)
         else:
             from inference.native_support_cost import measure
-            result = measure(pin(args.registration), pin(args.freeze), code)
+            result = measure(pin(args.registration), pin(args.freeze), code, args.producer_commit)
     print(json.dumps(result), flush=True)
 
 
