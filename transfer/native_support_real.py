@@ -69,7 +69,7 @@ def probe(out, wp07, wp08, curator, code):
         raise ValueError("Only accepted release and source registrations can authorize real arrays")
     prior, campaign, custody = map(_read, (wp07, wp08, curator))
     rows = {row["scene"]: row for row in custody["rows"]}
-    if (prior["issue"] != 411 or campaign["issue"] != 407 or custody["status"] != "passed"
+    if (prior["issue"] != 411 or campaign["issue"] != 407 or custody["status"] != "completed"
             or rows["xuzhou"]["status"] != "prepared" or rows["whu-honghu"]["status"] != "blocked"):
         raise ValueError("Prior WP07 and WP02 role evidence differs")
     baseline = dev._load_source(prior["source"], prior["sidecar"])
