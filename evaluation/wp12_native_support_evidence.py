@@ -48,7 +48,9 @@ def adapt(out, previous, registration, freeze, audit, cost, real, adapter_commit
     previous = external_directory(previous)
     original_tables = {name: dict(path=str(previous / name), sha256=checksum) for name, checksum in OLD_TABLES.items()}
     old_rows = list(csv.DictReader(dev._read(original_tables["production-table.csv"]).decode().splitlines()))
-    if len(old_rows) != 193 or len(dev._read(original_tables["controlled-graph-synthetic.csv"]).decode().splitlines()) != 55:
+    models = {(row["module"], row["case_id"], row["arm"], row["state_sha256"]) for row in old_rows}
+    if (len(old_rows) != 193 or len(models) != 65
+            or len(dev._read(original_tables["controlled-graph-synthetic.csv"]).decode().splitlines()) != 55):
         raise ValueError("Old production or controlled evidence cardinality differs")
     out = external_directory(out)
     out.mkdir(parents=True, exist_ok=False)
@@ -73,7 +75,7 @@ def adapt(out, previous, registration, freeze, audit, cost, real, adapter_commit
             writer.writerow((scene, probe["scope"], row["status"], len(row["role_arrays"]), row["actual_forwards"],
                              0, row.get("reason")))
     return dev._json_new(out / "native-supplement.json", dict(version=2, producer=reg["code"], adapter=adapter_commit,
-        preserved=dict(real_models=65, real_heads=len(old_rows), controlled_rows=54, tables=original_tables),
+        preserved=dict(real_models=len(models), real_heads=len(old_rows), controlled_rows=54, tables=original_tables),
         synthetic=dict(scope="native_cpu_engineering", registration=registration, freeze=freeze, audit=audit, cost=cost,
                        cases=dict(scopes), updates=assessed["updates"], gpu="NOT_RUN"),
         real=dict(scope=probe["scope"], receipt=real, updates=0, query=0, scenes=probe["scenes"],
