@@ -1251,6 +1251,14 @@
       "report": "research/reports/WP12_真实课程质量教师与有效曝光证据_20261112.md",
       "chat_report": "本批待主审。保留有效监督、教师执行、逐头小类和实际阶段预算"
     }
+    ,{
+      "id": "WP01 Xuzhou K5/V5 真实观测课程四排列",
+      "state": "真实12例恢复、精确续接及四条件冻结复盘通过",
+      "evidence": "Issue438/PR440，实际 e3a3c74b287bc024514a03a04cd9ae4f9a6c2c9f。4,272次更新，48阶段，独审88.09秒。选中full融合OA较同种子fixed升1/平7/降1，无同时通过三头保护且融合提升的个例。独审 1ccf81149b4fcc17d9e95cd5515368e4cfff8565e65871e480a2158f28a43eaf。",
+      "remaining": "固定开发V5与单源三恢复种子。空间独立、GPU及部署耗时未测",
+      "report": "research/reports/WP01_Xuzhou_K5V5真实观测课程四排列_20261112.md",
+      "chat_report": "真实CUR-O已交付，待主审；默认结构与选模入口照旧"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
