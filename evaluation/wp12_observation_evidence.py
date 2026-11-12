@@ -8,6 +8,7 @@ import math
 from pathlib import Path
 
 from evaluation.classification_metrics import classification_metrics
+from evaluation.wp12_cost_primitives import pin
 from evaluation.wp12_low_rank_evidence import verify_guard
 from evaluation.wp12_production_evidence import FULL_HEADS, metrics, missing, provenance
 from model.research_config import digest
@@ -81,13 +82,14 @@ def _campaign(spec):
             raise ValueError("Observation subprocess failed or its timing differs")
     if campaign["wall_seconds"] < math.fsum(v["wall_seconds"] for v in stages.values()):
         raise ValueError("Campaign wall time is smaller than sequential process timings")
-    return reg, audit, campaign, old, sample, cases
+    return reg, audit, campaign, old, sample, cases, completion
 
 
 def _quality(snapshot, classes, targets, condition, blocks):
     if (snapshot["condition_record"] != condition or snapshot["targets"] != targets
             or snapshot["labels"] != len(targets) or snapshot["forwards"] != blocks
             or len(snapshot["scores"]) != blocks or any(len(v) != len(FULL_HEADS) for v in snapshot["scores"])
+            or any(not pin(digest_value) for v in snapshot["scores"] for digest_value in v)
             or set(snapshot["predictions"]) != set(FULL_HEADS)
             or not math.isfinite(snapshot["seconds"]) or snapshot["seconds"] <= 0):
         raise ValueError("Observation condition, development targets or replay cost differs")
@@ -193,7 +195,7 @@ def _endpoint(entry, item, point, root, reg):
 
 
 def adapt(spec):
-    reg, audit, campaign, old, sample, cases = _campaign(spec)
+    reg, audit, campaign, old, sample, cases, completion = _campaign(spec)
     root = Path(reg["root"])
     origin = read(reg["source"]["origin"])
     historic, stage = read(origin["registration"]), read(origin["off_full"])
@@ -242,7 +244,16 @@ def adapt(spec):
         if (item["case"] != case or len(item["history"]) != reg["budget"]
                 or policy["policy_hash"] != reg["policy_hashes"][case["order"]]
                 or any(policy["validation"][c] != condition_records[c] for c in CONDITIONS)):
+
             raise ValueError("Recorded case or frozen observation policy differs")
+        attempts = completion["attempts"][name]
+        if set(attempts) != set(STAGES):
+            raise ValueError("All observation interval receipts are required")
+        for stage_name, witness in attempts.items():
+            raw_stage = read(witness)
+            if (witness["path"] != str(root/"attempts"/name/stage_name/"status.json") or raw_stage["status"] != "passed"
+                    or any(raw_stage[k] != v for k, v in item["stage_costs"][stage_name].items())):
+                raise ValueError("Observation stage cost differs from its executed receipt")
         exposure = _exposure(item, reg, old, policy)
         training = _training(item, campaign, blocks, len(targets))
         reference = audit["cases"][f"s{case['seed']}-fixed"]
@@ -258,6 +269,11 @@ def adapt(spec):
                     raise ValueError("Recorded observation protection differs from same-seed fixed")
                 conditions[c] = dict(**_quality(snapshot, classes, targets, condition_identity[c], blocks), protection=guard)
             reviewed[point] = dict(step=entry["step"], conditions=conditions)
+        losses = {}
+        for point, event in zip(("first", "last"), (item["history"][0], item["history"][-1]), strict=True):
+            losses[point] = dict(step=event["step"], train_loss=event["loss"], full_v5_fused_nll=event["validation"]["nll"])
+            if not all(math.isfinite(v) for v in losses[point].values()):
+                raise ValueError("Nonfinite first or last observation loss")
         chosen, package = reviewed["selected"], item["selected"]["package"]
         primary = chosen["conditions"]["full"]
         lineage = provenance(**proof, recovery_commit=reg["commit"], recovery_steps=reg["budget"],
@@ -268,7 +284,7 @@ def adapt(spec):
                          selected_step=chosen["step"], selection=reg["selection"], quality=primary["quality"],
                          protection=primary["protection"], cost=no_cost, observation_protocol=dict(protocol, policy_hash=policy["policy_hash"]),
                          condition_quality=reviewed, initial_condition_reference="original_fp32",
-                         training_cost=training, observation_exposure=exposure))
+                         training_cost=training, observation_exposure=exposure, loss_trace_summary=losses))
     training = {key: sum(r["training_cost"][key] for r in rows[1:]) for key in
                 ("training_forwards", "label_accesses", "training_v5_events", "restore_v5_events",
                  "training_v5_forwards", "restore_v5_forwards", "training_v5_labels", "restore_v5_labels")}

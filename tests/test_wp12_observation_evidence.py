@@ -21,7 +21,7 @@ class ObservationEvidenceTests(unittest.TestCase):
         head = classification_metrics(targets, predicted, classes)
         head.update(nll=0.25, zero_recall=[])
         value = dict(condition_record="frozen", targets=targets, labels=45, forwards=5, seconds=1.25,
-                     scores=[["fused", "graph", "cnn"]] * 5,
+                     scores=[["a"*64, "b"*64, "c"*64]] * 5,
                      metrics={h: deepcopy(head) for h in ("fused", "graph", "cnn")},
                      predictions={h: list(predicted) for h in ("fused", "graph", "cnn")})
         result = _quality(value, classes, targets, "frozen", 5)
