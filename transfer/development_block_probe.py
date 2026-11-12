@@ -8,7 +8,7 @@ from time import perf_counter
 
 import torch
 
-from model.research_config import digest
+from model.research_config import canonical_json, digest
 from research_runtime import external_directory, tensor_hash
 from transfer import development_block_custody as custody, registered_development as transport
 from transfer.development_blocks import Blocks, publish, read_pin, recover, sample_identity, scene_roster, view
@@ -154,6 +154,52 @@ def describe(results):
     return by_consumer
 
 
+def _registration(names, code):
+    return {"version": 1, "code": code, "scenes": names, "views": VIEWS,
+            "module_seed": SEED, "support_seed": SUPPORT_SEED, "maximum_updates": 0}
+
+
+def _load_completed(pin, root, code):
+    report = json.loads(read_pin(pin, root))
+    request = json.loads(read_pin(report["requests"], root))
+    registration = json.loads(read_pin(report["registration"], root))
+    names = scene_roster(registration["scenes"])
+    if (report["code"] != code or registration != _registration(names, code)
+            or report["scope"] != "authorized_spatial_development_zero_update"
+            or set(report["scenes"]) != set(names)
+            or any(report[key] for key in ("updates", "raw_gt", "query", "labels_added"))
+            or request != dict(version=1, code=code, consumers=describe(report["scenes"]),
+                               updates=0, raw_gt=0, query=0, labels_added=0)):
+        raise ValueError("Completed development receipt differs from the frozen request")
+    return report
+
+
+def replay(root, pin, code, scene):
+    """Replay one admitted scene using its original external immutable package."""
+    root = external_directory(Path(root).resolve(strict=True))
+    report = _load_completed(pin, root, code)
+    scene = scene_roster([scene])[0]
+    if scene not in report["scenes"]:
+        raise ValueError("Requested scene is outside the registered roster")
+    expected = report["scenes"][scene]
+    if expected["status"] != "PASSED":
+        return {key: expected[key] for key in ("status", "reason_code", "missing")}
+    admitted = _PROVIDERS[scene](root)
+    package = expected["block_package"]
+    if Path(package["path"]).parent != Path(pin["path"]).parent:
+        raise ValueError("Completed publication package is outside its registered run")
+    blocks = Blocks(package, Path(pin["path"]).parent, admitted.release)
+    result = forward_blocks(blocks, admitted.baseline, package, admitted.regression)
+    if json.loads(canonical_json(result)) != {key: value for key, value in expected.items() if key != "protected_inputs"}:
+        raise ValueError("Replayed development forwards differ from the pinned receipt")
+    custody._protect(root, admitted.protected)
+    return dict(status="PASSED", scene=scene, actual_forwards=result["actual_forwards"],
+                receipt=pin, repeated_outputs_exact=True, updates=0, raw_gt=0, query=0, labels_added=0)
+
+
+_PROVIDERS = {"xuzhou": custody.xuzhou, "whu-honghu": custody.honghu}
+
+
 def probe(root, out, code, names=("paviaU", "xuzhou", "whu-honghu"), *, resume=False):
     started = perf_counter()
     names = scene_roster(names)
@@ -164,17 +210,25 @@ def probe(root, out, code, names=("paviaU", "xuzhou", "whu-honghu"), *, resume=F
     if not out.is_relative_to(root):
         raise ValueError("Publish development artifacts within the authorized runs root")
     out.mkdir(parents=False, exist_ok=resume)
+    roster_file = out / "registration.json"
+    registered = _registration(names, code)
+    if resume:
+        roster = transport._pin(roster_file)
+        if json.loads(read_pin(roster, out)) != registered:
+            raise ValueError("Resume differs from the originally registered scenes, source or views")
+    else:
+        roster = transport._json_new(roster_file, registered)
     previous = out / "admission.json"
     if resume and previous.exists():
         raise FileExistsError("Completed publication is immutable; use the pinned receipt to replay")
     results = {}
-    providers = {"xuzhou": custody.xuzhou, "whu-honghu": custody.honghu}
+
     for name in names:
         try:
             if name == "paviaU":
                 results[name] = custody.pavia_status(root)
                 continue
-            admitted = providers[name](root)
+            admitted = _PROVIDERS[name](root)
         except FileNotFoundError as error:
             results[name] = dict(status="BLOCKED", reason_code="PINNED_INPUT_FILE_MISSING",
                                  missing=error.filename or str(error), actual_forwards=0)
@@ -197,6 +251,6 @@ def probe(root, out, code, names=("paviaU", "xuzhou", "whu-honghu"), *, resume=F
             raise ValueError("Prior experiment request differs from the recovered publication")
     else:
         requests = transport._json_new(request_file, requested)
-    return transport._json_new(out / "admission.json", dict(version=1, code=code,
+    return transport._json_new(out / "admission.json", dict(version=1, code=code, registration=roster,
         updates=0, query=0, raw_gt=0, labels_added=0, scope="authorized_spatial_development_zero_update",
         scenes=results, requests=requests, elapsed_seconds=perf_counter() - started))
