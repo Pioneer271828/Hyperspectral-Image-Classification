@@ -297,7 +297,7 @@ def adapt_wp11(spec):
 
 
 def build(spec):
-    if not {"wp10", "wp11"} <= set(spec) <= {"wp10", "wp11", "low_rank", "curriculum", "observation", "factorial", "real_factorial"}:
+    if not {"wp10", "wp11"} <= set(spec) <= {"wp10", "wp11", "low_rank", "curriculum", "observation", "factorial", "real_factorial", "controlled_graph"}:
         raise ValueError("Exact WP10 and WP11 evidence references required")
     rows, comparison = adapt_wp10(spec["wp10"])
     if "blocked_source" in spec["wp11"]:
@@ -334,6 +334,10 @@ def build(spec):
 
         added, supplements["real_factorial"] = adapt(spec["real_factorial"], rows)
         rows.extend(added)
+    if "controlled_graph" in spec:
+        from evaluation.wp12_controlled_graph_evidence import adapt
+
+        supplements["controlled_graph"] = adapt(spec["controlled_graph"])
     return dict(policy=POLICY, status="production_development_evidence", rows=rows, wp10_comparison=comparison,
                 wp11_independent=wp11, gpu=missing("NOT_RUN", "The supplied evidence measures CPU only"),
                 cross_protocol_benefit=missing("NOT_RUN", "WP10 K5/V5 and WP11 K10/V5 use distinct training evidence"),
@@ -426,3 +430,8 @@ def write_table(out, report):
         from evaluation.wp12_real_factorial_evidence import write_factorial
 
         write_factorial(out, report["real_factorial"])
+
+    if "controlled_graph" in report:
+        from evaluation.wp12_controlled_graph_evidence import write
+
+        write(out, report["controlled_graph"])
