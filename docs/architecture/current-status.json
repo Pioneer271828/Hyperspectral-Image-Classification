@@ -1235,6 +1235,14 @@
       "report": "research/reports/WP01_Xuzhou_K5V5真实样本课程六臂恢复_20261112.md",
       "chat_report": "主审接受固定K5/V5同源三组恢复、6408次更新、精确恢复和小类保护。Issue432完成，PR434可审阅"
     }
+    ,{
+      "id": "WP06 课程逐支持机制复盘与 CUR-O 真实零更新准入",
+      "state": "真实逐支持复盘、观测排列准入及实际前向核对通过",
+      "evidence": "Issue433/PR435，零更新端点修订 2dedf5f64dd67b0a609a10aaa1f26d527b8578d6。逐端点前缀复算，7个选中点修正、11个选中点及18个末态一致。旧观测12例、48前向及准入身份沿用。修订复盘 9bf307260ecd07f087db35c26e276930c22aa417d10687e58ed7b8bb758d2782。",
+      "remaining": "描述性固定开发证据。真实CUR-O、S×O、空间确认及GPU待验",
+      "report": "research/reports/WP06_课程逐支持复盘与观测课程真实准入_20261112.md",
+      "chat_report": "本批待主审。真实近似带元数据、原统计和选列至图输入逐层核对"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
