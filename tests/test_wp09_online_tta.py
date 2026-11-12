@@ -159,6 +159,22 @@ class PersistentOnlineTTATests(unittest.TestCase):
             self.assertFalse((out / 'frame-000001').exists())
 
             from transfer import online_tta_run as runner
+            out = root / 'after-update'
+            write_payload = runner._write
+
+            def lose_checkpoint(path, writer):
+                if path.name == 'checkpoint.pt':
+                    raise RuntimeError('injected after first SGD')
+                write_payload(path, writer)
+
+            with patch.object(runner, '_write', lose_checkpoint), self.assertRaisesRegex(RuntimeError, 'injected'):
+                execute(reg, out)
+            attempt = parse_json((out / '.pending-000001' / 'attempt.json').read_bytes())
+            self.assertEqual(attempt['completed']['optimizer_updates'], 1)
+            self.assertFalse((out / 'frame-000001').exists())
+            with self.assertRaisesRegex(RuntimeError, 'cannot be resumed'):
+                execute(reg, out)
+
             out = root / 'after-commit'
             real = runner._journal
 
@@ -257,6 +273,10 @@ class PersistentOnlineTTATests(unittest.TestCase):
                 training_class_counts=[30, 12, 6, 1, 1, 1, 1, 1, 1], frames=labels))
             plan = write(root / 'plan.json', dict(version=1, label_release=release, runs=runs))
             result = score(plan)
+            summary = root / 'scored.json'
+            subprocess.run([sys.executable, '-m', 'evaluation.online_tta', '--plan', plan['path'],
+                            '--plan-sha256', plan['sha256'], '--out', str(summary)], check=True)
+            self.assertEqual(result, parse_json(summary.read_bytes()))
             online = result['online_pre_update']
             self.assertEqual(len(online), 6)
             self.assertEqual(online['frozen/continual/reverse']['versus_original_order']['fused']['metrics']['nll'], 0)
