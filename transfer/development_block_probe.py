@@ -1,6 +1,7 @@
 """Use admitted blocks in the existing WP07 and WP08 zero-update forward paths."""
 
 from dataclasses import asdict
+import json
 from pathlib import Path
 from time import perf_counter
 
@@ -10,7 +11,7 @@ import torch
 from model.research_config import digest
 from research_runtime import external_directory, tensor_hash
 from transfer import development_block_custody as custody, registered_development as transport
-from transfer.development_blocks import Blocks, publish, sample_identity, scene_roster, view
+from transfer.development_blocks import Blocks, publish, read_pin, recover, sample_identity, scene_roster, view
 from transfer.g3_training import _forward, state_hash
 from transfer.multiscale_training import MultiscaleTrial
 from transfer.native_support import NativeSupportModel, _measure, capture_context, make_selector, native_forward
@@ -153,7 +154,7 @@ def describe(results):
     return by_consumer
 
 
-def probe(root, out, code, names=("paviaU", "xuzhou", "whu-honghu")):
+def probe(root, out, code, names=("paviaU", "xuzhou", "whu-honghu"), *, resume=False):
     started = perf_counter()
     names = scene_roster(names)
     root = external_directory(Path(root).resolve(strict=True))
@@ -162,27 +163,40 @@ def probe(root, out, code, names=("paviaU", "xuzhou", "whu-honghu")):
     out = external_directory(out)
     if not out.is_relative_to(root):
         raise ValueError("Publish development artifacts within the authorized runs root")
-    out.mkdir(parents=False, exist_ok=False)
+    out.mkdir(parents=False, exist_ok=resume)
+    previous = out / "admission.json"
+    if resume and previous.exists():
+        raise FileExistsError("Completed publication is immutable; use the pinned receipt to replay")
     results = {}
     providers = {"xuzhou": custody.xuzhou, "whu-honghu": custody.honghu}
     for name in names:
-        if name == "paviaU":
-            results[name] = custody.pavia_status(root)
-            continue
         try:
+            if name == "paviaU":
+                results[name] = custody.pavia_status(root)
+                continue
             admitted = providers[name](root)
         except FileNotFoundError as error:
             results[name] = dict(status="BLOCKED", reason_code="PINNED_INPUT_FILE_MISSING",
                                  missing=error.filename or str(error), actual_forwards=0)
             continue
-        pin = publish(out / f"{name}.zip", admitted.release, admitted.reader)
+        package = out / f"{name}.zip"
+        if resume and package.exists():
+            pin = recover(package, out, admitted.release, admitted.reader)
+        else:
+            pin = publish(package, admitted.release, admitted.reader)
         blocks = Blocks(pin, out, admitted.release)
         result = forward_blocks(blocks, admitted.baseline, pin, admitted.regression)
         custody._protect(root, admitted.protected)
         result["protected_inputs"] = list(admitted.protected)
         results[name] = result
-    requests = transport._json_new(out / "frozen-requests.json", dict(version=1, code=code,
-                                     consumers=describe(results), updates=0, query=0, raw_gt=0, labels_added=0))
+    request_file = out / "frozen-requests.json"
+    requested = dict(version=1, code=code, consumers=describe(results), updates=0, query=0, raw_gt=0, labels_added=0)
+    if resume and request_file.exists():
+        requests = transport._pin(request_file)
+        if json.loads(read_pin(requests, out)) != requested:
+            raise ValueError("Prior experiment request differs from the recovered publication")
+    else:
+        requests = transport._json_new(request_file, requested)
     return transport._json_new(out / "admission.json", dict(version=1, code=code,
         updates=0, query=0, raw_gt=0, labels_added=0, scope="authorized_spatial_development_zero_update",
         scenes=results, requests=requests, elapsed_seconds=perf_counter() - started))

@@ -23,6 +23,7 @@ def main():
     admission = commands.add_parser("probe")
     admission.add_argument("--out", type=Path, required=True)
     admission.add_argument("--scenes", nargs="+")
+    admission.add_argument("--resume", action="store_true")
     status = commands.add_parser("supplement")
     status.add_argument("--out", type=Path, required=True)
     status.add_argument("--admission", nargs=2, required=True, metavar=("PATH", "SHA256"))
@@ -36,7 +37,7 @@ def main():
     require_frozen_code(code)
     if args.command == "probe":
         options = {} if args.scenes is None else {"names": args.scenes}
-        result = probe(args.runs, args.out, code["commit"], **options)
+        result = probe(args.runs, args.out, code["commit"], resume=args.resume, **options)
     else:
         result = supplement(args.runs, dict(zip(("path", "sha256"), args.admission, strict=True)), args.out)
     print(json.dumps(result), flush=True)

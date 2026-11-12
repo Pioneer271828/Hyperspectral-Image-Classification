@@ -156,6 +156,17 @@ def _measure(module, attribute, timing, name, observer=None):
         delattr(module, attribute)
 
 
+def _block_identity(scene, tile, observation_view):
+    raw = tensor_hash(torch.from_numpy(scene.cube[tile_slice(tile)].copy()))
+    if observation_view is None:
+        return raw
+    if observation_view.bands.fingerprint != scene.bands.fingerprint:
+        raise ValueError("Preselected native bands differ from the scene")
+    observed = observation_view.observation
+    return digest(dict(raw=raw, spectral=tensor_hash(observed.spectral.copy()),
+                       coordinates=tensor_hash(observed.coordinates.copy()), ids=tensor_hash(observed.global_ids.copy())))
+
+
 def native_forward(model, scene, tile, *, selector=None, capture=False, detail=False, timing=None, observation_view=None):
     """Call the same registered block materializer and original native classifier."""
     if not isinstance(model, NativeSupportModel) or (selector is None) != capture or _active.get() is not None:
@@ -164,6 +175,9 @@ def native_forward(model, scene, tile, *, selector=None, capture=False, detail=F
             selector.identity["bands"] != scene.bands.fingerprint or
             selector.context["block"] != str(tile["id"])):
         raise ValueError("Selector does not belong to this development block")
+    if selector is not None and observation_view is not None and (
+            selector.identity["block_input"] != _block_identity(scene, tile, observation_view)):
+        raise ValueError("Selector does not belong to this preselected observation")
     if timing is None:
         timing = {}
     frame = dict(backbone=model.backbone, selector=selector, capture=capture, detail=detail, timing=timing)
@@ -197,7 +211,7 @@ def capture_context(model, scene, role, admission, source_state, timing=None, *,
     context = development_context(role=role["role"], block=str(tile["id"]), node_ids=ids, partitions=[tile["id"]] * len(ids))
     identity = dict(scene=scene.dataset, grid=frame["grid"], bands=scene.bands.fingerprint,
                     source=source_state, assignment=tensor_hash(frame["Q"]), admission=admission,
-                    block_input=tensor_hash(torch.from_numpy(scene.cube[tile_slice(tile)].copy())))
+                    block_input=_block_identity(scene, tile, observation_view))
     return dict(context=context, identity=identity, adjacency=frame["A0"], spectra=frame["spectra"],
                 graph_features=frame["descriptor"], mandatory=[])
 

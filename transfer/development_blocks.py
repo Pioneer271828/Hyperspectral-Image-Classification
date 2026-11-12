@@ -1,5 +1,6 @@
 """Publish and replay exact blocks from an existing authenticated spatial release."""
 
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 import io
 import json
@@ -92,7 +93,7 @@ class Release:
                                                            if any(row["role"] == role for row in self.roles)]):
             raise ValueError("Select at most one authenticated block for each development role")
         for row in self.roles:
-            if set(row) != {"id", "role", "partition", "box", "parent_tile", "samples", "origin"}:
+            if set(row) != {"id", "role", "partition", "box", "parent_tile", "samples", "origin", "origin_content_sha256"}:
                 raise ValueError("Development block metadata fields differ")
             y0, y1, x0, x1 = row["box"]
             if (type(row["id"]) is not int or row["id"] < 0 or type(row["parent_tile"]) is not int
@@ -102,6 +103,9 @@ class Release:
                     or (self.profile in ("fixed_spatial", "guarded_development")
                         and row["partition"] != ("train" if row["role"] == "devtrain" else "val"))):
                 raise ValueError("Block outside its spatial role or scene bounds")
+            checksum = row["origin_content_sha256"]
+            if (not isinstance(checksum, str) or len(checksum) != 64 or set(checksum) - set("0123456789abcdef")):
+                raise ValueError("Development origin requires a bound array digest")
             sample_identity(row, self.shape, self.classes)
         if len(self.roles) == 2:
             first, second = self.roles
@@ -142,13 +146,43 @@ def block_values(array, row, bands):
     return np.ascontiguousarray(array)
 
 
-def _array_hash(array):
+def array_hash(array):
     return tensor_hash(np.array(array, copy=True, order="C"))
+
+
+def _publication(release, read_array):
+    members, payloads = [], []
+    for row in release.roles:
+        array = block_values(read_array(row), row, release.shape[-1])
+        with io.BytesIO() as buffer:
+            np.save(buffer, array, allow_pickle=False)
+            raw = buffer.getvalue()
+        member = {"id": row["id"], "role": row["role"], "name": f"tile-{row['id']}.npy",
+                  "array_sha256": array_hash(array), "sha256": transport._sha(raw),
+                  "bytes": len(raw), "dtype": array.dtype.str}
+        if member["array_sha256"] != row["origin_content_sha256"]:
+            raise ValueError("Published content differs from the authenticated origin array")
+        if any(item["array_sha256"] == member["array_sha256"] for item in members):
+            raise ValueError("Identical block content cannot occupy different roles")
+        members.append(member)
+        payloads.append((member["name"], raw))
+    metadata = (canonical_json(dict(identity=release.identity(), members=members)) + "\n").encode()
+    return metadata, payloads
+
+
+def recover(path, root, release, read_array):
+    """Re-derive the manifest from custody and verify the existing publication in place."""
+    metadata, _ = _publication(release, read_array)
+    pin = {"path": str(path), "manifest_sha256": transport._sha(metadata)}
+    opened = Blocks(pin, root, release)
+    for row in release.roles:
+        opened.read(row["id"], row["role"], row["box"])
+    return pin
 
 
 def publish(path, release, read_array):
     """Commit a single immutable ZIP by hard link, with pinned metadata and NPY members."""
-    identity = release.identity()
+    release.identity()
     path = external_directory(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -157,21 +191,10 @@ def publish(path, release, read_array):
     try:
         with NamedTemporaryFile(dir=path.parent, delete=False) as stream:
             temp = Path(stream.name)
-            members = []
+            metadata, payloads = _publication(release, read_array)
             with ZipFile(stream, "w", compression=ZIP_STORED) as archive:
-                for row in release.roles:
-                    array = block_values(read_array(row), row, release.shape[-1])
-                    with io.BytesIO() as buffer:
-                        np.save(buffer, array, allow_pickle=False)
-                        raw = buffer.getvalue()
-                    member = {"id": row["id"], "role": row["role"], "name": f"tile-{row['id']}.npy",
-                              "array_sha256": _array_hash(array), "sha256": transport._sha(raw),
-                              "bytes": len(raw), "dtype": array.dtype.str}
-                    if any(item["array_sha256"] == member["array_sha256"] for item in members):
-                        raise ValueError("Identical block content cannot occupy different roles")
-                    members.append(member)
-                    archive.writestr(member["name"], raw)
-                metadata = (canonical_json(dict(identity=identity, members=members)) + "\n").encode()
+                for name, raw in payloads:
+                    archive.writestr(name, raw)
                 archive.writestr("development.json", metadata)
             stream.flush()
             os.fsync(stream.fileno())
@@ -188,7 +211,7 @@ class Blocks:
 
     def __init__(self, pin, root, release):
         self.path = inside(pin["path"], root)
-        self.release = release
+        self.release = release = deepcopy(release)
         with ZipFile(self.path) as archive:
             info = archive.getinfo("development.json")
             if info.file_size > 1024 * 1024:
@@ -210,6 +233,7 @@ class Blocks:
                 size = (y1 - y0) * (x1 - x0) * release.shape[2] * 4
                 item = archive.getinfo(member["name"])
                 if (set(member) != {"id", "role", "name", "array_sha256", "sha256", "bytes", "dtype"}
+                        or member["array_sha256"] != row["origin_content_sha256"]
                         or member["dtype"] != "<f4" or not size < member["bytes"] <= size + 4096
                         or item.file_size != member["bytes"] or item.compress_type != ZIP_STORED):
                     raise ValueError("Invalid bounded FP32 development member")
@@ -228,7 +252,7 @@ class Blocks:
         if transport._sha(raw) != member["sha256"]:
             raise ValueError("Development block file hash differs")
         array = block_values(np.load(io.BytesIO(raw), allow_pickle=False), row, self.release.shape[-1])
-        if _array_hash(array) != member["array_sha256"]:
+        if array_hash(array) != member["array_sha256"]:
             raise ValueError("Development array content differs")
         array.setflags(write=False)
         return array
@@ -267,9 +291,9 @@ def view(blocks, row, condition):
     scene = Scene(scene.dataset, BlockCube(release.shape, tile, retained), plan, observed.bands,
                   scene.classes, statistics)
     identity = dict(tile=tile["id"], role=row["role"], box=row["box"], partition=tile["partition"],
-        original=blocks.members[tile["id"]]["array_sha256"], raw=_array_hash(retained),
-        observed=_array_hash(observed.observation.spectral),
-        coordinates=_array_hash(observed.observation.coordinates), ids=_array_hash(observed.observation.global_ids),
+        original=blocks.members[tile["id"]]["array_sha256"], raw=array_hash(retained),
+        observed=array_hash(observed.observation.spectral),
+        coordinates=array_hash(observed.observation.coordinates), ids=array_hash(observed.observation.global_ids),
         band_ids=list(observed.bands.band_ids), band_order=observed.bands.fingerprint, selection=selection,
         statistics=statistics, preprocessing=release.statistics["statistics_hash"])
     return scene, tile, observed, identity

@@ -13,7 +13,7 @@ from model.research_config import canonical_json, digest
 from research_runtime import hash_file, tensor_hash
 from train_spatial import SpatialConfig
 from transfer import p4_guarded, p4_spatial, registered_development as transport, wp02_route_development as wp02
-from transfer.development_blocks import Release, SCENES, inside, read_pin
+from transfer.development_blocks import Release, SCENES, array_hash, block_values, inside, read_pin
 from transfer.development_mat import open_guarded
 from transfer.g3_training import state_hash
 from transfer.native_support_real import WP07_REGISTRATION, WP08_SOURCE_CAMPAIGN, CURATOR_RECEIPT
@@ -46,7 +46,6 @@ HISTORICAL = {
 
 def historical(root, key):
     name, sha256 = HISTORICAL[key]
-
     return {"path": str(root / name), "sha256": sha256}
 
 
@@ -85,7 +84,7 @@ def _band_metadata(root, scene):
     return bands, physical
 
 
-def _rows(tiles, labels, shape, origin, parents=None):
+def _rows(tiles, labels, shape, origin, parents):
     labels_by_tile = {tile["id"]: local for role in ("train", "val") for tile, local in labels[role]}
     rows = []
     for role, tile in zip(("devtrain", "devval"), tiles, strict=True):
@@ -93,9 +92,17 @@ def _rows(tiles, labels, shape, origin, parents=None):
         yy, xx = np.nonzero(labels_by_tile[tile["id"]])
         local = labels_by_tile[tile["id"]]
         points = [[int((y0 + y) * shape[1] + x0 + x), int(local[y, x])] for y, x in zip(yy, xx, strict=True)]
-        rows.append(dict(tile, role=role, parent_tile=tile["id"] if parents is None else parents[tile["id"]],
+        rows.append(dict(tile, role=role, parent_tile=parents[tile["id"]],
                          origin=origin(tile), samples=points))
     return tuple(rows)
+
+
+def _bound_arrays(rows, bands, reader):
+    arrays = {row["id"]: block_values(reader(row), row, bands) for row in rows}
+    for array in arrays.values():
+        array.setflags(write=False)
+    bound = tuple(dict(row, origin_content_sha256=array_hash(arrays[row["id"]])) for row in rows)
+    return bound, lambda row: arrays[row["id"]]
 
 
 @dataclass
@@ -150,6 +157,10 @@ def xuzhou(root):
         points = [[i, y] for i, y in zip(record[key]["indices"], record[key]["labels"], strict=True)
                   if y0 <= i // shape[1] < y1 and x0 <= i % shape[1] < x1]
         rows.append(dict(role, parent_tile=role["id"], origin=pin, samples=points))
+    def load_array(row):
+        return np.load(io.BytesIO(read_pin(row["origin"], root)), allow_pickle=False)
+
+    rows, reader = _bound_arrays(rows, shape[-1], load_array)
     model_files = (prior["source"], prior["sidecar"])
     for pin in model_files:
         inside(pin["path"], root)
@@ -163,8 +174,7 @@ def xuzhou(root):
                    minimum_buffer=2 * plan["gap"], block_selection="original_issue447_pair")
     release = Release("xuzhou", "nested_development", shape, classes, plan["plan_hash"], bands, stats,
                       tuple(rows), custody, physical, source)
-    return Admitted(release, baseline, lambda row: np.load(io.BytesIO(read_pin(row["origin"], root)),
-                    allow_pickle=False), (accepted, *value["provenance"], development, *model_files,
+    return Admitted(release, baseline, reader, (accepted, *value["provenance"], development, *model_files,
                     *old["role_arrays"], *[p for k, p in record["wp02"].items() if k != "image"],
                     physical["metadata_receipt"]), old)
 
@@ -284,6 +294,7 @@ def honghu(root):
     parents = {row["id"]: row["parent_tile"] for row in special.values()}
     rows = _rows(tiles, labels, shape, lambda _: image, parents)
     reader = open_guarded(image, root, "WHU_Hi_HongHu", shape, rows)
+    rows, reader = _bound_arrays(rows, shape[-1], reader)
     source, files, baseline = _spatial_source(root, registration, "whu-honghu", state_required=True)
     custody = dict(acceptance=accepted_pin, registration=registration_pin, guarded_split=split_pin,
                    original_image=original_image, geometry=roles_pin, role_plan=plan_pin,
