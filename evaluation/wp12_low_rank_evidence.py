@@ -146,6 +146,8 @@ def adapt(spec):
         raise ValueError("Class or small-class protection differs")
     costs, group_summaries = measured_rows(manifest, receipt, read(receipt["resident"]))
     support = next(iter(reg["exposures"].values()))["support"]
+    if any(plan["support"] != support for plan in reg["exposures"].values()):
+        raise ValueError("Recovered low-rank seeds must share the original training support")
     family = dict(scene="xuzhou", data_protocol="wp10_xuzhou_k5_v5", model_seed=reg["source_model_seed"],
                   support_sha256=digest(support), train_labels=len(support["indices"]), validation_labels=5*len(classes),
                   class_ids=classes, split=reg["validation"]["identity"], validation_role="repeated_development_v5",
@@ -180,9 +182,13 @@ def adapt(spec):
                              release_commit=reg["commit"], release_evidence=spec["audit"])
         rows.append(dict(module="WP10-LR", arm=case["arm"], case_id=name, identity=dict(family, sampler_seed=case["seed"]),
                          **lineage, state=package["state"], package=package["weights"]["sha256"],
-                         precision=package["format"], package_bytes=package["bytes"], budget=reg["budget"],
+                         precision=package["format"], package_bytes=package["bytes"], assignment=case["assignment"],
+                         budget=reg["budget"],
                          actual_optimizer_calls=report["updates"], selected_step=chosen["step"], selection=reg["selection"],
                          quality=metrics(chosen["metrics"], classes, FULL_HEADS, matrix_key="confusion_matrix"),
+                         other_checkpoints={point: dict(step=report[point]["step"], quality=metrics(
+                             report[point]["metrics"], classes, FULL_HEADS, matrix_key="confusion_matrix"))
+                             for point in ("initial", "last")},
                          protection=guards["selected"], initial_protection=guards["initial"], last_protection=guards["last"],
                          cost=costs[name]))
     qualified = {str(seed): [r["arm"] for r in rows if r["identity"]["sampler_seed"] == seed and r["arm"].startswith("svd-")
