@@ -1243,6 +1243,14 @@
       "report": "research/reports/WP06_课程逐支持复盘与观测课程真实准入_20261112.md",
       "chat_report": "本批待主审。真实近似带元数据、原统计和选列至图输入逐层核对"
     }
+    ,{
+      "id": "WP12 真实课程质量、教师和有效监督证据接入",
+      "state": "49模型统一表与独立复算通过",
+      "evidence": "Issue431/PR436，实际 5d93543214a77b2562ae69ff692dfd8296f92972。49模型145头1305逐类，原30模型和成本逐项一致。教师、训练与部署边界分开。独审 77cf80ddf764b749325dcb8d5a3564eea8022070d3133bb32eaa5e5a441b1a95。",
+      "remaining": "课程部署与GPU NOT_RUN，WP11独立确认 BLOCKED。真实CUR-O仅关联零更新准入",
+      "report": "research/reports/WP12_真实课程质量教师与有效曝光证据_20261112.md",
+      "chat_report": "本批待主审。保留有效监督、教师执行、逐头小类和实际阶段预算"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
