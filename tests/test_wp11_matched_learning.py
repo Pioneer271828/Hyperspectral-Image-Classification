@@ -169,7 +169,7 @@ class MatchedWP11Tests(unittest.TestCase):
         self.assertFalse(cal["confirmation_labels_read"])
         handoff = dict(handoff=early["confirmation"], freeze=file_pin(sealed / "gate-freeze.json"),
                        freeze_receipt=file_pin(sealed / "receipt.json"), confirmation_labels=labels)
-        with self.assertRaisesRegex(ValueError, "differs from custody|cannot be inside"):
+        with self.assertRaisesRegex(ValueError, "separate deferred artifact|differs from custody|cannot be inside"):
             preparation.run(save(root, "bad-role", dict(handoff, confirmation_labels=release["development"])),
                             root / "bad", code)
         prepared = preparation.run(save(root, "prepare-confirmation", handoff), root / "ready", code)
