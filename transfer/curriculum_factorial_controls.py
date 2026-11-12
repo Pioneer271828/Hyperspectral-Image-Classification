@@ -193,7 +193,7 @@ def authenticate(request, out, code):
             cases=cases, protected=protected, dependencies={k:v[3] for k,v in families.items()},
             synthetic_arithmetic=synthetic, source=s["source"], state=state_hash(model),
             optimizer_updates=0, query=0, gt=0, seconds=perf_counter()-started))
-    except (ValueError, OSError, subprocess.SubprocessError, KeyError, RuntimeError) as error:
+    except (ValueError, OSError, subprocess.SubprocessError, KeyError, RuntimeError, AttributeError) as error:
         dev._json_new(root/"blocked.json", dict(status="BLOCKED", request=request, reason=str(error),
                                                optimizer_updates=0, query=0, gt=0, seconds=perf_counter()-started))
         raise

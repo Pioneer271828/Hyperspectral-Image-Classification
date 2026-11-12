@@ -47,8 +47,8 @@ class RealFactorialRun(FactorialRun):
     FAILURE_FORMAT = "vca-wp01-real-factorial-failure-v1"
     CONTRACT_SCOPE = FORMAT
 
-    def _scene_allowed(self, scene):
-        return (self.trial == "s_plus_o" and scene.dataset == "xuzhou" and scene.classes == 9
+    def _scene_allowed(self, scene, trial):
+        return (trial == "s_plus_o" and scene.dataset == "xuzhou" and scene.classes == 9
                 and len(scene.bands.band_ids) == 436)
 
     def _training_forward(self, tile, step, extra):

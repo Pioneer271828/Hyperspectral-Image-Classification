@@ -31,14 +31,14 @@ class FactorialRun(RegisteredSampleRun):
 
     CONTRACT_SCOPE = FORMAT
 
-    def _scene_allowed(self, scene):
+    def _scene_allowed(self, scene, trial):
         return len(scene.bands.band_ids) <= 16 and max(scene.plan["shape"]) <= 160
 
     def __init__(self, source, scene, record, *, trial, teacher_hash, policy, expected_policy_hash,
                  observation_policy=None, expected_observation_hash=None, **kwargs):
         both = policy is not None and observation_policy is not None
         if (trial not in ARMS or ARMS[trial] != (policy is not None, observation_policy is not None)
-                or not self._scene_allowed(scene)):
+                or not self._scene_allowed(scene, trial)):
             raise ValueError("Explicit bounded synthetic factorial arm required")
         super().__init__(source,scene,record,trial=trial,teacher_hash=teacher_hash,
             policy=None if both else policy,expected_policy_hash=None if both else expected_policy_hash,
