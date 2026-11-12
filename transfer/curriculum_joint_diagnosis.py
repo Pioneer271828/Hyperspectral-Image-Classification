@@ -1,7 +1,6 @@
 """Frozen teacher probes on train support and endpoint-specific joint supervision."""
 
 from collections import Counter, defaultdict
-from copy import deepcopy
 import csv
 import json
 import math
@@ -14,7 +13,7 @@ from compression.precision_recovery_audit import HEADS
 from model.research_config import digest
 from research_runtime import external_directory, require_frozen_code
 from transfer import matched_route_admission as admission, registered_development as dev
-from transfer.curriculum_factorial_real import CASES, ORDER, inputs
+from transfer.curriculum_factorial_real import CASES, inputs
 from transfer.curriculum_observation_admission import CONDITIONS, audited_forward
 from transfer.curriculum_real_audit import fp32
 from transfer.curriculum_support_review import _ranks, _spearman
@@ -166,7 +165,7 @@ def teacher_diagnosis(pin, output, code):
         interpretation="Previously seen training support; five per class; descriptive sensitivity only"))
 
 
-def joint_prefix(history, plan, support, step, observations, tiles, full_bands, strata):
+def joint_prefix(history, plan, support, step, observations, tiles, full_bands, strata, condition_strata=None):
     if type(step) is not int or not 0 <= step <= plan.updates or len(history) != plan.updates:
         raise ValueError("Complete history and valid endpoint cutoff required")
     if observations is not None and len(observations) != plan.updates:
@@ -201,16 +200,21 @@ def joint_prefix(history, plan, support, step, observations, tiles, full_bands, 
             per_class[labels[i]].append(applied)
         if any(abs(math.fsum(v)-len(v)) > len(v)*2e-7 for v in per_class.values()):
             raise ValueError("Actual class loss mass is not preserved")
+    def by_bin(labels, rank, field, aggregate):
+        return {str(k):{str(b):aggregate([i for i,v in labels.items()
+                                         if v == k and rank[str(k)]["migrations"][str(i)][field] == b])
+                        for b in range(3)} for k in sorted(set(labels.values()))}
+
     conditions = {}
     for c in CONDITIONS:
         rows = {str(i):dict(raw=len(mass[c][i]),effective=math.fsum(mass[c][i])) for i in labels}
         def total(ids):
             return dict(raw=sum(rows[str(i)]["raw"] for i in ids),effective=math.fsum(rows[str(i)]["effective"] for i in ids))
         by_class = {str(k):total([i for i,v in labels.items() if v==k]) for k in sorted(set(labels.values()))}
-        bins = {str(k):{str(b):total([i for i,v in labels.items() if v == k and strata[str(k)]["migrations"][str(i)]["full_bin"] == b])
-                        for b in range(3)} for k in sorted(set(labels.values()))}
-        conditions[c] = dict(support=rows, classes=by_class, bins=bins, bands=band_count[c], pixel_bands=pixel_bands[c],
-                             unseen=sum(v["raw"]==0 for v in rows.values()))
+        conditions[c] = dict(support=rows, classes=by_class, bins=by_bin(labels, strata, "full_bin", total),
+                             bands=band_count[c], pixel_bands=pixel_bands[c], unseen=sum(v["raw"]==0 for v in rows.values()))
+        if condition_strata is not None:
+            conditions[c]["condition_teacher_bins"] = by_bin(labels, condition_strata[c]["fused"], "bin", total)
     return dict(step=step, history_sha256=digest(history[:step]), conditions=conditions)
 
 
@@ -288,7 +292,7 @@ def review_joint(request, teacher_pin, audit_pin, output, code):
         cutoffs = {"initial":0,"selected":item["endpoints"]["selected"]["step"],
                    "last":item["endpoints"]["last"]["step"],"full_run":plans[str(seed)].updates}
         points = {point:joint_prefix(history,plans[str(seed)],reg["support"],step,obs,scene.plan["tiles"],
-                                     len(scene.bands.band_ids),strata) for point,step in cutoffs.items()}
+                                     len(scene.bands.band_ids),strata,ranks) for point,step in cutoffs.items()}
         cases[name] = dict(case=c,producer=item["producer"],supervision=points,
                            errors_from_source=_class_errors(audit["source"],item,record["classes"]))
     equality = {}

@@ -163,6 +163,11 @@ def adapt(spec, existing):
                         raise ValueError("Real factorial candidate guard differs from a historical reference")
                     condition_row["protection"] = guards
                 conditions[condition] = condition_row
+            if not item["new"]:
+                value = {k:entry["conditions"]["full"][k] for k in ("metrics","predictions","targets","scores","forwards")}
+                reference = controls["cases"][name]["endpoints"][point]
+                if witness != reference or digest(value) != reference["full_sha256"]:
+                    raise ValueError("Historical endpoint full replay or package changed")
             if not item["new"] and point=="selected" and (conditions["full"]["quality"] != previous["quality"]
                     or package["state"] != previous["state"] or package["weights"]["sha256"] != previous["package"]
                     or step != previous["selected_step"]):
@@ -189,7 +194,9 @@ def adapt(spec, existing):
             state=selected_package["state"],package=selected_package["weights"]["sha256"],package_bytes=selected_package["bytes"],
             precision="fp32",budget=BUDGET,actual_optimizer_calls=2*BUDGET,selected_step=chosen_row["step"],selection=reg["selection"],
             quality=chosen_row["conditions"]["full"]["quality"],protection=chosen_row["conditions"]["full"]["protection"]["none"],
-            cost=no_cost,training_cost=cost,real_factorial_evidence=spec["audit"]))
+            cost=no_cost,training_cost=cost,real_factorial_evidence=spec["audit"],
+            loss_trace_summary={point:dict(step=event["step"],loss=event["loss"],full_v5_fused_nll=event["validation"]["nll"])
+                                for point,event in (("first",history[0]),("last",history[-1]))}))
     contrasts = {}
     for point in POINTS:
         contrasts[point] = {}
