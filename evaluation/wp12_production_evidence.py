@@ -337,7 +337,8 @@ def write_table(out, report):
               "parameters", "package_bytes", "cost_status", "device", "resident_scope", "resident_group",
               "resident_p50_ms", "resident_p95_ms", "load_p50_ms", "load_p95_ms", "first_p50_ms", "first_p95_ms",
               "end_to_end_p50_ms", "end_to_end_p95_ms", "peak_rss_p50_kib", "peak_rss_p95_kib",
-              "teacher_producer_commit", "teacher_state_sha256", "teacher_evidence_sha256", "teacher_scope",
+              "teacher_producer_commit", "teacher_scoring_commit", "teacher_state_sha256", "teacher_evidence_sha256", "teacher_scope",
+              "teacher_score_kind", "curriculum_policy_sha256", "curriculum_pacing_seed",
               "teacher_seconds", "teacher_forward_calls", "teacher_label_accesses", "raw_support_visits",
               "effective_support_mass", "minimum_applied_weight", "training_scope", "update_loop_seconds",
               "training_label_accesses", "stage_v5_label_accesses", "support_review_sha256")
@@ -346,7 +347,7 @@ def write_table(out, report):
         writer.writeheader()
         for row in report["rows"]:
             cost, identity = row["cost"], row["identity"]
-            teacher, exposure, training = (row.get(k, {}) for k in ("teacher", "exposure", "training_cost"))
+            teacher, exposure, training, curriculum = (row.get(k, {}) for k in ("teacher", "exposure", "training_cost", "curriculum"))
 
             def quantile(key, fraction):
                 return cost.get(key, {}).get(fraction)
@@ -358,7 +359,9 @@ def write_table(out, report):
                      scene=identity["scene"], actual_optimizer_calls=row.get("actual_optimizer_calls"),
                      guard_passed=guard.get("passes_metric_guards"),
                      small_new_errors=sum(guard["new_small_class_errors"].values()) if guard else None,
-                     teacher_producer_commit=teacher.get("producer"), teacher_state_sha256=teacher.get("state"),
+                     teacher_producer_commit=teacher.get("producer"), teacher_scoring_commit=teacher.get("scoring_commit"),
+                     teacher_state_sha256=teacher.get("state"), teacher_score_kind=teacher.get("scoring_kind"),
+                     curriculum_policy_sha256=curriculum.get("policy_hash"), curriculum_pacing_seed=curriculum.get("pacing", {}).get("seed"),
                      teacher_evidence_sha256=teacher.get("evidence", {}).get("sha256"), teacher_scope=teacher.get("scope"),
                      teacher_seconds=teacher.get("seconds"), teacher_forward_calls=teacher.get("forwards"),
                      teacher_label_accesses=teacher.get("label_accesses"), raw_support_visits=exposure.get("raw_support_visits"),

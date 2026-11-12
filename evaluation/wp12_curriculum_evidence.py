@@ -104,6 +104,7 @@ def adapt(spec):
         raise ValueError("Frozen teacher scoring or K5/V5 release identity differs")
     teacher_cost = dict(scope="one_shared_frozen_teacher_devtrain_support", producer=origin["producer_commit"],
                         state=teacher["teacher_state"], evidence=reg["teacher"], semantic_hash=teacher["score_hash"],
+                        scoring_commit=reg["commit"], scoring_kind=teacher["score_kind"],
                         forwards=teacher["forward_tiles"], label_accesses=len(support), seconds=teacher["seconds"],
                         independent_forwards=audit["teacher_independent_forwards"])
     common = dict(scene="xuzhou", data_protocol=reg["protocol"], model_seed=reg["model_seed"], train_labels=len(support),
@@ -133,6 +134,8 @@ def adapt(spec):
         if guards != audit["guards"][name]:
             raise ValueError("Recorded curriculum per-head protection differs")
         e = exposure_totals(item["exposure"], item["history"], support)
+        if e["minimum_applied_weight"] != item["exposure"]["minimum_applied_weight"]:
+            raise ValueError("Recorded minimum applied curriculum weight differs")
         training = dict(scope="sum_registered_stage_update_loop", updates=item["updates"],
                         update_loop_seconds=sum(v["update_loop_seconds"] for v in item["stages"].values()),
                         preparation_seconds=sum(v["restore_or_prepare_seconds"] for v in item["stages"].values()),
@@ -150,7 +153,8 @@ def adapt(spec):
                              item[p]["metrics"], classes, FULL_HEADS, matrix_key="confusion_matrix")) for p in ("initial", "last")},
                          protection=guards["selected"], initial_protection=guards["initial"], last_protection=guards["last"],
                          teacher=teacher_cost, curriculum=dict(policy_hash=item["policy_hash"], pacing=reg["pacing"]),
-                         exposure=dict(**e, by_support=item["exposure"]["by_support"], by_class=item["exposure"]["by_class"]),
+                         exposure=dict(**e, by_support=item["exposure"]["by_support"], by_class=item["exposure"]["by_class"],
+                                       maximum_class_mass_roundoff=item["exposure"]["maximum_class_mass_roundoff"]),
                          training_cost=training, support_review=spec["mechanism"], cost=no_cost))
     return rows, dict(producer=reg["commit"], registration=spec["registration"], independent_audit=spec["audit"],
                       cases=len(cases), recovery_seeds=reg["seeds"], source_model_seed=reg["model_seed"], budget=reg["budget"],
