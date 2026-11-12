@@ -6,10 +6,10 @@ from model.research_config import digest
 from research_runtime import tensor_hash
 from transfer.graph_route_context import _context,route_state_hash
 from loadData.spatial_tiles import observe_tile
-from evaluation.block_input_diagnostics import _value,_probe,input_gradients
+from .block_input_diagnostics import DEFAULT_SPECTRAL_CAP,XUZHOU_SPECTRAL_CAP,_value,_probe,input_gradients
 
 
-def _bind(run,*,tile_id,target_ids,class_id,sources,epsilon):
+def _bind(run,*,tile_id,target_ids,class_id,sources,epsilon,spectral_cap=DEFAULT_SPECTRAL_CAP):
     context=_context(run.scene,run.record,tile_id)  # Query rejected before prediction.
     obs=observe_tile(run.scene.cube,run.scene.plan,run.scene.stats,run.scene.plan['tiles'][tile_id])
     ids=obs.global_ids.ravel().tolist();bands=obs.spectral.shape[-1]
@@ -22,18 +22,27 @@ def _bind(run,*,tile_id,target_ids,class_id,sources,epsilon):
         raise ValueError('Finite normalized-spectrum epsilon in [1e-5,.1] required')
     if not isinstance(target_ids,list) or not 1<=len(target_ids)<=16:
         raise ValueError('One to16 explicit target pixels required')
-    base,model,obs,x=_value(run,tile_id,target_ids,class_id,[{'kind':'identity'}])
+    if spectral_cap!=DEFAULT_SPECTRAL_CAP and (spectral_cap!=XUZHOU_SPECTRAL_CAP or run.scene.dataset!='xuzhou'):
+        raise ValueError('Only the explicit Xuzhou spectral bound is supported')
+    base,model,obs,x=_value(run,tile_id,target_ids,class_id,[{'kind':'identity'}],spectral_cap=spectral_cap)
     if base['context']!=context:raise ValueError('Context changed while binding signal')
     v={'version':1,'base':base,'sources':deepcopy(sources),'epsilon':epsilon,
        'coordinate_policy':'fixed coordinates; physical-band perturbations in training-minmax units, unclipped',
        'route_policy':'native input-dependent Q/A/routing; report changes, do not freeze or replace supports'}
+    if spectral_cap!=DEFAULT_SPECTRAL_CAP:
+        v.update(version=2,spectral_cap=spectral_cap)
     v['plan_hash']=digest(v);return v,model,obs,x
 
 
 class SelectedSignalPlan:
     def __init__(self,value,*,expected_hash):
-        if (not isinstance(value,dict) or set(value)!={'version','base','sources','epsilon','coordinate_policy','route_policy','plan_hash'}
-                or value['version']!=1 or value['plan_hash']!=expected_hash
+        fields={'version','base','sources','epsilon','coordinate_policy','route_policy','plan_hash'}
+        if (isinstance(value,dict) and value.get('version')==2 and type(value.get('spectral_cap')) is int
+                and value['spectral_cap']==XUZHOU_SPECTRAL_CAP):
+            fields.add('spectral_cap')
+        elif not isinstance(value,dict) or value.get('version')!=1:
+            raise ValueError('Selected signal plan identity differs')
+        if (set(value)!=fields or value['plan_hash']!=expected_hash
                 or digest({k:v for k,v in value.items() if k!='plan_hash'})!=expected_hash):
             raise ValueError('Selected signal plan identity differs')
         self._value=deepcopy(value);self.plan_hash=expected_hash
@@ -46,15 +55,16 @@ class SelectedSignalPlan:
 def review_selected_signals(run,plan,*,expected_plan_hash):
     if not isinstance(plan,SelectedSignalPlan):raise ValueError('Frozen SelectedSignalPlan required')
     v=SelectedSignalPlan(plan.to_dict(),expected_hash=expected_plan_hash).to_dict();base=v['base']
+    cap=v.get('spectral_cap',DEFAULT_SPECTRAL_CAP)
     fresh,model,obs,x=_bind(run,tile_id=base['context']['tile_id'],target_ids=base['target_ids'],
-        class_id=base['class_id'],sources=v['sources'],epsilon=v['epsilon'])
+        class_id=base['class_id'],sources=v['sources'],epsilon=v['epsilon'],spectral_cap=cap)
     if fresh!=v:raise ValueError('Selected model/data/role/source/request changed')
     before=route_state_hash(model);ids=obs.global_ids.ravel().tolist();target_indices=[ids.index(i) for i in base['target_ids']]
     tid=base['context']['tile_id'];captured=[]
     def forward(value):
         probabilities,support=_probe(run,model,tid,value,base['normalized_spectrum_hash'])
         captured.append(support);return probabilities
-    baseline=input_gradients(forward,x,pixel_indices=target_indices,class_id=base['class_id']);support=captured[0]
+    baseline=input_gradients(forward,x,pixel_indices=target_indices,class_id=base['class_id'],spectral_cap=cap);support=captured[0]
     rows=[];class_index=base['class_id']-1
     with torch.random.fork_rng(devices=[]),torch.no_grad():
         direct=run._predict(model,run.scene.plan['tiles'][tid],0)
