@@ -116,7 +116,7 @@ class StreamRegistration:
         provenance = parse_json(read_pin(reg['provenance']))
         fields_are(provenance, 'kind source producer_commit exporter_commit origin_hash '
                                'selected_step class_ids bands_hash observations baseline_hashes')
-        if provenance['kind'] not in ('synthetic', 'e4b_pavia_development'):
+        if provenance['kind'] not in ('synthetic', 'e4b_pavia_development', 'registered_development'):
             raise ValueError('Unsupported source provenance')
         for name in ('producer_commit', 'exporter_commit'):
             require_hash(provenance[name], 40)
@@ -134,8 +134,10 @@ class StreamRegistration:
                 or type(settings['lr']) not in (int, float) or not math.isfinite(settings['lr'])
                 or settings['lr'] <= 0):
             raise ValueError('Invalid registered TTA settings')
+        if not isinstance(reg['class_ids'], list):
+            raise ValueError('Explicit ordered head classes required')
         ids = class_order(reg['class_ids'])
-        if (min(ids) < 1 or metadata['class_counts'].get(task) != len(ids)
+        if (metadata['class_counts'].get(task) != len(ids)
                 or provenance['class_ids'] != reg['class_ids']):
             raise ValueError('Head class order differs from provenance')
         fields_are(reg['bands'], ' '.join(field.name for field in fields(BandMetadata)))

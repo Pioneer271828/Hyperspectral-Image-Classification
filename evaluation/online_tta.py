@@ -62,6 +62,8 @@ def _frozen_run(item):
 
 
 def _labels(pin, reg):
+    if reg.provenance['kind'] == 'e4b_pavia_development':
+        raise ValueError('The historical E4b observation release carries no scoring authorization')
     release = parse_json(read_pin(pin))
     fields_are(release, 'kind population class_ids release_receipt_sha256 training_class_counts frames')
     require_hash(release['release_receipt_sha256'])
@@ -166,7 +168,8 @@ def score(plan):
         result[f'{mode}/{reset}/{order}'] = dict(metrics=metrics,
             versus_frozen=_paired(metrics, online[('frozen', reset, order)], small),
             versus_original_order=_paired(metrics, online[(mode, reset, 'original')], small))
-    return dict(version=1, population=reference[0], label_scope='development', small_classes=small,
+    scope = next(iter(runs.values()))[0].provenance['kind']
+    return dict(version=1, population=reference[0], label_scope=scope, small_classes=small,
                 online_pre_update=result, zero_update_anchor_replay=forgetting)
 
 
