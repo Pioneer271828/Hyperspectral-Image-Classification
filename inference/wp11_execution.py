@@ -9,12 +9,12 @@ import torch
 
 from evaluation.wp11_confirmation import admit, load_held_aside_tiles
 from evaluation.wp11_model_pair import LIGHT_PINS, MODEL_FILES, forbid_aliases, load_pair
-from evaluation.wp11_static_cost import PATHS, elapsed_ms, environment, load_static, output_hashes, prepare_requests, scan
+from evaluation.wp11_static_cost import PATHS, elapsed_ms, environment, load_static, output_hashes, prepare_requests, probability_hash, scan
 from inference import tile_cascade
 from inference.route_controls import _output_hash, random_cascade, request_hash
 from inference.trained_light import trained_cascade
 from model.research_config import digest
-from research_runtime import tensor_hash, write_json
+from research_runtime import write_json
 from scripts.prepare_wp11_confirmation import resolve_confirmation
 from transfer.g3_training import state_hash
 from transfer.observation_policy import scene_identity
@@ -53,17 +53,18 @@ def release_context(pin):
     return release, original, scope, scene, record, full, light, history, [*metadata, *files, *models]
 
 
-def verify_cost(pin, release_pin, release, input_hash):
+def verify_cost(pin, release_pin, release, input_hash, light_state):
     cost = read(pin)
     if (cost["status"] != "passed" or cost["release"] != release_pin or cost["input_hash"] != input_hash
-            or cost["commit"] != release["commit"] or cost["scope"] != "existing_devval_image_only"
+            or cost["scope"] != "existing_devval_image_only"
             or cost["environment"] != environment() or cost["query"] != 0 or cost["optimizer_updates"] != 0
             or set(cost["summary"]) != set(PATHS)):
         raise ValueError("Existing cost evidence is for different code, models, inputs or timing")
     if (cost["summary"]["full_source"]["weights"] != release["source_state"]
-            or cost["summary"]["full_matched"]["weights"] != release["full_state"]):
+            or cost["summary"]["full_matched"]["weights"] != release["full_state"]
+            or cost["summary"]["light"]["weights"] != light_state):
         raise ValueError("Existing cost evidence uses a different frozen model")
-    return dict(file=pin, scope=cost["environment"]["scope"], blocks=cost["blocks"],
+    return dict(file=pin, measured_commit=cost["commit"], scope=cost["environment"]["scope"], blocks=cost["blocks"],
                 pixels=cost["pixels"], repeats=len(cost["resident"]),
                 startup_repeats={k: len(v) for k, v in cost["startup"].items()})
 
@@ -127,7 +128,7 @@ def build(request, code, out):
     static_hash = request_hash(static)
     cost = None
     if spec["static_cost"] is not None:
-        cost = verify_cost(spec["static_cost"], release_pin, release, static_hash)
+        cost = verify_cost(spec["static_cost"], release_pin, release, static_hash, state_hash(light.model))
         pins.append(spec["static_cost"])
     routing = None
     if spec["confirmed_routes"] is not None:
@@ -254,13 +255,13 @@ def execute(pin, code, mode, out):
                       accepted_tiles=len(requests) if mode == "light" else 0, total_tiles=len(requests))
     else:
         output = dict(routed=_output_hash(result),
-                      probabilities=tensor_hash([item["probabilities"] for item in result["outputs"]]))
+                      probabilities=probability_hash([item["probabilities"] for item in result["outputs"]]))
         counts = result["counts"]
     sync_ms = elapsed_ms(sync_begin)
     total_ms = elapsed_ms(begin)
     if mode == "all_fallback":
         reference = scan(full, "full_matched", requests)
-        if output["probabilities"] != tensor_hash([row[0] for row in reference]):
+        if output["probabilities"] != probability_hash([row[0] for row in reference]):
             raise ValueError("Full fallback output differs from the static full route")
     if stats["graph_calls"] != counts["full_calls"] or request_hash(requests) != identity:
         raise ValueError("Graph executions or registered input changed")
