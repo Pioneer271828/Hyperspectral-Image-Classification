@@ -28,7 +28,7 @@ def spatial_fixture(classes=9):
     _, prior, _ = fixture()
     plan = make_tile_plan((84, 84), 28, 1, 2026)
     labels = np.resize(np.arange(1, classes+1), (84, 84))
-    record = make_development(labels, plan, list(range(1, classes+1)), train_per_class=5)
+    record = make_development(labels, plan, list(range(1, classes+1)))
     cube = np.random.default_rng(12).normal(size=(84, 84, 8)).astype(np.float32)
     scene = prepare_scene(cube, prior.bands, plan, record)
     torch.manual_seed(64)
@@ -92,6 +92,14 @@ class XuzhouRegionMessageTests(unittest.TestCase):
                 torch.testing.assert_close(actual, wide)
                 for a, b in zip(actual_grad, torch.autograd.grad(wide.square().sum(), inputs), strict=True):
                     torch.testing.assert_close(a, b)
+        dense = identity_attention("dense", chunk=16)
+        route = identity_attention("route", top_k=20, chunk=16)
+        d, r = [layer(target, source, positions, valid) for layer in (dense, route)]
+        torch.testing.assert_close(d, r)
+        gd = torch.autograd.grad(d.square().sum(), (target, source, *dense.parameters()))
+        gr = torch.autograd.grad(r.square().sum(), (target, source, *route.parameters()))
+        for a, b in zip(gd, gr, strict=True):
+            torch.testing.assert_close(a, b)
 
     def test_equal_scores_masked_and_invalid_inputs(self):
         layer = identity_attention("route", top_k=2)
