@@ -15,6 +15,7 @@ import torch
 from evaluation.wp11_confirmation import build_requests, confirmation_environment
 from inference.route_controls import request_hash
 from inference.trained_light import load_trained_light
+from model.research_config import digest
 from research_runtime import ROOT, tensor_hash, write_json
 from transfer.g3_training import state_hash
 from transfer.registered_development import _load_source, _read, load_development
@@ -91,9 +92,14 @@ def scan(model, path, requests):
     return result
 
 
+def probability_hash(tensors):
+    """Preserve block order and shapes, including different-sized edge blocks."""
+    return digest([tensor_hash(value) for value in tensors])
+
+
 def output_hashes(path, outputs):
     names = ("light",) if path == "light" else HEADS
-    return {name: tensor_hash([p[i] for p in outputs]) for i, name in enumerate(names)}
+    return {name: probability_hash([p[i] for p in outputs]) for i, name in enumerate(names)}
 
 
 def measure(model, path, requests):
