@@ -297,7 +297,7 @@ def adapt_wp11(spec):
 
 
 def build(spec):
-    if not {"wp10", "wp11"} <= set(spec) <= {"wp10", "wp11", "low_rank", "curriculum"}:
+    if not {"wp10", "wp11"} <= set(spec) <= {"wp10", "wp11", "low_rank", "curriculum", "observation", "factorial"}:
         raise ValueError("Exact WP10 and WP11 evidence references required")
     rows, comparison = adapt_wp10(spec["wp10"])
     if "blocked_source" in spec["wp11"]:
@@ -321,6 +321,14 @@ def build(spec):
         added, summary = adapt(spec["curriculum"])
         rows.extend(added)
         supplements["curriculum"] = summary
+    if "observation" in spec or "factorial" in spec:
+        from evaluation.wp12_observation_evidence import adapt, synthetic
+
+        if "observation" in spec:
+            added, supplements["observation"] = adapt(spec["observation"])
+            rows.extend(added)
+        if "factorial" in spec:
+            supplements["factorial"] = synthetic(spec["factorial"])
     return dict(policy=POLICY, status="production_development_evidence", rows=rows, wp10_comparison=comparison,
                 wp11_independent=wp11, gpu=missing("NOT_RUN", "The supplied evidence measures CPU only"),
                 cross_protocol_benefit=missing("NOT_RUN", "WP10 K5/V5 and WP11 K10/V5 use distinct training evidence"),
@@ -344,12 +352,16 @@ def write_table(out, report):
               "effective_support_mass", "minimum_applied_weight", "training_scope", "update_loop_seconds",
               "training_label_accesses", "stage_v5_label_accesses", "support_review_sha256",
               "exposure_scope", "selected_exposure_step", "selected_exposure_sha256", "selected_raw_support_visits",
-              "selected_effective_support_mass")
+              "selected_effective_support_mass", "observation_protocol", "primary_observation_condition",
+              "observation_policy_sha256", "train_band_exposures", "train_pixel_band_exposures",
+              "training_v5_events", "restore_v5_events", "training_v5_forwards", "restore_v5_forwards")
     with (out / "production-table.csv").open("x", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for row in report["rows"]:
             cost, identity = row["cost"], row["identity"]
+            observation = row.get("observation_protocol", {})
+            bands = row.get("observation_exposure", {})
             selected_mass = row.get("endpoint_supervision", {}).get("selected", {})
             teacher, exposure, training, curriculum = (row.get(k, {}) for k in ("teacher", "exposure", "training_cost", "curriculum"))
 
@@ -377,6 +389,10 @@ def write_table(out, report):
                      selected_exposure_sha256=selected_mass.get("history_sha256"),
                      selected_raw_support_visits=sum(v["raw"] for v in selected_mass["exposure"].values()) if selected_mass else None,
                      selected_effective_support_mass=math.fsum(v["effective"] for v in selected_mass["exposure"].values()) if selected_mass else None,
+                     observation_protocol=observation.get("scope"), primary_observation_condition=observation.get("primary_condition"),
+                     observation_policy_sha256=observation.get("policy_hash"),
+                     train_band_exposures=bands.get("train_band_exposures"), train_pixel_band_exposures=bands.get("train_pixel_band_exposures"),
+                     **{key: training.get(key) for key in ("training_v5_events", "restore_v5_events", "training_v5_forwards", "restore_v5_forwards")},
                      data_protocol=identity["data_protocol"], model_seed=identity["model_seed"],
                      sampler_seed=identity["sampler_seed"], state_sha256=row["state"], package_sha256=row["package"],
                      split_sha256=digest(identity["split"]), support_sha256=identity["support_sha256"],
@@ -395,3 +411,8 @@ def write_table(out, report):
                      first_p50_ms=quantile("first_ms", "p50"), first_p95_ms=quantile("first_ms", "p95"),
                      end_to_end_p50_ms=quantile("end_to_end_ms", "p50"), end_to_end_p95_ms=quantile("end_to_end_ms", "p95"),
                      peak_rss_p50_kib=quantile("peak_rss_kib", "p50"), peak_rss_p95_kib=quantile("peak_rss_kib", "p95")))
+
+    if "observation" in report:
+        from evaluation.wp12_observation_evidence import write_conditions
+
+        write_conditions(out, report["rows"])
