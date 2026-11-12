@@ -36,7 +36,7 @@ HISTORICAL = {
     "honghu": ("wp05-honghu-guarded-short01/registration.json",
                "67fc5cf386960172d8d7c4b925efdcb12cf79b81a6004616ac2faa049429ec13"),
     "honghu_split": ("wp05-honghu-guarded-short01/registration-split.json",
-                     "b339a1c471061a08085c92c5bbf494165994bb0eae1fe0ce6a4a9d9073b3bc"),
+                     "b339a1c471061a08085c92c5bbf494165994bb0eae1fe0ce6a4a9a7d9073b3bc"),
     "honghu_acceptance": ("wp05-honghu-guarded-independent02/receipt.json",
                           "80063151738651736512b47a66ef907f2bb22fb80376fea1023ea5c81505aa72"),
     "wp12": ("wp12-controlled-support-reviewed01/controlled-supplement.json",
