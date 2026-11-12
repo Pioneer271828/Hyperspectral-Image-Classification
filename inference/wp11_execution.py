@@ -111,7 +111,9 @@ def confirmed_routes(spec, release_pin, full, light, scene, record, history):
         raise ValueError("Confirmed runtime requests, random control or threshold differ")
     value = dict(admission=digest(admission), protocol=digest(gate), freeze=digest(frozen),
                  input_hash=request_hash(requests), options=result["inference_kwargs"],
-                 random_hash=timing["random_plan_hash"], random=timing["random_plan"])
+                 random_hash=timing["random_plan_hash"], random=timing["random_plan"],
+                 existing_resident_receipt=spec["receipt"], resident_scope=timing["scope"],
+                 resident_repeats=timing["pairs"])
     return value, requests, [*inputs, *resolved["pins"]]
 
 
