@@ -43,8 +43,7 @@ def _case_package(registered, audited, case):
     return package
 
 
-def freeze(request_pin, code, out):
-    require_frozen_code(code)
+def _campaign(request_pin):
     request = admission.read(request_pin)
     if set(request) != {"kind", "registration", "audit"} or request["kind"] != KIND:
         raise ValueError("Exact low-rank deployment request required")
@@ -56,6 +55,24 @@ def freeze(request_pin, code, out):
             or audited["registration"] != request["registration"] or audited["actual_updates"] != registration["maximum_updates"]
             or any(audited[key] != 0 for key in ("query", "gt", "independent_updates"))):
         raise ValueError("Frozen low-rank registration and successful independent audit required")
+    return request, registration, audited
+
+
+def _selected_cases(registration, audited):
+    cases = {}
+    for case in registration["cases"]:
+        name = case["case"]
+        cases[name] = dict(case=case, package=_case_package(registration, audited, case),
+                           initial=registration["initial"][name]["evidence"],
+                           selected_step=audited["report"][name]["selected"]["step"])
+    if not cases:
+        raise ValueError("No registered case covered all support")
+    return cases
+
+
+def freeze(request_pin, code, out):
+    require_frozen_code(code)
+    request, registration, audited = _campaign(request_pin)
     producer = registration["commit"]
     subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", producer, code["commit"]], check=True)
     changed = subprocess.check_output(["git", "-C", str(ROOT), "diff", "--name-only", producer, code["commit"],
@@ -65,20 +82,14 @@ def freeze(request_pin, code, out):
     spec, _, scene, _, _ = _design(registration["request"])
     if any(registration[k] != value for k, value in spec.items()):
         raise ValueError("Frozen scope, rank, observation or exposure design differs")
-    cases = {}
+    cases = _selected_cases(registration, audited)
     pins = [request_pin, request["registration"], request["audit"], *registration["protected"].values()]
-    for case in registration["cases"]:
-        name = case["case"]
-        initial = registration["initial"][name]["evidence"]
-        package = _case_package(registration, audited, case)
-        model = load_package(package, initial=initial, case=case)
-        if state_hash(model) != package["state"]:
+    for entry in cases.values():
+        package_pin = entry["package"]
+        model = package(entry)
+        if state_hash(model) != package_pin["state"]:
             raise ValueError("Low-rank package differs from the independent endpoint")
-        cases[name] = dict(case=case, package=package, initial=initial,
-                           selected_step=audited["report"][name]["selected"]["step"])
-        pins.extend(package[k] for k in ("weights", "sidecar"))
-    if not cases:
-        raise ValueError("No registered case covered all support")
+        pins.extend(package_pin[k] for k in ("weights", "sidecar"))
     out = external_directory(out)
     if out.exists() or any(out == Path(pin["path"]).resolve() or out in Path(pin["path"]).resolve().parents
                            for pin in pins):
@@ -112,6 +123,16 @@ def load_manifest(pin, code):
             or reg["resident_inputs"]["path"] != str(Path(pin["path"]).parent / "resident-inputs.pt")
             or any(reg[k] != 0 for k in ("query", "gt", "optimizer_updates"))):
         raise ValueError("Low-rank manifest code, timing, path or source identity differs")
+    request, registration, audited = _campaign(reg["request"])
+    if (any(reg[k] != request[k] for k in ("registration", "audit"))
+            or reg["producer_commit"] != registration["commit"]
+            or reg["case_order"] != [c["case"] for c in registration["cases"]]
+            or reg["cases"] != _selected_cases(registration, audited)
+            or reg["class_ids"] != registration["validation"]["class_ids"]
+            or [row["tile_id"] for row in reg["tiles"]] != [v["id"] for v in registration["validation"]["tiles"]]
+            or reg["default"] != "original_full_fp32" or reg["selection"] != registration["selection"]
+            or reg["budget"] != registration["budget"]):
+        raise ValueError("Frozen manifest differs from its audited recovery case or source")
     rows = torch.load(io.BytesIO(dev._read(reg["resident_inputs"])), map_location="cpu", weights_only=True)
     if any(set(row) != {"tile_id", "image", "wavelengths"} for row in rows):
         raise ValueError("Registered image-only input required")

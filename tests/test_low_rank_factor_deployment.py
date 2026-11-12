@@ -166,5 +166,12 @@ class LowRankDeploymentTests(unittest.TestCase):
         output = admission.read(dev._pin(path/"inference/execution.json"))
         self.assertEqual(output["factor_calls"], dict(right=len(reg["tiles"]), left=len(reg["tiles"])))
         self.assertEqual(output["output_hashes"], frozen.startup(pin, code, name)["output_hashes"])
+        selected = reg["cases"][name]
+        changed = dict(reg, cases=dict(reg["cases"], **{
+            name: dict(selected, package=reg["cases"]["s64-dense"]["package"])
+        }))
+        forged = path / "manifest" / "forged.json"
+        with self.assertRaisesRegex(ValueError, "audited recovery case or source"):
+            frozen.execute(dev._json_new(forged, changed), code, name, path/"wrong-source")
         with self.assertRaisesRegex(ValueError, "registered low-rank"):
             frozen.execute(pin, code, "adaptive", path/"denied")
