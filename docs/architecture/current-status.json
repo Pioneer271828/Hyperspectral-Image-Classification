@@ -1193,7 +1193,7 @@
       "evidence": "Issue421/PR423，实测 a4ec7c4dc14811b5b536fa0970ee2fcc6a16711c。9/22各六路，专项2/2。自适应与随机各轻3、回退1。真实3920像素三静态加全回退，轻建图0，完整各5，输出哈希与A包成本一致，真实adaptive/random拒绝。",
       "remaining": "真实动态待12/13块各自可信托管和冻结独立确认。共享CPU的单次诊断与原重复成本各保留范围，GPU待测，保留FP32完整默认",
       "report": "research/reports/WP11_冻结模型统一执行与成本接入_20261112.md",
-      "chat_report": "本轮待主审。混合块哈希与测试夹具失败保留，修复后沿原冻结模型验收"
+      "chat_report": "主审接受统一静态与全回退真实范围和合成动态。真实自适应、独立确认与GPU待验。Issue421按工程范围完成，PR423 ready、未合并"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
