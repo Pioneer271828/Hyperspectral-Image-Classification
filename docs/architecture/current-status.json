@@ -1310,10 +1310,10 @@
     {
       "id": "WP02 真实开发块认证与 WP05/WP07/WP08/WP12 原生零更新接入",
       "state": "Xuzhou/HongHu 认证发布、零更新和精确重放通过，PaviaU 固定空间验证缺可寻址块",
-      "evidence": "Issue451/PR452，tested 2559bc63b3527ef0f67de6e85e42442e11cf9047。真实4块8视图64首发前向，另64固定重放和64中断恢复逐项相同，Xuzhou历史42个头哈希及两块图一致。11专项与47相关回归全过，WP12旧10表按原哈希，新训练模型和优化/rawGT/query/新标签均0",
+      "evidence": "Issue451/PR452，整改tested d444f4beb0ab84146a1355d0d7d870392b46cf17。恢复历史WP07源文件原blob，旧课程4子例修复前拒绝、后通过，12专项与50相关回归无跳过。4真实块8视图168头哈希与初版逐项一致，原Xuzhou42头及完整raw-only图回执一致。WP12旧10表通过，真实优化/rawGT/query/新标签均0",
       "remaining": "PaviaU DEVVAL_BOUNDED_ARRAY_NOT_PUBLISHED。真实机制收益、独立空间和GPU待验。WP05双卡未达标，2400待资格、180000暂停；WP04暂缓，WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP07_WP08_WP12_真实开发块认证与零更新接入_20261113.md",
-      "chat_report": "两真实场景与独立9/22类工程夹具通过，主审待验。受控干预Issue449收尾仅澄清历史口径"
+      "chat_report": "两真实场景与独立9/22类工程夹具通过。主审发现的历史兼容、预选绑定和恢复读取顺序均已远程复验，待复审"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
