@@ -18,7 +18,7 @@ from research_runtime import write_json
 from scripts.prepare_wp11_confirmation import resolve_confirmation
 from transfer.g3_training import state_hash
 from transfer.observation_policy import scene_identity
-from transfer.registered_development import load_development
+from transfer.registered_development import _pin, load_development
 from transfer.registered_wp11_learning import REAL, RELEASE, read, verify
 
 
@@ -183,7 +183,7 @@ def instrumentation(stack, full, stats):
     stack.enter_context(patch.object(tile_cascade, "gate_score", new=timed(tile_cascade.gate_score, "gate")))
 
 
-def execute(pin, code, mode, out):
+def execute(pin, code, mode, out, *, export=False):
     manifest = read(pin)
     if (manifest["policy"] != POLICY or manifest["commit"] != code["commit"] or manifest["source_hash"] != code["source_hash"]
             or manifest["timing"] != environment() or mode not in MODES or out.exists()):
@@ -195,6 +195,15 @@ def execute(pin, code, mode, out):
     if manifest["release"] != request["release"]:
         raise ValueError("Execution model manifest was substituted")
     release, _, scope, pins = release_metadata(manifest["release"])
+    archived = manifest["archived_cost"]
+    if (archived is None) != (request["static_cost"] is None):
+        raise ValueError("Archived static measurement is absent from its request or manifest")
+    if archived is not None:
+        cost = verify_cost(request["static_cost"], manifest["release"], release,
+                           manifest["static_input"], manifest["models"]["light"]["state"])
+        if cost != archived:
+            raise ValueError("Archived timing evidence differs from its manifest")
+        pins.append(request["static_cost"])
     ready_ms = elapsed_ms(begin)
     setup = perf_counter_ns()
     scene, record, dev_files = load_development(release["development"])
@@ -267,6 +276,7 @@ def execute(pin, code, mode, out):
         raise ValueError("Graph executions or registered input changed")
     verify([pin, manifest["request"], *pins], code, out)
     out.mkdir()
+    result_rows = result
     result = dict(status="passed", policy=POLICY, commit=code["commit"], manifest=pin, mode=mode,
                   scope=scope, input_hash=identity, output_hashes=output, counts=counts, instrumentation=stats,
                   blocks=len(requests), pixels=sum(int(r["x"].shape[0] * r["x"].shape[1]) for r in requests),
@@ -280,6 +290,19 @@ def execute(pin, code, mode, out):
                   environment=manifest["timing"], archived_cost=manifest["archived_cost"],
                   peak_rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
                   original_gt_read=False, query=0, optimizer_updates=0)
+    if export:
+        start_write = perf_counter_ns()
+        if mode in PATHS:
+            heads = manifest["models"][mode]["heads"]
+            predictions = [dict(id=req["id"], probabilities=dict(zip(heads, row, strict=True)))
+                           for req, row in zip(requests, result_rows, strict=True)]
+        else:
+            predictions = [dict(id=row["id"], route=row["route"], probabilities=row["probabilities"])
+                           for row in result_rows["outputs"]]
+        path = out / "predictions.pt"
+        torch.save(dict(input_hash=identity, mode=mode, rows=predictions), path)
+        result["prediction_package"] = _pin(path)
+        result["timing"]["prediction_write_ms"] = elapsed_ms(start_write)
     write_json(out / "execution.json", result)
     return result
 
