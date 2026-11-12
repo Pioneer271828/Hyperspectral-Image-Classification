@@ -142,7 +142,7 @@ def _low_rank_arms(models, dataset, expected):
         paths = [] if plan is None else list(plan["ranks"])
         if (arm == "dense") != (plan is None) or any(type(model.get_submodule(path)) is not LowRankMatrix for path in paths):
             raise ValueError("Expected actual factor execution with the registered topology")
-        details[arm] = dict(state_sha256=_state_identity(model), precision_paths=paths,
+        details[arm] = dict(state_sha256=identity["state"], precision_paths=paths,
                             parameter_count=sum(p.numel() for p in model.parameters()))
         if details[arm]["parameter_count"] != identity["parameters"]:
             raise ValueError("Low-rank parameter count differs")
@@ -190,6 +190,7 @@ def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, r
             result.append({head: tensor_hash(value) for head, value in zip(HEADS, values, strict=True)})
         return result
 
+    identity = _state_identity if low_rank is None else state_hash
     samples = []
     with torch.inference_mode():
         before = {arm: validate_outputs(model) for arm, model in models.items()}
@@ -213,7 +214,7 @@ def benchmark_precision_cost(models, tiles, dataset, *, warmups=3, repeats=12, r
             samples.append({'order': list(order), 'timings': sweep})
         after = {arm: validate_outputs(model) for arm, model in models.items()}
     if before != after or _tile_identity(tiles) != inputs or any(
-        _state_identity(model) != details[arm]['state_sha256'] for arm, model in models.items()
+        identity(model) != details[arm]['state_sha256'] for arm, model in models.items()
     ):
         raise RuntimeError('Frozen precision cost states, inputs or outputs changed')
     summary = {}

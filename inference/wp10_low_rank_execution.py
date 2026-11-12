@@ -147,7 +147,10 @@ def _outputs(values, reg):
 
 
 def package(entry):
-    return load_package(entry["package"], initial=entry["initial"], case=entry["case"])
+    model = load_package(entry["package"], initial=entry["initial"], case=entry["case"])
+    # The native factor checkpoint restores tensors, while cache policy belongs to deployment.
+    model.backbone.adapter.cache_attention = False
+    return model
 
 
 def startup(pin, code, name):
