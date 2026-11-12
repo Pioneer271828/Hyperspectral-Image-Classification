@@ -1201,7 +1201,7 @@
       "evidence": "Issue422/PR424，来源修订实测 d53fb7236a4f4bc5619b9ad1c0d6c31fd2d3fd96。11模型31头279逐类记录144计时/RSS样本，独审7拒绝和来源逐项核对。WP08及WP11原完整源生产、恢复、发布分列。质量与成本沿用原实测；修订回执 96e4e3624f370a755fbce53f546deee3d974ca0605f3a40ef0f2695efab31f3b。",
       "remaining": "仅真实开发证据适配。真实独立确认BLOCKED，GPU NOT_RUN，冻结54硬件成本和完整WP12研究待后续。保留两协议预算、角色和计时边界",
       "report": "research/reports/WP12_WP10与WP11真实生产证据适配_20261112.md",
-      "chat_report": "本轮待主审。历史汇总CLI依赖补齐，旧失败与最终真实表、独立回执均归档"
+      "chat_report": "主审接受本轮来源修订和独立复算。Issue422完成，PR424可审阅。独立确认与GPU保留待验"
     }
     ,{
       "id": "WP10 Xuzhou 首层低秩秩阶梯与三组等预算恢复",
@@ -1209,7 +1209,7 @@
       "evidence": "Issue425/PR428，实际运行 01b99515156694b09c250723b89277f475700897，三种子各6臂，178步×两轨，共6,408更新，72阶段、455独审前向，完成重入0。三个种子均无三头保护通过的减参SVD。独审 0eceb1e01657acc960860969d2360d2399f9d25987e03973e802d73c99ad400b。",
       "remaining": "同一源模型、同一固定开发 V5。独立空间和 GPU 待验，完整 FP32 默认保留",
       "report": "research/reports/WP10_Xuzhou真实低秩秩阶梯与三种子恢复_20261112.md",
-      "chat_report": "本批待主审。当前证据含初始、选中与末态、全秩和随机控制、小类失败"
+      "chat_report": "主审接受同一源三组恢复和独立审计。Issue425完成，PR428可审阅"
     }
     ,{
       "id": "WP10 低秩冻结部署 CPU 实测与两因子 INT8 组合",
@@ -1217,7 +1217,7 @@
       "evidence": "Issue427/PR429，运行 2e5807e46d1c37163fbe8aed4fe54cd62eed139c。五块3920像素，9个常驻配对组，54个独立启动进程，实际因子算子和 V5 概率哈希一致。组合 9/22 类，回归56/56。成本 2d4b0618e6c5548f68ce1b3a9c3b8076ba4b2688512a8211482264f1882c2e9d。",
       "remaining": "真实组合 NOT_RUN。端到端、GPU、剪枝组合及独立确认待验，默认完整 FP32",
       "report": "research/reports/WP10_低秩部署CPU实测与两因子INT8组合_20261112.md",
-      "chat_report": "本批待主审。全秩增参控制单独计时，保留缓存及进程边界"
+      "chat_report": "主审接受真实固定CPU成本和合成两因子INT8。Issue427完成，PR429可审阅"
     }
     ,{
       "id": "WP12 真实低秩逐种子三头及 CPU 证据接入",
@@ -1225,7 +1225,15 @@
       "evidence": "Issue426/PR430，适配 050e46bc068d2fd9e6357c846d451c5f1251268c。主表30模型88头792逐类记录；新增54独立启动进程及288常驻样本。原11条完整模型记录相同，真实独立复算 a4783d0c5c16d96542a0e4b369471c43ce3c5637d0674aefabf3beb354d423e5。",
       "remaining": "固定开发证据。WP11 独立确认 BLOCKED，低秩独立空间、真实组合及 GPU NOT_RUN",
       "report": "research/reports/WP12_真实低秩三头证据与部署成本接入_20261112.md",
-      "chat_report": "本批待主审。源生产、恢复、发布、适配器各有SHA，原表与失败记录留存"
+      "chat_report": "主审接受固定开发证据接入、独立复算及计时边界。Issue426完成，PR430可审阅"
+    }
+    ,{
+      "id": "WP01 Xuzhou K5/V5 真实样本课程六臂恢复",
+      "state": "真实 18 例等预算、认证恢复和独立三头审计通过",
+      "evidence": "Issue432/PR434，实际 9e27e88e0d3631ea6d8f557b6d3127353d768f32。6408次更新，72阶段，off/balanced三组逐位一致。5个非退化个例三头保护通过，融合OA均持平。独审 ebb4eb24d7ef24542fd08e8b3ca8fa87ecba55f80fd855d8e7d7ecd90746590b。",
+      "remaining": "单源三个恢复采样与Torch RNG重复。独立空间、模型种子和GPU待验，默认off",
+      "report": "research/reports/WP01_Xuzhou_K5V5真实样本课程六臂恢复_20261112.md",
+      "chat_report": "本批待主审。冻结教师、原始和有效监督、小类保护及旧dense跨实现参考留存"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
