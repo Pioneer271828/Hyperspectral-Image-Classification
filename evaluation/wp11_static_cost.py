@@ -44,13 +44,17 @@ def read_release(pin):
     return release
 
 
-def prepare(release):
-    scene, record, _ = load_development(release["development"])
+def prepare_requests(scene, record):
     blocks = [dict(id=str(r["id"]), tile_id=r["id"]) for r in record["roles"] if r["role"] == "devval"]
     if not blocks:
         raise ValueError("Existing permitted development observations required")
     requests = build_requests(scene, blocks, 50 if scene.dataset == "paviaU" else 100)
     return requests
+
+
+def prepare(release):
+    scene, record, _ = load_development(release["development"])
+    return prepare_requests(scene, record)
 
 
 def load_static(release, path):
