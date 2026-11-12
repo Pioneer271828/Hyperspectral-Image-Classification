@@ -296,7 +296,7 @@ def adapt_wp11(spec):
 
 
 def build(spec):
-    if set(spec) != {"wp10", "wp11"}:
+    if set(spec) not in ({"wp10", "wp11"}, {"wp10", "wp11", "low_rank"}):
         raise ValueError("Exact WP10 and WP11 evidence references required")
     rows, comparison = adapt_wp10(spec["wp10"])
     if "blocked_source" in spec["wp11"]:
@@ -307,21 +307,28 @@ def build(spec):
     else:
         rows.extend(adapt_wp11(spec["wp11"]))
         wp11 = missing("BLOCKED", "Independent calibration and confirmation require both authorized custody packages")
+    low_rank = {}
+    if "low_rank" in spec:
+        from evaluation.wp12_low_rank_evidence import adapt
+
+        added, summary = adapt(spec["low_rank"])
+        rows.extend(added)
+        low_rank["low_rank"] = summary
     return dict(policy=POLICY, status="production_development_evidence", rows=rows, wp10_comparison=comparison,
                 wp11_independent=wp11, gpu=missing("NOT_RUN", "The supplied evidence measures CPU only"),
                 cross_protocol_benefit=missing("NOT_RUN", "WP10 K5/V5 and WP11 K10/V5 use distinct training evidence"),
                 synthetic="Engineering receipts are outside the real production table",
-                raw_label_reads=0, query_reads=0, optimizer_updates=0)
+                raw_label_reads=0, query_reads=0, optimizer_updates=0, **low_rank)
 
 
 def write_table(out, report):
     write_json(out / "production-evidence.json", report)
-    fields = ("module", "arm", "scene", "data_protocol", "model_seed", "sampler_seed", "state_sha256", "package_sha256",
+    fields = ("module", "arm", "case_id", "scene", "data_protocol", "model_seed", "sampler_seed", "state_sha256", "package_sha256",
               "split_sha256", "support_sha256", "evaluation_sha256", "source_producer_commit", "recovery_producer_commit",
               "release_commit", "adapter_commit", "source_evidence_sha256", "release_evidence_sha256",
-              "original_training_steps", "train_labels", "validation_labels", "role", "updates",
-              "selected_step", "precision", "head", "oa", "aa", "kappa", "macro_f1", "nll",
-              "parameters", "package_bytes", "cost_status", "device", "resident_scope",
+              "original_training_steps", "train_labels", "validation_labels", "role", "updates", "actual_optimizer_calls",
+              "selected_step", "precision", "head", "oa", "aa", "kappa", "macro_f1", "nll", "guard_passed", "small_new_errors",
+              "parameters", "package_bytes", "cost_status", "device", "resident_scope", "resident_group",
               "resident_p50_ms", "resident_p95_ms", "load_p50_ms", "load_p95_ms", "first_p50_ms", "first_p95_ms",
               "end_to_end_p50_ms", "end_to_end_p95_ms", "peak_rss_p50_kib", "peak_rss_p95_kib")
     with (out / "production-table.csv").open("x", encoding="utf-8", newline="") as f:
@@ -334,7 +341,12 @@ def write_table(out, report):
                 return cost.get(key, {}).get(fraction)
 
             for head, metrics in row["quality"].items():
-                writer.writerow(dict(module=row["module"], arm=row["arm"], scene=identity["scene"],
+                guards = row["protection"] or {}
+                guard = guards.get("heads", guards).get(head, {})
+                writer.writerow(dict(module=row["module"], arm=row["arm"], case_id=row.get("case_id", row["arm"]),
+                     scene=identity["scene"], actual_optimizer_calls=row.get("actual_optimizer_calls"),
+                     guard_passed=guard.get("passes_metric_guards"),
+                     small_new_errors=sum(guard["new_small_class_errors"].values()) if guard else None,
                      data_protocol=identity["data_protocol"], model_seed=identity["model_seed"],
                      sampler_seed=identity["sampler_seed"], state_sha256=row["state"], package_sha256=row["package"],
                      split_sha256=digest(identity["split"]), support_sha256=identity["support_sha256"],
@@ -347,7 +359,7 @@ def write_table(out, report):
                      selected_step=row["selected_step"], precision=row["precision"], head=head,
                      **{key: metrics[key] for key in ("oa", "aa", "kappa", "macro_f1", "nll")},
                      parameters=cost.get("parameters"), package_bytes=row["package_bytes"], cost_status=cost["status"],
-                     device=cost.get("device"), resident_scope=cost.get("resident_scope"),
+                     device=cost.get("device"), resident_scope=cost.get("resident_scope"), resident_group=cost.get("primary_group"),
                      resident_p50_ms=quantile("resident_ms", "p50"), resident_p95_ms=quantile("resident_ms", "p95"),
                      load_p50_ms=quantile("load_ms", "p50"), load_p95_ms=quantile("load_ms", "p95"),
                      first_p50_ms=quantile("first_ms", "p50"), first_p95_ms=quantile("first_ms", "p95"),

@@ -24,7 +24,8 @@ def main():
     out = external_directory(args.out)
     wp10_root = external_directory(spec["wp10"]["root"])
     protected = [wp10_root, Path(pin["path"]).resolve().parent,
-                 *[Path(v["path"]).resolve().parent for v in spec["wp11"].values()]]
+                 *[Path(v["path"]).resolve().parent for group in ("wp11", "low_rank")
+                   for v in spec.get(group, {}).values()]]
     if out.exists() or any(p == out or p in out.parents or out in p.parents for p in protected):
         raise ValueError("Fresh output separate from all evidence directories required")
     report = build(spec)

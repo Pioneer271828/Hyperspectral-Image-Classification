@@ -1219,6 +1219,14 @@
       "report": "research/reports/WP10_低秩部署CPU实测与两因子INT8组合_20261112.md",
       "chat_report": "主审接受真实固定CPU成本和合成两因子INT8。Issue427完成，PR429可审阅"
     }
+    ,{
+      "id": "WP12 真实低秩逐种子三头及 CPU 证据接入",
+      "state": "扩展真实 JSON/CSV 和独立证据复算通过",
+      "evidence": "Issue426/PR430，适配 050e46bc068d2fd9e6357c846d451c5f1251268c。主表30模型88头792逐类记录；新增54独立启动进程及288常驻样本。原11条完整模型记录相同，真实独立复算 a4783d0c5c16d96542a0e4b369471c43ce3c5637d0674aefabf3beb354d423e5。",
+      "remaining": "固定开发证据。WP11 独立确认 BLOCKED，低秩独立空间、真实组合及 GPU NOT_RUN",
+      "report": "research/reports/WP12_真实低秩三头证据与部署成本接入_20261112.md",
+      "chat_report": "主审接受固定开发证据接入、独立复算及计时边界。Issue426完成，PR430可审阅"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
