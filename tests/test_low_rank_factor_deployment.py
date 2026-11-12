@@ -55,7 +55,12 @@ class LowRankDeploymentTests(unittest.TestCase):
         train = [t["id"] for t in record["roles"] if t["role"] == "devtrain"][:2]
         val = next(t["id"] for t in record["roles"] if t["role"] == "devval")
         frozen_factor_state = factors.get_submodule(TARGET)
-        self.assertEqual(state_hash(with_precision(factors, scene, record)), identity)
+        disabled = with_precision(factors, scene, record)
+        self.assertEqual(state_hash(disabled), identity)
+        with torch.no_grad():
+            control = _forward(factors, scene, scene.plan["tiles"][val])
+            observed = _forward(disabled, scene, scene.plan["tiles"][val])
+        self.assertTrue(all(torch.equal(a, b) for a, b in zip(control[:3], observed[:3], strict=True)))
         with self.assertRaisesRegex(ValueError, "devtrain"):
             contract(factors, scene, record, "both", train + [val], qat=True)
         old_contract = calibration_contract(dense, scene, record, [TARGET], train)
@@ -117,6 +122,10 @@ class LowRankDeploymentTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "different upstream"):
             fallback(dense, factors, {"left": candidates["both"]}, {"left": True}, low_rank_passed=True, **kwargs)
 
+        different = deploy(with_precision(factors, scene, record, layout="left", tile_ids=train[:1], qat=True))
+        with self.assertRaisesRegex(ValueError, "same calibration scope"):
+            fallback(dense, factors, dict(candidates, left=different), {"left": True}, low_rank_passed=True, **kwargs)
+
         reg = contract(factors, scene, record, "both", train, qat=True)
         prepared = calibrate(factors, scene, record, registration=reg, expected_hash=digest(reg))
         initial_path = path / "qat-source.pt"
@@ -167,6 +176,13 @@ class LowRankDeploymentTests(unittest.TestCase):
         self.assertEqual(output["factor_calls"], dict(right=len(reg["tiles"]), left=len(reg["tiles"])))
         self.assertEqual(output["output_hashes"], frozen.startup(pin, code, name)["output_hashes"])
         selected = reg["cases"][name]
+        # The combination can start from the authenticated native recovery package.
+        case_model = frozen.package(selected)
+        spec = admission.read(dev._pin(source / "request.json"))
+        scene, record, _ = dev.load_development(spec["development"])
+        train = [t["id"] for t in record["roles"] if t["role"] == "devtrain"][:2]
+        registered = deploy(with_precision(case_model, scene, record, layout="both", tile_ids=train))
+        self.assertEqual(validate(registered)["contract"]["source_state"], selected["package"]["state"])
         changed = dict(reg, cases=dict(reg["cases"], **{
             name: dict(selected, package=reg["cases"]["s64-dense"]["package"])
         }))
