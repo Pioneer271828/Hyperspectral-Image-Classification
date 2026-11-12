@@ -1299,6 +1299,14 @@
       "report": "research/reports/WP08_WP07_WP12_原生区域支持演化与多尺度补充_20261113.md",
       "chat_report": "Issue445已completed，PR446已ready且未合并；Issue447整包保留初次完整回归日志，修复后完成受影响用例和跨进程恢复验证"
     }
+    ,{
+      "id": "WP06/WP08/WP12 度数与距离受控的原生区域支持干预",
+      "state": "冻结合成干预与等预算恢复已验，真实仅两块零更新适用性",
+      "evidence": "Issue449/PR450。6/9格合格，1,728合成更新、18臂72阶段，完成重入0。54冻态端点，60训练块匹配、36开发验证块穷举仅原图。定向17/17、集成20/20、负例5/5，七份WP12旧表字节一致",
+      "remaining": "3格在冻结约束及预算内未找到。真实Xuzhou两块无非平凡解，PaviaU/HongHu BLOCKED；真实收益、小类准入及GPU待验。WP05双卡待资格，WP11独立标签BLOCKED，WP04暂缓",
+      "report": "research/reports/WP06_WP08_WP12_度数距离受控区域支持干预与固定图恢复_20261113.md",
+      "chat_report": "沿用Issue447已审CPU工程，默认off；本包主审待验"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
