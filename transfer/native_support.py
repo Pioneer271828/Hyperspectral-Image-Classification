@@ -163,7 +163,8 @@ def _block_identity(scene, tile, observation_view):
     if observation_view.bands.fingerprint != scene.bands.fingerprint:
         raise ValueError("Preselected native bands differ from the scene")
     observed = observation_view.observation
-    return digest(dict(raw=raw, spectral=tensor_hash(observed.spectral.copy()),
+    return digest(dict(raw=raw, box=tile["box"], partition=observed.partition, plan=observed.plan_hash,
+                       statistics=scene.stats, spectral=tensor_hash(observed.spectral.copy()),
                        coordinates=tensor_hash(observed.coordinates.copy()), ids=tensor_hash(observed.global_ids.copy())))
 
 
@@ -175,9 +176,8 @@ def native_forward(model, scene, tile, *, selector=None, capture=False, detail=F
             selector.identity["bands"] != scene.bands.fingerprint or
             selector.context["block"] != str(tile["id"])):
         raise ValueError("Selector does not belong to this development block")
-    if selector is not None and observation_view is not None and (
-            selector.identity["block_input"] != _block_identity(scene, tile, observation_view)):
-        raise ValueError("Selector does not belong to this preselected observation")
+    if selector is not None and selector.identity["block_input"] != _block_identity(scene, tile, observation_view):
+        raise ValueError("Selector observation identity differs")
     if timing is None:
         timing = {}
     frame = dict(backbone=model.backbone, selector=selector, capture=capture, detail=detail, timing=timing)

@@ -151,6 +151,7 @@ def array_hash(array):
 
 
 def _publication(release, read_array):
+    identity = release.identity()
     members, payloads = [], []
     for row in release.roles:
         array = block_values(read_array(row), row, release.shape[-1])
@@ -166,18 +167,19 @@ def _publication(release, read_array):
             raise ValueError("Identical block content cannot occupy different roles")
         members.append(member)
         payloads.append((member["name"], raw))
-    metadata = (canonical_json(dict(identity=release.identity(), members=members)) + "\n").encode()
+    metadata = (canonical_json(dict(identity=identity, members=members)) + "\n").encode()
     return metadata, payloads
 
 
 def recover(path, root, release, read_array):
     """Re-derive the manifest from custody and verify the existing publication in place."""
-    metadata, _ = _publication(release, read_array)
-    pin = {"path": str(path), "manifest_sha256": transport._sha(metadata)}
-    opened = Blocks(pin, root, release)
-    for row in release.roles:
+    opened = Blocks._inspect(path, root, release)
+    metadata, _ = _publication(opened.release, read_array)
+    if transport._sha(metadata) != opened.manifest_sha256:
+        raise ValueError("Development manifest differs from the original publication")
+    for row in opened.release.roles:
         opened.read(row["id"], row["role"], row["box"])
-    return pin
+    return {"path": str(opened.path), "manifest_sha256": opened.manifest_sha256}
 
 
 def publish(path, release, read_array):
@@ -210,17 +212,31 @@ class Blocks:
     """Verify release identity and requested role before opening a single member."""
 
     def __init__(self, pin, root, release):
-        self.path = inside(pin["path"], root)
+        expected_hash = pin["manifest_sha256"]
+        if not isinstance(expected_hash, str):
+            raise ValueError("Pinned development manifest hash required")
+        self._validate(pin["path"], root, release, expected_hash)
+
+    @classmethod
+    def _inspect(cls, path, root, release):
+        opened = cls.__new__(cls)
+        opened._validate(path, root, release, None)
+        return opened
+
+    def _validate(self, path, root, release, expected_hash):
+        self.path = inside(path, root)
         self.release = release = deepcopy(release)
+        identity = release.identity()
         with ZipFile(self.path) as archive:
             info = archive.getinfo("development.json")
             if info.file_size > 1024 * 1024:
                 raise ValueError("Development manifest exceeds metadata bound")
             raw = archive.read(info)
-            if transport._sha(raw) != pin["manifest_sha256"]:
+            self.manifest_sha256 = transport._sha(raw)
+            if expected_hash is not None and self.manifest_sha256 != expected_hash:
                 raise ValueError("Development manifest hash differs")
             metadata = json.loads(raw)
-            if set(metadata) != {"identity", "members"} or metadata["identity"] != release.identity():
+            if set(metadata) != {"identity", "members"} or metadata["identity"] != identity:
                 raise ValueError("Development manifest differs from authenticated release")
             members = metadata["members"]
             expected = [(row["id"], row["role"], f"tile-{row['id']}.npy") for row in release.roles]

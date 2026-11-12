@@ -5,7 +5,7 @@ from pathlib import Path
 from dataclasses import asdict, replace
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from zipfile import ZipFile
 
 import numpy as np
@@ -82,6 +82,31 @@ class DevelopmentBlocksTests(unittest.TestCase):
         recovered = blocks.recover(pin["path"], self.root, self.release, lambda row: self.arrays[row["id"]])
         self.assertEqual(recovered, pin)
         self.assertEqual(hash_file(pin["path"]), before)
+
+    def test_recovery_checks_existing_manifest_before_any_array_reader(self):
+        pin = self.publish()
+        first, second = self.release.roles
+        invalid = (
+            replace(self.release, roles=(dict(first, role="test"), second)),
+            replace(self.release, roles=(dict(first, box=[2, 25, 2, 10]), second)),
+            replace(self.release, bands=self.release.bands.subset(tuple(reversed(range(7))))),
+            replace(self.release, source={"state": "wrong-source", "shared_state": "wrong-source"}),
+            replace(self.release, roles=(first, dict(second, box=[3, 11, 12, 20], samples=[[3 * 24 + 12, 9]]))),
+        )
+        source = Mock(side_effect=AssertionError("read an array before validating custody"))
+        with patch.object(blocks.np, "load", side_effect=AssertionError("decoded unaccepted archive member")):
+            for release in invalid:
+                with self.subTest(release=release), self.assertRaises(ValueError):
+                    blocks.recover(pin["path"], self.root, release, source)
+            safe = self.root / "authorized"
+            safe.mkdir()
+            with self.assertRaisesRegex(ValueError, "escapes"):
+                blocks.recover(pin["path"], safe, self.release, source)
+            altered = self.tamper(pin, lambda name, raw: raw.replace(b'"devtrain"', b'"bad_role"')
+                                  if name == "development.json" else raw)
+            with self.assertRaisesRegex(ValueError, "manifest"):
+                blocks.recover(altered["path"], self.root, self.release, source)
+        source.assert_not_called()
 
     def test_wrong_request_does_not_read_or_decode_arrays(self):
         opened = blocks.Blocks(self.publish(), self.root, self.release)
@@ -204,10 +229,29 @@ class DevelopmentBlocksTests(unittest.TestCase):
         entry = capture_context(native, scene, role, "1" * 64, state_hash(self.model), observation_view=view)
         selector = make_selector(entry, dict(mode="joint", schedule=asdict(Schedule(10, 6, 3, 7, 6, 48, pool=5))),
                                  probe.SUPPORT_SEED)
-        forged = replace(view, observation=replace(view.observation, spectral=view.observation.spectral + 0.01))
-        with patch.object(native, "forward", side_effect=AssertionError("forward used a different spectral view")):
-            with self.assertRaisesRegex(ValueError, "preselected observation"):
-                native_forward(native, scene, tile, selector=selector, observation_view=forged)
+        raw = scene.cube[blocks.tile_slice(tile)].copy()
+        changed_cube = blocks.BlockCube(scene.cube.shape, tile, raw + 0.01)
+        changes = (
+            ("omitted view", scene, None),
+            ("different scene", replace(scene, dataset="xuzhou"), view),
+            ("different raw", replace(scene, cube=changed_cube), view),
+            ("different statistics", replace(scene, stats=dict(scene.stats, minimum=[-3.] * 7)), view),
+            ("different spectral", scene,
+             replace(view, observation=replace(view.observation, spectral=view.observation.spectral + 0.01))),
+            ("different coordinates", scene,
+             replace(view, observation=replace(view.observation, coordinates=view.observation.coordinates + 0.01))),
+            ("different ids", scene,
+             replace(view, observation=replace(view.observation, global_ids=view.observation.global_ids + 1))),
+            ("different plan", scene,
+             replace(view, observation=replace(view.observation, plan_hash="different-plan"))),
+        )
+        with patch.object(native, "forward", side_effect=AssertionError("forward used a different observation")):
+            for name, candidate_scene, candidate_view in changes:
+                with self.subTest(name=name), self.assertRaisesRegex(ValueError, "Selector"):
+                    native_forward(native, candidate_scene, tile, selector=selector, observation_view=candidate_view)
+        output, frame = native_forward(native, scene, tile, selector=selector, observation_view=view)
+        self.assertEqual(tuple(output[0].shape), (64, 9))
+        self.assertEqual(frame["trace"]["q"], entry["identity"]["assignment"])
 
     def test_bounded_mat_read_and_role_reject(self):
         array = np.arange(np.prod(self.release.shape), dtype=np.float32).reshape(self.release.shape)

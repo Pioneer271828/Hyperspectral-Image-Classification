@@ -13,11 +13,11 @@ from model.research_config import canonical_json, digest
 from research_runtime import hash_file, tensor_hash
 from train_spatial import SpatialConfig
 from transfer import p4_guarded, p4_spatial, registered_development as transport, wp02_route_development as wp02
-from transfer.development_blocks import Release, SCENES, array_hash, block_values, inside, read_pin
+from transfer.development_blocks import Release, SCENES, inside, read_pin
 from transfer.development_mat import open_guarded
 from transfer.g3_training import state_hash
 from transfer.native_support_real import WP07_REGISTRATION, WP08_SOURCE_CAMPAIGN, CURATOR_RECEIPT
-from transfer.xuzhou_multiscale import baseline_from_config
+from transfer.development_block_model import TARGET_SEED, group_norm_baseline
 
 
 HISTORICAL = {
@@ -97,12 +97,22 @@ def _rows(tiles, labels, shape, origin, parents):
     return tuple(rows)
 
 
-def _bound_arrays(rows, bands, reader):
-    arrays = {row["id"]: block_values(reader(row), row, bands) for row in rows}
-    for array in arrays.values():
-        array.setflags(write=False)
-    bound = tuple(dict(row, origin_content_sha256=array_hash(arrays[row["id"]])) for row in rows)
-    return bound, lambda row: arrays[row["id"]]
+# Exact array identities from the independently compared Issue 451 proof. Binding
+# them here keeps all payload readers lazy until the existing manifest is checked.
+ORIGIN_CONTENT = {
+    "xuzhou": {
+        1: "eb627cbcf4fa7ee71254fa38b3a5690b4e9dcf3a92bf30e99c08fb2f013b9638",
+        0: "e067541c639de527f2600edce7b00a9e5f93931e23bc55fae71eec2abcdf0b7a",
+    },
+    "whu-honghu": {
+        450: "b46664cc0a657afb3aaf8bcde16b590e28a53f63a5d23b6edcbaf5ddc1b1e206",
+        451: "0718ae345985cb184f2f26e9251d6747f08b5d8ef981be62be7b4696da095030",
+    },
+}
+
+
+def _bound_rows(scene, rows):
+    return tuple(dict(row, origin_content_sha256=ORIGIN_CONTENT[scene][row["id"]]) for row in rows)
 
 
 @dataclass
@@ -160,7 +170,7 @@ def xuzhou(root):
     def load_array(row):
         return np.load(io.BytesIO(read_pin(row["origin"], root)), allow_pickle=False)
 
-    rows, reader = _bound_arrays(rows, shape[-1], load_array)
+    rows = _bound_rows("xuzhou", rows)
     model_files = (prior["source"], prior["sidecar"])
     for pin in model_files:
         inside(pin["path"], root)
@@ -174,7 +184,7 @@ def xuzhou(root):
                    minimum_buffer=2 * plan["gap"], block_selection="original_issue447_pair")
     release = Release("xuzhou", "nested_development", shape, classes, plan["plan_hash"], bands, stats,
                       tuple(rows), custody, physical, source)
-    return Admitted(release, baseline, reader, (accepted, *value["provenance"], development, *model_files,
+    return Admitted(release, baseline, load_array, (accepted, *value["provenance"], development, *model_files,
                     *old["role_arrays"], *[p for k, p in record["wp02"].items() if k != "image"],
                     physical["metadata_receipt"]), old)
 
@@ -196,7 +206,7 @@ def _spatial_source(root, registration, scene, *, state_required):
     if not state_required:
         return authority, (weight, sidecar, result), None
     config = registration["config"]
-    target = baseline_from_config(config, scene=scene, classes=SCENES[scene][1])
+    target = group_norm_baseline(config, scene, SCENES[scene][1])
     # P4's established transfer supplies exactly the non-domain, non-graph shared tensors.
     shared_model, shared_info = p4_spatial.initialize(SpatialConfig(config), weight["path"], result["path"])
     keys = shared_info["copied_keys"]
@@ -216,7 +226,7 @@ def _spatial_source(root, registration, scene, *, state_required):
                   if not name.startswith("backbone.")})
     authority.update(initialization="p4_exact_shared_into_wp07_group_norm", baseline_state=state_hash(target),
                      shared_keys=keys, shared_state=digest({n: tensor_hash(original[n]) for n in keys}),
-                     fresh=fresh, target_seed=64)
+                     fresh=fresh, target_seed=TARGET_SEED)
     return authority, (weight, sidecar, result), target
 
 
@@ -292,9 +302,15 @@ def honghu(root):
     special = {row["role"]: row for row in geometry["roles"] if "parent_tile" in row}
     tiles = [guarded_plan["tiles"][special[role]["id"]] for role in ("devtrain", "devval")]
     parents = {row["id"]: row["parent_tile"] for row in special.values()}
-    rows = _rows(tiles, labels, shape, lambda _: image, parents)
-    reader = open_guarded(image, root, "WHU_Hi_HongHu", shape, rows)
-    rows, reader = _bound_arrays(rows, shape[-1], reader)
+    rows = _bound_rows("whu-honghu", _rows(tiles, labels, shape, lambda _: image, parents))
+    read_guarded = None
+
+    def reader(row):
+        nonlocal read_guarded
+        if read_guarded is None:
+            read_guarded = open_guarded(image, root, "WHU_Hi_HongHu", shape, rows)
+        return read_guarded(row)
+
     source, files, baseline = _spatial_source(root, registration, "whu-honghu", state_required=True)
     custody = dict(acceptance=accepted_pin, registration=registration_pin, guarded_split=split_pin,
                    original_image=original_image, geometry=roles_pin, role_plan=plan_pin,
