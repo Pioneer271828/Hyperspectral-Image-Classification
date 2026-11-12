@@ -15,7 +15,7 @@ class LowRankEvidenceTests(unittest.TestCase):
                 targets = [c for c in classes for _ in range(5)]
                 baseline = [[5 if i == j else 0 for j in range(size)] for i in range(size)]
                 endpoints = dict(targets=targets, predictions={h: targets.copy() for h in FULL_HEADS},
-                                 metrics={h: dict(confusion_matrix=baseline, count=5*size, oa=1., nll=.1) for h in FULL_HEADS})
+                                 metrics={h: dict(confusion_matrix=deepcopy(baseline), count=5*size, oa=1., nll=.1) for h in FULL_HEADS})
                 altered = deepcopy(endpoints)
                 altered["metrics"]["cnn"]["confusion_matrix"][0][0] = 4
                 altered["metrics"]["cnn"]["confusion_matrix"][0][1] = 1
