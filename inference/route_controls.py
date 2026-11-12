@@ -81,32 +81,83 @@ def _output_hash(result):
     return digest([dict(id=r['id'],route=r['route'],probabilities=_tensor(r['probabilities'])) for r in result['outputs']])
 
 
-def benchmark_controls(full,published,requests,*,adaptive_kwargs,seed,warmups=2,pairs=8):
+def _fixed_routes(full, published, requests, plan, expected_plan_hash):
+    if (not isinstance(plan, dict) or digest(plan) != expected_plan_hash
+            or set(plan) != {'format', 'input_hash', 'full_state', 'light_state', 'min_coverage', 'routes'}
+            or plan['format'] != 'dy-fixed-path-v1'):
+        raise ValueError('Pinned fixed path plan required')
+    _check(full, published, requests, plan['min_coverage'])
+    if (plan['input_hash'] != request_hash(requests) or plan['full_state'] != state_hash(full)
+            or plan['light_state'] != state_hash(published.model)):
+        raise ValueError('Fixed path model or input identity changed')
+    rows = plan['routes']
+    if (not isinstance(rows, list) or len(rows) != len(requests)
+            or any(set(r) != {'id', 'route'} or r['route'] not in ('fast', 'full') for r in rows)):
+        raise ValueError('Complete explicit fixed routes required')
+    routes = {r['id']: r['route'] for r in rows}
+    if routes.keys() != {r['id'] for r in requests}:
+        raise ValueError('Fixed routes must cover each tile exactly once')
+    if any(routes[r['id']] == 'fast' and
+           (not r['coverage_known'] or r['coverage_fraction'] < plan['min_coverage']) for r in requests):
+        raise ValueError('Fixed path bypasses mandatory full fallback')
+    return routes
+
+
+def fixed_cascade(full, published, requests, plan, *, expected_plan_hash):
+    """Run only the registered path per tile, with mandatory coverage fallback."""
+    routes = _fixed_routes(full, published, requests, plan, expected_plan_hash)
+    outputs = []
+    with torch.no_grad():
+        for r in requests:
+            route = routes[r['id']]
+            kwargs = dict(wavelengths=r['wavelengths'])
+            if route == 'fast':
+                p = published.model(r['dataset'], r['x'], **kwargs)
+            else:
+                p = full(r['dataset'], r['x'], superpixel_scale=r['scale'], **kwargs)[0]
+            if not torch.isfinite(p).all():
+                raise ValueError('Nonfinite fixed control output')
+            outputs.append(dict(id=r['id'], route=route, probabilities=p))
+    fast = sum(r['route'] == 'fast' for r in outputs)
+    return dict(outputs=outputs, counts=dict(light_calls=fast, full_calls=len(outputs)-fast,
+                                            accepted_tiles=fast, total_tiles=len(outputs)),
+                mode='fixed', calibrated=False, plan_hash=expected_plan_hash)
+
+
+def benchmark_controls(full,published,requests,*,adaptive_kwargs,seed,warmups=2,pairs=8,fixed=None):
     """Single-core CPU paired cost, including public validation/routing overhead.
 
     Excludes model/input loading, preprocessing, initial plan creation and output
     hashing. Random-plan revalidation is included. Memory/energy are not measured.
     """
-    if (type(warmups) is not int or warmups<1 or type(pairs) is not int or pairs<4 or pairs%4
+    arms_count = 4 if fixed is None else 5
+    if (type(warmups) is not int or warmups<1 or type(pairs) is not int or pairs<arms_count or pairs%arms_count
             or torch.get_num_threads()!=1 or len(os.sched_getaffinity(0))!=1):
-        raise ValueError('One CPU core/thread, warmup and multiple-of-four paired rounds required')
+        raise ValueError('One CPU core/thread, warmup and balanced paired rounds required')
     if not isinstance(adaptive_kwargs,dict) or adaptive_kwargs.get('mode')!='adaptive':raise ValueError('Explicit frozen adaptive configuration required')
     if not requests:raise ValueError('Nonempty matched benchmark required')
+    coverage=adaptive_kwargs.get('min_coverage',1.)
+    if fixed is not None:
+        fixed_plan, fixed_hash = fixed
+        _fixed_routes(full, published, requests, fixed_plan, fixed_hash)
+        if fixed_plan['min_coverage'] != coverage:
+            raise ValueError('Fixed and adaptive coverage rules differ')
     source=state_hash(full);light=state_hash(published.model);inputs=request_hash(requests);start=time.perf_counter()
     adaptive=trained_cascade(full,published,requests,**adaptive_kwargs)
     reference=[dict(id=r['id'],route=r['route']) for r in adaptive['outputs']]
-    coverage=adaptive_kwargs.get('min_coverage',1.)
     plan=random_plan(full,published,requests,reference,seed=seed,min_coverage=coverage);pin=digest(plan);setup_seconds=time.perf_counter()-start
     arms=dict(full=lambda:trained_cascade(full,published,requests),
               fast=lambda:trained_cascade(full,published,requests,mode='fast',min_coverage=coverage),
               adaptive=lambda:trained_cascade(full,published,requests,**adaptive_kwargs),
               random=lambda:random_cascade(full,published,requests,plan,expected_plan_hash=pin))
+    if fixed is not None:
+        arms['fixed'] = lambda: fixed_cascade(full, published, requests, fixed_plan, expected_plan_hash=fixed_hash)
     baseline={k:fn() for k,fn in arms.items()};before={k:_output_hash(v) for k,v in baseline.items()};samples=[];keys=list(arms)
     if baseline['adaptive']['counts']!=baseline['random']['counts']:raise AssertionError('Matched control calls differ')
     for _ in range(warmups):
         for fn in arms.values():fn()
     for round_id in range(pairs):
-        order=keys[round_id%4:]+keys[:round_id%4];row=dict(order=order,timings={})
+        shift=round_id%len(keys);order=keys[shift:]+keys[:shift];row=dict(order=order,timings={})
         for name in order:
             cpu=time.process_time_ns();wall=time.perf_counter_ns();output=arms[name]()
             wall_ms=(time.perf_counter_ns()-wall)/1e6;cpu_ms=(time.process_time_ns()-cpu)/1e6
@@ -120,8 +171,11 @@ def benchmark_controls(full,published,requests,*,adaptive_kwargs,seed,warmups=2,
         summary[name]=dict(p50_ms=statistics.median(ms),p95_ms=statistics.quantiles(ms,n=100,method='inclusive')[94],
             mean_ms=statistics.mean(ms),sample_sd_ms=statistics.stdev(ms),process_cpu_p50_ms=statistics.median(cpu),
             blocks_per_second=len(requests)/(statistics.median(ms)/1000),calls=baseline[name]['counts'])
-    return dict(status='passed',scope='resident_cpu_batch_public_api_validation_and_compute',affinity=sorted(os.sched_getaffinity(0)),threads=1,
+    result = dict(status='passed',scope='resident_cpu_batch_public_api_validation_and_compute',affinity=sorted(os.sched_getaffinity(0)),threads=1,
         source_state=source,light_state=light,input_hash=inputs,random_plan=plan,random_plan_hash=pin,adaptive_kwargs=adaptive_kwargs,
         initial_reference_and_plan_seconds=setup_seconds,warmups=warmups,pairs=pairs,samples=samples,summary=summary,
         output_hashes=before,matching='same_stratified_call_counts_not_latency',optimizer_updates=0,query=0,
         peak_memory=None,energy=None,scientific_speed_claim=False)
+    if fixed is not None:
+        result['fixed_plan_hash'] = fixed_hash
+    return result
