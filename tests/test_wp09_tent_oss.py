@@ -60,6 +60,26 @@ class TentTests(unittest.TestCase):
         first, second = case(x), case(x)
         self.assertFalse(torch.equal(first.detach(), second.detach()))
 
+    def test_prediction_is_durable_before_update_and_failure_is_terminal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            _, _, spec=fixture(root/"inputs",9)
+            reg=registration(root/"inputs",spec,"affine")
+            out=root/"failed"
+            from transfer.wp09_tent import TentEntropySession
+            def check(session, inputs):
+                pending=out/".pending-000001"
+                self.assertTrue((pending/"prediction.npz").exists())
+                self.assertFalse((pending/"checkpoint.pt").exists())
+                raise RuntimeError("injected before update")
+            with patch.object(TentEntropySession,"adapt",check), self.assertRaisesRegex(RuntimeError,"before update"):
+                execute_tent(reg,out,SOURCE)
+            with self.assertRaisesRegex(RuntimeError,"attempt retained"):
+                execute_tent(reg,out,SOURCE)
+            _, _, stats=fixture(root/"group",22,"group_norm")
+            with self.assertRaisesRegex(ValueError,"no supported mutable state"):
+                execute_tent(registration(root/"group",stats,"statistics"),root/"stats",SOURCE)
+
     def test_nine_twenty_two_modes_restart_and_gradients(self):
         evidence = os.environ.get("WP09_TENT_FIXTURE_DIR")
         folder = tempfile.TemporaryDirectory() if not evidence else None
@@ -88,6 +108,12 @@ class TentTests(unittest.TestCase):
                             execute_tent(reg,split,SOURCE,to_frame=stop)
                     with patch.object(_Session,"forward",side_effect=AssertionError("completed forward")):
                         self.assertEqual(execute_tent(reg,split,SOURCE)["added"],0)
+                    from transfer.online_tta_run import committed_history
+                    from transfer.online_tta_stream import StreamRegistration
+                    view = StreamRegistration(reg)
+                    view.adaptation_provider = provider
+                    self.assertEqual(committed_history(view, optional, complete=True),
+                                     committed_history(view, split, complete=True))
                     compare(mode,native,optional,reg,reg,provider)
                     with self.assertRaisesRegex(ValueError, "different registration"):
                         execute(reg, split)
