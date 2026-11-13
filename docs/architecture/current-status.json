@@ -1321,7 +1321,15 @@
       "evidence": "Issue453/PR454，tested 0f4006e9b817fdcce50a86507e3c6d554b3f01f3。真实351块逐原值核对，482三头前向和20 capture，168旧概率一致。24工程案例1152合成更新、96阶段、完成重入0。8专项与62相关回归无跳过，WP12旧十表通过，真实优化/rawGT/query/新增标签0",
       "remaining": "PaviaU 125训练/41验证缺有界载荷；Xuzhou/HongHu 24步草案不足覆盖全部带标注训练块。真实训练效果、独立地块和GPU待验。WP05 2400待资格、180000暂停；WP04暂缓、WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP07_WP08_完整授权开发块银行与恢复_20261113.md",
-      "chat_report": "HongHu第21类同父块。整改tested 4d3817f4ba17b1282ba29b2bfb3678b99c056c8d，惰性请求及公开数据引用隔离；11专项、62影响回归、24合成例和351真实块只读复验通过，待主审"
+      "chat_report": "主审通过整改 tested 4d3817f4ba17b1282ba29b2bfb3678b99c056c8d，最终 ad3ef9f3e08255cf8df1b8cc11e4b50c086acef7；Issue453 closed/completed，PR454 ready 未合并"
+    },
+    {
+      "id": "WP05/WP06/WP07/WP12 块内空间退化、条件多尺度与恢复",
+      "state": "受控观测、八臂条件对照、合成恢复及真实零更新范围完成，待主审",
+      "evidence": "Issue455/PR456，tested ed54c27997da13f6a0559d0a927fe64350b7dec9。8专项及73相关回归无跳过，48合成案例192阶段2304更新与96端点精确；351真实块1448观测2168三头前向，174历史头一致，WP12旧十表验签",
+      "remaining": "真实完整训练、可信物理尺度及完整标签纯度未验，PaviaU仅两块，HongHu第21类同父块，GPU未运行；WP05 2400待资格、180000暂停，WP04暂缓、WP11独立标签BLOCKED",
+      "report": "research/reports/WP05_WP06_WP07_WP12_块内空间退化与条件多尺度恢复_20261113.md",
+      "chat_report": "退化局限块内，真实优化/rawGT/query/新增标签均0。证据 ZIP 495项校验通过；Issue455 open，PR456 Draft"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
