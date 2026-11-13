@@ -2,7 +2,6 @@
 from argparse import ArgumentParser
 from collections import Counter
 from fractions import Fraction
-import math
 from pathlib import Path
 from statistics import median
 
@@ -93,7 +92,11 @@ def main():
             for name, summary in values["summary"].items():
                 elapsed = sorted(s["timing"][name]["wall_ms"] for s in values["samples"])
                 assert summary["p50_ms"] == median(elapsed)
-                assert summary["p95_ms"] == elapsed[math.ceil(.95*len(elapsed))-1]
+                # Inclusive percentile uses linear interpolation between the adjacent sorted ranks.
+                pos = .95*(len(elapsed)-1)
+                i = int(pos)
+                interpolated = elapsed[i] + (pos-i)*(elapsed[i+1]-elapsed[i])
+                assert abs(summary["p95_ms"] - interpolated) <= 1e-12
     workers = [x["pid"] for v in cost["isolated_startup"].values() for r in v for x in r["samples"].values()]
     assert len(workers) == len(set(workers)) == 12
     out = external_directory(args.out)
