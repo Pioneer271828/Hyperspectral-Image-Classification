@@ -54,7 +54,7 @@ def assumptions(runs, code):
                     "evaluate_tta.py", "model", "model/checkpoint_io.py"], cwd=ROOT, check=True)
     pins += [campaign["provenance"], campaign["legacy"], *campaign["registrations"].values()]
     legacy = read(campaign["legacy"])
-    pins += legacy["protected"] if isinstance(legacy["protected"], list) else list(legacy["protected"].values())
+    pins += [dict(path=path, sha256=checksum) for path, checksum in legacy["protected"].items()]
     for old in campaign["registrations"].values():
         reg = StreamRegistration(old)
         if (reg.value["runtime"] != runtime_identity() or reg.provenance["kind"] != "e4b_pavia_development"
@@ -172,7 +172,15 @@ def real(runs, tent, out, code):
         return name, dict(executions=runs, event_comparison=check)
 
     start = perf_counter()
-    rows = dict(one(name) for name in specs)
+    # The original budget is sequential per case. Record each accepted case
+    # before advancing so a later failure retains completed audit evidence.
+    cases_dir = out / "compared"
+    cases_dir.mkdir()
+    rows = {}
+    for name in specs:
+        _, row = one(name)
+        write(cases_dir / (name+".json"), row)
+        rows[name] = row
     actual = Counter()
     for row in rows.values():
         for stage in row["executions"]:
