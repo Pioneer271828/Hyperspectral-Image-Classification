@@ -92,7 +92,8 @@ class Run:
         clean = deepcopy(registered)
         if released is not None:
             from transfer import native_released_training
-            if released is not native_released_training:
+            from transfer.native_released_real import RealReleasedRun
+            if released is not native_released_training and type(released) is not RealReleasedRun:
                 raise ValueError("Unknown released supervision provider")
         expected = (contract(clean["classes"],clean["seed"],clean["arm"],producer,
                              mode=clean["supervision"],numeric=numeric) if released is None else
@@ -105,11 +106,13 @@ class Run:
         self.execution = execution
         self._released = released
         self.device = CPU if numeric is None else torch.device(numeric["device"])
-        self.model = initialize(baseline(clean["classes"],clean["seed"]),clean["arm"],clean["module_seed"]).to(self.device)
+        source = (baseline(clean["classes"],clean["seed"]) if released is None or released is native_released_training
+                  else released.baseline(clean["seed"]))
+        self.model = initialize(source,clean["arm"],clean["module_seed"]).to(self.device)
         options = {} if numeric is None else {"foreach":False,"fused":False}
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=clean["learning_rate"],**options)
-        self._train = Fixture(clean["classes"],"devtrain")
-        self._val = Fixture(clean["classes"],"devval")
+        self._train, self._val = (("devtrain", "devval") if released is not None and released is not native_released_training
+                                  else (Fixture(clean["classes"],"devtrain"), Fixture(clean["classes"],"devval")))
         self._history, self._validation, self._selected = [], [], None
         self.timing = dict(train_update_seconds=0.,validation_seconds=0.,transform_seconds=0.,
                            forward_seconds=0.,graph_seconds=0.)
@@ -135,7 +138,7 @@ class Run:
         return result
 
     def _forward(self, actual, role, intervention):
-        condition = condition_for(actual,intervention)
+        condition = None if actual.receipt["synthetic_profile"] is None else condition_for(actual,intervention)
         timed = {}
         out,graph = forward(self.model,actual,self.producer,role,condition=condition,timed=timed,
                             execution=self.execution)
@@ -154,7 +157,7 @@ class Run:
             observed = (metrics(output,actual,labels,targets,detailed=detailed) if self._released is None else
                         self._released.scores(output, targets, detailed=detailed))
             rows.append(dict(**event,observation=actual.receipt["observation"],
-                             labels=array_hash(labels),condition_key=condition.source_key,
+                             labels=array_hash(labels),condition_key=None if condition is None else condition.source_key,
                              area=int(targets.area.sum()),heads=head_hashes(output,actual),graph=graph,
                              scores=observed))
             if self._released is not None:
@@ -205,7 +208,8 @@ class Run:
                  for name in self._fresh}
         self.optimizer.step()
         self._history.append(dict(**event,observation=actual.receipt["observation"],labels=array_hash(labels),
-            condition_key=condition.source_key,gsd_m=condition.gsd_m,area=int(targets.area.sum()),
+            condition_key=None if condition is None else condition.source_key,
+            gsd_m=None if condition is None else condition.gsd_m,area=int(targets.area.sum()),
             supervised_area=int(mask[:,0].sum()),histogram=array_hash(targets.histogram),
             heads=head_hashes(out,actual),graph=graph,loss=detached_loss_values(terms),
             fresh={name:dict(gradient_l1=grads[name],changed=tensor_hash(named[name])!=before[name])
@@ -243,10 +247,11 @@ class Run:
         selected = min(packet["validation"],key=lambda x:x["fused_nll"])
         if any(packet["selected"][key]!=selected[key] for key in ("step","fused_nll")):
             raise ValueError("Native checkpoint selection differs")
+        adam = packet["optimizer"]["state"]
+        if not adam or any(int(s["step"])!=cursor for s in adam.values()):
+            raise ValueError("Native Adam cursor differs")
         self.model.load_state_dict(packet["model"],strict=True)
         self.optimizer.load_state_dict(packet["optimizer"])
-        if not self.optimizer.state or any(int(s["step"])!=cursor for s in self.optimizer.state.values()):
-            raise ValueError("Native Adam cursor differs")
         self._history, self._validation, self._selected = packet["history"],packet["validation"],packet["selected"]
         _restore_rng(packet["rng"],self.device)
 
@@ -254,6 +259,8 @@ class Run:
 def execute(registered, phase, path, producer, prior=None, *, execution=None, released=None):
     run = Run(registered,producer,execution=execution,released=released)
     spec = run.registered
+    if released is not None and spec.get("release") is not None:
+        released.check_destination(path)
     prefix,steps = spec["prefix"],spec["steps"]
     start,end = {"full":(0,steps),"prefix":(0,prefix),"resume":(prefix,steps),"completed":(steps,steps)}[phase]
     if (start>0)!=(prior is not None) or path.exists():

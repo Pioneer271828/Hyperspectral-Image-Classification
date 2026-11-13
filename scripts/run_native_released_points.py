@@ -1,6 +1,6 @@
 """Execute bounded sparse-point recovery and authorized zero-update preflights."""
 import argparse
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from itertools import product
 from pathlib import Path
 import os
@@ -14,7 +14,9 @@ from research_runtime import code_snapshot, external_directory, require_frozen_c
 from transfer import native_released_preflight as preflight, native_released_training as released
 from transfer import native_scale_training as training, native_scale_device as device
 from transfer import p4_runtime_device as p4, registered_development as transport
-from transfer.native_scale_campaign import packet
+from transfer.native_scale_campaign import packet, read
+from transfer.native_released_real import RealReleasedRun
+from joint_training import _run_lock
 from transfer.xuzhou_multiscale_audit import _exact
 
 
@@ -81,27 +83,69 @@ def synthetic(root, out, producer, gpu):
     return transport._json_new(out / "synthetic-acceptance.json", result)
 
 
+def real_stage(root, out, preflight, release, case, phase, code, gpu):
+    guarded = RealReleasedRun(root, preflight, case, release, out, code)
+    if gpu != guarded.physical_uuid:
+        raise ValueError("Real sparse execution GPU must match the approved release")
+    data = read(preflight, root)
+    selected, = (row for row in data["draft"]["cases"] if row["id"] == case)
+    out.mkdir(exist_ok=True)
+    with _run_lock(out), arithmetic(root, gpu) as execution:
+        spec = guarded.contract(preflight.EXPECTED[data["scene"]][0], selected["model_seed"], selected["arm"],
+                                selected["factor"], code["commit"], numeric=execution.numeric)
+        identity = out / "registration.json"
+        if identity.is_file():
+            spec_pin = transport._pin(identity)
+            if read(spec_pin, root) != spec:
+                raise ValueError("Approved checkpoint registration differs from prior execution")
+        else:
+            spec_pin = transport._json_new(identity, spec)
+        previous = {"resume": "prefix", "completed": "resume"}.get(phase)
+        state = None
+        if previous:
+            prior = read(transport._pin(out / f"{previous}.json"), root)
+            if prior["registration"] != spec_pin or prior["phase"] != previous:
+                raise ValueError("Real predecessor belongs to another phase or registration")
+            state = packet(prior["checkpoint"], root)
+        path = out / f"{phase}.pt"
+        actual = training.execute(spec, phase, path, code["commit"], state, execution=execution, released=guarded)
+        return transport._json_new(out / f"{phase}.json",
+                                   {**actual, "registration": spec_pin, "checkpoint": transport._pin(path)})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--gpu")
-    parser.add_argument("--mode", choices=("synthetic", "preflight"), required=True)
+    parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage"), required=True)
+    parser.add_argument("--preflight", nargs=2, metavar=("PATH", "SHA256"))
+    parser.add_argument("--release", nargs=2, metavar=("PATH", "SHA256"))
+    parser.add_argument("--case")
+    parser.add_argument("--phase", choices=("full", "prefix", "resume", "completed"))
     args = parser.parse_args()
     code = code_snapshot()
     require_frozen_code(code)
-    if args.expected_commit != code["commit"] or (args.gpu is not None and args.mode != "synthetic"):
+    if args.expected_commit != code["commit"] or (args.gpu is not None and args.mode == "preflight"):
         raise ValueError("Scope, worker or real optimization permission differs")
     root = args.runs.resolve(strict=True)
     out = external_directory(args.out)
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
-    out.mkdir()
+    real = args.mode == "real-stage"
+    if real != bool(args.preflight and args.case and args.phase) or (not real and args.release is not None):
+        raise ValueError("A real stage requires its own explicit preflight, case and phase")
     torch.set_num_threads(1)
-    if args.mode == "synthetic":
+    if real:
+        pinned = {"path": args.preflight[0], "sha256": args.preflight[1]}
+        release = {"path": args.release[0], "sha256": args.release[1]} if args.release else None
+        result = real_stage(root, out, pinned, release, args.case, args.phase, code, args.gpu)
+    elif args.mode == "synthetic":
+        out.mkdir()
         result = synthetic(root, out, code["commit"], args.gpu)
     else:
+        out.mkdir()
         rows = {scene: transport._json_new(out / (scene+".json"), preflight.scan(root, scene, code["commit"]))
                 for scene in preflight.SCENES}
         result = transport._json_new(out / "preflight.json", {"schema": preflight.SCHEMA,

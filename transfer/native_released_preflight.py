@@ -170,6 +170,7 @@ def scan(root, scene, producer):
                     raise ValueError("Native arms did not share the same initial Q")
                 outputs.append({"role": role, "tile": row["id"], "band": band, "factor": factor,
                                 "observation": actual.receipt["observation"], "source": actual.receipt["source"],
+                                "spectral": actual.receipt["spectral"], "coords": actual.receipt["coords"],
                                 "footprints": actual.receipt["footprints"], "grid": actual.receipt["grid_shape"],
                                 "released": target, "scalar_histogram": hist, "graphs": graphs,
                                 "initial_head_loss_equivalence_checks": losses_checked})

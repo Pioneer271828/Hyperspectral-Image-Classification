@@ -1,8 +1,10 @@
 """Independent scalar/gradient and fail-before-mutation checks for released labels."""
 from copy import deepcopy
 from dataclasses import replace
+from pathlib import Path
+import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import torch
@@ -11,6 +13,7 @@ from model.task_losses import probability_loss_components
 from transfer import native_released_points as points, native_released_training as sparse
 from transfer import native_scale_training as training
 from transfer.native_released_preflight import open_bank
+from transfer.native_released_real import RealReleasedRun
 from transfer.native_scale_fixture import Fixture
 from transfer.native_scale_observation import Lattice
 from transfer.native_scale_supervision import loss
@@ -97,6 +100,16 @@ class ReleasedPointTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "released point input"):
             run.restore(wrong, 1)
         self.assertTrue(_exact(current, run.pack()))
+
+    def test_real_execution_requires_separately_reviewed_release_before_bank_access(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            with patch("transfer.native_released_real.require_frozen_code"), \
+                 patch("transfer.native_released_real.open_bank") as bank:
+                with self.assertRaisesRegex(ValueError, "separately reviewed"):
+                    RealReleasedRun(root, None, "case", None, root / "run", {})
+                bank.assert_not_called()
+            self.assertFalse((root / "run").exists())
 
     def test_empty_block_rejected_before_modes_gradient_and_rng(self):
         spec = sparse.contract(22, 512, "mean", 2, "oracle")
