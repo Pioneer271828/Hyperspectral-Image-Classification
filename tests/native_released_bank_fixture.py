@@ -16,7 +16,7 @@ from transfer.native_scale_observation import FACTORS, from_bank
 from transfer.native_scale_training import SEEDS
 
 
-def fixture(root, code):
+def fixture(root, code, *, design=None):
     receipts, intakes = {}, {}
     for classes, scene in ((9, "xuzhou"), (22, "whu-honghu")):
         release, arrays = original.fixture(classes)
@@ -47,7 +47,7 @@ def fixture(root, code):
             schedule = [{"tile": tile, "band": band} for band in VIEWS for tile in order]
             counts = Counter(label for event in schedule
                              for _, label in admitted.role_row("devtrain", event["tile"])["samples"])
-            for factor, arm in COMPARISONS:
+            for factor, arm in real.comparisons(design):
                 cases.append({"id": f"{scene}/{seed}/{factor}/{arm}", "model_seed": seed,
                               "factor": factor, "arm": arm, "planned_updates": len(schedule),
                               "train_exposures_per_class": [counts[i] for i in range(1, classes+1)],
@@ -67,7 +67,7 @@ def fixture(root, code):
         receipts[scene] = transport._json_new(root/f"preflight-{classes}.json", {
             "schema": real.ENGINEERING, "synthetic": True, "status": "preflight_only", "producer": producer,
             "optimization_updates": 0, "query_accessed": False, "raw_gt_loaded": False,
-            "scene": scene, "objective": LOSS, "bank": bank_pin, "point_set": point_set,
+            "scene": scene, "objective": LOSS, "bank": bank_pin, "point_set": point_set, "design": design,
             "prior_production": prior, "views": views,
             "draft": {"cases": cases, "authorized_for_training": False}})
     def open_fixture(authorized, scene):

@@ -30,10 +30,10 @@ class ConstantSelector:
 
     @property
     def gsd_m(self):
-        return 1.0
+        return None
 
     def values(self):
-        return _REFERENCE, .5, self.gsd_m
+        return _REFERENCE, .5, 1.0
 
     def validate(self, actual, receipt):
         if self.observation != receipt["observation"] or receipt["role"] not in ("devtrain", "devval"):
@@ -68,6 +68,8 @@ def experiment(classes, seed, arm, factor, intervention, producer, *, numeric=No
     baseline = sparse.contract(classes, seed, "joint", factor, producer, numeric=numeric)
     return {**baseline, "format": FORMAT, "arm": arm, "intervention": intervention,
             "parameter_control": "same_joint_modules_same_initial_state",
+            "selector_input": "artificial_control_descriptor" if arm == CONSTANT else "registered_synthetic_condition",
+            "graph_scale_native_pixels": 16,
             "source_contract": digest(baseline), "counted_in_original_matrix": False}
 
 

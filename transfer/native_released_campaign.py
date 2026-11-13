@@ -30,11 +30,11 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def expected_case_names(scene):
-    return [f"{scene}/{seed}/{factor}/{arm}" for seed, (factor, arm) in product(SEEDS, released.COMPARISONS)]
+def expected_case_names(scene, design=None):
+    return [f"{scene}/{seed}/{factor}/{arm}" for seed, (factor, arm) in product(SEEDS, real.comparisons(design))]
 
 
-def prepare(root, out, execution, preflight_pin, code, *, engineering=False):
+def prepare(root, out, execution, preflight_pin, code, *, engineering=False, design=None):
     require_frozen_code(code)
     request = read(preflight_pin, root)
     expected_schema = real.ENGINEERING if engineering else preflight.SCHEMA
@@ -42,7 +42,12 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False):
             and request["optimization_updates"] == 0
             and request["raw_gt_loaded"] is request["query_accessed"] is False
             and set(request["scenes"]) == set(preflight.SCENES)
-            and (engineering or preflight_pin["sha256"] == REAL_PRE_FLIGHT_SHA), "Unrelated frozen comparison preflight")
+            and (engineering or design == real.DUTY or preflight_pin["sha256"] == REAL_PRE_FLIGHT_SHA),
+            "Unrelated frozen comparison preflight")
+    if design == real.DUTY and not engineering:
+        from transfer.native_released_duties import validate_expansion
+
+        validate_expansion(root, request)
     require(out != execution and all(root in p.parents and p == p.resolve() and not p.exists()
                                       for p in (out, execution)), "Expected empty isolated matrix and execution paths")
     cases = []
@@ -50,9 +55,10 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False):
         pin = request["scenes"][name]
         receipt = read(pin, root)
         schedule_rows = {row["id"]: row for row in receipt["draft"]["cases"]}
-        order = expected_case_names(name)
+        order = expected_case_names(name, design)
         require(receipt["scene"] == name and receipt["schema"] == expected_schema
-                and set(schedule_rows) == set(order) and len(receipt["draft"]["cases"]) == 15
+                and receipt.get("design") == design
+                and set(schedule_rows) == set(order) and len(receipt["draft"]["cases"]) == len(order)
                 and receipt["draft"]["authorized_for_training"] is False, "Frozen complete 15-case scene draft required")
         steps = len(schedule_rows[order[0]]["schedule"]) if engineering else 2 * preflight.EXPECTED[name][-1]
         for key in order:
@@ -69,12 +75,14 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False):
             group = [schedule_rows[key] for key in order if key.split("/")[1] == str(seed)]
             require(all(row["schedule"] == group[0]["schedule"] for row in group), "Paired exposure schedule differs")
     budget = sum(row["updates"] for row in cases)
-    require(engineering or budget == 2910, "Original real comparison budget is 2910 updates")
+    require(engineering or budget == (2910 if design is None else 11058), "Unexpected released comparison budget")
     out.mkdir()
     value = {"schema": MATRIX, "controller": {"commit": code["commit"], "source_hash": code["source_hash"]},
              "synthetic": engineering, "preflight": preflight_pin, "cases": cases, "optimizer_updates": budget,
              "execution": str(execution), "authorization": "separate_release_required",
              "optimization_updates": 0, "query_authorized": False}
+    if design is not None:
+        value["design"] = design
     return dev._json_new(out / "matrix.json", value)
 
 
@@ -83,7 +91,8 @@ def load(root, item, code, release, *, engineering):
     spec = read(item, root)
     require(spec["schema"] == MATRIX and spec["synthetic"] is engineering
             and spec["controller"] == {"commit": code["commit"], "source_hash": code["source_hash"]}
-            and spec["query_authorized"] is False and spec["optimization_updates"] == 0 and len(spec["cases"]) == 30,
+            and spec["query_authorized"] is False and spec["optimization_updates"] == 0
+            and len(spec["cases"]) == 6 * len(real.comparisons(spec.get("design"))),
             "Wrong matrix source, scope or matrix cardinality")
     require(release is not None, "Only prepare is permitted without a separate matrix release")
     approved = read(release, root)
