@@ -8,6 +8,7 @@ from unittest import TestCase
 import torch
 
 from joint_training import run_training, _tree_fingerprint
+from model.research_config import ResearchConfig
 from model.variable_channel_adapter import VariableChannelAdapter
 from scripts.train_joint_m4 import graph_binding
 from test_calibrated_selection import items
@@ -72,10 +73,20 @@ class DiagnosticTests(TestCase):
         provenance = {**PROVENANCE,"m4_graph_binding":graph_binding(data),"oss_a_joint_registration":identity}
         with TemporaryDirectory() as folder:
             root = Path(folder)
+            shared_initializations = {}
             for index,cell in enumerate(identity["cells"]):
                 key = cell["residual"],cell["supervision"],cell["adapter"]
                 runtime = OrthogonalRuntime(*key)
                 option = options(settings(cell["seed"]),*key)
+                with torch.random.fork_rng(devices=[]):
+                    torch.manual_seed(cell["seed"])
+                    model = runtime.build_model(ResearchConfig.from_dict(option["config"]),
+                                                {name:item["class_num"] for name,item in data.items()})
+                shared = {name:value for name,value in model.state_dict().items()
+                          if not name.startswith("backbone.region_residual.")}
+                init_key = cell["seed"]
+                fingerprint = _tree_fingerprint(shared)
+                self.assertEqual(shared_initializations.setdefault(init_key,fingerprint),fingerprint)
                 full = root/f"full-{index}"
                 answer = run_training(option,data,full,provenance,SOURCE,device=device,runtime_adapter=runtime)
                 self.assertEqual(answer["updates_this_call"],12)

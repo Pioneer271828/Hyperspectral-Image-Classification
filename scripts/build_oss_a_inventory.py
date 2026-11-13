@@ -99,6 +99,12 @@ MIXED_BOUNDARIES = {
 }
 NO_EXACT_CANDIDATE = {"C0", "M4"}
 FAMILY_ALIASES = {"baseline":"C0", "E4a-2":"E4a", "MASK-1":"MASK", "MASK-2":"MASK", "MON-01":"MON"}
+REPOSITORY_SCOPE = {
+    "zhu-xlab/DOFA":("wavelength-unit oracle","dynamic patch convolution has different output and weight semantics"),
+    "huggingface/pytorch-image-models":("selective-kernel comparison","channelwise split/normalization and weights differ from per-scene shared dilation"),
+    "QishuaiWen/MiTA":("landmark message reference","square token layout and KV routing differ from explicit fixed graph support"),
+    "VainF/Torch-Pruning":("stage-1 dependency oracle","structural mapping qualifies; candidate selection and whole-model pruning remain out of scope"),
+}
 
 
 def git(*arguments):
@@ -146,9 +152,15 @@ def build(base):
     if len(modules) != 166 or len({row["id"] for row in modules}) != 166:
         raise ValueError("OSS-A frozen ledger roster differs")
     candidates = {
-        key:[row["repository"] for row in plan["entries"] if key in row["modules"]]
+        key:[dict(repository=row["repository"],commit=row["commit"],license_path=row["license_path"],
+                  initial_disposition=row["decision"],review_scope=REPOSITORY_SCOPE.get(row["repository"]))
+             for row in plan["entries"] if key in row["modules"]]
         for key in FAMILIES
     }
+    indexed_by_family = {}
+    for entry in index["modules"]:
+        key = FAMILY_ALIASES.get(entry["id"],entry["id"])
+        indexed_by_family.setdefault(key,[]).append(entry["id"])
     mapped = []
     for i, row in enumerate(modules, 1):
         report = row["report"]
@@ -169,6 +181,7 @@ def build(base):
             scope="planning_only" if i in DOCUMENTATION_ONLY else "delivered_evidence_and_listed_remaining_work",
             boundary=MIXED_BOUNDARIES.get(i,row["remaining"]),
             implementations=[dict(family=key,duty=FAMILIES[key][0],candidates=candidates[key],
+                                  module_index_ids=indexed_by_family.get(key,[]),
                                   disposition=("no_same_duty_replacement_found" if key in NO_EXACT_CANDIDATE
                                                or not candidates[key] else "family_candidates_require_scope_review"),
                                   reason=FAMILIES[key][1]) for key in keys],
