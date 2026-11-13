@@ -2,6 +2,7 @@
 import argparse
 from contextlib import nullcontext
 from copy import deepcopy
+from importlib.util import module_from_spec, spec_from_file_location
 import json
 from pathlib import Path
 import sys
@@ -40,14 +41,18 @@ def main():
     from evaluation.classification_metrics import classification_metrics
     from loadData.spatial_protocol import forward_partition
     from loadData.spatial_tiles import observe_tile
-    from monitoring import native_region_analysis as control
     from research_runtime import ROOT, code_snapshot, require_frozen_code, tensor_hash
     from transfer import matched_route_admission as admission, registered_development as dev
     from transfer.g3_training import state_hash
     from transfer.xuzhou_multiscale import ARMS, BUDGET, SEED, load_registration, read_stage
     from transfer.xuzhou_multiscale_audit import HEADS, _packet, _verify_history
 
-    require(ROOT == worker and Path(control.__file__).resolve().is_relative_to(candidate),
+    control_path = candidate / "monitoring" / "native_region_analysis.py"
+    control_spec = spec_from_file_location("wp07_compat_region_control", control_path)
+    control = module_from_spec(control_spec)
+    sys.modules[control_spec.name] = control
+    control_spec.loader.exec_module(control)
+    require(ROOT == worker and Path(control.__file__).resolve() == control_path,
             "Compatibility imports escaped the selected worker or consumer")
     torch.set_num_threads(1)
     code, backend = code_snapshot(candidate), code_snapshot()
