@@ -1,6 +1,7 @@
 """Test the isolated short worker and audit input contracts with no extra libraries."""
 
 import copy
+import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -11,7 +12,8 @@ import torch
 from joint_training import _tree_fingerprint, schedule_for
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot
-from scripts.run_oss_c_pair import authorized_launch, run_case
+from scripts.run_oss_c_pair import CLASSES, SEEDS, authorized_launch, run_case, score_pairs
+from scripts.audit_oss_a_history import digest as file_digest
 from test_calibrated_selection import items
 from test_joint_training import checkpoints, hashes, settings
 from transfer.oss_c_oracles import HEADS, confusion, qualification, require_production, validate_indices
@@ -50,6 +52,39 @@ class AuditContracts(TestCase):
                 require_production(value)
         with self.assertRaisesRegex(ValueError,"independently issued"):
             authorized_launch(None,None,{}, "native-64")
+
+    def test_score_protects_every_small_class(self):
+        candidate = "exclude_out_of_reference"
+        cases = {f"{arm}-{seed}":dict(arm=arm,seed=seed,settings={},schedule_sha256="plan",
+                                      validation_steps=[3,6,9,12])
+                 for arm in ARMS for seed in SEEDS}
+        reg = dict(cases=cases,source_commit="fixture",
+                   metadata={scene:{"support":{"train":[2]*size}} for scene,size in CLASSES.items()})
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            for key,spec in cases.items():
+                path = root/key
+                path.mkdir()
+                history = path/"history.json"
+                history.write_text(json.dumps([dict(step=step,macro_oa=step/20) for step in (3,6,9,12)]))
+                is_candidate = spec["arm"]==candidate
+                metrics = {}
+                for scene,size in CLASSES.items():
+                    row = dict(oa=.8,aa=.8,recall=[.8]*size,
+                               confusion=[[2 if i==j else 0 for j in range(size)] for i in range(size)])
+                    if scene=="paviaU" and is_candidate:
+                        row["recall"][0] = .77
+                    metrics[scene] = {role:{head:row for head in HEADS} for role in ("train","val")}
+                packet = dict(status="completed",optimizer_steps=12,settings={},test_scoring=False,
+                    identity={"prepared":{"case":key,"campaign_sha256":digest(reg)}},start_code={"commit":"fixture"},
+                    schedule_sha256="plan",selected_probability_max_abs_error=0.,
+                    artifacts={"history.json":file_digest(history)},selected_step=12,
+                    selected_validation={"macro_oa":.8 if is_candidate else .7,"metrics":metrics})
+                (path/"result.json").write_text(json.dumps(packet))
+            result = score_pairs(reg,root)
+            self.assertFalse(result["comparisons"]["native"]["development_gate_passed"])
+            self.assertEqual(len(result["comparisons"]["native"]["all_class_recall_delta_pp"]["whu-honghu"]),22)
+            self.assertFalse(result["production_authorized"])
 
 
 class VCAWorkerTests(TestCase):

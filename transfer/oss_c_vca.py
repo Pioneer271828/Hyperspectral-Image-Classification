@@ -9,6 +9,24 @@ from model.variable_channel_adapter import VariableChannelAdapter
 ARMS = ("native", "exclude_out_of_reference", "matched_boundary_dropout")
 
 
+def reference_masks(wave,valid,minimum,maximum):
+    """Return masks for an equal band-count control, or original masks on fallback."""
+    covered = valid & (wave >= minimum) & (wave <= maximum)
+    count = int((valid & ~covered).sum())
+    if not count or count >= int(covered.sum()):
+        return valid,valid
+    distance = torch.minimum(wave-minimum,maximum-wave)
+    order = torch.argsort(wave,stable=True)
+    order = order[torch.argsort(distance[order],stable=True)]
+    eligible = order[covered[order]]
+    chosen = eligible[:count]
+    if bool((wave[chosen,None]==wave[eligible[count:]]).any()):
+        return valid,valid
+    control = valid.clone()
+    control[chosen] = False
+    return covered,control
+
+
 class GlobalReferenceAdapter(VariableChannelAdapter):
     """Keep the original parameters and gate only inputs to the spectral adapter."""
 
@@ -25,25 +43,9 @@ class GlobalReferenceAdapter(VariableChannelAdapter):
                 else:
                     valid = torch.as_tensor(band_mask, device=x.device)
                 if valid.shape == wave.shape and valid.dtype == torch.bool and torch.isfinite(wave[valid]).all():
-                    covered = valid & (wave >= self.wavelength_min) & (wave <= self.wavelength_max)
-                    outside = valid & ~covered
-                    count = int(outside.sum())
-                    if count and count < int(covered.sum()):
-                        if self.study_arm == "exclude_out_of_reference":
-                            band_mask = covered
-                        else:
-                            # Remove exactly as many in-reference columns, starting at the
-                            # physical boundary, with wavelength as the deterministic tie-break.
-                            distance = torch.minimum(wave-self.wavelength_min, self.wavelength_max-wave)
-                            order = torch.argsort(wave, stable=True)
-                            order = order[torch.argsort(distance[order], stable=True)]
-                            eligible = order[covered[order]]
-                            chosen = eligible[:count]
-                            # An indistinguishable tie would make the control depend on
-                            # column order. Use the original path for such observations.
-                            if not bool((wave[chosen,None]==wave[eligible[count:]]).any()):
-                                band_mask = valid.clone()
-                                band_mask[chosen] = False
+                    candidate,control = reference_masks(wave,valid,self.wavelength_min,self.wavelength_max)
+                    if candidate is not valid:
+                        band_mask = candidate if self.study_arm == "exclude_out_of_reference" else control
         return super().forward(x, wavelengths, fwhm, return_attention,
                                wavelength_unit=wavelength_unit, fwhm_unit=fwhm_unit, band_mask=band_mask)
 

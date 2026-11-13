@@ -96,6 +96,8 @@ def pyg_qualification(path):
             continue
         row = json.loads(line)
         if "failed_parameter_tensors" in row:
+            if row["device"] in rows:
+                raise ValueError("Duplicate paired device receipt")
             rows[row["device"]] = row
     if set(rows)!={"cpu","cuda:0"}:
         raise ValueError("CPU and strict CUDA paired evidence required")
@@ -105,8 +107,11 @@ def pyg_qualification(path):
                 or row["training_trajectory_compatible"]!= (not row["failed_parameter_tensors"])):
             raise ValueError("Inconsistent engineering witness")
         failure.update({f"{device}/{name}":value for name,value in row["failed_parameter_tensors"].items()})
-    return qualification("pyg_coo_sum",test_execution_passed=True,failed_tensors=failure,
-                         numeric_scope="same-device native/candidate 12-update trajectory")
+    receipt = qualification("pyg_coo_sum",test_execution_passed=True,failed_tensors=failure,
+                            numeric_scope="same-device native/candidate 12-update trajectory")
+    receipt["evidence_sha256"] = digest(path)
+    receipt["devices"] = sorted(rows)
+    return receipt
 
 
 def main():
