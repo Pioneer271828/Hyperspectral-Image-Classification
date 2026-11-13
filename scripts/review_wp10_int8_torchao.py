@@ -127,6 +127,25 @@ def compare_original(row, expected):
         raise ValueError("Replayed native model differs from accepted audit")
 
 
+def stage_cost(layer, native, inputs):
+    def collect(fn):
+        timing = []
+        for x in inputs:
+            _, row = measure(lambda: fn(x))
+            timing.append(row)
+        return timing
+
+    quantized = [layer.quantize_input(x) for x in inputs]
+    layout = [layer.channels_last_codes(q) for q in quantized]
+    result = [layer.integer_conv(x) for x in layout]
+    return dict(quantize_tensor=collect(layer.quantize_input),
+                native_forward=collect(native),
+                layout_reorder=[measure(lambda q=q: layer.channels_last_codes(q))[1] for q in quantized],
+                qconv=[measure(lambda x=x: layer.integer_conv(x))[1] for x in layout],
+                dequantize=[measure(lambda x=x: layer.dequantize_output(x))[1] for x in result])
+
+
+@torch.inference_mode()
 def check_layers(native, optional, arm, tiles, oracle):
     captured = {path: [] for path in ARMS[arm][1]}
     with ExitStack() as stack:
@@ -157,7 +176,7 @@ def check_layers(native, optional, arm, tiles, oracle):
                                                       int((reference.int()-codes0.int()).abs().max()))
             counters["max_dequantized_error"] = max(counters["max_dequantized_error"], float((y-y_ref).abs().max()))
             counters["max_accumulator"] = max(counters["max_accumulator"], int(acc.abs().max()))
-        diagnostics[path] = counters
+        diagnostics[path] = dict(counters, component_timing=stage_cost(proposed, legacy, inputs))
     activities = [torch.profiler.ProfilerActivity.CPU]
     with torch.profiler.profile(activities=activities) as profile:
         actual = sweep(optional, tiles)
@@ -216,6 +235,7 @@ def startup(req):
 
 def main():
     if len(sys.argv) == 3 and sys.argv[1] == "--startup":
+        runtime()
         print(json.dumps(startup(json.loads(sys.argv[2]))))
         return
     parser = ArgumentParser(description=__doc__)

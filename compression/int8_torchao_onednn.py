@@ -9,6 +9,7 @@ from torch import nn
 from compression.int8 import _finite_cpu
 from compression.int8_model import _replace, validate_plan
 from compression.int8_torchao_reference import TORCHAO_COMMIT, TORCH_VERSION, TorchAOAffine, frozen_parameters
+from compression.precision_cost import _state_identity
 from compression.precision_recovery_audit import load_package
 from model.research_config import digest
 from research_runtime import external_directory
@@ -45,19 +46,27 @@ class OneDNNPointConv(nn.Module):
         _finite_cpu(x)
         if self.training or x.requires_grad or x.ndim != 4 or x.shape[1] != self.in_features:
             raise ValueError("Inference-only CPU NCHW point convolution required")
+        return self.integer_conv(self.channels_last_codes(self.quantize_input(x)))
+
+    def quantize_input(self, x):
         scale, zero = self.input_scale, self.input_zero
         # Keep the legacy reduced-range quantizer, including float multiplication/tie behavior.
-        q = torch.quantize_per_tensor(x.clamp(-zero*scale, (127-zero)*scale), scale, zero, torch.quint8)
-        return self.integer_conv(q.int_repr().contiguous(memory_format=torch.channels_last))
+        return torch.quantize_per_tensor(x.clamp(-zero*scale, (127-zero)*scale), scale, zero, torch.quint8)
+
+    @staticmethod
+    def channels_last_codes(quantized):
+        return quantized.int_repr().contiguous(memory_format=torch.channels_last)
 
     def integer_conv(self, codes):
         return torch.ops.onednn.qconv2d_pointwise(codes, self.input_scale, self.input_zero, self.packed, self.weight_scales,
                     self.weight_zero, self.bias, [1, 1], [0, 0], [1, 1], 1,
                     self.output_scale, self.output_zero, torch.uint8, "none", [], "")
 
-    def forward(self, x):
-        codes = self.codes(x)
+    def dequantize_output(self, codes):
         return (codes.to(torch.float32) - self.output_zero) * self.output_scale
+
+    def forward(self, x):
+        return self.dequantize_output(self.codes(x))
 
 
 def convert_backend(native, oracle, *, enabled=False):
@@ -83,7 +92,8 @@ def register_backend(package, path, oracle, *, native=None):
     """Store only an authenticated native package reference and backend provenance."""
     native = load_package(package) if native is None else native
     plan = validate_plan(native)
-    if type(oracle) is not TorchAOAffine or plan["phase"] != "integer":
+    if (type(oracle) is not TorchAOAffine or plan["phase"] != "integer"
+            or _state_identity(native) != package["state"]):
         raise ValueError("Attested backend and frozen integer plan required")
     path = external_directory(path)
     return dev._json_new(path, dict(policy=POLICY, package=package,
@@ -102,7 +112,6 @@ def load_backend(pin, oracle, *, enabled=False, native=None):
     if native is None:
         native = load_package(value["package"])
     else:
-        from compression.precision_cost import _state_identity
         if _state_identity(native) != value["package"]["state"]:
             raise ValueError("In-memory native state differs from the backend package")
     if digest(validate_plan(native)) != value["calibration"]:
