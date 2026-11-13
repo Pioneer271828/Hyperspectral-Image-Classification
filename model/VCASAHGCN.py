@@ -726,6 +726,12 @@ class MultiDatasetVCASAHGCN(nn.Module):
         coverage_reference_nm=None,
         band_metadata=None,
     ):
+        registration = getattr(self, "training_config", {}).get("spectral_registration")
+        if registration is not None:
+            if getattr(band_metadata, "fingerprint", None) != registration["selected_metadata_hash"]:
+                raise ValueError("Checkpoint requires its registered spectral observation")
+            if dataset_name != registration["dataset"]:
+                raise ValueError("Checkpoint spectral registration dataset differs")
         features = self.backbone.forward_features(
             x,
             Q,

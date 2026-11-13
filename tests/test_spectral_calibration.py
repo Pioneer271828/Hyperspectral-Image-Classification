@@ -158,8 +158,14 @@ class SpectralCalibrationTests(unittest.TestCase):
             original = forward_partition(model, "fixture", view.observation, band_metadata=view.bands)
             loaded = load_model_checkpoint(path, DEVICE, spectral_registration=registration)
             actual = forward_partition(loaded, "fixture", restored.observation, band_metadata=restored.bands)
+            with self.assertRaisesRegex(ValueError, "registered spectral observation"):
+                forward_partition(loaded, "fixture", obs, band_metadata=bands)
         for left, right in zip(original[:3], actual[:3], strict=True):
             torch.testing.assert_close(left, right, rtol=1e-5, atol=1e-6)
         legacy = self.root / "legacy.pt"
         save_model_checkpoint(model, legacy)
         self.assertNotIn("spectral_registration", load_model_checkpoint(legacy, DEVICE).training_config)
+
+        re_saved = self.root / "re-saved.pt"
+        save_model_checkpoint(loaded, re_saved)
+        load_model_checkpoint(re_saved, DEVICE, spectral_registration=registration)
