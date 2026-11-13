@@ -1179,6 +1179,14 @@
       "report": "research/reports/WP10_INT8QAT三值等预算恢复与部署_20261112.md",
       "chat_report": "主审接受工程、单Xuzhou单seed同V5真实短恢复与CPU有限成本。CNN第4类新增错与OA下降、三值回退均保留。原64步执行0，每臂155步首次全覆盖。Issue417按本轮范围完成，PR418 ready、未合并"
     }
+    ,{
+      "id": "WP10 INT8 静态仿射与冻结 oneDNN 对照",
+      "state": "原静态INT8参数的可选oneDNN CPU内核对照通过；保持完整FP32默认",
+      "evidence": "PR472，tested 4bec8a2537b76ab9e8f4d068b9952bdf4e367b8a。旧原生22+8、专项4、TorchAO上游4。原五块3920像素/45开发标签，三包20次整数分派、1505280整数码和45块头概率哈希逐位相同。独立24混淆及72组AB/BA与12启动；两单层三头保护通过，双层CNN第4类新增1错，融合通过。",
+      "remaining": "按原合同比较CPU，指定TorchAO 0.19源码与Torch2.7不兼容；兼容0.15仅作算术参照，编译PT2E冻结失败。未显示稳定整网提速，真实新增校准/更新0；独立空间/query与GPU部署未验。",
+      "report": "research/reports/WP10_INT8_TorchAO静态仿射与冻结oneDNN对照_20261114.md",
+      "chat_report": "旧155步权重只读，原默认完整FP32。P4 0/2400，13500及180000仍暂停。"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
