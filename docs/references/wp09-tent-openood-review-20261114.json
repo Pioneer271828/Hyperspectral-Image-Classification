@@ -1,0 +1,76 @@
+{
+  "issue": 473,
+  "scope": "WP09 frozen project contract; authenticated Python files are loaded from external authorized-LXC checkouts; no vendor copies in the repository",
+  "tent": {
+    "repository": "https://github.com/DequanWang/tent",
+    "commit": "e9e926a668d85244c66a6d5c006efbd2b82e83e8",
+    "origin": "Official author repository linked by the Tent project",
+    "paper": "https://arxiv.org/abs/2006.10726v3",
+    "sections": "§3 gradient step and normalization adaptation",
+    "license": {
+      "path": "LICENSE",
+      "spdx": "MIT",
+      "applies": "tent.py",
+      "sha256": "c782f284d1caaab37e0022e826622f898b9527c5eec0eba3fa16c0d85f418df6"
+    },
+    "files": [
+      "tent.py",
+      "README.md"
+    ],
+    "executed": [
+      "softmax_entropy",
+      "collect_params",
+      "configure_model",
+      "Tent.forward",
+      "Tent.reset"
+    ],
+    "runtime": [
+      "torch==2.7.1+cu128"
+    ],
+    "used": "Only softmax_entropy with original raw fused logits, stateless native SGD and an original probability-floor fallback",
+    "excluded": "BatchNorm tracking policy, full parameter collector and online wrapper do not match active DomainBN/region layers, pre-update durable prediction, or episode-level reset."
+  },
+  "openood": {
+    "repository": "https://github.com/Jingkang50/OpenOOD",
+    "commit": "3c35632ee91b54b09d1f085d04f94744cece7d0b",
+    "origin": "Official benchmark repository linked by the OpenOOD paper",
+    "papers": [
+      "https://arxiv.org/abs/2210.07242",
+      "https://arxiv.org/abs/1610.02136v3",
+      "https://arxiv.org/abs/2010.03759v4",
+      "https://arxiv.org/abs/1703.05175v2"
+    ],
+    "license": {
+      "path": "LICENSE",
+      "spdx": "MIT",
+      "applies": "base_postprocessor.py, ebo_postprocessor.py, evaluators/metrics.py. utils/comm.py carries a Facebook attribution; imported only to satisfy module import; distributed functions unused.",
+      "sha256": "82c3d9772f2655f5b0316f48ec58d01d444e82d36bb8cacf481751efe91c3979"
+    },
+    "files": [
+      "openood/postprocessors/base_postprocessor.py",
+      "openood/postprocessors/ebo_postprocessor.py",
+      "openood/evaluators/metrics.py",
+      "openood/utils/comm.py",
+      "openood/postprocessors/knn_postprocessor.py",
+      "pyproject.toml"
+    ],
+    "missing": [
+      "openood/postprocessors/msp_postprocessor.py",
+      "openood/postprocessors/energy_postprocessor.py"
+    ],
+    "executed": [
+      "BasePostprocessor.postprocess",
+      "EBOPostprocessor.postprocess",
+      "auc_and_fpr_recall",
+      "fpr_recall"
+    ],
+    "runtime": [
+      "torch==2.7.1+cu128",
+      "scikit-learn==1.7.2",
+      "tqdm==4.68.3",
+      "numpy==2.0.2"
+    ],
+    "used": "Deferred offline comparison on frozen raw network logits and original thresholds. OOD-positive ROC matches after score orientation and semantic filtering.",
+    "excluded": "No same-role squared-distance source mean prototype. Native scoring and known-only conservative calibration remain authoritative."
+  }
+}

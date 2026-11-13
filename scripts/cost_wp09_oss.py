@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 import json
 from tempfile import TemporaryDirectory
 from pathlib import Path
+import resource
 from statistics import median, quantiles
 import subprocess
 import sys
@@ -124,6 +125,23 @@ def main():
     t_primitive=ab(dict(native=entropy_native,
                         tent=lambda:upstream.softmax_entropy(raw)))
     reference=ab(dict(native=native,openood=compared))
+    from evaluation.open_set import _labels
+    from evaluation.wp09_openood import independent
+    from evaluation.registered_open_set import _load
+    from transfer.registered_development import _read
+    v, _, _, _, target, _ = _load(f["registration"])
+    labels=_labels(json.loads(_read(v["labels"]))["labels"],len(target["sample_ids"]))
+    columns=[c["id"] for c in v["known"]]
+    def scoring(use_oracle):
+        result=[]
+        for row in f["rows"]:
+            scorer=OpenSetScorer(row["scorer"],row["scorer_sha256"])
+            x=target[row["array_key"]]
+            if use_oracle and row["method"]!="prototype_squared_distance":
+                ref.compare_logits(scorer,x,input_kind="raw_logits",column_ids=columns)
+            result.append(independent(scorer,row,labels,x))
+        return result
+    full_scoring=ab(dict(native=lambda:scoring(False),openood=lambda:scoring(True)))
     cold={}
     for stage, path_ in (("tent",args.tent),("openood",args.openood)):
         rows=[]
@@ -137,6 +155,7 @@ def main():
         full_online_observation_predict_adapt_and_serialize=compare, checkpoint_read_and_restore=restore_cost,
         checkpoint_write=separate_write, observation_load=measure(load_observation)[1], serialized_checkpoint_bytes=path.stat().st_size,
         checkpoint_load=t_load, entropy_primitive=t_primitive, six_logits_scores_and_equivalence_check=reference,
+        complete_score_and_metrics=full_scoring, worker_peak_rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
         cold_processes=cold, active_fixture_sgd=30, real_optimizer_updates=0, query=0))
 
 
