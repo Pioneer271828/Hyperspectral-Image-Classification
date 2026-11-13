@@ -973,11 +973,11 @@
     }
     ,{
       "id": "WP05 HongHu稀疏边权梯度FP64累加与准入复核",
-      "state": "主审接受v4数学与CPU工程；后续一张实体CUDA通过资格和合成恢复",
+      "state": "主审接受v4数学与CPU工程；GPU 1/6各通过实体资格和同卡合成恢复",
       "evidence": "Issue394/PR395，tested 3a6381cb4b0c089a10123292bc831a3a613e6106。原数学和CPU证据保留；Issue399续验RTX4090原52夹具438项通过，旧28×23权重梯度容差比0.934，同卡9/22类合成240更新完成态0，实测v3/v4算子成本",
-      "remaining": "最终仅一张卡达标，第二张物理卡资格与恢复待补，真实0/2400，180000步保持暂停",
+      "remaining": "原双卡实体资格已通过，实际0/2400，等待同快照资源与真实独审。 180000步保持暂停",
       "report": "research/reports/WP05_HongHu稀疏边权梯度FP64累加与准入复核_20261111.md",
-      "chat_report": "主审核验原91份CPU证据；2026-11-12单卡v4实体通过证据见WP06数值故障报告，待主对话审查"
+      "chat_report": "原91份CPU证据及历史失败保留，两张实体卡后续证据见WP05META公共接口与P4v4真实准入复核。"
     }
     ,{
       "id": "WP03 失败轻量批次证据清点",
@@ -1089,13 +1089,13 @@
       "evidence": "Issue401/PR402；tested 3c0dfb2494c2a16b2e0ed8ca4ac003316cf45fdc；CPU专项6、回归32全过。初终216000+216000新更新，v1头复用/完成态重载/骨干/BN/query均0；5,529,600特征值、19,121文件、69,120逐类差及2,880保护组核对通过",
       "remaining": "v1/v2选中步和86,400逐行预测一致；HongHu初终68/528、终态残差对容量20/176未过2pp，10/72终态头有零召回。末步未独立审核；同景V5复用、独立空间/query、真实冻结删边及等预算重训待验",
       "report": "research/reports/WP06_全54同v2初终真实冻结探针_20261112.md",
-      "chat_report": "主审核验1408份证据，Issue401 closed/completed，PR402 ready/open未合并；保留Issue396/PR398原v1失败。WP05第二卡与真实2400仍待"
+      "chat_report": "主审核验1408份证据，Issue401 closed/completed，PR402 ready/open未合并；保留Issue396/PR398原v1失败。WP05两实体资格和恢复后续通过，真实状态见P4 v4条目"
     }
     ,{
       "id": "WP06 真实动态路由donor准入与匹配删边外部复盘",
       "state": "CPU外部准入和9/22类六臂跨进程恢复工程通过；真实动态donor未准入",
       "evidence": "Issue403/PR404；LXC实际运行c92c6915246289070bedef1c862551486bcba573，专项与回归d999cf65384c8b6e3b36ab9b8b187d8299683af6（只差测试负例定位），CPU8+25及checker；1918元数据、70候选预加载拒绝、123原指纹一致。两组合成48 donor更新、576重训、完成态重载0；六臂全标签三头复核通过，9类random64/2048同bank",
-      "remaining": "该历史清单无身份齐全的真实动态GraphRouteRun；后续Xuzhou合格真实donor及全上下文匹配见Issue407/PR408。独立空间/query、真实六臂重训和WP05第二GPU/2400仍待",
+      "remaining": "该历史清单无身份齐全的真实动态GraphRouteRun；后续Xuzhou合格真实donor及全上下文匹配见Issue407/PR408。独立空间/query、真实六臂重训和WP05两实体资格和恢复已通过，真实状态见P4 v4条目",
       "report": "research/reports/WP06_真实动态路由donor准入与匹配删边外部复盘_20261112.md",
       "chat_report": "主审接受原同提交合成、历史候选拒绝及全运行源码兼容修复。tested ea956810f55292e1594611cafeee8cf009b1b8b9，9+25与checker通过；Issue403关闭，PR404 ready未合并，原624合成更新身份保留"
     }
@@ -1111,7 +1111,7 @@
       "id": "WP06 Xuzhou 固定曝光真实动态donor与匹配删边",
       "state": "真实256步donor与恢复通过独审；完整匹配六臂因48个上下文无不同掩码而阻塞",
       "evidence": "Issue407/PR408，LXC tested 723b1afe43f6408ece6f34d461af8ef3c0a87365；专项3+回归36与checker通过。固定预算64/128/256缺5/1/0点，512真实更新、完成重载0，first-min选246且曝光齐。312求解120最优/192无不同掩码；独立1459458候选穷举。无删/重要边完整V5三头复盘，27逐类差为0pp",
-      "remaining": "全六臂真实重训0，低权重和三随机整臂无指标，保留45训练/3验证块失败。融合/图/CNN各有5/4/6零召回类；单seed开发验证，独立空间/query及等预算机制结论未验。WP05第二GPU/2400待满足资源",
+      "remaining": "全六臂真实重训0，低权重和三随机整臂无指标，保留45训练/3验证块失败。融合/图/CNN各有5/4/6零召回类；单seed开发验证，独立空间/query及等预算机制结论未验。WP05两实体资格已通过，真实状态见P4 v4条目",
       "report": "research/reports/WP06_Xuzhou真实动态路由与匹配删边_20261112.md",
       "chat_report": "主审接受真实donor模型/Adam/RNG/history逐位与独立选步核验、零更新匹配结果与重训阻塞；Issue407已关闭，PR408 ready未合并"
     }
@@ -1311,7 +1311,7 @@
       "id": "WP02 真实开发块认证与 WP05/WP07/WP08/WP12 原生零更新接入",
       "state": "Xuzhou/HongHu 认证发布、零更新和精确重放通过，PaviaU 固定空间验证缺可寻址块",
       "evidence": "Issue451/PR452，整改tested d444f4beb0ab84146a1355d0d7d870392b46cf17。恢复历史WP07源文件原blob，旧课程4子例修复前拒绝、后通过，12专项与50相关回归无跳过。4真实块8视图168头哈希与初版逐项一致，原Xuzhou42头及完整raw-only图回执一致。WP12旧10表通过，真实优化/rawGT/query/新标签均0",
-      "remaining": "PaviaU DEVVAL_BOUNDED_ARRAY_NOT_PUBLISHED。真实机制收益、独立空间和GPU待验。WP05双卡未达标，2400待资格、180000暂停；WP04暂缓，WP11独立标签BLOCKED",
+      "remaining": "PaviaU DEVVAL_BOUNDED_ARRAY_NOT_PUBLISHED。真实机制收益、独立空间和GPU待验。WP05双实体资格和合成恢复已通过，真实2400待资源、180000暂停；WP04暂缓，WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP07_WP08_WP12_真实开发块认证与零更新接入_20261113.md",
       "chat_report": "主审复核三项整改、fix01归档21成员及历史失败与复验，通过开发块准入和零更新范围。Issue451 closed/completed，PR452 ready未合并"
     },
@@ -1319,7 +1319,7 @@
       "id": "WP02 完整授权开发块银行与 WP05/WP07/WP08 可恢复消费",
       "state": "Xuzhou和HongHu全部授权开发块发布，PaviaU仅两训练观测可读；合成消费恢复通过",
       "evidence": "Issue453/PR454，tested 0f4006e9b817fdcce50a86507e3c6d554b3f01f3。真实351块逐原值核对，482三头前向和20 capture，168旧概率一致。24工程案例1152合成更新、96阶段、完成重入0。8专项与62相关回归无跳过，WP12旧十表通过，真实优化/rawGT/query/新增标签0",
-      "remaining": "PaviaU 125训练/41验证缺有界载荷；Xuzhou/HongHu 24步草案不足覆盖全部带标注训练块。真实训练效果、独立地块和GPU待验。WP05 2400待资格、180000暂停；WP04暂缓、WP11独立标签BLOCKED",
+      "remaining": "PaviaU 125训练/41验证缺有界载荷；Xuzhou/HongHu 24步草案不足覆盖全部带标注训练块。真实训练效果、独立地块和GPU待验。WP05双实体资格已通过，真实2400待资源、180000暂停；WP04暂缓、WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP07_WP08_完整授权开发块银行与恢复_20261113.md",
       "chat_report": "主审通过整改 tested 4d3817f4ba17b1282ba29b2bfb3678b99c056c8d，最终 ad3ef9f3e08255cf8df1b8cc11e4b50c086acef7；Issue453 closed/completed，PR454 ready 未合并"
     },
@@ -1327,7 +1327,7 @@
       "id": "WP05/WP06/WP07/WP12 块内空间退化、条件多尺度与恢复",
       "state": "受控原网格观测、八臂合成恢复和真实零更新范围经主审通过",
       "evidence": "Issue455/PR456，tested ed54c27997da13f6a0559d0a927fe64350b7dec9。8专项及73相关回归无跳过，48合成案例192阶段2304更新与96端点精确；351真实块1448观测2168三头前向，174历史头一致，WP12旧十表验签",
-      "remaining": "真实完整训练、可信物理尺度及完整标签纯度未验，PaviaU仅两块，HongHu第21类同父块，GPU未运行；WP05 2400待资格、180000暂停，WP04暂缓、WP11独立标签BLOCKED",
+      "remaining": "真实完整训练、可信物理尺度及完整标签纯度未验，PaviaU仅两块，HongHu第21类同父块，GPU未运行；WP05双实体资格已通过，真实2400待资源、180000暂停，WP04暂缓、WP11独立标签BLOCKED",
       "report": "research/reports/WP05_WP06_WP07_WP12_块内空间退化与条件多尺度恢复_20261113.md",
       "chat_report": "主审通过限定工程范围，tested ed54c27997da13f6a0559d0a927fe64350b7dec9，final 1fb7f73dc0a4896a87edcbbab04cc1bef7353a2e；Issue455 closed/completed，PR456 ready 未合并"
     },
@@ -1335,7 +1335,7 @@
       "id": "WP02/WP05/WP06/WP07/WP12 原生尺度观测与冻结留出",
       "state": "原生网格、面积监督、八臂恢复、冻结确认及一次性门禁修复经主审通过；合成留出收益未达门槛",
       "evidence": "Issue457/PR458，tested 4ab1eb24efd9fe4965ca2e09ede3de6a99334017。6专项92相关回归，50案例200阶段9312合成更新100端点精确恢复，32确认观测8000前向；真实351块1086观测1506三头前向，1326旧头一致，WP12十表验签",
-      "remaining": "真实GSD/SRF、完整纯度、尺度误差和真实训练效果未验，PaviaU两无标注块，HongHu第21类同父块；GPU严格确定性后向未通过，单卡warn-only合成诊断通过；WP05 2400待资格、180000暂停，WP04暂缓，WP11独立标签BLOCKED",
+      "remaining": "真实GSD/SRF、完整纯度、尺度误差和真实训练效果未验，PaviaU两无标注块，HongHu第21类同父块；GPU严格确定性后向未通过，单卡warn-only合成诊断通过；WP05双实体资格已通过，真实2400待资源、180000暂停，WP04暂缓，WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP06_WP07_WP12_原生尺度监督与冻结留出条件_20261113.md",
       "chat_report": "主审通过修复tested 81e2bdd440a8d073fa61475adc019a1475145ebf、最终 e6279300e52583a0b4f872682d2bdc9fa2f3bdeb；57成员与11专项92回归验签，旧确认未重读。Issue457 closed/completed，PR458 ready未合并"
     },
@@ -1343,7 +1343,7 @@
       "id": "WP05/WP07/WP12 原生尺度严格设备执行与成本",
       "state": "CPU与严格CUDA各48例同卡恢复完整；跨设备三头通过、两设备真实只读成本实测；直接CPU32梯度兼容失败",
       "evidence": "Issue459/PR460，tested 8938eff625772b039673d8bbd8964d2e8c1fe579；2专项118相关回归，192阶段1152合成更新96端点精确，真实189案例1323前向；377算子独立FP64对照通过，原生CPU32边权梯度4处超限已独立复现，54组零更新对照三头分类一致、80个适配器参数梯度张量比较超限。原GPU续跑943次合成更新，完整192阶段及独立96端点通过；189组真实跨设备三头与稀疏结构通过、分类变动0；WP12固定资格消费 b7a8af3c9a9a37e32ec2a1d49231b1db1ce5f957，6专项118回归及仓库检查通过，原十表验签，生产准入为false",
-      "remaining": "真实训练/收益和生产CUDA资格未验证。WP05 2400待资格、180000暂停，WP04暂缓、WP11标签BLOCKED。候选源码未并入主入口",
+      "remaining": "真实训练/收益和该候选生产CUDA资格未验证。WP05双实体资格已通过，真实2400待资源、180000暂停，WP04暂缓、WP11标签BLOCKED。候选源码未并入主入口",
       "report": "research/reports/WP05_WP07_WP12_原生尺度设备恢复与成本_20261113.md",
       "chat_report": "真实优化/rawGT/query/新增标签及旧确认读取0；严格单卡1152次合成更新、48例精确；原682项、纠正48项、GPU续跑447项归档含各自清单。Issue459 open，PR460 Draft"
     }
@@ -1369,7 +1369,7 @@
       "id": "WP05-META 可信光谱元数据接入与真实只读核对",
       "state": "独立可信表入口、真实裁剪与检查点绑定完成；三景历史近似路径只读核对通过",
       "evidence": "Issue466，tested 754c9b97ecd5a86f0c2900632deb9d51ab938fa5；CPU 4/GPU 7/回归69；三景12个train/val视图同设备旧路径逐位一致，新增真实更新0。",
-      "remaining": "逐带中心、FWHM与发布映射证据缺失；候选冻结生产字节门槛未过。HongHu三组13500草案待主审和资格，旧180000暂停。",
+      "remaining": "逐带中心、FWHM与发布映射证据缺失。公共接口和候选冻结已主审接受，见后续WP05-META复核记录。",
       "report": "research/reports/WP05META_可信光谱元数据与真实只读核对_20261113.md",
       "chat_report": "继续原固定全局坐标与历史近似默认。新草案等待独立登记，未读取原GT或留出。"
     },
@@ -1377,7 +1377,7 @@
       "id": "WP05-META 公共接口兼容与冻结源复核",
       "state": "完整 CPU 1,122 通过、7 原条件跳过；CUDA 常规 66 和严格专项 19 通过；候选冻结参考通过仓库检查",
       "evidence": "候选 5bebbe1bc8db93d6e7b3a96d3d168abd60dc9811，旧基线清单核对 446 个继承差异，十条守卫路径保持。真实字节和固定单观测绑定，三景只读，12 个真实元数据视图同设备逐位相同，旧 checkpoint CPU 18 个三头读数逐位同，原生 CUDA 误差上界 2.98e-8 且分类一致。",
-      "remaining": "候选冻结源更新待主审。三景逐带校准、FWHM和发布映射仍缺；HongHu 13500 步为草案，180000 仍暂停。",
+      "remaining": "候选冻结源与有界公共接口已主审接受。三景逐带校准、FWHM和发布映射仍缺。HongHu三臂执行工程及真实前置见新条目。",
       "report": "research/reports/WP05META_公共接口与P4v4真实准入复核_20261113.md",
       "chat_report": "关联 Issue466；主入口仅同步报告、草案和状态，保留历史 OSS-C-R 与 21 仓库结论。"
     },
@@ -1388,6 +1388,14 @@
       "remaining": "GPU 1 资源低于 12,288 MiB，登记双卡始终未同时达标；真实批次独立验收待执行。",
       "report": "research/reports/WP05META_公共接口与P4v4真实准入复核_20261113.md",
       "chat_report": "原 P4 学习图空间协议。13500 和 180000 未在本包启动。"
+    },
+    {
+      "id": "WP05 HongHu 固定缺带三臂拟合执行与接受",
+      "state": "九例执行与全批独审工程通过；9/22类合成矩阵及22类1500步完成，同卡CUDA九例54步通过",
+      "evidence": "测试 65dd7864ad2d54e658b1efb91e408bb99e687c04，预检 0676d13736c0c6be4106171205e873fde9d81e9124245a9d0fe5dbb62244b2ca8，九例和50事件，P4 v4算术，七条件、三头/逐类、实际更新、LR/RNG/断点和成本。",
+      "remaining": "真实13500仍为0，待原2400接受及独立审核释放。原180000保持暂停。原双卡实体资格已通过，实际0/2400，等待同快照资源与真实独审。",
+      "report": "research/reports/WP05_HongHu三臂完整拟合执行与CUDA准入衔接_20261113.md",
+      "chat_report": "关联原 #466/#468 的已接受 META 工程。保留21仓库结果与原生默认。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
