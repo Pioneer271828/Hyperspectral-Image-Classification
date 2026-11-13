@@ -52,3 +52,31 @@ class FactorTests(TestCase):
             self.assertAlmostEqual(value, 8/3)
         self.assertEqual(state_hash(layer), initial)
         self.assertEqual(fingerprint(layer), params)
+
+    def test_candidate_fits_two_private_front_layers_and_restores_without_forward(self):
+        from evaluation.p4_bn_candidate import calibrate_private, restore_private
+        fixture = Fixture()
+        extra = nn.Module()
+        extra.norms = nn.ModuleDict({"synthetic": nn.BatchNorm1d(2)})
+        fixture.backbone.CNN_denoise.add_module("second", extra)
+        original = state_hash(fixture)
+        source = ["0"*64, "1"*64]
+        contexts = [torch.tensor([[0., 1.], [2., 3.]]), torch.tensor([[4., 5.]])]
+
+        def forward(model, x):
+            first = model.backbone.CNN_denoise.norms["synthetic"](x)
+            return model.backbone.CNN_denoise.second.norms["synthetic"](first + 1)
+
+        with self.assertRaisesRegex(ValueError, "devtrain"):
+            calibrate_private(fixture, contexts, forward, role="devval", source_pins=source)
+        model, proof = calibrate_private(fixture, contexts, forward, role="devtrain", source_pins=source)
+        self.assertEqual(state_hash(fixture), original)
+        expected_names = [k for k in proof["replacements"] if k.endswith("running_mean")]
+        torch.testing.assert_close(proof["replacements"][expected_names[0]], torch.tensor([2., 3.]))
+        torch.testing.assert_close(proof["replacements"][expected_names[1]], torch.ones(2))
+        resumed, result = restore_private(fixture, proof, source)
+        self.assertEqual(state_hash(resumed), state_hash(model))
+        self.assertEqual(result["new_statistics_fitting_passes"], 0)
+        self.assertEqual(proof["statistics_buffer_writes"], 4)
+        with self.assertRaisesRegex(ValueError, "context"):
+            restore_private(fixture, proof, source[::-1])
