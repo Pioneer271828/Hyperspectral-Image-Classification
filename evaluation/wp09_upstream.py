@@ -14,8 +14,15 @@ from research_runtime import hash_file
 
 TENT = "e9e926a668d85244c66a6d5c006efbd2b82e83e8"
 OPENOOD = "3c35632ee91b54b09d1f085d04f94744cece7d0b"
-OPENOOD_FILES = ("openood/utils/comm.py", "openood/postprocessors/base_postprocessor.py",
+OPENOOD_FILES = ("openood/postprocessors/base_postprocessor.py",
                  "openood/postprocessors/ebo_postprocessor.py", "openood/evaluators/metrics.py")
+
+
+class _DisabledComm(ModuleType):
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        raise RuntimeError(f"Distributed OpenOOD operation is disabled: {name}")
 
 
 def authenticate(root, revision, files):
@@ -58,23 +65,27 @@ class OpenOODReference:
         import tqdm
         root, evidence = authenticate(root, OPENOOD, OPENOOD_FILES)
         packages = ("openood", "openood.utils", "openood.postprocessors", "openood.evaluators")
-        names = (*packages, "openood.utils.comm", "openood.postprocessors.base_postprocessor",
-                 "openood.postprocessors.ebo_postprocessor", "openood.evaluators.metrics")
+        comm = "openood.utils.comm"
+        postprocessors = ("openood.postprocessors.base_postprocessor",
+                          "openood.postprocessors.ebo_postprocessor", "openood.evaluators.metrics")
+        names = (*packages, comm, *postprocessors)
         before = {name: sys.modules.get(name) for name in names}
         try:
             for name in packages:
                 namespace = ModuleType(name)
                 namespace.__path__ = []
                 sys.modules[name] = namespace
-            loaded = [module(root, path, name) for path, name in zip(OPENOOD_FILES, names[len(packages):], strict=True)]
+            sys.modules[comm] = _DisabledComm(comm)
+            loaded = [module(root, path, name) for path, name in zip(OPENOOD_FILES, postprocessors, strict=True)]
         finally:
             for name, previous in before.items():
                 if previous is None:
                     sys.modules.pop(name, None)
                 else:
                     sys.modules[name] = previous
-        self.base, self.energy, self.metrics_module = loaded[1:]
-        self.evidence = dict(evidence, sklearn=sklearn.__version__, tqdm=tqdm.__version__, torch=str(torch.__version__))
+        self.base, self.energy, self.metrics_module = loaded
+        self.evidence = dict(evidence, distributed_comm="disabled_fail_on_use_v1",
+                             sklearn=sklearn.__version__, tqdm=tqdm.__version__, torch=str(torch.__version__))
         self.identity = digest(self.evidence)
 
     def compare_logits(self, scorer, values, *, input_kind, column_ids):

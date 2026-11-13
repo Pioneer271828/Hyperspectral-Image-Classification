@@ -10,6 +10,9 @@ from unittest.mock import patch
 
 import numpy as np
 
+import torch
+
+from evaluation import wp09_upstream
 from evaluation.open_set import OpenSetScorer, detection_metrics
 from evaluation.wp09_openood import evaluate_approval
 from evaluation.wp09_upstream import OpenOODReference
@@ -25,7 +28,12 @@ SOURCE = os.environ.get("WP09_OPENOOD_SOURCE")
 @unittest.skipUnless(SOURCE, "Pinned OpenOOD source required")
 class OpenOODTests(unittest.TestCase):
     def test_actual_msp_ebo_roc_orientation_and_boundaries(self):
-        provider=OpenOODReference(SOURCE)
+        with patch.object(wp09_upstream, "module", wraps=wp09_upstream.module) as modules:
+            provider = OpenOODReference(SOURCE)
+        self.assertEqual(set(provider.evidence["files"]), {"LICENSE", *wp09_upstream.OPENOOD_FILES})
+        self.assertEqual([call.args[1] for call in modules.call_args_list], list(wp09_upstream.OPENOOD_FILES))
+        with self.assertRaisesRegex(RuntimeError, "disabled: is_main_process"):
+            provider.base.BasePostprocessor(None).inference(torch.nn.Identity(), [], progress=True)
         known=[dict(id=i,name=str(i)) for i in (19,2,7)]
         unknown=[dict(id=31,name="open")]
         logits=np.array([[1,2,3],[3,3,1],[0,0,0],[7,2,1],[4,8,1]],dtype=np.float64)[:,::-1]

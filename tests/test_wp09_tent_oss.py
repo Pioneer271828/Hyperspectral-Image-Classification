@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import torch
 from torch import nn
@@ -13,7 +13,7 @@ from evaluation.wp09_upstream import tent_reference
 from scripts.review_wp09_tent import compare, run_child
 from test_wp09_online_tta import fixture, registration
 from transfer.online_tta_run import execute
-from transfer.wp09_tent import execute_tent
+from transfer.wp09_tent import TentEntropySession, execute_tent
 
 
 SOURCE = os.environ.get("WP09_TENT_SOURCE")
@@ -59,6 +59,61 @@ class TentTests(unittest.TestCase):
         case = upstream.Tent(model, solver, steps=1, episodic=False)
         first, second = case(x), case(x)
         self.assertFalse(torch.equal(first.detach(), second.detach()))
+
+    def test_affine_entropy_at_probability_floor_and_nonfinite_logits(self):
+        upstream, _ = tent_reference(SOURCE)
+
+        class Logits(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.backbone = nn.Sequential(nn.LayerNorm(3, dtype=torch.float64))
+
+            def forward(self, task, x, *, return_logits=False, **kwargs):
+                # Zero input makes the affine bias zero initially. A separate
+                # exact fixture sets the tail without changing the trainable path.
+                logits = self.backbone(torch.zeros_like(x)) + x
+                return (logits if return_logits else logits.softmax(1),)
+
+        torch.manual_seed(64)
+        options = dict(task="toy", mode="affine", lr=.07, rank=1, seed=64, scale=1)
+
+        def sessions():
+            entropy = Mock(wraps=upstream.softmax_entropy)
+            model = Logits()
+            return _Session(model, **options), TentEntropySession(model, entropy=entropy, **options), entropy
+
+        threshold = torch.log(torch.tensor(1e-8, dtype=torch.float64)
+                              * (1 + torch.exp(torch.tensor(-.7, dtype=torch.float64))) / (1 - 1e-8)).item()
+        for tail, fallback in ((threshold-1e-6, True), (threshold+1e-6, False), (-1000., True)):
+            with self.subTest(tail=tail):
+                x = torch.tensor([[0., -.7, tail]], dtype=torch.float64)
+                self.assertEqual(bool((x.softmax(1) < 1e-8).any()), fallback)
+                native, candidate, entropy = sessions()
+                before = candidate.model.backbone[0].bias.detach().clone()
+                native_loss, candidate_loss = native.adapt((x, None)), candidate.adapt((x, None))
+                if fallback:
+                    entropy.assert_not_called()
+                    self.assertEqual(native_loss, candidate_loss)
+                else:
+                    entropy.assert_called_once()
+                    self.assertAlmostEqual(native_loss, candidate_loss, places=15)
+                self.assertFalse(torch.equal(before, candidate.model.backbone[0].bias))
+                for baseline, adapted in zip(native.model.parameters(), candidate.model.parameters(), strict=True):
+                    for old, new in ((baseline, adapted), (baseline.grad, adapted.grad)):
+                        torch.testing.assert_close(old, new, rtol=0 if fallback else 1e-13,
+                                                   atol=0 if fallback else 1e-15)
+
+        for bad in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(bad=bad):
+                _, candidate, entropy = sessions()
+                before = candidate.state()
+                with patch.object(candidate.optimizer, "step", wraps=candidate.optimizer.step) as step:
+                    with self.assertRaisesRegex(ValueError, "Nonfinite Tent logits"):
+                        candidate.adapt((torch.tensor([[0., -.7, bad]], dtype=torch.float64), None))
+                    step.assert_not_called()
+                entropy.assert_not_called()
+                self.assertTrue(all(p.grad is None for p in candidate.model.parameters()))
+                self.assertEqual(before, candidate.state())
 
     def test_prediction_is_durable_before_update_and_failure_is_terminal(self):
         with tempfile.TemporaryDirectory() as directory:
