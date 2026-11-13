@@ -83,6 +83,18 @@ def synthetic(root, out, producer, gpu):
     return transport._json_new(out / "synthetic-acceptance.json", result)
 
 
+def check_real_route(out, phase):
+    # A released budget owns one training path. An interrupted phase retains
+    # its intent for diagnosis instead of allowing another update attempt.
+    phases = ("full", "prefix", "resume", "completed")
+    seen = {name for name in phases if (out / f"{name}.intent.json").exists()}
+    expected = {"full": set(), "prefix": set(), "resume": {"prefix"}}
+    admissible = (seen in ({"full"}, {"prefix", "resume"}) if phase == "completed" else seen == expected[phase])
+    if not admissible:
+        raise ValueError("A released case allows one training path and no repeated stage")
+    return "full" if seen == {"full"} else {"resume": "prefix", "completed": "resume"}.get(phase)
+
+
 def real_stage(root, out, preflight, release, case, phase, code, gpu):
     guarded = RealReleasedRun(root, preflight, case, release, out, code)
     if gpu != guarded.physical_uuid:
@@ -100,7 +112,7 @@ def real_stage(root, out, preflight, release, case, phase, code, gpu):
                 raise ValueError("Approved checkpoint registration differs from prior execution")
         else:
             spec_pin = transport._json_new(identity, spec)
-        previous = {"resume": "prefix", "completed": "resume"}.get(phase)
+        previous = check_real_route(out, phase)
         state = None
         if previous:
             prior = read(transport._pin(out / f"{previous}.json"), root)
@@ -108,6 +120,12 @@ def real_stage(root, out, preflight, release, case, phase, code, gpu):
                 raise ValueError("Real predecessor belongs to another phase or registration")
             state = packet(prior["checkpoint"], root)
         path = out / f"{phase}.pt"
+        artifacts = [out / f"{phase}{part}" for part in (".pt", ".json", ".intent.json")]
+        if any(file.exists() for file in artifacts):
+            raise ValueError("A prior real phase artifact is already present")
+        if gpu:
+            p4.gate(gpu)
+        transport._json_new(artifacts[2], {"registration": spec_pin, "phase": phase})
         actual = training.execute(spec, phase, path, code["commit"], state, execution=execution, released=guarded)
         return transport._json_new(out / f"{phase}.json",
                                    {**actual, "registration": spec_pin, "checkpoint": transport._pin(path)})

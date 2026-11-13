@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 from model.task_losses import probability_loss_components
+from scripts.run_native_released_points import check_real_route
 from transfer import native_released_points as points, native_released_training as sparse
 from transfer import native_scale_training as training
 from transfer.native_released_preflight import open_bank
@@ -110,6 +111,20 @@ class ReleasedPointTests(unittest.TestCase):
                     RealReleasedRun(root, None, "case", None, root / "run", {})
                 bank.assert_not_called()
             self.assertFalse((root / "run").exists())
+
+    def test_real_path_cannot_spend_the_same_budget_twice(self):
+        with tempfile.TemporaryDirectory() as name:
+            out = Path(name)
+            self.assertIsNone(check_real_route(out, "full"))
+            (out / "prefix.intent.json").touch()
+            self.assertEqual(check_real_route(out, "resume"), "prefix")
+            with self.assertRaisesRegex(ValueError, "one training path"):
+                check_real_route(out, "full")
+            (out / "resume.intent.json").touch()
+            self.assertEqual(check_real_route(out, "completed"), "resume")
+            for phase in ("resume", "prefix"):
+                with self.assertRaisesRegex(ValueError, "one training path"):
+                    check_real_route(out, phase)
 
     def test_empty_block_rejected_before_modes_gradient_and_rng(self):
         spec = sparse.contract(22, 512, "mean", 2, "oracle")
