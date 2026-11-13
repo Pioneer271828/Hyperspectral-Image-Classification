@@ -12,7 +12,6 @@ from time import perf_counter_ns, process_time_ns
 import numpy as np
 import torch
 
-from compression.precision_startup import _memory_kib
 from evaluate_tta import _Session
 from evaluation.open_set import OpenSetScorer
 from evaluation.wp09_upstream import OpenOODReference, tent_reference
@@ -57,7 +56,7 @@ def worker(mode, ref):
         result, duration = measure(lambda:OpenOODReference(ref))
         files = result.evidence["files"]
     return dict(source_bytes=sum((Path(ref)/path).stat().st_size for path in files),
-                attestation_and_import=duration, memory_kib=_memory_kib())
+                attestation_and_import=duration, peak_rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 
 def main():
