@@ -168,7 +168,7 @@ def from_bank(bank, role, tile, band_spec, factor, producer, *, edge=EDGE_POLICY
     return _materialize(scene.dataset,scene.classes,view,lattice,context,role,producer), row
 
 
-def forward(model, actual, producer, role, *, condition=None, timed=None):
+def forward(model, actual, producer, role, *, condition=None, timed=None, execution=None):
     receipt = actual.verify(producer, role)
     if condition is not None:
         condition.validate(actual, receipt)
@@ -186,15 +186,21 @@ def forward(model, actual, producer, role, *, condition=None, timed=None):
     args = (model,actual.dataset,actual.view.observation,np.asarray(bands.wavelengths,dtype=np.float32),
             16 if condition is not None else (50 if actual.dataset=="paviaU" else 100))
     started = perf_counter()
-    with _measure(builder,"build_graph",timing,"graph_seconds",
-                  lambda state: graphs.append(dict(**_graph_trace(state), q_shape=list(state.Q.shape)))):
+    partition = forward_partition if execution is None else execution.partition
+    capture = (lambda state: graphs.append(dict(**_graph_trace(state), q_shape=list(state.Q.shape)))
+               if execution is None else graphs.append(state))
+    measured = (_measure(builder,"build_graph",timing,"graph_seconds",capture) if execution is None
+                else execution.measure_graph(builder,timing,capture))
+    with measured:
         if isinstance(model, ConditionalMultiscaleVCASAHGCN):
             metadata, coverage, gsd = (bands, None, None) if condition is None else condition.values()
             with model.partition_bands(metadata), model.physical_conditions(coverage,gsd):
-                out = forward_partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
+                out = partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
         else:
-            out = forward_partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
+            out = partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
     timing["forward_seconds"] = perf_counter()-started
+    if execution is not None:
+        graphs = [execution.graph_trace(state) for state in graphs]
     if len(graphs) != 1 or graphs[0]["q_shape"][0] != receipt["pixels"]:
         raise ValueError("Q must be built on the actual native pixels")
     cnn, graph = out[-1].get("multiscale_cnn"), out[-1].get("multiscale_graph")
