@@ -108,7 +108,7 @@ def training_labels(labels, plan, observation):
     return np.array(labels.reshape(-1)[ids].reshape(observation.global_ids.shape),copy=True)
 
 def forward_partition(model, dataset, observation, wavelengths=None, superpixel_scale=100, *, fwhm=None, wavelength_unit=None, fwhm_unit=None,
-                      coverage_metadata=None, coverage_reference_nm=None):
+                      coverage_metadata=None, coverage_reference_nm=None, band_metadata=None):
     import torch
     if model.backbone.graph_mode != 'learned':
         raise ValueError('Strict spatial protocol requires label-free learned graphs')
@@ -116,6 +116,14 @@ def forward_partition(model, dataset, observation, wavelengths=None, superpixel_
         raise ValueError('Validation/test must use eval mode with frozen normalization state')
     device = next(model.parameters()).device
     value = torch.tensor(np.concatenate((observation.spectral,observation.coordinates),axis=-1),device=device)
+    if band_metadata is not None:
+        from loadData.observation_sampling import BandMetadata
+        if any(item is not None for item in (wavelengths, fwhm, wavelength_unit, fwhm_unit, coverage_metadata)):
+            raise ValueError("Use band_metadata alone for the spatial view")
+        if not isinstance(band_metadata, BandMetadata) or len(band_metadata.band_ids) != observation.spectral.shape[-1]:
+            raise ValueError("Spatial view and band metadata lengths differ")
+        return model(dataset, value, superpixel_scale=superpixel_scale, return_graph_info=True,
+                     band_metadata=band_metadata, coverage_reference_nm=coverage_reference_nm)
     if wavelengths is not None:wavelengths=torch.as_tensor(wavelengths,device=device)
     extra = {} if fwhm is None else {'fwhm': torch.as_tensor(fwhm, device=device)}
     if wavelength_unit is not None:extra['wavelength_unit']=wavelength_unit
