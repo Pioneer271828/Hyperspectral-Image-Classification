@@ -1241,7 +1241,7 @@
       "evidence": "Issue433/PR435，零更新端点修订 2dedf5f64dd67b0a609a10aaa1f26d527b8578d6。逐端点前缀复算，7个选中点修正、11个选中点及18个末态一致。旧观测12例、48前向及准入身份沿用。修订复盘 9bf307260ecd07f087db35c26e276930c22aa417d10687e58ed7b8bb758d2782。",
       "remaining": "描述性固定开发证据。真实CUR-O、S×O、空间确认及GPU待验",
       "report": "research/reports/WP06_课程逐支持复盘与观测课程真实准入_20261112.md",
-      "chat_report": "本批待主审。真实近似带元数据、原统计和选列至图输入逐层核对"
+      "chat_report": "主审接受端点v2和原零更新观测准入。Issue433完成，PR435可审阅"
     }
     ,{
       "id": "WP12 真实课程质量、教师和有效监督证据接入",
@@ -1249,7 +1249,7 @@
       "evidence": "Issue431/PR436，修订适配 ee181cf052fb21cb08784487d642d8507387ba19。49模型145头，区分整轨与端点累计监督；7个选中点修正，质量成本及原30模型一致。独立复算 d66ed7b84dee50c61598e262429ab26c7e9c13d7c68b944f80cf65a9284f19d9。",
       "remaining": "课程部署与GPU NOT_RUN，WP11独立确认 BLOCKED。真实CUR-O仅关联零更新准入",
       "report": "research/reports/WP12_真实课程质量教师与有效曝光证据_20261112.md",
-      "chat_report": "本批待主审。保留有效监督、教师执行、逐头小类和实际阶段预算"
+      "chat_report": "主审接受修订后的49模型与逐端点累计监督。Issue431完成，PR436可审阅"
     }
     ,{
       "id": "WP01 Xuzhou K5/V5 真实观测课程四排列",
@@ -1257,7 +1257,7 @@
       "evidence": "Issue438/PR440，实际 e3a3c74b287bc024514a03a04cd9ae4f9a6c2c9f。4,272次更新，48阶段，独审88.09秒。选中full融合OA较同种子fixed升1/平7/降1，无同时通过三头保护且融合提升的个例。独审 1ccf81149b4fcc17d9e95cd5515368e4cfff8565e65871e480a2158f28a43eaf。",
       "remaining": "固定开发V5与单源三恢复种子。空间独立、GPU及部署耗时未测",
       "report": "research/reports/WP01_Xuzhou_K5V5真实观测课程四排列_20261112.md",
-      "chat_report": "真实CUR-O已交付，待主审；默认结构与选模入口照旧"
+      "chat_report": "主审接受单源三恢复种子、12例4,272更新及冻结四条件复盘。Issue438完成，PR440可审阅"
     }
     ,{
       "id": "WP01 样本与观测课程双因素合成恢复",
@@ -1265,7 +1265,7 @@
       "evidence": "Issue437/PR441，实际 01aacab2a8744879c0313c97d60db2aedd82dca3。登记内448次合成更新、12个独立恢复进程、168次旧实现合成对照。45组效应算式，真实0次更新。",
       "remaining": "真实组合保留冻结前提和预算草案，须另行授权",
       "report": "research/reports/WP01_样本与观测课程双因素合成恢复_20261112.md",
-      "chat_report": "双因素为显式工程入口，旧默认保持单因素合同，待主审"
+      "chat_report": "主审接受3/9/22类合成四臂工程。Issue437完成，PR441可审阅"
     }
     ,{
       "id": "WP12 真实观测课程与双因素工程证据",
@@ -1273,7 +1273,15 @@
       "evidence": "Issue439/PR442，适配 b20c3b0ed2e58721a07c71230c0bb6193bd02a74。原49真实行逐项保留；共62模型184头，条件表300头。16项回归及7项真实工件篡改拒绝，独审 999edf314cf34463e3b42e57354d666edbdd2e21df24f88a317ce3eb8d4fa5d2。",
       "remaining": "部署与GPU NOT_RUN，WP11独立确认 BLOCKED，真实S×O NOT_RUN",
       "report": "research/reports/WP12_真实观测课程与双因素工程证据_20261112.md",
-      "chat_report": "WP12真实及工程汇总已交付，待主审；适配和独立复算均为零更新"
+      "chat_report": "主审接受62真实模型、300条件头和独立合成工程栏。Issue439完成，PR442可审阅"
+    }
+    ,{
+      "id": "WP01/WP06/WP12 真实样本与观测课程组合验收",
+      "state": "真实三组合、九对照认证、联合监督诊断和集成 CPU 通过",
+      "evidence": "Issue443/PR444，运行 762f0ede16233dc2bb129bd64a2ae7a6a491d0bc，独审及适配 25b4e36ae3ab2be0aae01ffb7d6c82c37ed84aca。新增1,068次更新并引用3,204次旧对照。主表65模型，独立复算 cd3fafa75f9732dbac10c55e39c1f699ce78149016ec9203ed50ee01a9b4d489。",
+      "remaining": "固定K5/V5单源，未确认独立空间收益、部署或GPU。WP11标签BLOCKED，WP05待资格",
+      "report": "research/reports/WP01_WP06_WP12_真实样本观测课程组合验收_20261113.md",
+      "chat_report": "待主审。full选中融合OA交互均值约0.00pp，保持原默认关闭"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
