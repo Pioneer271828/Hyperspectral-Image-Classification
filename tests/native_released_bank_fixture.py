@@ -16,22 +16,25 @@ from transfer.native_scale_observation import FACTORS, from_bank
 from transfer.native_scale_training import SEEDS
 
 
+def release_fixture(classes):
+    release, arrays = original.fixture(classes)
+    # A distinct released point of class one makes a genuine count-weighted minority.
+    rows = [dict(row, samples=[list(p) for p in row["samples"]]) for row in release.rows]
+    for row in rows:
+        ids = {p[0] for p in row["samples"]}
+        low = row["box"][0]*release.shape[1]+row["box"][2]
+        for cell in (low+1, low+release.shape[1]):
+            if cell not in ids:
+                row["samples"].append([cell, 1])
+                row["samples"].sort()
+                break
+    return replace(release, rows=tuple(rows)), arrays
+
+
 def fixture(root, code, *, design=None):
     receipts, intakes = {}, {}
     for classes, scene in ((9, "xuzhou"), (22, "whu-honghu")):
-        release, arrays = original.fixture(classes)
-        # Retain only explicit points. Duplicate the class-1 point at a distinct
-        # pixel in its first 4x4 cell, yielding a real count-weighted minority.
-        rows = [dict(row, samples=[list(p) for p in row["samples"]]) for row in release.rows]
-        for row in rows:
-            ids = {p[0] for p in row["samples"]}
-            low = row["box"][0]*release.shape[1]+row["box"][2]
-            for cell in (low+1, low+release.shape[1]):
-                if cell not in ids:
-                    row["samples"].append([cell, 1])
-                    row["samples"].sort()
-                    break
-        release = replace(release, rows=tuple(rows))
+        release, arrays = release_fixture(classes)
         # Real bank transport performs the same hashing, geometry and decode.
         pin = bank.publish(root / f"bank-{classes}", root, release, lambda row: arrays[row["id"]])
         bank_pin = {key: pin[key] for key in ("root", "sha256", "registration")}
