@@ -3,7 +3,6 @@
 import copy
 from pathlib import Path
 import os
-import subprocess
 import tempfile
 from unittest import TestCase, skipUnless
 
@@ -15,7 +14,7 @@ from model.research_config import ResearchConfig
 from scripts.train_joint_m4 import graph_binding
 from test_calibrated_selection import items
 from test_joint_training import PROVENANCE, SOURCE, checkpoints, hashes, settings
-from transfer.oss_b_sparse_backend import coo_product, use_product
+from transfer.oss_b_sparse_backend import coo_product, load_pyg_sum, use_product
 
 
 PIN = "d1f2f8642387b6e0563d6aee227c39130746c738"
@@ -24,13 +23,7 @@ ENABLED = os.environ.get("OSS_B_TEST_PYG")=="1"
 
 
 def load_scatter():
-    import torch_geometric
-    from torch_geometric.utils import scatter
-    root = Path(torch_geometric.__file__).resolve().parents[1]
-    head = subprocess.check_output(["git","-C",str(root),"rev-parse","HEAD"],text=True).strip()
-    if head!=PIN or subprocess.check_output(["git","-C",str(root),"status","--porcelain"]):
-        raise ValueError("Clean fixed PyG source required")
-    return scatter
+    return load_pyg_sum(Path(os.environ["OSS_B_PYG_SOURCE"]))
 
 
 class SparseContractTests(TestCase):
@@ -44,6 +37,11 @@ class SparseContractTests(TestCase):
             with use_product(None):
                 torch.sparse.mm(dense.to_sparse(),dense,reduce="mean")
         torch.testing.assert_close(torch.sparse.mm(dense.to_sparse(),dense),dense)
+        with tempfile.TemporaryDirectory() as temp:
+            fake = Path(temp)/"_scatter.py"
+            fake.write_text("raise RuntimeError('must not execute')")
+            with self.assertRaisesRegex(ValueError,"Fixed PyG source"):
+                load_pyg_sum(fake)
 
 
 @skipUnless(ENABLED,"Fixed PyG acceptance requires OSS_B_TEST_PYG=1")
