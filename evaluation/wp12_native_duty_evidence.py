@@ -82,6 +82,8 @@ def qualification(item, root, scientific_worker):
                 ("waiting", "completed", "completed", "failed")
             and wait["new_updates"] == resumed["new_updates"] == 12 and done["new_updates"] == 0
             and row["actual_optimizer_updates"] == 48 + fail["new_updates"]
+            and type(row["interrupted_pid"]) is int and row["interrupted_pid"] > 0
+            and fail["slots"]["a"]["returncode"] < 0 and fail["slots"]["b"]["status"] == "drained"
             and len(row["paired_states"]) == 2
             and all(v["model_adam_rng_history_selected_exact"] is True for v in row["paired_states"].values()),
             "Wrong qualification scope or subprocess evidence")
@@ -153,7 +155,9 @@ def p4_fit(item, root, resource, release, p4):
             and 0 < row["complete_cases"] <= p4["reviewed_cases"] and row["actual_scope_updates"] <= p4["optimizer_updates"]
             and row["validation_steps"] == [30, 60] and all(case["actual_optimizer_updates_on_one_path"] == 60
                 and set(case["selected"]) == {"fused", "cnn", "graph"} and len(case["class_to_column"]) == 22
-                and len(case["events"]) == 2 for case in row["cases"]), "P4 diagnostic exceeds committed real evidence")
-    return {"scope": "selected_checkpoint_diagnostic", "receipt": item, "producer": row["producer"],
+                and len(case["events"]) == 2 and set(case["frozen_cpu_readout"]) == {"initial", "selected", "last"}
+                and all(set(role) == {"train", "val"} for role in case["frozen_cpu_readout"].values())
+                for case in row["cases"]), "P4 diagnostic exceeds committed real evidence")
+    return {"scope": "saved_cuda_selected_metrics_and_supplemental_frozen_cpu_replay", "receipt": item, "producer": row["producer"],
             "observed_cases": row["complete_cases"], "committed_updates_at_diagnosis": row["actual_scope_updates"],
             "new_updates": 0, "full_run_effect": None}
