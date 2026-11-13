@@ -1,10 +1,13 @@
 """Reject fabricated identities and keep planning states outside ranked evidence."""
+import fcntl
 import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
 
 from evaluation import wp12_p4_released_evidence as evidence
+from evaluation import wp12_p4_progress as progress
+from research_runtime import write_json
 from transfer import registered_development as dev
 
 
@@ -31,6 +34,32 @@ class EvidenceTests(unittest.TestCase):
         terminal = {**status, "status": "completed", "slots": {"a": committed, "b": committed}}
         self.assertEqual({r["state"] for r in evidence.queue_states(resource, terminal, acceptance).values()},
                          {"accepted"})
+
+    def test_read_only_running_status_uses_only_committed_acknowledgments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            out = root / "run"
+            out.mkdir()
+            name = "s2048-k1-scratch-m512-none"
+            resource = dev._json_new(root / "scope.json", {"execution": str(out),
+                "schema": "wp05_p4_independent_slot_scope_v1",
+                "slots": {"cpu-a": {"updates": 120, "cases": [name]}}})
+            write_json(out / "resource-owner.json", {"resource": resource})
+            with (out / ".coordinator.lock").open("a") as stream:
+                fcntl.flock(stream, fcntl.LOCK_EX)
+                call = out / "cases" / name / "full/calls/000000-000060.json"
+                call.parent.mkdir(parents=True)
+                write_json(call, {"updates": 60})
+                stages = out / "stages" / name
+                stages.mkdir(parents=True)
+                live = lambda: progress.status(resource, root, approved_resource_sha=resource["sha256"])
+                self.assertEqual(live()["slots"]["cpu-a"]["optimizer_updates"], 0)
+                write_json(stages / "00.receipt.json", {"evidence": dev._pin(call)})
+                self.assertEqual(live()["slots"]["cpu-a"]["optimizer_updates"], 60)
+                write_json(call, {"changed": True})
+                with self.assertRaisesRegex(ValueError, "fingerprint"):
+                    live()
+            self.assertIsNone(progress.status(resource, root, approved_resource_sha=resource["sha256"]))
 
     def test_foreign_source_even_when_well_formed_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:

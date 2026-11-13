@@ -12,6 +12,7 @@ from transfer.native_released_points import LOSS
 from transfer.native_released_preflight import BANK_ROOTS, EXPECTED, SCHEMA
 from transfer.native_released_training import COMPARISONS
 from evaluation.wp12_native_support_evidence import OLD_TABLES
+from evaluation.wp12_p4_progress import status as controller_status
 
 
 P4_SCIENCE = "a827dec0a6087d1eaf990ca086f1c28dd27e501ba0ae81c3b2c18434672e9ce5"
@@ -94,13 +95,18 @@ def p4_prepared(resource_pin, template_pin, root):
             and {key: row["worker"][key] for key in P4_WORKER} == P4_WORKER
             and len(science["cases"]) == 20 and science["budget"]["planned_optimizer_updates"] == 2400
             and {i for slot in row["slots"].values() for i in slot["cases"]} == {c["id"] for c in science["cases"]}
-            and not Path(row["execution"]).exists()
             and template["schema"] == "wp05_honghu_fit_input_template_v1" and template["status"] == "NOT_RUN"
             and len(template["cases"]) == 9 and sum(c["planned_updates"] for c in template["cases"]) == 13500
             and all(c["status"] == "NOT_RUN" and c["actual_updates"] == 0 and c["selected_step"] is None
                     for c in template["cases"]), "Expected independently prepared P4 and fitting evidence")
-    return {"scope": resource_pin, "science": row["science"], "state": "planned",
-            "slots": queue_states(row), "optimizer_updates": 0, "fit_template": template_pin,
+    progress = controller_status(resource_pin, root, approved_resource_sha=P4_RESOURCE)
+    slots = queue_states(row, progress)
+    state = "planned" if progress is None else progress["status"]
+    if state == "completed":
+        state = "audited_pending_batch_acceptance"
+    return {"scope": resource_pin, "science": row["science"], "state": state,
+            "slots": slots, "optimizer_updates": sum(item["actual_updates"] for item in slots.values()),
+            "fit_template": template_pin,
             "fit_status": template["status"], "accuracy": None, "cost": None,
             "average_benefit": None, "batch_accepted": False, "query_authorized": False}
 
