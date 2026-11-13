@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "issue": 461,
+  "base": "1265490eda01d0cda1ab15ad80aa902911ed1f3a",
+  "tested": "8a52935f4e676c95201468d334eac8e88aed01a4",
+  "coverage": {
+    "initial_inventory": "docs/references/completed-module-oss-review-20261113.json",
+    "crosswalk": "docs/references/oss-a-module-crosswalk.json",
+    "baseline_rows": 166,
+    "index_rows": 50,
+    "policy": "Existing candidates outside the four deep reviews retain their initial source and license evidence; this package does not imply a repository-wide audit or substitution."
+  },
+  "priority": [
+    {
+      "repository": "VainF/Torch-Pruning",
+      "sha": "e80127d7c6935c319a7dd6719b8a72e3c1fcbff9",
+      "paper": "https://arxiv.org/abs/2301.12900",
+      "read_sections": "§3.1–3.3 and Algorithm 2",
+      "officiality": "Paper links this author repository",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "sha256": "73b75aa7704b862659dc7692374b6a5dd849701e3d63c5605be95933bec0edbb",
+        "scope": "DependencyGraph, Group, pruner functions and the no-download custom-layer example used here; no nested license found for these paths."
+      },
+      "files": {
+        "torch_pruning/dependency/graph.py": "8bef11cfff2e3801e69fb17c7e1363c1e1440b0494e4ac5232b6d8b9d34f2fb1",
+        "torch_pruning/dependency/group.py": "ee6af9f5577bfb9334d23c968a21570e0b8d2a13ce080ef17162f890c4e88bf0",
+        "torch_pruning/pruner/function.py": "922abab9bbb670df5ecdb28c25af5b1f06e24aa464284686c11e1586118f9678"
+      },
+      "used": "Imported the fixed source from an isolated external checkout. Stock G4 stage-1/2 wrapper traces all DomainBN leaves, prunes a copy and verifies complete tensor axes against the project mapping.",
+      "original_example": "tests/test_customized_layer.py ran on CPU; other pretrained model example was not selected because it downloads weights.",
+      "disposition": "Engineering dependency oracle accepted for this stock CNN witness. Whole-model routing, graph/pruning handlers, candidate quality, validation guard and production replacement not inferred."
+    },
+    {
+      "repository": "huggingface/pytorch-image-models",
+      "sha": "43b549bfe9d680bc94284cfd0b611152d18e97d7",
+      "paper": "https://openaccess.thecvf.com/content_CVPR_2019/html/Li_Selective_Kernel_Networks_CVPR_2019_paper.html",
+      "read_sections": "§3.1 Split, Fuse, Select",
+      "officiality": "Maintainer implementation of the paper mechanism; author repository implus/SKNet is a separate source",
+      "license": {
+        "spdx": "Apache-2.0",
+        "path": "LICENSE",
+        "sha256": "71b111620fa32c17a80ccd6db2da759d31a591e497d8b5f382174f59d1b59d49",
+        "scope": "Exact selective_kernel.py file checked against root license, no nested override found"
+      },
+      "files": {
+        "timm/layers/selective_kernel.py": "70e06298d6c9be1d98bb9cc98825db8a612ba9e526f1e2d6fefec08c4efe7b10"
+      },
+      "disposition": "Direct WP07 replacement rejected: separate convolutions and optional split, BN in attention, per-channel weights. Turning split off does not recover shared kernels, scene-scalar weights, metadata conditioning or graph radii. Generic softmax already exists locally.",
+      "executed": false
+    },
+    {
+      "repository": "zhu-xlab/DOFA",
+      "sha": "0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9",
+      "paper": "https://arxiv.org/html/2403.15356v3",
+      "read_sections": "§3.3, §4.4.1, §7",
+      "officiality": "Paper links this author repository",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "sha256": "e169ac02166d48529244826773fc7e4afa855b62edb7533a09f910e6fb6dfcd8",
+        "scope": "Position helper in root wave_dynamic_layer.py; pretraining variant read but not executed"
+      },
+      "files": {
+        "wave_dynamic_layer.py": "f3ab4b3af85b73765bc4a48e39b12d2ed6c81d2c06936b3e9ca16b1b10e25a28",
+        "pretraining/wave_dynamic_layer.py": "7fd19a955deba5265f7824e6a0cb805191c7b322525deea8252a7509f8786cd8"
+      },
+      "used": "Only the frozen position encoder in an isolated CPU RNG scope. Upstream example specifies µm. Dynamic layer multiplies by 1000; no upstream weights or model.",
+      "disposition": "Unit oracle accepted. Dynamic patch embedding is outside the VCA replacement scope. Import resets global CPU RNG, verified then restored."
+    },
+    {
+      "repository": "QishuaiWen/MiTA",
+      "sha": "0dfca9e0f6affdefc663b185da1a7330cd6bb892",
+      "paper": "https://arxiv.org/html/2602.01219v6",
+      "read_sections": "§3.2 and §D",
+      "officiality": "Author repository describes the paper implementation",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "sha256": "8acb4bb4c2f896a5c7143383cac44939d37b9ab08a374652edd7c71cdfe0e05a",
+        "scope": "Root MIT and explicit adapted-from-MoBA headers inspected; exact historical MoBA source revision is not identified by the upstream headers."
+      },
+      "files": {
+        "mita/mita_attention.py": "dc9f59818c8f4c73651a0c7e4e6a7f2a84421036ddb637d8f802c36b8d921ad1",
+        "mita/mixed_attention.py": "facc677be1c9dfe54f7c154a157668287456f0c75f325d18900e67790e13e48a"
+      },
+      "dependencies": [
+        {
+          "repository": "MoonshotAI/MoBA",
+          "sha": "b5d58363311d3ca946f1ec444182727c15e338b5",
+          "license": "MIT",
+          "path": "LICENSE",
+          "note": "Inspected modern repository revision; not proven to be MiTA's adapted original."
+        },
+        {
+          "repository": "Dao-AILab/flash-attention",
+          "tag": "v2.6.3",
+          "sha": "418d677192b483dfc1decfdf9aadca40b402485d",
+          "license": "BSD-3-Clause",
+          "path": "LICENSE",
+          "note": "Reviewed the version named by MiTA; private variable-length forward/backward API, not installed or called."
+        }
+      ],
+      "disposition": "Direct WP08 replacement rejected. Square/CLS layout and fixed pooled experts do not preserve explicit region IDs or fixed candidate support. Independent dense reference only; it has its own tie rule and does not assert parity with FlashAttention."
+    }
+  ],
+  "external_code_vendored": false,
+  "production_replacement": false,
+  "new_real_training": false,
+  "query_reads": 0
+}
