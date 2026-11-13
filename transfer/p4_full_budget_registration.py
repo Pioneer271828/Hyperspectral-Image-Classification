@@ -289,7 +289,8 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
         if fit_reference is not None:
             fit_pins[str(fit_reference)] = three_arm.LONG_PREFLIGHT_SHA
         if fit['release'] is not None:
-            fit_pins.update(three_arm.release_pins(fit['release'], code, gpus, qualification_pins))
+            fit_pins.update(three_arm.release_pins(fit['release'], code, gpus,
+                                                  qualification_pins, fit['execution']))
         device.require(all(len(raw['validation']['labels']) == 5*fit['classes'] for raw, _ in releases.values()),
                        'Declared fitting class count differs from the released labels')
     floor_path = reg['exposure']['floor']
@@ -443,7 +444,7 @@ def load(path, sha, code, *, check_files=True):
                                       read_pinned(Path(reference), three_arm.LONG_PREFLIGHT_SHA))
             if fit['release'] is not None:
                 fit_pins.update(three_arm.release_pins(fit['release'], code, frozen['gpus'],
-                                                     {p: pins[p] for p in quals.values()}))
+                                                     {p: pins[p] for p in quals.values()}, fit['execution']))
         else:
             device.require(frozen['fit_reference'] is None
                            and (not quals or frozen['operator_geometry']['geometry_sha256'] == REAL_GEOMETRY),

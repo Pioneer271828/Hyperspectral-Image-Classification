@@ -353,9 +353,9 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
 
         lock = lease(out / '.worker.lock')
     with lock:
+        fitting = runtime is not None and registration['full_budget_policy'] == three_arm.POLICY
         model.training_config = {'spatial_p4_identity': identity, 'plan_hash': scene.plan['plan_hash'],
                                  'statistics_hash': scene.stats['statistics_hash'], 'initialization': init}
-        fitting = registration['full_budget_policy'] == three_arm.POLICY if runtime is not None else False
         resumed_from = None
         if state_path.exists():
             if fitting:

@@ -1,4 +1,5 @@
 """Exercise the fitting worker with actual guarded synthetic labels and Adam steps."""
+from contextlib import contextmanager
 from pathlib import Path
 import argparse
 import json
@@ -7,11 +8,13 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from model.research_config import digest
 from research_runtime import code_snapshot, hash_file, write_json
 from test_p4_coverage import fixture
 from tests.test_p4_stable_cuda import synthetic_schema
+from transfer import p4_exposure
 from transfer import p4_full_budget_audit as audit
 from transfer import p4_full_budget_campaign as campaign, p4_full_budget_registration as registration
 from transfer import p4_runtime_device as device
@@ -22,6 +25,12 @@ QUALIFICATION = os.environ.get('WP05_FIT_QUALIFICATION')
 GPU = os.environ.get('WP05_FIT_GPU')
 BASE_PROCESS_ENV = dict(os.environ, OMP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', MKL_NUM_THREADS='1',
                         PYTHONDONTWRITEBYTECODE='1')
+
+
+@contextmanager
+def fitting_schema(classes):
+    with synthetic_schema(classes), patch.object(p4_exposure, 'CLASSES', classes):
+        yield
 
 
 def setup(root, classes, code, variant, *, gpus=(), qualifications=()):
@@ -51,18 +60,24 @@ def isolated_worker(classes, direct):
 
 def run_fixture(root, classes, variant, *, gpu=None, qualification=None, direct=False):
     code = code_snapshot()
-    with synthetic_schema(classes):
+    with fitting_schema(classes):
         pins = {} if gpu is None else {'gpus': [gpu], 'qualifications': [qualification]}
         scope, execution = setup(root, classes, code, variant, **pins)
         checksum = hash_file(scope)
         launcher = isolated_worker(classes, direct)
-        result = campaign.run(scope, checksum, execution, code, launcher=launcher)
+        try:
+            result = campaign.run(scope, checksum, execution, code, launcher=launcher)
+        except RuntimeError as error:
+            status = campaign.read(execution / 'status.json')
+            raise RuntimeError(status['errors']) from error
         if result['status'] != 'completed':
             raise RuntimeError(result)
         receipt = campaign.accept(scope, checksum, execution, code)
         initial = {str(p): hash_file(p) for p in execution.rglob('*') if p.is_file()}
-        repeat = campaign.run(scope, checksum, execution, code, resume=True,
-                              launcher=lambda *args: (_ for _ in ()).throw(AssertionError('Completed reentry dispatch')))
+        def unexpected_dispatch(*args):
+            raise AssertionError('Completed reentry dispatched a worker')
+
+        repeat = campaign.run(scope, checksum, execution, code, resume=True, launcher=unexpected_dispatch)
         assert repeat['optimizer_updates_this_invocation'] == 0
         assert initial == {str(p): hash_file(p) for p in execution.rglob('*') if p.is_file()}
         analysis = None
@@ -178,7 +193,7 @@ def main():
     if sys.argv[1:2] == ['--classes']:
         classes = int(sys.argv[2])
         del sys.argv[1:3]
-        with synthetic_schema(classes):
+        with fitting_schema(classes):
             campaign.main()
         return
     if sys.argv[1:2] != ['fixture']:

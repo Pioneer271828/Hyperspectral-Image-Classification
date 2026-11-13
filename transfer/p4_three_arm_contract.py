@@ -87,6 +87,9 @@ def check_initializations(cases, fit):
         group = initializations.setdefault(case['model_seed'], [])
         group.append(case)
     for group in initializations.values():
+        expected = ('continuous',) if fit['variant'] == 'long_synthetic' else ARMS
+        device.require(tuple(c['arm'] for c in group) == expected,
+                       'Fitting seed does not have all registered coverage arms')
         device.require(len({c['pair_sha256'] for c in group}) == 1, 'Seed pair initialization differs')
         if fit['variant'] != 'long_synthetic':
             _, continuous, anchor = (c['initialization']['coverage'] for c in group)
@@ -119,19 +122,19 @@ def check_reference(reg, cases, evidence, conditions, reference):
                    'Shared initialization or training-stride selection view differs')
 
 
-def release_pins(release, code, gpus, qualifications):
+def release_pins(release, code, gpus, qualifications, execution):
     """Consume a separately authorized execution release and the old accepted 2400 evidence."""
     path = release['path']
     approval = read_pinned(Path(path), release['sha256'])
     device.require(set(approval) == {'schema', 'decision', 'source_commit', 'source_hash', 'research_issue',
-                                     'gpus', 'qualification_sha256', 'admission_scope',
+                                     'gpus', 'qualification_sha256', 'execution', 'admission_scope',
                                      'admission_acceptance', 'planned_optimizer_updates'}
                    and approval['schema'] == 'wp05_three_arm_execution_release_v1'
                    and approval['decision'] == 'approved'
                    and (approval['source_commit'], approval['source_hash']) ==
                        (code['commit'], code['source_hash'])
                    and type(approval['research_issue']) is int and approval['research_issue'] > 0
-                   and approval['gpus'] == list(gpus)
+                   and approval['gpus'] == list(gpus) and approval['execution'] == execution
                    and approval['qualification_sha256'] == qualifications
                    and approval['planned_optimizer_updates'] == 13500,
                    'Separately reviewed 13500-step release required')
