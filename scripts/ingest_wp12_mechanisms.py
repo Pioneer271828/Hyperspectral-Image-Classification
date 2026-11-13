@@ -17,12 +17,19 @@ def main():
     kinds = ("crash", "learning", "bn", "region")
     for key in (*kinds, "authorities"):
         parser.add_argument("--" + key, required=True, nargs=2)
+    extension = ("calibration", "legacy-region")
+    for key in extension:
+        parser.add_argument("--" + key, nargs=2)
     args = parser.parse_args()
+    if any(getattr(args, key.replace("-", "_")) for key in extension):
+        if not all(getattr(args, key.replace("-", "_")) for key in extension):
+            parser.error("Real calibration and legacy region receipts must both be pinned")
+        kinds += extension
     code = code_snapshot()
     require_frozen_code(code)
     root, out = args.runs.resolve(strict=True), external_directory(args.out)
     evidence.require(code["commit"] == args.expected_commit and root in out.parents, "Invalid adapter revision or output path")
-    pin = lambda key: dict(zip(("path", "sha256"), getattr(args, key), strict=True))
+    pin = lambda key: dict(zip(("path", "sha256"), getattr(args, key.replace("-", "_")), strict=True))
     result = evidence.admit(out, root, {key: pin(key) for key in kinds}, pin("authorities"),
                             {k: code[k] for k in ("commit", "source_hash")})
     print(result, flush=True)

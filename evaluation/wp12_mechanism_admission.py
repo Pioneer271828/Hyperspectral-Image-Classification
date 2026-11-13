@@ -63,6 +63,9 @@ def crash(item, root, registered):
         require(receipt_count == len(cases) and accounted == record["new_updates"] == sum(s["new_updates"] for s in cases),
                 "Incomplete acknowledged attempt")
         counted += accounted
+    if registered.get("real_calibration") is not None:
+        require(row.get("alternate_journal_refused") is True,
+                "The real mechanism supplement requires the final single-owner controller qualification")
     for key in ("coordinator_failure_window", "unacknowledged_success"):
         test = row[key]
         gate = read(test["gate"], root)
@@ -188,19 +191,103 @@ def adapter(item, root, registered):
             "views": views, "real_optimizer_updates": 0, "real_gain": None}
 
 
+def real_calibration(item, root, registered):
+    row = read(item, root)
+    attest(row, "wp05_p4_real_front_population_v1")
+    plan = read(row["registration"], root)
+    require(row["scope"] == plan["scope"] == "real_frozen_p4_development_only"
+            and row["status"] == "measured" and row["producer"] == plan["producer"] == registered["real_calibration"]
+            and plan["inputs"]["resource"] == registered["p4_resource"]
+            and row["optimizer_updates"] == row["original_state_updates"] == row["restore_refits"] == 0
+            and row["validation_statistics_fit"] is row["confirmation_accessed"] is row["production_default_changed"] is False
+            and row["statistics_forwards"] == plan["statistics_forward_limit"] == 528
+            and row["evaluation_forwards"] == plan["evaluation_forward_limit"] == 768
+            and row["private_buffer_writes"] == plan["statistics_buffer_write_limit"] == 48
+            and row["restore_evaluation_forwards"] == plan["restore_evaluation_forward_limit"] == 12
+            and len(row["cases"]) == len(plan["cases"]) == 4
+            and plan["selection"] == "original_selection_frozen",
+            "Real development calibration must declare all private fitted writes and evaluation scope")
+    passed = []
+    for case, authority in zip(row["cases"], plan["cases"], strict=True):
+        require(all(case[k] == authority[k] for k in ("case", "checkpoint", "selected_step"))
+                and set(case["states"]) == {"initial", "selected", "last"} and len(authority["contexts"]) == 22,
+                "Calibration changed the independently audited case or context")
+        scoped_pin(case["checkpoint"], root)
+        for state in case["states"].values():
+            proof = state["proof"]
+            require(proof["role"] == "devtrain" and proof["statistics_population_passes"] == 2
+                    and proof["statistics_context_forwards"] == 44 and proof["statistics_buffer_writes"] == 4
+                    and state["restore"] == {"evaluation_forwards": 1, "optimizer_updates": 0,
+                                             "new_statistics_fitting_passes": 0},
+                    "Calibration state changes or recovery costs were misreported")
+            scoped_pin(state["buffers"], root)
+        passed.extend(head["passes"] for head in case["states"]["selected"]["val"]["protection"].values())
+    require(bool(passed) and all(passed) is row["selected_all_heads_protected"],
+            "Calibration protection must reflect all original selected heads")
+    return {"scope": row["scope"], "receipt": item, "private_statistic_buffer_writes": row["private_buffer_writes"],
+            "statistics_forwards": row["statistics_forwards"], "evaluation_forwards": row["evaluation_forwards"],
+            "real_optimizer_updates": 0, "selected_all_heads_protected": row["selected_all_heads_protected"],
+            "production_default_changed": False, "independent_confirmation": None}
+
+
+def legacy_region(item, root, registered):
+    row = read(item, root)
+    attest(row, "wp07_real_xuzhou_legacy_v5_region_intervention_v1")
+    compatible = read(row["compatibility"], root)
+    require(row["producer"] == registered["legacy_region"] and row["status"] == "measured"
+            and row["backend"] == registered["legacy_worker"] and row["real_gain"] is None
+            and row["scope"] == "legacy_real_xuzhou_v5_development_only"
+            and row["original_protocol"] == compatible["original_protocol"] == "wp07_xuzhou_multiscale_v1"
+            and row["optimizer_updates"] == row["bn_updates"] == row["calibration_updates"] == 0
+            and row["independent_confirmation"] is row["new_native_protocol"] is False
+            and compatible["status"] == "exact_historical_predictions" and compatible["source"] == row["source"]
+            and row["original_forwards"] == compatible["forward_calls"] == 80 and len(row["records"]) == 16,
+            "Legacy V5 mechanism output needs exact original predictions and separate protocol")
+    old = read(row["source"]["audit"], root)
+    expected = {(arm, endpoint) for arm in old["results"] for endpoint in ("selected", "last")}
+    require({(value["arm"], value["endpoint"]) for value in row["records"]} == expected,
+            "Legacy V5 endpoint census changed")
+    forwards = 0
+    for value in row["records"]:
+        binding = compatible["endpoints"][value["arm"]][value["endpoint"]]
+        witness = old["results"][value["arm"]]["endpoints"][value["endpoint"]]
+        require(binding["audit_probability_hashes_equal"] and value["step"] == binding["step"] == witness["step"]
+                and value["state_sha256"] == binding["state"] and value["original_state_restored"]
+                and len(value["tiles"]) == 5 and all(set(t["observed"]) in
+                    ({"self", "zero", "replace"}, {"self", "zero"}) for t in value["tiles"])
+                and all(value["heads"]["baseline"][head]["metrics"]["confusion_matrix"] ==
+                        witness["metrics"][head]["confusion_matrix"] for head in ("fused", "cnn", "graph")),
+                "Original audited V5 endpoint differs")
+        forwards += sum(1+len(tile["observed"]) for tile in value["tiles"])
+    require(forwards == row["intervention_and_restoration_forwards"] <= 320, "Wrong bounded intervention census")
+    return {"scope": row["scope"], "receipt": item, "endpoints": len(row["records"]),
+            "operation_and_restore_forwards": row["intervention_and_restoration_forwards"],
+            "optimizer_updates": 0, "new_native_matrix": None, "independent_confirmation": None, "real_gain": None}
+
+
 def admit(out, root, receipts, approved, producer):
     registered = read(approved, root)
-    for key in ("science_worker", "crash_controller", "learned_worker", "learned_review", "bn_diagnostic", "region_adapter"):
+    base = {"crash", "learning", "bn", "region"}
+    extension = {"calibration", "legacy-region"}
+    require(set(receipts) in (base, base | extension), "Expected paired real development supplements")
+    extra = set(receipts) == base | extension
+    keys = ("science_worker", "crash_controller", "learned_worker", "learned_review", "bn_diagnostic", "region_adapter")
+    if extra:
+        keys += ("real_calibration", "legacy_region", "legacy_worker")
+    for key in keys:
         identity = registered[key]
         require(set(identity) == {"commit", "source_hash"} and len(identity["commit"]) == 40
                 and len(identity["source_hash"]) == 64, "Exact code and tree identities required")
-    require(registered["schema"] == SCHEMA and set(receipts) == {"crash", "learning", "bn", "region"}
+    require(registered["schema"] == SCHEMA
             and registered["receipts"] == receipts and registered["query_authorized"] is False,
             "Explicit scope and pinned sources required")
     entries = {"dual_slots": crash(receipts["crash"], root, registered),
                "learning": learning(receipts["learning"], root, registered),
                "normalization": bn(receipts["bn"], root, registered),
                "region": adapter(receipts["region"], root, registered)}
+    if extra:
+        entries["front_population_calibration"] = real_calibration(receipts["calibration"], root, registered)
+        entries["legacy_v5_region_analysis"] = legacy_region(receipts["legacy-region"], root, registered)
     retained = {}
     for folder, tables in OLD.items():
         for table, sha in tables.items():
