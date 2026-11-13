@@ -21,6 +21,7 @@ from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from train_spatial import SpatialConfig
 from transfer.g3_training import Scene, _forward, _optimizer, _update, state_hash
+from transfer import p4_three_arm_contract as three_arm
 from transfer import p4_coverage, p4_exposure, p4_guarded, p4_update_evidence as updates
 
 TARGETS = {'paviaU', 'xuzhou', p4_guarded.SCENE}
@@ -352,9 +353,13 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
 
         lock = lease(out / '.worker.lock')
     with lock:
+        fitting = runtime is not None and registration['full_budget_policy'] == three_arm.POLICY
         model.training_config = {'spatial_p4_identity': identity, 'plan_hash': scene.plan['plan_hash'],
                                  'statistics_hash': scene.stats['statistics_hash'], 'initialization': init}
+        resumed_from = None
         if state_path.exists():
+            if fitting:
+                resumed_from = hash_file(state_path)
             state = torch.load(state_path, map_location='cpu', weights_only=True)
             if state['identity'] != identity or state.get('runtime') != runtime:
                 raise ValueError('Resume identity differs')
@@ -380,6 +385,12 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
             np.random.seed(model_seed)
             cursor, trace, history, best = 0, [], [], None
         start = cursor
+        resume_proof = None
+        if fitting:
+            resume_proof = {'state_sha256': resumed_from, 'cursor': cursor,
+                'rng_sha256': _tree_fingerprint(_rng_state(device)), 'next_tile': sequence[cursor][0]['id'] if cursor < steps else None}
+            if resumed_from is not None and resume_proof['rng_sha256'] != fingerprints['rng']:
+                raise ValueError('Restored RNG differs from the committed checkpoint')
         if cursor > until:
             raise ValueError('Requested stop precedes authoritative state')
         if timing:
@@ -472,6 +483,11 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
             if timing:
                 timing.reload_seconds = timing.mark() - reload_start
         result = {'updates_this_call': until-start, 'cursor': until, 'identity': identity}
+        if fitting and until > start:
+            result['resume'] = {'before': resume_proof,
+                'after': {'state_sha256': hash_file(state_path), 'cursor': until,
+                          'rng_sha256': state['fingerprints']['rng'],
+                          'next_tile': sequence[until][0]['id'] if until < steps else None}}
         if timing:
             result['timing'] = timing.result()
         return result
