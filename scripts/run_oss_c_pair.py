@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import fcntl
 from itertools import product
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -37,7 +38,7 @@ GATES = dict(primary="mean_macro_oa_delta_gt_0_and_at_least_2_positive_seeds",
     checkpoint_probability_max_abs=1e-5,checkpoint_rtol=1e-5,checkpoint_atol=1e-6)
 
 
-def release(runs, *, materialize):
+def release(runs):
     path = runs/PREPARATION/"manifest.json"
     if path.is_symlink() or file_digest(path)!=MANIFEST:
         raise ValueError("Unexpected frozen train/validation manifest")
@@ -52,20 +53,19 @@ def release(runs, *, materialize):
             raise ValueError("Frozen preparation payload changed")
         sources[scene] = dict(name=payload.name,sha256=entry["prepared_sha256"],
                               producer_fingerprint=digest(entry["prepared_fields"]))
-        if materialize:
-            item = torch.load(payload,map_location="cpu",weights_only=True,mmap=True)
-            if (item["class_num"]!=CLASSES[scene] or any(key.startswith(("test_","query_")) for key in item)
-                    or _item_fingerprint(item)!=entry["prepared_fields"]):
-                raise ValueError("Unexpected prepared identity or held-out fields")
-            train,val = (item[role+"_samples_gt"]>0 for role in ("train","val"))
-            if not train.any() or not val.any() or (train&val).any():
-                raise ValueError("Train/validation roles must be nonempty and disjoint")
-            items[scene] = item
+        item = torch.load(payload,map_location="cpu",weights_only=True,mmap=True)
+        if (item["class_num"]!=CLASSES[scene] or any(key.startswith(("test_","query_")) for key in item)
+                or _item_fingerprint(item)!=entry["prepared_fields"]):
+            raise ValueError("Unexpected prepared identity or held-out fields")
+        train,val = (item[role+"_samples_gt"]>0 for role in ("train","val"))
+        if not train.any() or not val.any() or (train&val).any():
+            raise ValueError("Train/validation roles must be nonempty and disjoint")
+        items[scene] = item
     return items,sources
 
 
-def campaign(runs,source):
-    items,sources = release(runs,materialize=True)
+def campaign(runs,source, *, loaded=None):
+    items,sources = release(runs) if loaded is None else loaded
     metadata = {}
     for scene,item in items.items():
         wave = torch.as_tensor(item["wavelengths"])
@@ -138,13 +138,14 @@ def score_pairs(registered,case_root):
     for key,spec in registered["cases"].items():
         case = case_root/key
         result = read(case/"result.json")
+        error = result["selected_probability_max_abs_error"]
         if (result["status"]!="completed" or result["optimizer_steps"]!=12
                 or result["settings"]!=spec["settings"] or result["test_scoring"] is not False
                 or result["identity"]["prepared"]["campaign_sha256"]!=digest(registered)
                 or result["start_code"]["commit"]!=registered["source_commit"]
                 or result["identity"]["prepared"]["case"]!=key
                 or result["schedule_sha256"]!=spec["schedule_sha256"]
-                or result["selected_probability_max_abs_error"]>GATES["checkpoint_probability_max_abs"]):
+                or not math.isfinite(error) or not 0<=error<=GATES["checkpoint_probability_max_abs"]):
             raise ValueError("Comparison requires the original completed frozen cell")
         history = case/"history.json"
         if file_digest(history)!=result["artifacts"][history.name]:
@@ -160,8 +161,9 @@ def score_pairs(registered,case_root):
                     raise ValueError("Missing or unexpected comparison head")
                 for row in heads.values():
                     size = CLASSES[scene]
-                    if len(row["recall"])!=size or len(row["confusion"])!=size or any(
-                            len(line)!=size for line in row["confusion"]):
+                    if (len(row["recall"])!=size or len(row["confusion"])!=size or any(
+                            len(line)!=size for line in row["confusion"]) or not all(
+                            math.isfinite(x) and 0<=x<=1 for x in [row["oa"],row["aa"],*row["recall"]])):
                         raise ValueError("Incomplete registered class roster")
         values[spec["arm"],spec["seed"]] = metrics
     results = {}
@@ -260,7 +262,8 @@ def main():
             json.dump(registered,stream,indent=2)
         print(json.dumps(dict(registration_sha256=file_digest(out),updates=108,real_updates=0)))
         return
-    if args.registration.is_symlink() or file_digest(args.registration)!=args.registration_sha256:
+    if (args.registration.is_symlink() or not args.registration.resolve().is_relative_to(runs)
+            or file_digest(args.registration)!=args.registration_sha256):
         parser.error("Registered cell identity differs")
     registered = read(args.registration)
     if args.mode=="score":
@@ -281,9 +284,10 @@ def main():
     torch.use_deterministic_algorithms(True)
     authorized_launch(args.launch_receipt,args.launch_sha256,registered,args.case)
     with admitted_gpu(runs,registered["gpu_uuid"]):
-        if registered!=campaign(runs,source):
+        loaded = release(runs)
+        if registered!=campaign(runs,source,loaded=loaded):
             parser.error("Registered configuration, source or observed inputs differ")
-        items,_ = release(runs,materialize=True)
+        items,_ = loaded
         result = run_case(registered,args.case,items,source,out,resume=args.resume,device="cuda:0")
     print(json.dumps({key:result[key] for key in ("operation","updates_this_call")}))
 
