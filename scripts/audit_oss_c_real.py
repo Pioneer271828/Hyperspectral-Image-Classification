@@ -460,6 +460,9 @@ def main():
     require(training_container_kind() == "lxc" and source["commit"] == args.expected_commit,
             "Authorized LXC and exact analysis source required")
     require_frozen_code(source)
+    audit_files = {"scripts/audit_oss_c_real.py", "tests/test_oss_c_real_audit.py"}
+    require(digest({name: sha for name, sha in source["files"].items() if name not in audit_files})
+            == PRODUCER_SOURCE, "Frozen producer implementation differs in the analysis checkout")
     runs = args.runs.resolve(strict=True)
     out = args.out.resolve()
     require(runs.name == "runs" and out.is_relative_to(runs), "New audit output must be inside runs")

@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -14,13 +15,15 @@ from model.bn_calibration import observation_id
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, hash_file
 from scripts.audit_oss_c_real import (
-    ARTIFACTS, CLASSES, STEPS, evaluate_record,
+    ARTIFACTS, CLASSES, STEPS, compare, evaluate_record,
     read, readouts, state, verify_artifacts, verify_checkpoint, verify_history, verify_trace,
 )
 from scripts.run_oss_c_pair import run_case
 from scripts.train_joint_m4 import graph_binding
 from test_calibrated_selection import items
 from test_joint_training import settings
+from transfer.oss_c_oracles import torchmetrics_oracle
+from transfer.oss_c_vca import ARMS
 from transfer.oss_c_vca import GlobalReferenceRuntime, settings as study_settings
 
 
@@ -72,6 +75,17 @@ class IndependentAuditTests(TestCase):
                                          self.result["selected_step"], self.spec["settings"], self.observations)
         self.assertEqual(_tree_fingerprint(scores), _tree_fingerprint(self.probabilities))
         self.assertGreater(last["backbone.adapter.anchor_offsets"].count_nonzero().item(), 0)
+
+    def test_optional_torchmetrics_counts_equal_offline(self):
+        source = os.environ.get("OSS_C_AUDIT_TEST_TORCHMETRICS")
+        if source is None:
+            self.skipTest("Fixed TorchMetrics source is explicit opt-in")
+        record = self.result["selected_validation"]
+        expected = evaluate_record(record, self.labels, probabilities=self.probabilities)
+        self.assertEqual(expected, evaluate_record(record, self.labels, probabilities=self.probabilities,
+                                                   crosscheck=torchmetrics_oracle(Path(source))))
+        with self.assertRaisesRegex(ValueError, "Fixed TorchMetrics source bytes"):
+            torchmetrics_oracle(self.directory / "trace.json")
 
     def test_rejects_wrong_metric_wrong_macro_and_wrong_probability_order(self):
         recorded = self.result["selected_validation"]
@@ -125,3 +139,18 @@ class IndependentAuditTests(TestCase):
         self.assertEqual(len(verify_trace(trace, schedule_for(opts), opts)["graph_changed_elements_by_step"]), 12)
         with self.assertRaisesRegex(ValueError, "budget or schedule"):
             verify_trace(trace + trace[-1:], schedule_for(opts), opts)
+
+    def test_gate_requires_both_controls_and_protects_each_small_class(self):
+        values = evaluate_record(self.result["selected_validation"], self.labels, probabilities=self.probabilities)
+        cases = {f"{arm}-{seed}": {"selected": deepcopy(values)} for arm in ARMS for seed in (64, 512, 2048)}
+        for seed in (64, 512, 2048):
+            candidate = cases[f"exclude_out_of_reference-{seed}"]["selected"]
+            candidate["macro_oa"] += .05
+            candidate_class = candidate["metrics"]["paviaU"]["val"]["fused"]["per_class"][0]
+            native_class = cases[f"native-{seed}"]["selected"]["metrics"]["paviaU"]["val"]["fused"]["per_class"][0]
+            native_class["recall"] = candidate_class["recall"] + .03
+        paired = compare(cases)
+        self.assertTrue(paired["native"]["gates"]["primary"])
+        self.assertFalse(paired["native"]["development_gate_passed"])
+        self.assertEqual(paired["native"]["small_class_failures"][0]["label"], 1)
+        self.assertTrue(paired["matched_boundary_dropout"]["development_gate_passed"])
