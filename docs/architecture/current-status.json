@@ -1372,6 +1372,22 @@
       "remaining": "逐带中心、FWHM与发布映射证据缺失；候选冻结生产字节门槛未过。HongHu三组13500草案待主审和资格，旧180000暂停。",
       "report": "research/reports/WP05META_可信光谱元数据与真实只读核对_20261113.md",
       "chat_report": "继续原固定全局坐标与历史近似默认。新草案等待独立登记，未读取原GT或留出。"
+    },
+    {
+      "id": "WP05-META 公共接口兼容与冻结源复核",
+      "state": "完整 CPU 1,122 通过、7 原条件跳过；CUDA 常规 66 和严格专项 19 通过；候选冻结参考通过仓库检查",
+      "evidence": "候选 5bebbe1bc8db93d6e7b3a96d3d168abd60dc9811，旧基线清单核对 446 个继承差异，十条守卫路径保持。真实字节和固定单观测绑定，三景只读，12 个真实元数据视图同设备逐位相同，旧 checkpoint CPU 18 个三头读数逐位同，原生 CUDA 误差上界 2.98e-8 且分类一致。",
+      "remaining": "候选冻结源更新待主审。三景逐带校准、FWHM和发布映射仍缺；HongHu 13500 步为草案，180000 仍暂停。",
+      "report": "research/reports/WP05META_公共接口与P4v4真实准入复核_20261113.md",
+      "chat_report": "关联 Issue466；主入口仅同步报告、草案和状态，保留历史 OSS-C-R 与 21 仓库结论。"
+    },
+    {
+      "id": "WP05 P4 v4 两个物理 UUID 资格与真实准入",
+      "state": "两个实体 CUDA 数值及合成恢复通过，20 例真实范围完成登记，实际 0/2400 步",
+      "evidence": "GPU 1 与 GPU 6 各 52 个夹具、438 项通过。第二 UUID 的 9/22 类连续与分段恢复共 240 次合成更新，审计新增 0。真实 scope a827dec0a6087d1eaf990ca086f1c28dd27e501ba0ae81c3b2c18434672e9ce5，验证步 30/60。",
+      "remaining": "GPU 1 资源低于 12,288 MiB，登记双卡始终未同时达标；真实批次独立验收待执行。",
+      "report": "research/reports/WP05META_公共接口与P4v4真实准入复核_20261113.md",
+      "chat_report": "原 P4 学习图空间协议。13500 和 180000 未在本包启动。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
