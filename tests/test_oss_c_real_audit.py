@@ -12,9 +12,9 @@ from joint_calibrated_selection import observations
 from joint_training import _tree_fingerprint, schedule_for
 from model.bn_calibration import observation_id
 from model.research_config import ResearchConfig, digest
-from research_runtime import hash_file
+from research_runtime import code_snapshot, hash_file
 from scripts.audit_oss_c_real import (
-    ARTIFACTS, CLASSES, PRODUCER, PRODUCER_SOURCE, STEPS, evaluate_record,
+    ARTIFACTS, CLASSES, STEPS, evaluate_record,
     read, readouts, state, verify_artifacts, verify_checkpoint, verify_history, verify_trace,
 )
 from scripts.run_oss_c_pair import run_case
@@ -44,7 +44,7 @@ class IndependentAuditTests(TestCase):
                         initial_state_sha256=_tree_fingerprint(initial.state_dict()),
                         schedule_sha256=digest(schedule_for(opts)), validation_steps=list(STEPS))
         cls.registered = dict(cases={cls.key: cls.spec}, data_manifest="fixture")
-        cls.source = dict(commit=PRODUCER, source_hash=PRODUCER_SOURCE, dirty=False, files={})
+        cls.source = code_snapshot()
         result = run_case(cls.registered, cls.key, data, cls.source, cls.directory, device="cpu")
         if result["updates_this_call"] != 12:
             raise AssertionError("Expected a complete synthetic producer case")
