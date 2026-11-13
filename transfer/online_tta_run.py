@@ -91,10 +91,10 @@ def isolated_rng(seed):
         _restore_rng(original)
 
 
-def new_session(reg, source):
+def new_session(reg, source, session_factory=_Session):
     settings = dict(reg.settings)
     del settings['reset']
-    session = _Session(source, **settings)
+    session = session_factory(source, **settings)
     if any(module.running_mean is None or module.running_var is None or module.num_batches_tracked is None
            for module in session.statistics):
         raise ValueError('Statistics mode requires real running buffers')
@@ -171,7 +171,11 @@ def _is_reset(reg, index):
 
 
 def _binding(reg):
-    return dict(version=1, registration=reg.pin['sha256'], population=reg.population, budget=reg.value['budget'])
+    value = dict(version=1, registration=reg.pin['sha256'], population=reg.population, budget=reg.value['budget'])
+    provider = getattr(reg, 'adaptation_provider', None)
+    if provider is not None:
+        value['adaptation_provider'] = provider
+    return value
 
 
 def _summary(reg, events, tip):
@@ -309,13 +313,20 @@ def _frame(reg, source, session, root, index, previous):
     return event, hash_file(root / f'frame-{cursor:06d}' / 'event.json')
 
 
-def execute(registration, out, *, to_frame=None, admission=None):
+def execute(registration, out, *, to_frame=None, admission=None, session_factory=None, provider=None):
     """Resume only from fully committed frames. A pending attempt remains terminal."""
     import fcntl
 
     snapshot = code_snapshot()
     require_frozen_code(snapshot)
+    if (session_factory is None) != (provider is None):
+        raise ValueError('Optional session factory and provider digest must be supplied together')
     reg = StreamRegistration(registration, admission=admission)
+    if provider is not None:
+        from transfer.online_tta_stream import require_hash
+        require_hash(provider)
+        reg.adaptation_provider = provider
+    factory = _Session if session_factory is None else session_factory
     if (reg.value['commit'] != snapshot['commit'] or reg.value['source_hash'] != snapshot['source_hash']
             or reg.value['runtime'] != runtime_identity()):
         raise ValueError('Registered code or CPU runtime differs')
@@ -345,7 +356,7 @@ def execute(registration, out, *, to_frame=None, admission=None):
             source = reg.source_model()
             reg.initial_source = _fingerprint(source)
             with isolated_rng(reg.settings['seed']):
-                session = new_session(reg, source)
+                session = new_session(reg, source, factory)
                 if start and not _is_reset(reg, start):
                     previous = events[-1]
                     path = root / f'frame-{start:06d}' / 'checkpoint.pt'
@@ -360,7 +371,7 @@ def execute(registration, out, *, to_frame=None, admission=None):
                     _journal(root / 'progress.json', _progress(index, tip, in_flight=True))
                     if _is_reset(reg, index):
                         with isolated_rng(reg.settings['seed']):
-                            session = new_session(reg, source)
+                            session = new_session(reg, source, factory)
                             event, tip = _frame(reg, source, session, root, index, tip)
                             next_rng = _rng()
                         _restore_rng(next_rng)
