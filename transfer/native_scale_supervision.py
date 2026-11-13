@@ -114,7 +114,7 @@ def metrics(output, actual, labels, targets, *, detailed):
     valid = PURITY_DENOMINATOR*h.max(axis=1) >= PURITY_NUMERATOR*targets.area
     result = {}
     for name,p in zip(("fused","graph","cnn"),output[:3],strict=True):
-        probs = p.detach().numpy()
+        probs = p.detach().cpu().numpy()
         nll = float(-(h*np.log(np.clip(probs.astype(np.float64),1e-8,1.0))).sum())
         result[name] = dict(nll_sum=nll,count=count)
         if detailed:
