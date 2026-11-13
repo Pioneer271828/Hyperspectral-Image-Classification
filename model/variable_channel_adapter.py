@@ -339,7 +339,10 @@ class VariableChannelAdapter(nn.Module):
         if retained is not None and band_mask is not None:
             retained = retained.subset(band_indices.detach().cpu().tolist())
         identity = retained.fingerprint if retained is not None else None
-        attention, anchor_valid, anchors = self._get_attention(band_positions, fwhm_norm, identity)
+        attention_args = (band_positions, fwhm_norm)
+        if identity is not None:
+            attention_args = (*attention_args, identity)
+        attention, anchor_valid, anchors = self._get_attention(*attention_args)
         latent = self._project_to_latent_chunked(flat_x, attention)
         latent = latent * anchor_valid.view(1, self.latent_channels, 1)
         latent = latent.reshape(flat_x.shape[0], self.out_channels)

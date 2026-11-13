@@ -27,8 +27,10 @@ class SpectralCalibrationTests(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         self.path = self.root / "calibration.json"
-        self.image = "1" * 64
-        self.identity = dict(dataset="fixture", image_sha256=self.image, authority="synthetic fixture", version="1")
+        self.image = self.root / "image.bytes"
+        self.image.write_bytes(b"synthetic scene release")
+        self.identity = dict(dataset="fixture", image_sha256=sha256(self.image.read_bytes()).hexdigest(),
+                             authority="synthetic fixture", version="1")
         self.table = dict(schema="delivered-spectral-calibration-v1", **self.identity,
                           center_unit="um", fwhm_unit="nm", bands=[
                               dict(original_band_id=i, center=center, fwhm=width, valid=valid)
@@ -41,7 +43,7 @@ class SpectralCalibrationTests(unittest.TestCase):
         raw = json.dumps(self.table if table is None else table).encode()
         self.path.write_bytes(raw)
         approval = dict(self.approval, table_sha256=sha256(raw).hexdigest(), **changes)
-        return read_band_metadata("fixture", 5, calibration=self.path, approval=approval, image_sha256=self.image)
+        return read_band_metadata("fixture", 5, calibration=self.path, approval=approval, image_path=self.image)
 
     def observation(self):
         values = np.random.default_rng(33).random((7, 8, 5), dtype=np.float32)
@@ -82,8 +84,11 @@ class SpectralCalibrationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.load(bad)
         with self.assertRaisesRegex(ValueError, "table bytes"):
-            read_band_metadata("fixture", 5, calibration=self.path, image_sha256=self.image,
+            read_band_metadata("fixture", 5, calibration=self.path, image_path=self.image,
                                approval=dict(self.approval, table_sha256="0" * 64))
+        self.image.write_bytes(b"same name, different release")
+        with self.assertRaisesRegex(ValueError, "Delivered image bytes"):
+            self.load()
         self.assertEqual(read_band_metadata("xuzhou", 436).wavelength_quality, "approximate")
         self.assertEqual(read_band_metadata("unknown", 3).wavelength_quality, "index_only")
 
@@ -154,12 +159,25 @@ class SpectralCalibrationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "sampling record identity"):
                 restore(registration, "fixture", obs, invalid)
         restored = restore(registration, "fixture", obs, bands)
+        with self.assertRaisesRegex(ValueError, "registration identity"):
+            restore(registration, "another-scene", obs, bands)
+        wrong_pixels = replace(obs, spectral=obs.spectral + np.float32(1))
+        wrong_ids = replace(obs, global_ids=obs.global_ids + 10)
+        for wrong in (wrong_pixels, wrong_ids):
+            with self.assertRaisesRegex(ValueError, "registration observation"):
+                restore(registration, "fixture", wrong, bands)
         with torch.no_grad():
             original = forward_partition(model, "fixture", view.observation, band_metadata=view.bands)
             loaded = load_model_checkpoint(path, DEVICE, spectral_registration=registration)
             actual = forward_partition(loaded, "fixture", restored.observation, band_metadata=restored.bands)
             with self.assertRaisesRegex(ValueError, "registered spectral observation"):
                 forward_partition(loaded, "fixture", obs, band_metadata=bands)
+            with self.assertRaisesRegex(ValueError, "registration dataset"):
+                forward_partition(loaded, "another-scene", restored.observation, band_metadata=restored.bands)
+            with self.assertRaisesRegex(ValueError, "registration input"):
+                forward_partition(loaded, "fixture",
+                                  replace(restored.observation, spectral=restored.observation.spectral + np.float32(1)),
+                                  band_metadata=restored.bands)
         for left, right in zip(original[:3], actual[:3], strict=True):
             torch.testing.assert_close(left, right, rtol=1e-5, atol=1e-6)
         legacy = self.root / "legacy.pt"

@@ -96,16 +96,16 @@ def readWavelengths(data_set_name, bands):
     return np.linspace(0.0, 1.0, bands, dtype=np.float32), None
 
 
-def read_band_metadata(data_set_name, bands, *, calibration=None, approval=None, image_sha256=None):
-    """Conservative E1 metadata; retain the unchanged legacy wavelength API."""
+def read_band_metadata(data_set_name, bands, *, calibration=None, approval=None, image_path=None):
+    """Load the historical metadata or explicitly authenticate a reviewed delivery."""
     from loadData.observation_sampling import BandMetadata
-    if any(value is not None for value in (calibration, approval, image_sha256)):
+    if any(value is not None for value in (calibration, approval, image_path)):
         from pathlib import Path
         from loadData.spectral_calibration import load_calibration
-        if calibration is None or approval is None or image_sha256 is None:
-            raise ValueError("Calibration requires a reviewed table and delivered image identity")
+        if calibration is None or approval is None or image_path is None:
+            raise ValueError("Calibration requires an external approval and the delivered image file")
         return load_calibration(Path(calibration), dataset=data_set_name, bands=bands,
-                                image_sha256=image_sha256, approval=approval)
+                                image_path=Path(image_path), approval=approval)
     wave, fwhm = readWavelengths(data_set_name,bands)
     physical = data_set_name.lower() in {'paviau','indian','xuzhou','whu','whuh',
         'whu-honghu','whu_honghu','whul','whu-longkou','whu_longkou','whuhc','whu-hanchuan','whu_hanchuan'}
