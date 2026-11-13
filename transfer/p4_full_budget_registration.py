@@ -274,7 +274,10 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
 
         shape_contract = (recovery_geometry(qualifications) if purpose == RECOVERY or (fit is not None and synthetic) else
                           geometry_contract(guarded_plan, allowed, reg['config']))
-        qualification, qualification_pins = qualification_bindings(qualifications, gpus, protocol, code, shape_contract)
+        qualified_code = three_arm.qualification_code(fit, synthetic, code)
+        qualification, qualification_pins = qualification_bindings(
+            qualifications, gpus, protocol, qualified_code, shape_contract)
+        three_arm.qualification_code(fit, synthetic, code, qualification, qualification_pins)
     else:
         device.require(not qualifications, 'Qualification receipts apply only to real audited CUDA scopes')
     if purpose == RECOVERY:
@@ -422,8 +425,9 @@ def load(path, sha, code, *, check_files=True):
             (purpose == RECOVERY or fit is not None) and protocol == device.CUDA_FP64_WEIGHT):
         from transfer.p4_cuda_qualification import check_receipt
 
+        qualified_code = three_arm.qualification_code(fit, synthetic, code, quals, pins)
         device.require(set(quals) == set(frozen['gpus']) and all(
-            check_receipt(read_pinned(Path(path), pins[path]), frozen['protocol'], code, frozen['operator_geometry']) == gpu
+            check_receipt(read_pinned(Path(path), pins[path]), frozen['protocol'], qualified_code, frozen['operator_geometry']) == gpu
             for gpu, path in quals.items()), 'Registered GPU operator qualification differs')
     else:
         device.require(not quals, 'Unregistered GPU operator qualification')
@@ -435,7 +439,6 @@ def load(path, sha, code, *, check_files=True):
             'Synthetic recovery class or qualification geometry differs')
     fit_pins = {}
     if fit is not None:
-        three_arm.check_initializations(frozen['cases'], fit)
         three_arm.check_observations(frozen['observation_diagnostics'])
         if not synthetic:
             reference = frozen['fit_reference']
@@ -471,6 +474,8 @@ def load(path, sha, code, *, check_files=True):
            and (case.get('parameter_layout_sha256') is None if schema is None else
                 bool(re.fullmatch('[a-f0-9]{64}', case.get('parameter_layout_sha256', ''))))
            for case in frozen['cases']), 'Full case identity matrix differs')
+    if fit is not None:
+        three_arm.check_initializations(frozen['cases'], fit)
     if check_files:
         batch.check_pins(pins)
     return frozen, reg

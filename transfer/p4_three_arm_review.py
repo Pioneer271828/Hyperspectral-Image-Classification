@@ -1,5 +1,6 @@
 """Review accepted P4 fitting ledgers and their independently replayed predictions."""
 from collections import defaultdict
+from fractions import Fraction
 from statistics import mean
 from pathlib import Path
 
@@ -60,7 +61,7 @@ def fitting_evidence(state, receipts, sequence, chosen, observations, resume):
     }
 
 
-def paired_outcomes(rows):
+def paired_outcomes(rows, *, train_support_per_class=5):
     cohort = defaultdict(dict)
     for row in rows:
         case = row['case']
@@ -70,32 +71,41 @@ def paired_outcomes(rows):
                    and all(set(arm) == set(contract.SEEDS) for arm in cohort.values()),
                    'The complete nine-case fitting matrix is required for paired outcomes')
 
-    def values(arm, condition, metric):
-        return {seed: row[condition]['heads']['fused'][metric] for seed, row in cohort[arm].items()}
+    def head(arm, seed, condition):
+        return cohort[arm][seed][condition]['heads']['fused']
+
+    def fractions(arm, condition, metric):
+        return {seed: Fraction(str(head(arm, seed, condition)[metric])) for seed in contract.SEEDS}
 
     def primary(arm):
-        return {seed: mean(row[name]['heads']['fused']['oa'] for name in contract.UNSEEN)
-                for seed, row in cohort[arm].items()}
+        return {seed: mean(Fraction(str(head(arm, seed, name)['oa'])) for name in contract.UNSEEN)
+                for seed in contract.SEEDS}
 
     comparisons = {}
     for baseline in ('none', 'anchor_only'):
-        paired = paired_difference(primary('continuous'), primary(baseline), contract.SEEDS)
-        primary_passed = paired['mean_pp'] > 0 and paired['positive_seeds'] >= contract.PROTECTION['minimum_positive_seeds']
+        left, right = primary('continuous'), primary(baseline)
+        paired = paired_difference({seed: float(val) for seed, val in left.items()},
+                                   {seed: float(val) for seed, val in right.items()}, contract.SEEDS)
+        deltas = [left[seed] - right[seed] for seed in contract.SEEDS]
+        primary_passed = mean(deltas) > 0 and sum(delta > 0 for delta in deltas) >= contract.PROTECTION['minimum_positive_seeds']
         rows_by_condition = {}
         for condition in contract.CONDITIONS:
-            effects = {metric: paired_difference(values('continuous', condition, metric),
-                                                  values(baseline, condition, metric), contract.SEEDS)
-                       for metric in ('oa', 'aa')}
-            recalls = [np.asarray(cohort['continuous'][seed][condition]['heads']['fused']['recall'])
-                       - np.asarray(cohort[baseline][seed][condition]['heads']['fused']['recall'])
-                       for seed in contract.SEEDS]
-            recall_pp = np.mean(recalls, axis=0) * 100
+            effects, protected = {}, True
+            for metric in ('oa', 'aa'):
+                left, right = (fractions(arm, condition, metric) for arm in ('continuous', baseline))
+                delta = 100 * mean(left[seed] - right[seed] for seed in contract.SEEDS)
+                effects[metric] = paired_difference({seed: float(val) for seed, val in left.items()},
+                                                    {seed: float(val) for seed, val in right.items()}, contract.SEEDS)
+                protected &= delta >= -Fraction(str(contract.PROTECTION['max_oa_aa_drop_pp']))
+            recalls = [head('continuous', seed, condition)['recall'] for seed in contract.SEEDS]
+            references = [head(baseline, seed, condition)['recall'] for seed in contract.SEEDS]
+            recall_pp = [100 * mean(Fraction(str(a)) - Fraction(str(b)) for a, b in zip(now, old, strict=True))
+                         for now, old in zip(zip(*recalls, strict=True), zip(*references, strict=True), strict=True)]
             failed = [i for i, delta in enumerate(recall_pp, 1)
-                      if delta < -contract.PROTECTION['max_small_recall_drop_pp']]
-            rows_by_condition[condition] = {'oa': effects['oa'], 'aa': effects['aa'],
-                'mean_recall_delta_pp': recall_pp.tolist(), 'small_classes_below_threshold': failed,
-                'passed': not failed and all(row['mean_pp'] >= -contract.PROTECTION['max_oa_aa_drop_pp']
-                                            for row in effects.values())}
+                      if train_support_per_class <= contract.PROTECTION['max_small_train_support']
+                      and delta < -contract.PROTECTION['max_small_recall_drop_pp']]
+            rows_by_condition[condition] = {**effects, 'mean_recall_delta_pp': [float(v) for v in recall_pp],
+                'small_classes_below_threshold': failed, 'passed': not failed and protected}
         comparisons[baseline] = {'primary': paired, 'primary_passed': primary_passed, 'conditions': rows_by_condition,
             'passed': primary_passed and all(row['passed'] for row in rows_by_condition.values())}
     return comparisons
@@ -135,7 +145,9 @@ def review(scope_path, scope_sha, execution, acceptance_path, acceptance_sha, ou
                            and row['coverage_participation']['parameter_count'] == (0 if case['arm'] == 'none' else 194),
                            'Fitting diagnostic scope or parameter capacity differs')
             rows.append(row)
-        comparisons = paired_outcomes(rows)
+        support = {row['populations']['train']['per_class'] for row in rows}
+        device.require(support == {contract.ROLE[1]}, 'Fitting train support differs')
+        comparisons = paired_outcomes(rows, train_support_per_class=contract.ROLE[1])
         # The readouts come from the independent worker replay, with one fixed selected state per case.
         result = {'schema': SCHEMA, 'status': 'passed', 'scope_sha256': scope_sha,
                   'acceptance_sha256': acceptance_sha, 'producer_commit': code['commit'],

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from model.research_config import digest
 from research_runtime import hash_file
-from transfer import p4_coverage as coverage, p4_coverage_batch as batch, p4_runtime_device as device
+from transfer import p4_runtime_device as device
 from transfer.g2_contract import read_pinned
 
 PURPOSE = 'honghu_three_arm_fit'
@@ -20,6 +20,12 @@ ADMISSION_COMMIT = '3a6381cb4b0c089a10123292bc831a3a613e6106'
 ADMISSION_SOURCE = '1c4251f86d0c725323d0b00df80b516064e2ae32bc4436abe5203cd9dd5a495d'
 ADMISSION_SHA = 'a827dec0a6087d1eaf990ca086f1c28dd27e501ba0ae81c3b2c18434672e9ce5'
 LONG_PREFLIGHT_SHA = '358b50aee1bf51feeb80fe7ef1e603b42662da3c6bf6886fa4b636155ca391fd'
+REFERENCE_QUALIFICATION_SHA = {
+    'GPU-2fd29d4e-c4c7-618b-22d8-3c2fa73e48e5':
+        '221ac49ad71490930522b96027f75fef92f1c2e4f8b2d24800a6cdcb7201b802',
+    'GPU-1c123d1c-2962-6a75-ca3a-b2f13a09e964':
+        '59876ac7cab17ef250ec9037e64f0fdb2c89a5b8369e7727187e28afff7af78f',
+}
 EXPECTED_RELEASE_SHA = 'c0ce157d9e69854940bd9f245bb82309346690fd9ad46bf57f487b606cbf033f'
 EXPECTED_SEQUENCE_SHA = '4d3d89847c08eb1d0aef198349195895a7dc18bfecf81b1d4d898aa7eacec4db'
 PROTECTION = {'max_oa_aa_drop_pp': .5, 'max_small_recall_drop_pp': 2,
@@ -176,6 +182,15 @@ def release_pins(release, code, gpus, qualifications, execution):
     device.require(audited == {case['id']: case for case in scope['cases']},
                    'The prerequisite P4 20-case matrix differs')
     return {**result['protected_files'], **pins, receipt['path']: receipt['sha256']}
+
+
+def qualification_code(fit, synthetic, code, qualified=None, pins=None):
+    if fit is not None and not synthetic and fit['release'] is None:
+        if qualified is not None:
+            device.require({gpu: pins[path] for gpu, path in qualified.items()} == REFERENCE_QUALIFICATION_SHA,
+                           'Read-only preflight requires the original two qualified device receipts')
+        return {'commit': ADMISSION_COMMIT, 'source_hash': ADMISSION_SOURCE}
+    return code
 
 
 def registered_for_dispatch(scope, out):
