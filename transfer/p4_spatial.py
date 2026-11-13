@@ -483,7 +483,7 @@ def run_case(registration, index, out, until, code, *, coverage_arm=None, runtim
             if timing:
                 timing.reload_seconds = timing.mark() - reload_start
         result = {'updates_this_call': until-start, 'cursor': until, 'identity': identity}
-        if fitting:
+        if fitting and until > start:
             result['resume'] = {'before': resume_proof,
                 'after': {'state_sha256': hash_file(state_path), 'cursor': until,
                           'rng_sha256': state['fingerprints']['rng'],
