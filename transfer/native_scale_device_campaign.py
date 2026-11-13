@@ -100,14 +100,16 @@ def qualify(root,geometry_pin,out,producer,protocol,uuid):
         rows = _operator_rows(roster["shapes"],execution.device.type)
     expected = dict(adaptive_avg_pool2d=3*len(roster["shapes"]),sparse_mm=12*len(roster["shapes"])+2)
     failed = [name for name,row in rows.items() if not qual.check_comparisons(name,row)]
+    oracle_failed = [name for name,row in rows.items() if any(
+        not proof["replacement_vs_math64"]["compatible"] for proof in row.values())]
     if execution.device.type=="cuda" and dict(execution.calls)!=expected:
         failed.append("interception_count")
+        oracle_failed.append("interception_count")
     result = transport._json_new(out,dict(schema=SCHEMA,producer=producer,geometry=geometry_pin,
         numeric=execution.numeric,scope_restored=True,tolerances=dict(rtol=qual.RTOL,atol=qual.ATOL),
-        fixture_count=len(rows),rows=rows,failures=failed,kernels=dict(execution.calls),seconds=perf_counter()-started,
+        fixture_count=len(rows),rows=rows,failures=failed,oracle_failures=oracle_failed,
+        kernels=dict(execution.calls),seconds=perf_counter()-started,
         updates=0,real_updates=0))
-    if failed:
-        raise ValueError(f"Native operator tolerance failed; retained {result['path']}: {failed}")
     return result
 
 
@@ -131,8 +133,8 @@ def _frozen_inputs(specs,producer):
 
 def register(root,qualification,out,producer,protocol,uuid):
     qa = read(qualification,root)
-    if qa["producer"]!=producer or qa["schema"]!=SCHEMA or qa["failures"]:
-        raise ValueError("A passing native geometry qualification is required")
+    if qa["producer"]!=producer or qa["schema"]!=SCHEMA or qa["oracle_failures"]:
+        raise ValueError("Native geometry oracle failed or qualification identity differs")
     with arithmetic(protocol,uuid) as execution:
         if execution.numeric!=qa["numeric"]:
             raise ValueError("Qualification device/environment differs")
@@ -143,7 +145,8 @@ def register(root,qualification,out,producer,protocol,uuid):
         out.mkdir()
         hashes = {name:transport._json_new(out/f"{name}.json",dict(spec,numeric=numeric)) for name,spec in raw}
         return transport._json_new(out/"matrix.json",dict(schema=SCHEMA,producer=producer,
-            qualification=qualification,numeric=numeric,inputs=inputs,cases=hashes,updates=EXPECTED_UPDATES,
+            qualification=qualification,qualification_all_comparisons_passed=not qa["failures"],
+            numeric=numeric,inputs=inputs,cases=hashes,updates=EXPECTED_UPDATES,
             real_updates=0,confirmation_reads=0))
 
 

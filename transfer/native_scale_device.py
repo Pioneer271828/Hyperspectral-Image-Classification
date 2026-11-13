@@ -3,6 +3,7 @@
 from collections import Counter
 from contextlib import contextmanager
 import os
+import sys
 from time import perf_counter
 
 import numpy as np
@@ -125,7 +126,7 @@ def arithmetic(protocol, uuid=None, *, inputs=None):
     calls = Counter(adaptive_avg_pool2d=0,sparse_mm=0)
     try:
         with p4.arithmetic(protocol,uuid,kernel_calls=calls) as numeric:
-            numeric = dict(numeric, numpy=np.__version__, python=os.sys.version.split()[0],
+            numeric = dict(numeric, numpy=np.__version__, python=sys.version.split()[0],
                            p4_arithmetic_sha256=hash_file(p4.__file__),
                            input_roster=None if inputs is None else digest(inputs))
             if uuid is not None and (not numeric["deterministic_algorithms"] or numeric["deterministic_warn_only"]):
