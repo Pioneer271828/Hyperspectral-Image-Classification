@@ -34,7 +34,7 @@ def fixture(root, code):
         release = replace(release, rows=tuple(rows))
         # Real bank transport performs the same hashing, geometry and decode.
         pin = bank.publish(root / f"bank-{classes}", root, release, lambda row: arrays[row["id"]])
-        bank_pin = pin["bank"] if "bank" in pin else pin
+        bank_pin = {key: pin[key] for key in ("root", "sha256", "registration")}
         prior = transport._json_new(root / f"source-{classes}.json",
             {"synthetic": True, "scope": real.ENGINEERING, "bank": bank_pin})
         baseline = original._baseline(release, 81271)

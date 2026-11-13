@@ -21,7 +21,7 @@ from transfer.spatial_multiscale import initialize
 
 
 FORMAT = "wp07-native-real-released-continuation-v2"
-RELEASE = "wp07_native_released_execution_release_v1"
+RELEASE = "wp07_native_released_execution_release_v2"
 ENGINEERING = "wp07_native_released_bank_fixture_v1"
 ENGINEERING_RELEASE = "wp07_native_released_fixture_release_v1"
 

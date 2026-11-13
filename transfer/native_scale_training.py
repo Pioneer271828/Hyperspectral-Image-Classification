@@ -162,9 +162,8 @@ class Run:
                              scores=observed))
             if self._released is not None:
                 rows[-1]["released"] = targets.summary()
-                if not callable(getattr(self._released, "stage_evidence", None)):
-                    continue
-                rows[-1].update(self._released.stage_evidence(actual))
+                if hasattr(self._released, "stage_evidence"):
+                    rows[-1].update(self._released.stage_evidence(actual))
         numerator = sum(row["scores"]["fused"]["nll_sum"] for row in rows)
         denominator = sum(row["scores"]["fused"]["count"] for row in rows)
         self.timing["validation_seconds"] += perf_counter()-started
@@ -219,7 +218,7 @@ class Run:
                    for name in self._fresh}))
         if self._released is not None:
             self._history[-1]["released"] = targets.summary()
-            if callable(getattr(self._released, "stage_evidence", None)):
+            if hasattr(self._released, "stage_evidence"):
                 self._history[-1].update(self._released.stage_evidence(actual))
         self.timing["train_update_seconds"] += perf_counter()-started
         if event["step"] in self._contract["events"]:
