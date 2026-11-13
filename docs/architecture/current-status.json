@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-13",
-  "issue": 462,
+  "issue": 463,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -1355,6 +1355,15 @@
       "remaining": "PyG生产资格未过。真实108次配对仅草案，候选与同容量控制、预算通知及独立确认待登记，旧180000暂停。",
       "report": "research/reports/OSS_B_开源职责补审与隔离候选_20261113.md",
       "chat_report": "OSS-A固定源码测试显式启用，来源未认证的工程收据禁止作为真实准入。"
+    }
+,
+    {
+      "id": "OSS-C 开源职责收尾与固定物理坐标短测",
+      "state": "21仓库26职责审查收尾；独立oracle与固定坐标合成工程通过，108真实短测已登记待启动",
+      "evidence": "Issue463，tested a36a389d1ff55a77f921cf7e829f42f5abd1beaa；CPU5/GPU5，52相关发现含4外部可选跳过；306历史计数，12依赖轴；PyG收据生产false。",
+      "remaining": "108真实更新尚未启动；先告知冻结预算与估时，原UUID通过资源门槛且独立签发收据后方可执行；独立确认待验，旧180000暂停。",
+      "report": "research/reports/OSS_C_开源收尾与固定坐标短测登记_20261113.md",
+      "chat_report": "主审已接受OSS-A/B工程证据的限定范围；无生产替换或分类增益。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
