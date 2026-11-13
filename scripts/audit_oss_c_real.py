@@ -20,6 +20,7 @@ from model.bn_calibration import CONTEXT, POLICY, observation_id
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, hash_file, require_frozen_code, tensor_hash
 from scripts.run_oss_c_pair import ARMS, CLASSES, GATES, GPU, SEEDS, campaign, release
+from scripts import run_oss_c_resources as queued
 from scripts.train_joint_m4 import graph_binding
 from transfer.container_runtime import training_container_kind
 from transfer.oss_c_oracles import HEADS, confusion, torchmetrics_oracle, validate_indices
@@ -29,6 +30,10 @@ from transfer.oss_c_vca import GlobalReferenceRuntime
 PRODUCER = "a36a389d1ff55a77f921cf7e829f42f5abd1beaa"
 PRODUCER_SOURCE = "cfde802fc22458c36e6a42698ccbfa1d55724f096f2c4f9fa4999d8a2e07cc44"
 REGISTRATION = "8186b1fa5f822247a4f2fa5dd39f1825f45d9d553d0962c6f9b075dea8fef57e"
+QUEUED_PRODUCER = "686c394bcd2751d1aa73b71d81d938b6b2aa640f"
+QUEUED_SOURCE = "43abdca53915c12454b243ea698ecebd27ce901ee16a59676534dbca8f36a8fc"
+QUEUED_RUNTIME_FILE_HASH = "dc84858256bc1507d9e4ddc03fab11439e21c01a613321593bb6847af8104579"
+QUEUED_REGISTRATION = "74ccfcf42ca5baf5c82f718b9772c45143d39c2cbdb1bfdadef7737bfb2822e8"
 ROLES = ("train", "val")
 STEPS = (3, 6, 9, 12)
 KEYS = tuple(f"{arm}-{seed}" for arm in ARMS for seed in SEEDS)
@@ -71,13 +76,13 @@ def parse_snapshot(path):
     return manifest
 
 
-def verify_artifacts(directory, execution, key):
+def verify_artifacts(directory, execution, key, *, queued_run=False):
     hashes = artifact_hashes(directory, ARTIFACTS | {"result.json"})
     result = read(directory / "result.json")
     require(result["artifacts"] == {name: hashes[name] for name in ARTIFACTS},
             "Artifact hash or roster changed")
-    before, after = (parse_snapshot(execution / f"{key}.{phase}.sha256")
-                     for phase in ("before", "after"))
+    before, after = (read(execution / f"{key}.{phase}.json") if queued_run
+                     else parse_snapshot(execution / f"{key}.{phase}.sha256") for phase in ("before", "after"))
     require(hashes == before == after, "Completed-resume artifact hashes differ")
     return result, hashes
 
@@ -282,25 +287,30 @@ def verify_checkpoint(directory, result, hashes, selected_step, opts, observatio
     return last, probabilities
 
 
-def audit_case(key, spec, registered, directory, execution, labels, graph, observation_binding, crosscheck):
-    result, hashes = verify_artifacts(directory, execution, key)
+def audit_case(key, spec, registered, directory, execution, labels, graph, observation_binding, crosscheck,
+               *, queued_run=False):
+    result, hashes = verify_artifacts(directory, execution, key, queued_run=queued_run)
+    commit = registered["source_commit"] if queued_run else PRODUCER
+    source_hash = registered["source_hash"] if queued_run else PRODUCER_SOURCE
+    gpu = registered["case_gpu"][key] if queued_run else GPU
+    device = queued.DEVICE if queued_run else "cuda:0"
     opts = spec["settings"]
     schedule = schedule_for(opts)
     provenance = dict(campaign_sha256=digest(registered), case=key, m4_graph_binding=graph,
                       prepared=registered["data_manifest"])
     identity = dict(protocol=opts["protocol"], settings_hash=spec["settings_sha256"], settings=opts,
-                    execution_device="cuda:0", consumer_source_hash=PRODUCER_SOURCE, prepared=provenance,
+                    execution_device=device, consumer_source_hash=source_hash, prepared=provenance,
                     schedule_sha256=spec["schedule_sha256"])
     source = result["start_code"]
     require(result["status"] == "completed" and result["optimizer_steps"] == spec["updates"] == 12
             and result["test_scoring"] is False and result["settings"] == opts
-            and source["commit"] == PRODUCER and source["source_hash"] == PRODUCER_SOURCE
-            and source["dirty"] is False and digest(source["files"]) == PRODUCER_SOURCE
+            and source["commit"] == commit and source["source_hash"] == source_hash
+            and source["dirty"] is False and digest(source["files"]) == source_hash
             and digest(schedule) == spec["schedule_sha256"] == result["schedule_sha256"]
             and result["identity"] == identity == read(directory / "identity.json")
             and result["per_dataset_updates"] == dict(Counter(schedule))
-            and result["execution"]["device"] == "cuda:0"
-            and result["execution"]["visible_cuda_devices"] == GPU,
+            and result["execution"]["device"] == device
+            and result["execution"]["visible_cuda_devices"] == gpu,
             "Run identity, device, schedule or update budget differs")
     error = result["selected_probability_max_abs_error"]
     require(math.isfinite(error) and 0 <= error <= GATES["checkpoint_probability_max_abs"],
@@ -453,24 +463,128 @@ def verify_execution(execution, registered):
                 completed_resume_updates=0, receipt_sha256=receipts)
 
 
-def main():
+def verify_queued_execution(execution, registered, sha):
+    authorization = read(execution / "authorization.json")
+    expected = dict(source_chat=queued.MAIN_CHAT, notice=queued.AUTHORIZATION, registration_sha256=sha,
+                    campaign_sha256=digest(registered), source_commit=registered["source_commit"],
+                    source_hash=registered["source_hash"], case_gpu=registered["case_gpu"], budget=108)
+    require(all(authorization.get(key) == value for key, value in expected.items()), "Controller authorization differs")
+    files = {f"{key}.json" for key in queued.KEYS}
+    receipts = artifact_hashes(execution / "receipts", files)
+    claims = artifact_hashes(execution / "claims", files)
+    for key in queued.KEYS:
+        name = f"{key}.json"
+        require(receipts[name] == claims[name] == authorization["receipts"][key]
+                and read(execution / "receipts" / name) == queued.launch_record(registered, sha, key),
+                "Worker receipt or single-execution claim differs")
+    require(read(execution / "controller.json")["status"] == "completed", "Controller did not complete")
+    events = [json.loads(line) for line in (execution / "events.jsonl").read_text().splitlines()]
+    require(len(events) == 36 and all(row["action"] in ("start", "exit") for row in events)
+            and all(row["uuid"] == registered["case_gpu"].get(row["case"]) for row in events)
+            and all(a["time"] <= b["time"] for a, b in zip(events, events[1:])), "Invalid or incomplete queue events")
+    timing = {}
+    for uuid in registered["devices"]:
+        keys = [key for key in queued.KEYS if registered["case_gpu"][key] == uuid]
+        roster = [(phase, key, action) for phase in ("fresh", "completed")
+                  for key in keys for action in ("start", "exit")]
+        rows = [row for row in events if row["uuid"] == uuid]
+        require([(row["phase"], row["case"], row["action"]) for row in rows] == roster,
+                "Queue is not serial, or has a repeated or missing case")
+        for row in rows[1::2]:
+            key, phase = row["case"], row["phase"]
+            log = (execution / f"{key}.{phase}.log").read_text().splitlines()
+            worker = json.loads(log[-1])
+            expected = ("completed", 12) if phase == "fresh" else ("verified_completed", 0)
+            require((worker["operation"], worker["updates_this_call"]) == expected
+                    and queued.qualifies(worker["admission"])
+                    and worker["admission"]["index"] == registered["devices"][uuid]["index"]
+                    and worker["admission"]["total_mib"] == registered["devices"][uuid]["total_mib"]
+                    and row["code"] == 0 and math.isfinite(row["seconds"]) and row["seconds"] >= 0,
+                    "Worker admission, elapsed time or update receipt differs")
+            current = timing.setdefault(key, {"uuid": uuid})
+            current[phase + "_seconds"] = row["seconds"]
+            if phase == "fresh":
+                samples = [json.loads(line) for line in (execution / f"{key}.gpu.jsonl").read_text().splitlines()]
+                used = [sample["device_used_mib"] for sample in samples if "device_used_mib" in sample]
+                current.update(device_peak_memory_used_mib=max(used) if used else None,
+                               gpu_samples=len(used), sample_errors=len(samples) - len(used))
+    elapsed = datetime.fromisoformat(events[-1]["time"]) - datetime.fromisoformat(events[0]["time"])
+    return dict(cases=timing, wall_seconds=elapsed.total_seconds(),
+                fresh_seconds_sum=sum(row["fresh_seconds"] for row in timing.values()),
+                completed_resume_updates=0, receipt_sha256=receipts)
+
+
+def audit_queued(args, source, runs, out):
+    import subprocess
+
+    runtime = subprocess.check_output(["git", "rev-parse", args.runtime_commit + "^{commit}"], text=True).strip()
+    require(runtime == args.runtime_commit and runtime == QUEUED_PRODUCER, "Unknown pinned queue producer")
+    require(args.registration_sha256 == QUEUED_REGISTRATION, "Unknown pinned queue registration")
+    require(subprocess.run(["git", "merge-base", "--is-ancestor", runtime, source["commit"]], check=False).returncode == 0,
+            "Analysis checkout does not descend from pinned queue producer")
+    runtime_files = {name: sha for name, sha in source["files"].items()
+                     if name not in {"scripts/audit_oss_c_real.py", "tests/test_oss_c_real_audit.py",
+                                     "tests/test_oss_c_resources.py"}}
+    require(digest(runtime_files) == QUEUED_RUNTIME_FILE_HASH, "Queue producer file hash differs")
+    producer = {"commit": runtime, "source_hash": QUEUED_SOURCE}
+    loaded = release(runs)
+    registered = queued.verify_registration(runs, producer, args.registration_sha256, loaded)
+    path = queued.registration_path(runs)
+    items = loaded[0]
+    labels = readouts(items, registered["metadata"])
+    graph = graph_binding(items)
+    binding = observation_id(observations(items))
+    crosscheck = torchmetrics_oracle(args.torchmetrics_source) if args.torchmetrics_source else None
+    cases_root = path.parent / "cases"
+    require(not cases_root.is_symlink() and {path.name for path in cases_root.iterdir()} == set(queued.KEYS),
+            "Exactly nine registered case directories required")
+    execution = path.parent / "execution"
+    timing = verify_queued_execution(execution, registered, args.registration_sha256)
+    cases = {key: audit_case(key, spec, registered, cases_root / key, execution, labels, graph, binding,
+                            crosscheck, queued_run=True) for key, spec in registered["cases"].items()}
+    comparisons = compare(cases)
+    result = dict(status="audited", analysis_commit=source["commit"], analysis_source_hash=source["source_hash"],
+                  producer_commit=runtime, producer_source_hash=QUEUED_SOURCE,
+                  registration_sha256=args.registration_sha256, campaign_sha256=digest(registered),
+                  real_updates=sum(case["updates"] for case in cases.values()), timing=timing, cases=cases,
+                  supports={scene: {role: dict(class_support=support, row_identity_sha256=row_hash)
+                                   for role, (_, support, row_hash) in roles.items()}
+                            for scene, roles in labels.items()},
+                  arm_summary=summarize(cases), comparisons=comparisons,
+                  development_gate_passed=all(row["development_gate_passed"] for row in comparisons.values()),
+                  oracle="torch_numpy_torchmetrics" if crosscheck else "torch_numpy",
+                  heldout_reads=0, audit_optimizer_updates=0, production_authorized=False)
+    require_frozen_code(source)
+    require(hash_file(path) == args.registration_sha256, "Registration changed during audit")
+    queued.create(out, result)
+    print(json.dumps({key: result[key] for key in ("status", "oracle", "real_updates", "development_gate_passed")}))
+    return result
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--execution", type=Path)
     parser.add_argument("--torchmetrics-source", type=Path)
+    parser.add_argument("--runtime-commit")
+    parser.add_argument("--registration-sha256")
     parser.add_argument("--out", type=Path, required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     source = code_snapshot()
     require(training_container_kind() == "lxc" and source["commit"] == args.expected_commit,
             "Authorized LXC and exact analysis source required")
     require_frozen_code(source)
-    audit_files = {"scripts/audit_oss_c_real.py", "tests/test_oss_c_real_audit.py"}
-    require(digest({name: sha for name, sha in source["files"].items() if name not in audit_files})
-            == PRODUCER_SOURCE, "Frozen producer implementation differs in the analysis checkout")
     runs = args.runs.resolve(strict=True)
     out = args.out.resolve()
-    require(runs.name == "runs" and out.is_relative_to(runs), "New audit output must be inside runs")
+    require(runs.name == "runs" and out.is_relative_to(runs) and not out.exists(), "New audit output must be inside runs")
+    if args.runtime_commit is not None:
+        require(args.registration_sha256 is not None and args.execution is None, "Queued audit identity required")
+        return audit_queued(args, source, runs, out)
+    audit_files = {"scripts/audit_oss_c_real.py", "tests/test_oss_c_real_audit.py",
+                   "scripts/run_oss_c_resources.py", "tests/test_oss_c_resources.py"}
+    require(digest({name: sha for name, sha in source["files"].items() if name not in audit_files})
+            == PRODUCER_SOURCE, "Frozen producer implementation differs in the analysis checkout")
     path = runs / "oss-c-review01/real-registration04/registration.json"
     require(not path.is_symlink() and hash_file(path) == REGISTRATION, "Frozen registration bytes differ")
     registered = read(path)
