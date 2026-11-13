@@ -67,9 +67,7 @@ def geometry(root,out,producer):
                               shapes=[list(x) for x in sorted(shapes)],thin_controls=[[1,1],[1,7],[7,1],[3,5]]))
 
 
-def _operator_rows(shapes,target):
-    rows = {}
-    rng = np.random.default_rng(qual.FIXTURE_SEED)
+def operator_specs(shapes):
     # Both native synthetic stride 4 and real strides sqrt(50)/10.
     for stride in (4,50**.5,10):
         for h,w in shapes:
@@ -83,11 +81,19 @@ def _operator_rows(shapes,target):
             sparse = (("assignment",q,(n,m),64),("assignment_transposed",q[::-1].copy(),(m,n),64),
                       ("adjacency64",a,(m,m),64),("adjacency128",a,(m,m),128))
             key = f"{stride:g}/{h}x{w}"
-            rows[f"{key}/adaptive_pool"] = qual.evaluate_pool(rng,h,w,64,grid,target)
+            yield f"{key}/adaptive_pool", (h,w,64,grid)
             for name,indices,shape,channels in sparse:
-                rows[f"{key}/{name}"] = qual.evaluate_sparse(rng,indices,shape,channels,target,p4.CUDA_FP64_WEIGHT)
+                yield f"{key}/{name}", (indices,shape,channels)
     for name,indices,shape,channels in qual.adversarial_fixtures():
-        rows[name] = qual.evaluate_sparse(rng,indices,shape,channels,target,p4.CUDA_FP64_WEIGHT)
+        yield name, (indices,shape,channels)
+
+
+def _operator_rows(shapes,target):
+    rows = {}
+    rng = np.random.default_rng(qual.FIXTURE_SEED)
+    for name, args in operator_specs(shapes):
+        rows[name] = (qual.evaluate_pool(rng,*args,target) if name.endswith("/adaptive_pool")
+                      else qual.evaluate_sparse(rng,*args,target,p4.CUDA_FP64_WEIGHT))
     return rows
 
 
@@ -201,7 +207,12 @@ def _read_stages(root,pin,case,spec_pin,numeric):
 
 @torch.no_grad()
 def audit(root,pin,out,producer,protocol,uuid):
+    from transfer.native_scale_device_evidence import qualification
+
     reg = matrix(root,pin,producer)
+    proof = qualification(root,reg["qualification"],producer,reg["numeric"])
+    if reg["qualification_all_comparisons_passed"] is not proof["all_comparisons_passed"]:
+        raise ValueError("Native matrix qualification status differs")
     paired, result = {}, {}
     started = perf_counter()
     with arithmetic(protocol,uuid,inputs=reg["inputs"]) as execution:
@@ -229,5 +240,5 @@ def audit(root,pin,out,producer,protocol,uuid):
             result[case] = dict(stages=rows,history=full["history"],validation=full["validation"],
                                 selected=first["step"],last=12,exact=True)
     return transport._json_new(out,dict(schema=SCHEMA,producer=producer,matrix=pin,numeric=reg["numeric"],
-        cases=result,updates=EXPECTED_UPDATES,endpoint_replays=96,kernels=dict(execution.calls),
+        cases=result,updates=EXPECTED_UPDATES,endpoint_replays=96,kernels=dict(execution.calls),qualification=proof,
         scope_restored=True,seconds=perf_counter()-started,real_updates=0,confirmation_reads=0))

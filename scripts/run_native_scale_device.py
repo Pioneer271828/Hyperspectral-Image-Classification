@@ -1,7 +1,6 @@
 """Register and verify strict native-scale CPU/CUDA engineering campaigns in LXC."""
 
 import argparse
-import csv
 import json
 from pathlib import Path
 import sys
@@ -10,38 +9,9 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 
 from research_runtime import code_snapshot, external_directory, require_frozen_code
 from transfer import native_scale_device_campaign as campaign, native_scale_device_cost as cost
-from transfer import p4_runtime_device as p4, registered_development as transport
+from transfer import native_scale_device_evidence as evidence
+from transfer import p4_runtime_device as p4
 from transfer.container_runtime import training_container_kind
-from transfer.development_block_custody import historical, _protect
-from transfer.native_scale_campaign import read
-
-
-def supplement(root,cpu_pin,audit_pin,out,producer,*,gpu_pin=None,comparison_pin=None,gpu_audit_pin=None):
-    prior = read(historical(root,"wp12"),root)
-    tables = {**prior["preserved"],**prior["tables"]}
-    _protect(root,tables.values())
-    audits = [read(pin,root) for pin in (audit_pin,gpu_audit_pin) if pin is not None]
-    evidence = [read(pin,root) for pin in (cpu_pin,gpu_pin) if pin is not None]
-    if len(tables)!=10 or any(item["producer"]!=producer or item["real_updates"] for item in (*audits,*evidence)):
-        raise ValueError("Native numerical WP12 evidence differs")
-    if comparison_pin is not None:
-        compared = read(comparison_pin,root)
-        if compared["cpu"]!=cpu_pin or compared["gpu"]!=gpu_pin or compared["producer"]!=producer:
-            raise ValueError("WP12 numerical comparison pin differs")
-    out.mkdir()
-    with (out/"native-numerical-cost.csv").open("x",newline="",encoding="utf-8") as stream:
-        w = csv.writer(stream)
-        w.writerow(("protocol","uuid","scene","tile","band","factor","arm","phase","p50_s","p95_s","pixels_s","peak_bytes"))
-        for result in evidence:
-            n = result["numeric"]
-            for row in result["rows"]:
-                for name,stat in row["timings"].items():
-                    w.writerow((n["protocol"],n["physical_uuid"],row["scene"],row["tile"],row["band"],row["factor"],
-                        row["arm"],name,stat["p50_seconds"],stat["p95_seconds"],stat["native_pixels_per_second"],
-                        None if row["peaks"] is None else row["peaks"]["peak_allocated_bytes"]))
-    return transport._json_new(out/"supplement.json",dict(producer=producer,old_tables=tables,old_models=65,old_heads=193,
-        cpu=cpu_pin,cpu_audit=audit_pin,gpu=gpu_pin,gpu_audit=gpu_audit_pin,comparison=comparison_pin,
-        real_updates=0,scope=transport._pin(out/"native-numerical-cost.csv")))
 
 
 def main():
@@ -51,7 +21,7 @@ def main():
     parser.add_argument("--protocol",choices=campaign.DEVICES,default=p4.CPU)
     parser.add_argument("--gpu")
     modes = parser.add_subparsers(dest="mode",required=True)
-    for name in ("geometry","qualify","register","stage","audit","cost","compare","supplement"):
+    for name in ("geometry","qualify","register","stage","audit","cost","compare","supplement","consume"):
         sub = modes.add_parser(name)
         if name!="stage":
             sub.add_argument("--out",required=True,type=Path)
@@ -64,13 +34,16 @@ def main():
         if name=="stage":
             sub.add_argument("--case",choices=campaign.cases(),required=True)
             sub.add_argument("--phase",choices=campaign.PHASES,required=True)
-        if name in ("compare","supplement"):
+        if name in ("compare","supplement","consume"):
             sub.add_argument("--cpu",nargs=2,required=True)
             sub.add_argument("--cuda",nargs=2,required=name=="compare")
-        if name=="supplement":
+        if name in ("supplement","consume"):
             sub.add_argument("--cpu-audit",nargs=2,required=True)
             sub.add_argument("--cuda-audit",nargs=2)
             sub.add_argument("--comparison",nargs=2)
+        if name=="consume":
+            sub.add_argument("--producer",required=True)
+            sub.add_argument("--partial-cuda",action="store_true")
     args = parser.parse_args()
     if not training_container_kind() or not __debug__:
         parser.error("Authorized LXC with assertions required")
@@ -101,9 +74,17 @@ def main():
         result = cost.cost(root,pin(args.geometry),out,*target)
     elif args.mode=="compare":
         result = cost.compare_cost(root,pin(args.cpu),pin(args.cuda),out,producer)
-    else:
-        result = supplement(root,pin(args.cpu),pin(args.cpu_audit),out,producer,
-                            gpu_pin=pin(args.cuda),gpu_audit_pin=pin(args.cuda_audit),comparison_pin=pin(args.comparison))
+    elif args.mode=="consume":
+        if args.protocol!=p4.CPU or args.comparison is not None or (args.partial_cuda and not args.cuda_audit):
+            parser.error("Consume reads fixed artifacts on CPU and verifies any paired comparison directly")
+        result = evidence.publish(root,out,args.producer,producer,pin(args.cpu_audit),pin(args.cpu),
+                                  gpu_audit_pin=pin(args.cuda_audit),gpu_cost_pin=pin(args.cuda),
+                                  partial=args.partial_cuda)
+    elif args.mode=="supplement":
+        if args.comparison is not None:
+            parser.error("Supplement verifies the CPU/CUDA comparison directly from the paired cost inputs")
+        result = evidence.publish(root,out,producer,producer,pin(args.cpu_audit),pin(args.cpu),
+                                  gpu_audit_pin=pin(args.cuda_audit),gpu_cost_pin=pin(args.cuda))
     print(json.dumps(result),flush=True)
 
 
