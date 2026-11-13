@@ -4,15 +4,17 @@ from copy import deepcopy
 from dataclasses import asdict
 import io
 import json
+import os
 from pathlib import Path
 from time import perf_counter
 
 import torch
 
 from joint_training import _run_lock
-from model.research_config import digest
+from model.research_config import canonical_json, digest
 from research_runtime import tensor_hash
 from transfer import native_scale_training as training, registered_development as transport
+from transfer.development_bank import _atomic_new
 from transfer.development_blocks import array_hash, read_pin
 from transfer.native_scale_fixture import Fixture, INTERVENTIONS, _CONFIRM, condition_for, confirmation_catalog
 from transfer.native_scale_observation import forward, head_hashes
@@ -157,10 +159,20 @@ def _state_digest(state):
     return digest({key:tensor_hash(value) for key,value in state.items()})
 
 
+def _confirmation_json(path, value):
+    _atomic_new(path, (canonical_json(value)+"\n").encode())
+    return transport._pin(path)
+
+
 @torch.no_grad()
 def confirm(root, freeze_pin, out, producer):
+    root = Path(root).resolve(strict=True)
+    out = Path(out).resolve()
+    if out==root or not out.is_relative_to(root):
+        raise ValueError("Confirmation output must be inside the authorized runs root")
     if out.exists():
         raise ValueError("Confirmation output is single-use")
+    freeze_pin = dict(freeze_pin)
     reg = read(freeze_pin,root)
     pinned = matrix(reg["matrix"],root,producer)
     evidence = read(reg["audit"],root)
@@ -187,10 +199,24 @@ def confirm(root, freeze_pin, out, producer):
         checkpoints[name] = spec, checkpoint
     folder = Path(reg["matrix"]["path"]).parent
     completed = folder/"confirmation-complete.json"
+    claim_path = folder/"confirmation-claim.json"
     with _run_lock(folder):
         if completed.exists():
             raise ValueError("Frozen matrix confirmation was already consumed")
+        if claim_path.exists():
+            raise ValueError("Frozen matrix confirmation was already claimed; inspect its existing artifacts")
         out.mkdir()
+        # Make the output directory itself durable before binding it in the claim.
+        parent = os.open(out.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(parent)
+        finally:
+            os.close(parent)
+        # Publish and sync the exclusive claim before touching the held-out
+        # stream. An exception or interruption must never release this claim.
+        claim = _confirmation_json(claim_path,dict(
+            kind="wp07-native-confirmation-claim-v1",matrix=reg["matrix"],freeze=freeze_pin,
+            producer=producer,output=str(out)))
         started = perf_counter()
         # Materialize each held-out field/profile/view once for the entire campaign.
         observations = {}
@@ -231,9 +257,10 @@ def confirm(root, freeze_pin, out, producer):
                         predictions=predictions))
                 endpoints[endpoint] = rows
             cases[name] = endpoints
-        result = transport._json_new(out/"confirmation.json",dict(producer=producer,freeze=freeze_pin,cases=cases,
+        result = _confirmation_json(out/"confirmation.json",dict(producer=producer,freeze=freeze_pin,claim=claim,cases=cases,
             materializations=sum(map(len,observations.values())),forward_calls=len(checkpoints)*2*16*len(INTERVENTIONS),
             timing=dict(total_seconds=perf_counter()-started,materialization_seconds=materialization_seconds,
                         forward_seconds=forward_seconds,graph_seconds=graph_seconds),real_updates=0))
-        transport._json_new(completed,dict(producer=producer,freeze=freeze_pin,confirmation=result))
+        _confirmation_json(completed,dict(producer=producer,matrix=reg["matrix"],freeze=freeze_pin,claim=claim,
+                                          confirmation=result))
         return result
