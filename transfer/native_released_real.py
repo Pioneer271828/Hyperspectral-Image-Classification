@@ -84,6 +84,12 @@ class RealReleasedRun:
         self._views = {(row["role"], row["tile"], row["band"], row["factor"]): deepcopy(row) for row in receipt["views"]}
         self._point_set = deepcopy(receipt["point_set"])
         self._observation_producer = receipt["producer"]
+        if len(self._views) != len(receipt["views"]):
+            raise ValueError("Preflight contains repeated view identities")
+        expected_points = {role: digest(sorted(point for row in self._bank.role_rows(role) for point in row["samples"]))
+                           for role in ("devtrain", "devval")}
+        if self._point_set != expected_points:
+            raise ValueError("Direct bank release identities differ from the draft")
 
     @property
     def case(self):
@@ -122,7 +128,7 @@ class RealReleasedRun:
         if len(train) != steps or {(row["tile"], row["band"]) for row in train} != authorized or len(authorized) != steps:
             raise ValueError("Schedule does not cover exactly the authorized labeled tiles and band views")
         if self._case["events"] != [0, steps//2, steps] or steps % 2:
-            raise ValueError("Real sparse update schedule duplicates a tile/view or differs from its budget")
+            raise ValueError("Real sparse selection clock differs from the frozen half/end budget")
         model = self.baseline(seed)
         initial = initialize(model, arm, seed + 7321)
         return {"format": FORMAT, "producer": producer, "classes": classes, "seed": seed, "arm": arm,

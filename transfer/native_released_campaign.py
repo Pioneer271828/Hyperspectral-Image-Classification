@@ -1,5 +1,6 @@
 """Prepare, execute and independently audit the frozen released-point matrix."""
 from collections import Counter
+import csv
 from itertools import product
 from pathlib import Path
 from time import perf_counter
@@ -235,7 +236,23 @@ def audit(root, item, release, out, code, *, intake=None, cli):
     require(all(len({row["source_state"] for row in rows if row["case"].startswith(scene + "/")}) == 3
                 for scene in preflight.SCENES), "The matrix lacks three distinct seeded initializations")
     out.mkdir()
+    export_csv(out / "selected-devval.csv", rows, spec["synthetic"])
     result = {"schema": AUDIT, "status": "passed", "synthetic": spec["synthetic"], "matrix": item,
               "release": release, "producer": code["commit"], "cases": rows, "optimizer_updates": spec["optimizer_updates"],
               "audit_optimizer_updates": 0, "elapsed_seconds": perf_counter()-started, "query_authorized": False}
+    result["selected_devval_table"] = dev._pin(out / "selected-devval.csv")
     return dev._json_new(out / "comparison-audit.json", result)
+
+
+def export_csv(path, rows, synthetic):
+    with path.open("x", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("scope", "case", "head", "band", "selected_step", "oa", "aa", "kappa", "macro_f1",
+                         "nll", "class_id", "released_support", "recall"))
+        for row in rows:
+            for head, by_band in row["head_metrics"].items():
+                for band, observed in by_band.items():
+                    for per_class in observed["per_class"]:
+                        writer.writerow(("synthetic" if synthetic else "released_devval", row["case"], head, band,
+                            row["selected_step"], *(observed[name] for name in ("oa", "aa", "kappa", "macro_f1", "nll")),
+                            *(per_class[name] for name in ("class_id", "support", "recall"))))
