@@ -54,7 +54,7 @@ def release(runs, *, materialize):
                               producer_fingerprint=digest(entry["prepared_fields"]))
         if materialize:
             item = torch.load(payload,map_location="cpu",weights_only=True,mmap=True)
-            if (any(key.startswith(("test_","query_")) for key in item)
+            if (item["class_num"]!=CLASSES[scene] or any(key.startswith(("test_","query_")) for key in item)
                     or _item_fingerprint(item)!=entry["prepared_fields"]):
                 raise ValueError("Unexpected prepared identity or held-out fields")
             train,val = (item[role+"_samples_gt"]>0 for role in ("train","val"))
@@ -91,12 +91,16 @@ def campaign(runs,source):
         cases[f"{arm}-{seed}"] = dict(arm=arm,seed=seed,settings=opts,settings_sha256=digest(opts),
             initial_state_sha256=initial, optimizer="joint Adam over the original backbone and three task heads",
             scheduler="ReduceLROnPlateau on calibrated fused validation NLL",
+            optimizer_sha256=digest({"implementation":"joint_training.run_training","settings":opts["config"]["training"]}),
+            scheduler_sha256=digest({"implementation":"ReduceLROnPlateau","settings":opts["scheduler"],
+                                     "policy":opts["validation_policy"]}),
             schedule_sha256=digest(schedule_for(opts)),updates=12,
             validation_steps=[(epoch+1)*3 for epoch in validation_epochs(opts)])
     return dict(schema="oss-c-fixed-coordinate-real-v1",issue=463,
         source_commit=source["commit"],source_hash=source["source_hash"],config_sha256=file_digest(BASE),
         plan_sha256=file_digest(PLAN),data_manifest=MANIFEST,data_roles=["train","val"],
         split_root=64,data=sources,metadata=metadata,cases=cases,updates=108,gates=GATES,gpu_uuid=GPU,
+        gpu_policy=dict(min_free_mib=12288,max_utilization=60,device_assignment="one registered UUID"),
         production_authorized=False,real_launch_authorized=False,heldout_reads=0)
 
 
@@ -118,7 +122,7 @@ def run_case(registered,key,items,source,directory,*,resume=False,device="cpu",s
     result = run_training(opts,items,directory,prov,source,resume=resume,device=device,
                           runtime_adapter=runtime,stop_after=stop_after,
                           finish_guard=lambda:require_frozen_code(source))
-    if result["operation"]=="completed":
+    if result["operation"] in ("completed","verified_completed"):
         receipt = result["result"]
         events = read(Path(directory)/"history.json")
         if ([event["step"] for event in events]!=spec["validation_steps"]

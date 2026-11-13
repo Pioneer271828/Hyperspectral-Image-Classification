@@ -1,6 +1,5 @@
 """Test the isolated short worker and audit input contracts with no extra libraries."""
 
-import copy
 import json
 import os
 from pathlib import Path

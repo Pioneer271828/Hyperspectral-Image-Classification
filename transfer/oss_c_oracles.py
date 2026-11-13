@@ -1,6 +1,5 @@
 """Independent verification inputs and opt-in source-bound audit backends."""
 
-from hashlib import sha256
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -87,6 +86,4 @@ def qualification(component, *, test_execution_passed, failed_tensors=None, nume
 
 
 def require_production(receipt):
-    if (receipt.get("schema") == "oss-c-qualification-v1" or
-            receipt.get("production_authorized") is not True):
-        raise ValueError("Research qualification receipts cannot authorize production")
+    raise ValueError(f"Research qualification receipts cannot authorize production: {receipt.get('component','unknown')}")
