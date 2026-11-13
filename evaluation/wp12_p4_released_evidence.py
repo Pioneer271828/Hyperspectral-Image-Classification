@@ -50,7 +50,8 @@ def queue_states(resource, status=None, accepted=None):
     """Validate progress totals and derive a visible state for each frozen lane."""
     result = {}
     if status is not None:
-        require(status["status"] in {"running", "waiting_for_resources", "failed", "completed"}
+        require(status["status"] in {"running", "waiting_for_resources", "failed", "completed",
+                                        "draining_after_failure", "interrupted_or_unknown"}
                 and set(status["slots"]) == set(resource["slots"]), "Incomplete or unknown P4 progress record")
     for slot, planned in resource["slots"].items():
         cases, budget = len(planned["cases"]), planned["updates"]
@@ -71,6 +72,8 @@ def queue_states(resource, status=None, accepted=None):
                 state = "waiting"
             elif completed == cases:
                 state = "audited_pending_batch_acceptance"
+            elif status["status"] == "draining_after_failure":
+                state = "draining"
             elif status["status"] == "failed":
                 state = "drained_after_peer_failed"
             else:
@@ -85,7 +88,7 @@ def queue_states(resource, status=None, accepted=None):
     return result
 
 
-def p4_prepared(resource_pin, template_pin, root):
+def p4_prepared(resource_pin, template_pin, root, *, review_pin=None, approval_pin=None):
     row, template = read(resource_pin, root), read(template_pin, root)
     science = read(row["science"], root)
     require(resource_pin["sha256"] == P4_RESOURCE and template_pin["sha256"] == FIT_TEMPLATE
@@ -100,15 +103,73 @@ def p4_prepared(resource_pin, template_pin, root):
             and all(c["status"] == "NOT_RUN" and c["actual_updates"] == 0 and c["selected_step"] is None
                     for c in template["cases"]), "Expected independently prepared P4 and fitting evidence")
     progress = controller_status(resource_pin, root, approved_resource_sha=P4_RESOURCE)
-    slots = queue_states(row, progress)
+    reviewed, accepted = None, None
+    if review_pin is not None:
+        require(approval_pin is not None, "Real review requires a separately pinned admission release")
+        reviewed = read_real_review(review_pin, approval_pin, resource_pin, row, science, root, progress)
+        if reviewed["status"] == "accepted":
+            accepted = read(reviewed["acceptance"], root)
+    slots = queue_states(row, progress, accepted)
     state = "planned" if progress is None else progress["status"]
     if state == "completed":
-        state = "audited_pending_batch_acceptance"
+        state = "accepted" if accepted else "audited_pending_batch_acceptance"
     return {"scope": resource_pin, "science": row["science"], "state": state,
             "slots": slots, "optimizer_updates": sum(item["actual_updates"] for item in slots.values()),
             "fit_template": template_pin,
             "fit_status": template["status"], "accuracy": None, "cost": None,
-            "average_benefit": None, "batch_accepted": False, "query_authorized": False}
+            "average_benefit": None, "batch_accepted": accepted is not None, "query_authorized": False,
+            "review": review_pin, "reviewed_cases": 0 if reviewed is None else reviewed["observed_cases"],
+            "case_metrics_scope": None if reviewed is None else reviewed["status"]}
+
+
+def read_real_review(review_pin, release, resource_pin, resource, science, root, progress):
+    receipt = read(review_pin, root)
+    approved = read(release, root)
+    require(approved["schema"] == "wp05_p4_independent_execution_release_v1"
+            and approved["resource_scope"] == resource_pin and approved["decision"] == "approved"
+            and approved["optimizer_updates"] == 2400 and approved["query_authorized"] is False
+            and receipt["schema"] == "wp05_p4_real_selected_recompute_v1"
+            and receipt["status"] in ("accepted", "partial") and receipt["resource"] == resource_pin
+            and receipt["release"] == release and receipt["scientific_scope"] == resource["science"]
+            and receipt["worker"] == P4_WORKER and receipt["input_pins"] == science["protected_files"]
+            and receipt["audit_optimizer_updates"] == 0 and receipt["planned_cases"] == 20
+            and receipt["query_accessed"] is receipt["raw_gt_loaded"] is False,
+            "Unrelated real review or release")
+    cases = {row["id"]: row for row in science["cases"]}
+    observed = {row["case"]["id"]: row for row in receipt["cases"]}
+    require(len(observed) == len(receipt["cases"]) == receipt["observed_cases"]
+            and observed.keys() <= cases.keys() and progress is not None
+            and receipt["committed_optimizer_updates"] <= sum(v["optimizer_updates"] for v in progress["slots"].values()),
+            "Real review exceeds committed worker coverage")
+    completed = {p["path"] for p in progress["stage_pins"]}
+    for name, row in observed.items():
+        audited = read(row["audit"], root)
+        expect = Path(resource["execution"]) / "cases" / name / "audit.json"
+        ack = Path(resource["execution"]) / "stages" / name / "06.receipt.json"
+        require(str(expect) == row["audit"]["path"] and str(ack) in completed
+                and json.loads(ack.read_text(encoding="utf-8"))["evidence"] == row["audit"]
+                and audited["case"] == row["case"] == cases[name] and audited["status"] == "passed"
+                and row["optimizer_updates"] == audited["optimizer_updates"] == 120
+                and row["audit_updates"] == 0
+                and row["paired"]["selected_step"] == audited["selected_step"]
+                and row["paired"]["heads"] == audited["fit"]["selected"]["val"]["heads"],
+                "Unrelated or tampered independently recomputed case")
+    if receipt["status"] == "accepted":
+        result = read(receipt["acceptance"], root)
+        require(progress["status"] == "completed" and len(observed) == 20 and result["synthetic"] is False
+                and result["schema"] == "wp05_p4_independent_slot_acceptance_v1"
+                and result["status"] == "passed" and result["release"] == release
+                and result["science_scope"] == resource["science"] and result["resource_scope"] == resource_pin
+                and result["worker"] == P4_WORKER and result["controller"] == resource["controller"]
+                and result["optimizer_updates"] == receipt["committed_optimizer_updates"] == 2400
+                and result["query_accessed"] is result["raw_gt_loaded"] is False
+                and result["case_audits"] == {v["audit"]["path"]: v["audit"]["sha256"] for v in observed.values()},
+                "Full real table requires a complete independent, non-synthetic acceptance")
+        require(all(hash_file(path) == pin for path, pin in result["protected_files"].items()),
+                "Accepted P4 evidence bytes changed")
+    else:
+        require(receipt["acceptance"] is None, "Partial P4 evidence cannot assert complete acceptance")
+    return receipt
 
 
 def p4_engineering(receipt_pin, root):
@@ -192,8 +253,47 @@ def sparse_prepared(manifest, root):
     return {"receipt": manifest, "scenes": rows, "blocked": value["blocked"], "optimizer_updates": 0}
 
 
-def append(out, root, resource, template, sparse, queue_receipt, adapter):
-    p4, released = p4_prepared(resource, template, root), sparse_prepared(sparse, root)
+def comparison_qualification(item, root):
+    row = read(item, root)
+    matrix = read(row["matrix"], root)
+    require(row["schema"] == "wp07_native_released_comparison_audit_v1" and row["status"] == "passed"
+            and row["synthetic"] is True and matrix["synthetic"] is True
+            and row["producer"] == matrix["controller"]["commit"]
+            and row["optimizer_updates"] == matrix["optimizer_updates"] == 360
+            and row["audit_optimizer_updates"] == 0 and row["query_authorized"] is False and len(row["cases"]) == 30
+            and {item["case"] for item in row["cases"]} == {item["id"] for item in matrix["cases"]}
+            and all(item["completed_resume_updates"] == 0 and item["optimizer_updates"] == 12 for item in row["cases"]),
+            "Expected complete synthetic production-entry qualification")
+    for case in row["cases"]:
+        for pin in case["stages"]:
+            stage = read(pin, root)
+            require(hash_file(stage["checkpoint"]["path"]) == stage["checkpoint"]["sha256"],
+                    "Synthetic entry qualification has a changed checkpoint")
+    return {"receipt": item, "scope": "synthetic_engineering", "cases": len(row["cases"]),
+            "optimizer_updates": row["optimizer_updates"], "real_release": None, "real_metrics": None}
+
+
+def write_case_metrics(path, review):
+    with path.open("x", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("scope", "case", "support_seed", "model_seed", "k", "method", "arm", "head",
+                         "selected_step", "oa", "aa", "kappa", "macro_f1", "nll",
+                         *(f"recall_{i}" for i in range(1, 23))))
+        for row in review["cases"]:
+            case = row["case"]
+            paired = row["paired"]
+            for name, head in paired["heads"].items():
+                writer.writerow((review["status"], *(case[k] for k in ("id", "support_seed", "model_seed", "k", "method", "arm")),
+                                 name, paired["selected_step"], *(head[k] for k in ("oa", "aa", "kappa", "macro_f1", "nll")),
+                                 *head["recall"]))
+
+
+def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
+           p4_review=None, p4_release=None, comparison=None):
+    p4 = p4_prepared(resource, template, root, review_pin=p4_review, approval_pin=p4_release)
+    released = sparse_prepared(sparse, root)
+    if comparison is not None:
+        released["comparison_qualification"] = comparison_qualification(comparison, root)
     engineering = p4_engineering(queue_receipt, root)
     tables = {}
     for folder, members in OLD.items():
@@ -220,7 +320,10 @@ def append(out, root, resource, template, sparse, queue_receipt, adapter):
         for scene, row in released["scenes"].items():
             writer.writerow((scene, row["status"], row["planned_updates"], row["minimum_exposure_updates"], "N/A", "N/A"))
         writer.writerow(("paviaU", released["blocked"]["paviaU"], "", "", "N/A", "N/A"))
-    names = ("p4-queue-progress.csv", "native-released-dev-status.csv")
+    names = ["p4-queue-progress.csv", "native-released-dev-status.csv"]
+    if p4_review is not None:
+        write_case_metrics(out / "p4-real-case-metrics.csv", read(p4_review, root))
+        names.append("p4-real-case-metrics.csv")
     return dev._json_new(out / "supplement.json", {"schema": "wp12_development_intake_supplement_v1",
         "adapter": adapter, "p4": p4, "engineering_p4": engineering, "native_released": released, "preserved": {
             "real_models": len(model_rows), "real_heads": len(production),

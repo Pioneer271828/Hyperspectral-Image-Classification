@@ -15,6 +15,8 @@ def main():
     parser.add_argument("--expected-commit", required=True)
     for name in ("runs", "p4-scope", "fit-template", "sparse", "queue-receipt", "out"):
         parser.add_argument("--" + name, type=Path, required=True)
+    for name in ("p4-review", "p4-release", "comparison"):
+        parser.add_argument("--" + name, nargs=2, metavar=("PATH", "SHA256"))
     args = parser.parse_args()
     code = code_snapshot()
     require_frozen_code(code)
@@ -24,8 +26,12 @@ def main():
     out = external_directory(args.out)
     if not out.is_relative_to(root):
         raise ValueError("Output must remain inside the authorized runs root")
+    def pinned(pair):
+        return {"path": str(Path(pair[0]).resolve(strict=True)), "sha256": pair[1]} if pair else None
     print(evidence.append(out, root, dev._pin(args.p4_scope), dev._pin(args.fit_template),
-                          dev._pin(args.sparse), dev._pin(args.queue_receipt), code["commit"]), flush=True)
+                          dev._pin(args.sparse), dev._pin(args.queue_receipt), code["commit"],
+                          p4_review=pinned(args.p4_review), p4_release=pinned(args.p4_release),
+                          comparison=pinned(args.comparison)), flush=True)
     require_frozen_code(code)
 
 
