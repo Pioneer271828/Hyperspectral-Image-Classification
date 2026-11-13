@@ -24,7 +24,7 @@ def arguments():
         parser.add_argument("--" + key, required=True)
     for key in ("matrix", "release", "routing"):
         parser.add_argument("--" + key, nargs=2, required=True)
-    parser.add_argument("--operation", nargs=3, help=argparse.SUPPRESS)
+    parser.add_argument("--operation", nargs=5, help=argparse.SUPPRESS)
     args = parser.parse_args()
     for key in ("matrix", "release", "routing"):
         setattr(args, key, pin(getattr(args, key)))
@@ -146,7 +146,10 @@ def operate(args, scope, selected, code):
     from transfer import registered_development as transport
     from transfer.native_scale_campaign import read
 
-    case_id, phase, receipt_path = args.operation
+    case_id, phase, receipt_path, matrix_fd, journal_fd = args.operation
+    matrix_out = Path(read(args.matrix, args.runs)["execution"])
+    resource.check_inherited_lease(int(matrix_fd), matrix_out / ".matrix.lock")
+    resource.check_inherited_lease(int(journal_fd), args.out / ".matrix.lock")
     receipt_path = Path(receipt_path)
     case, release, gpu, route = selected[case_id]
     slot = scope["cases"][case_id]
@@ -198,8 +201,17 @@ def dispatch(args, scope, selected, code):
     campaign.require(matrix_root == matrix_root.resolve() and args.runs in matrix_root.parents,
                      "Matrix output escapes the authorized runs root")
     matrix_root.mkdir(exist_ok=True)
-    with resource.lease(args.out / ".matrix.lock"), resource.lease(matrix_root / ".matrix.lock"):
+    with (resource.lease(args.out / ".matrix.lock") as journal_lease,
+          resource.lease(matrix_root / ".matrix.lock") as matrix_lease):
         identity = {"routing": args.routing, "controller": scope["controller"]}
+        matrix_owner = matrix_root / "owner.json"
+        authority = {"matrix": args.matrix, "release": args.release}
+        if matrix_owner.exists():
+            campaign.require(read(transport._pin(matrix_owner), args.runs) == authority, "Matrix has another owner")
+        else:
+            campaign.require({p.name for p in matrix_root.iterdir()} == {".matrix.lock"},
+                             "Unowned matrix execution directory")
+            transport._json_new(matrix_owner, authority)
         if owner.exists():
             campaign.require(read(transport._pin(owner), args.runs) == identity, "Dual-slot journal has another owner")
         else:
@@ -227,8 +239,13 @@ def dispatch(args, scope, selected, code):
                                 with lock:
                                     if stopping.is_set():
                                         return {"status": "drained", "stages": rows}
-                                    process = subprocess.Popen([*command, "--operation", case_id, phase, str(path)],
-                                        env=env, cwd=args.worker, stdout=log, stderr=subprocess.STDOUT)
+                                    fds = (matrix_lease.fileno(), journal_lease.fileno())
+                                    child = [*command, "--operation", case_id, phase, str(path), *map(str, fds)]
+                                    process = subprocess.Popen(child, env=env, cwd=args.worker,
+                                                               stdout=log, stderr=subprocess.STDOUT, pass_fds=fds)
+                                    transport._json_new(path.with_suffix(".launch.json"),
+                                                        {"pid": process.pid, "case": case_id, "phase": phase,
+                                                         "slot": slot, "physical_uuid": gpu})
                                 returncode = process.wait()
                             if returncode == WAITING:
                                 return {"status": "waiting", "case": case_id, "phase": phase, "stages": rows}

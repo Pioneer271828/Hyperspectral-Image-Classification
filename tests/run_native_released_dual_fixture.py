@@ -1,9 +1,12 @@
 """Run the frozen worker through real CPU subprocesses with two logical slots."""
 import argparse
 from pathlib import Path
+import json
 import os
+import signal
 import subprocess
 import sys
+from time import monotonic, sleep
 
 import torch
 
@@ -114,22 +117,38 @@ def main():
                              "direct_completed": transport._pin(dest / "completed.json")}
 
     _, _, broken, failure_journal, failure_command = prepare("interrupt", {})
-    broken.mkdir()
     target = broken / cases[0].replace("/", "-")
-    target.mkdir()
-    transport._json_new(target / "full.intent.json", {"phase": "full", "fixture_interrupted_after_intent": True})
-    failed = dispatch(failure_command, failure_journal, "interrupt", expected=1)
+    marker = target / "full.intent.json"
+    launch = failure_journal / f"attempt0-{target.name}-full.launch.json"
+    with (root / "interrupt.log").open("x") as log:
+        proc = subprocess.Popen(failure_command, cwd=worker, stdout=log, stderr=subprocess.STDOUT,
+                                env={**os.environ, "CUDA_VISIBLE_DEVICES": "", "PYTHONDONTWRITEBYTECODE": "1"})
+        deadline = monotonic() + 120
+        killed = None
+        try:
+            while proc.poll() is None and monotonic() < deadline:
+                if marker.exists() and launch.exists():
+                    killed = json.loads(launch.read_text())["pid"]
+                    os.kill(killed, signal.SIGKILL)
+                    break
+                sleep(.01)
+        finally:
+            returncode = proc.wait(timeout=120)
+    assert killed and returncode == 1 and marker.exists()
+    failed = read(transport._pin(failure_journal / "failure.json"), root)
     assert failed["status"] == "failed" and failed["slots"]["a"]["phase"] == "full"
-    assert failed["slots"]["a"]["stages"] == [] and not (target / "full.pt").exists()
-    assert len(failed["slots"]["b"]["stages"]) <= 1 and failed["slots"]["b"]["status"] == "drained"
+    assert failed["slots"]["a"]["returncode"] == -signal.SIGKILL
+    assert failed["slots"]["a"]["stages"] == [] and not (target / "full.json").exists()
+    assert failed["slots"]["b"]["status"] == "drained"
+    assert failed["slots"]["b"]["stages"] and len(failed["slots"]["b"]["stages"]) < 3
     dispatch(failure_command, failure_journal, "failure-retry-refused", expected=1)
-    assert not (target / "full.pt").exists()
+    assert not (target / "full.json").exists()
     result = {"schema": "wp07_native_dual_slot_cpu_qualification_v1", "status": "passed",
               "worker": identity(code), "controller": identity(owner), "physical_gpus": 0,
               "actual_optimizer_updates": first["new_updates"]+resumed["new_updates"]+24+failed["new_updates"],
               "completed_resume_updates": 0, "synthetic": True, "query_accessed": False, "raw_gt_loaded": False,
               "resource_wait": first, "continuation": resumed, "completed": again, "failure": failed,
-              "paired_states": compared, "real_scientific_cost": None}
+              "paired_states": compared, "interrupted_pid": killed, "real_scientific_cost": None}
     print(transport._json_new(root / "cpu-qualification.json", result), flush=True)
 
 
