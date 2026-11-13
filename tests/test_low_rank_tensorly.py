@@ -22,6 +22,7 @@ from tests.test_precision_recovery import fixture
 from transfer import matched_route_admission as admission, registered_development as dev
 from transfer.g3_training import state_hash
 from transfer.xuzhou_multiscale import SEED
+from transfer.xuzhou_multiscale_audit import SCIENCE, _exact
 
 
 SOURCE = os.environ.get("WP10_TENSORLY_SOURCE")
@@ -199,9 +200,8 @@ class TensorLyTests(unittest.TestCase):
                         resumed_packet = root / "resumed.pt"
                         resumed.save(resumed_packet)
                         baseline, actual = [torch.load(item, weights_only=True) for item in (full_packet, resumed_packet)]
-                        for name in ("optimizer", "rng", "torch_rng"):
-                            self.assertIn(name, actual)
-                            torch.testing.assert_close(actual[name], baseline[name], rtol=0, atol=0)
+                        for name in SCIENCE:
+                            self.assertTrue(_exact(actual[name], baseline[name]), name)
                         self.assertEqual(resumed.history, full.history)
                         self.assertEqual(set(resumed.history[-1]["deployment"]["heads"]), set(HEADS))
                         activity = resumed.history[-1]["target_activity"]

@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser
 import io
+import json
 import os
 from pathlib import Path
 from statistics import median
@@ -157,7 +158,39 @@ def save_candidate(model, dense, name, assignment, out):
     return dict(case=case, initial=initial, package=package_model(model, case, initial, out / f"{name}.pt"))
 
 
+def startup_worker(request):
+    manifest = admission.read(request["manifest"])
+    tiles, inputs = measure(lambda: resident_tiles(manifest))
+    model, loading = measure(lambda: package(request["entry"]))
+    values, first = measure(lambda: _scan(model, manifest, tiles)[0])
+    return dict(resident_input_read_and_decode=inputs, authenticated_model_load=loading,
+                first_full_sweep_includes_graph=first, output_hashes=_outputs(values, manifest), pid=os.getpid())
+
+
+def startup_pairs(pins, retained, candidates):
+    def worker(name):
+        request = json.dumps(dict(manifest=pins["manifest"], entry=retained[name]))
+        child, total = measure(lambda: subprocess.run([sys.executable, "-m", "scripts.review_wp10_tensorly",
+            "--startup-worker", request], cwd=ROOT, check=True, capture_output=True, text=True))
+        actual = json.loads(child.stdout)
+        if actual["output_hashes"] != candidates[name]["output_hashes"]:
+            raise ValueError("Isolated startup changed the checkpoint output hashes")
+        return dict(actual, process_wall=total["wall_ms"])
+
+    rows = {}
+    for name in candidates:
+        if not name.startswith("tensorly-"):
+            continue
+        names = [name.replace("tensorly-", "native-", 1), name]
+        rows[name.removeprefix("tensorly-")] = [
+            dict(order=order, samples={arm: worker(arm) for arm in order}) for order in (names, names[::-1])]
+    return rows
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--startup-worker":
+        print(json.dumps(startup_worker(json.loads(sys.argv[2]))))
+        return
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
@@ -273,11 +306,16 @@ def main():
         row, _ = score(model, manifest, tiles, selection)
         if row["output_hashes"] != candidates[name]["output_hashes"] or state_hash(model) != retained[name]["package"]["state"]:
             raise ValueError("Resident timings changed a frozen candidate")
+    controls = {name: paired({"native-dense": lambda: _scan(models["native-dense"], manifest, tiles),
+                              name: lambda: _scan(models[name], manifest, tiles)}, 3, 12)
+                for name in (key for key in retained if key != "native-dense")}
+    fresh_startup = startup_pairs(pins, retained, candidates)
     admission.check_pins([*pins.values(), *protected])
     require_frozen_code(code)
     write_json(out / "initial.json", dict(status="passed", tensorly_commit=TENSORLY_COMMIT,
                provider_attestation_and_import=provider_open, numpy_backend=True, original_dense=original,
                candidates=candidates, comparisons=comparisons, native_full_rank_probability_delta=dense_delta,
+               resident_controls_against_dense=controls, fresh_process_startup=fresh_startup,
                decomposition_scope="CPU FP64 contiguous weight already resident, before factor placement",
                resident_scope="CPU full model on fixed resident inputs, includes partition graph generation",
                startup_scope="warm process with authenticated load and first full sweep on loaded instance",
