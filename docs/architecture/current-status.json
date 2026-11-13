@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-11-13",
-  "issue": 459,
+  "issue": 462,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -1346,6 +1346,15 @@
       "remaining": "真实训练/收益和生产CUDA资格未验证。WP05 2400待资格、180000暂停，WP04暂缓、WP11标签BLOCKED。候选源码未并入主入口",
       "report": "research/reports/WP05_WP07_WP12_原生尺度设备恢复与成本_20261113.md",
       "chat_report": "真实优化/rawGT/query/新增标签及旧确认读取0；严格单卡1152次合成更新、48例精确；原682项、纠正48项、GPU续跑447项归档含各自清单。Issue459 open，PR460 Draft"
+    }
+,
+    {
+      "id": "OSS-B 开源职责补审、图算术候选与冻结精度诊断",
+      "state": "17个固定仓库补审完成，评分oracle与合成同后端恢复通过；PyG跨后端训练轨迹失败",
+      "evidence": "Issue462，tested 0727d191fe8e342c59b5ee26d59f4be6a5b9fb16；CPU3/GPU3/相关回归46，306个旧train/val混淆矩阵和252个128锚冻结探针，真实优化/query0。",
+      "remaining": "PyG生产资格未过。真实108次配对仅草案，候选与同容量控制、预算通知及独立确认待登记，旧180000暂停。",
+      "report": "research/reports/OSS_B_开源职责补审与隔离候选_20261113.md",
+      "chat_report": "OSS-A固定源码测试显式启用，来源未认证的工程收据禁止作为真实准入。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
