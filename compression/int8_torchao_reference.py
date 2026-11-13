@@ -24,8 +24,12 @@ class TorchAOAffine:
         def git(*args):
             return subprocess.check_output(["git", "-C", str(root), *args])
 
-        if (Path(git("rev-parse", "--show-toplevel").decode().strip()) != root
-                or git("rev-parse", "HEAD").decode().strip() != TORCHAO_COMMIT):
+        try:
+            revision = git("rev-parse", "HEAD").decode().strip()
+            repository = Path(git("rev-parse", "--show-toplevel").decode().strip())
+        except subprocess.CalledProcessError as exc:
+            raise ValueError("Pinned compatible TorchAO source revision required") from exc
+        if repository != root or revision != TORCHAO_COMMIT:
             raise ValueError("Pinned compatible TorchAO source revision required")
         if str(torch.__version__) != TORCH_VERSION:
             raise ValueError("Frozen PyTorch 2.7.1+cu128 required")

@@ -72,8 +72,7 @@ class FrozenAffineTests(unittest.TestCase):
                 with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profiler:
                     act_native, act, accum, bytes_native, bytes_oracle, native_out, real = compare_layer(native, x, self.oracle)
                 calls = {e.key: e.count for e in profiler.key_averages()}
-                self.assertEqual(calls.get("quantized::conv2d"), None)
-                self.assertEqual(calls["quantized::conv2d.new"], 1)
+                self.assertEqual(calls["quantized::conv2d"], 1)
                 self.assertTrue(torch.equal(act_native, act))
                 self.assertEqual((int(act.min()), int(act.max())), (0, 127))
                 weight = native.kernel.weight().int_repr().numpy().reshape(outputs, width)
