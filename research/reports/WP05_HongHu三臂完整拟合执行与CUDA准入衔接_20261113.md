@@ -29,6 +29,8 @@ CUDA 模式沿用 P4 `cuda_deterministic_fp64_sparse_weight_accum_v4`，含已�
 | 旧 P4 相关回归 | 54 通过、1 个旧的显式双实体 CUDA 测试按 CPU 条件跳过，1066.067 秒。包括旧 1,500 步连续/分段、120 例合成接受和资源门槛；独立比较旧 20/120 例标识及预算在冻结生产与候选中一致。 |
 | 真实只读预检 | 独立 NumPy 抽取授权可见数据的 137 个块观测，重算八个训练/验证范围的波段列、归一化、坐标和像素 ID。独审 SHA `7e41acc2d9b0359a2be03aebcb0f297d11239418e6285c7fa3148739513721ba`。 |
 
+迭代 03 和 04 分别核算。03 的新专项 4/4（54.129 秒），相关旧回归 54 通过、1 个 CPU 条件跳过（1061.768 秒）。04 的两项各为 4/4（59.302 秒）与 54 通过、1 个 CPU 条件跳过（1066.067 秒）。两轮各自的 9/22 类 CPU 边界均为 54+54 步，长程 CPU 1,500 步，GPU 6 同卡九例 54 步，另各有新专项内含 108 步。每轮独立进程测例 1,662 步，计入新专项共 1,770 步，两轮合计 3,540 次新三臂合成更新。相关旧回归内的历史协议测例单列，真实优化仍为 0。
+
 较早迭代的 9 类测试夹具初态类别不一致，以及完成态重复进入的边界指纹读取错误，已修正并完整重测。保留两次失败日志。原生产冻结分支未改。
 
 ## 原 2,400 步真实准入
@@ -46,6 +48,6 @@ CUDA 模式沿用 P4 `cuda_deterministic_fp64_sparse_weight_accum_v4`，含已�
 - `python -m transfer.p4_three_arm_fit prepare --parent <release> --prior <prior-receipt> --reference <original-1500-scope> --registration-dir <new-dir> --execution-dir <new-sibling> --gpus <UUIDs> --qualification <receipt-per-card> --expected-commit <SHA>`，仅预检。正式执行使用单独审核的 release 与 SHA。原 2,400 步检查命令收在 `commands/wp05_fit_check_p4_admission01.sh`。
 - 仓库检查为 `python scripts/check_repository.py --expected-commit <完整 SHA>`，状态从 JSON 通过 `python scripts/check_repository.py --write-status` 投影。授权 LXC 手工执行。
 
-证据 ZIP `/home/lbx/hsi-pioneer271828/runs/wp05-three-arm-fit-evidence01.zip`，SHA-256 `266719032082873faec1781e12f00b06bfab3b782eb281105c020dc71a29fbe5`，清单 `ded41df6b9c21ce7c218b82f8a24b7249b533388f1550870fb9036bccc626888`，本机逐项复核 641 个成员。训练状态保存在容器 checkout 外，ZIP 不含权重和影像。
+最终证据 ZIP `/home/lbx/hsi-pioneer271828/runs/wp05-three-arm-fit-evidence02.zip`，SHA-256 `973dd90f81c42328f7ea0de5d2e49e16176b3ef49de2e37046f2c7a41695bcdb`，清单 `60f0625b47f3898a299cb8eb306e6b60321e32f8366b713efb26951d09c34be8`。主审逐项核对 649 个成员及四份候选与主入口 checker 日志，确认 `65dd7864ad2d54e658b1efb91e408bb99e687c04` 至 `eb0206657842922c5a97e75c76b330157fc56558` 仅为文档和投影变动，接受有界拟合交付。PR #469 保持未合并，Issue #470 继续跟踪真实依赖。训练状态保存在容器 checkout 外，ZIP 不含权重和影像。
 
 上一批 #468 的主审已接受候选冻结与两张物理卡同卡合成恢复。补收未入原 ZIP 的两份最终 checker 原日志。候选 `92586890cc3d9efd2e187cb8aab959a3fcd1f4db`，日志 SHA `80ce67006c14f44c577cb4acafce74b0f488abd9d3d9b02b382eac74650706a6`。主入口 `d2c8caef823189d1bc09d430fe646c3ad464042e`，日志 SHA `4076b4d3cc90ae80f13515270c518c95da245430fe850b5080543b57458043eb`。本包真实研究下一依赖是原双卡短准入完成和新九例范围正式审核，开源 21 仓库及 OSS-C-R 结论沿用原记录。
