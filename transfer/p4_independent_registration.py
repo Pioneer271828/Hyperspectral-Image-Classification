@@ -1,8 +1,9 @@
 """Freeze the controller, worker, scientific inputs and destination independently."""
+import json
+import os
 from pathlib import Path
 import subprocess
 import sys
-import json
 
 from model.research_config import digest
 from research_runtime import ROOT, code_snapshot, hash_file, require_frozen_code, write_json
@@ -52,8 +53,6 @@ def identity(code):
 
 
 def environment(root, gpu=None):
-    import os
-
     env = {**os.environ, **WORKER_ENV, "CUDA_VISIBLE_DEVICES": gpu or "",
            "PYTHONPATH": str(root)}
     env.pop("PYTHONSTARTUP", None)

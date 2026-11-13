@@ -1,6 +1,6 @@
 """Reconstruct paired P4 acceptance from pinned stage and case records."""
 from pathlib import Path
-import json
+import re
 
 from research_runtime import hash_file, write_json
 from transfer import p4_coverage_batch as batch, p4_full_budget_campaign as campaign
@@ -11,7 +11,7 @@ from transfer import p4_runtime_device as device
 SCHEMA = "wp05_p4_independent_slot_acceptance_v1"
 
 
-def verify_attempt(resource, item, out, case, slot, stage, prefix, attempt):
+def verify_attempt(item, out, case, slot, stage, index, serial, attempt):
     name, operation, start, until = stage
     core = {"resource_sha256": item["sha256"], "case": case["id"], "slot": slot, "path": name,
             "operation": operation, "start": start, "until": until}
@@ -23,14 +23,16 @@ def verify_attempt(resource, item, out, case, slot, stage, prefix, attempt):
                   "Stage receipt has an unregistered dispatch identity or lease")
     log = Path(attempt["log"])
     scope.require(log.parent == out / "logs" and log.resolve() == log
-                  and log.name == f"{case['id']}-{prefix.name}-" + log.name.rsplit("-", 1)[-1],
+                  and log.name == f"{case['id']}-{index:02d}-{serial:04d}.log",
                   "Stage log is outside its registered identity")
     if gpu is None:
         scope.require(attempt["inventory"] is None, "CPU dispatch cannot claim a physical snapshot")
     else:
         inventory = attempt["inventory"]
         scope.require(set(inventory) == {"physical_uuid", "free_mib", "utilization", "driver"}
-                      and inventory["physical_uuid"] == gpu and device.eligible(inventory),
+                      and inventory["physical_uuid"] == gpu and device.eligible(inventory)
+                      and type(inventory["free_mib"]) is int and type(inventory["utilization"]) is int
+                      and 0 <= inventory["utilization"] <= 100,
                       "Missing eligible per-operation physical admission")
     # A coordinator can die after worker commit and before the last stdout
     # flush. The worker ledger, rather than stdout, is the commit authority.
@@ -50,8 +52,14 @@ def reconstruct(item, resource, science):
             **science["protected_files"], str(owner_file): hash_file(owner_file),
             str(out / "owner.json"): hash_file(out / "owner.json")}
     for recovery in resource["physical_recoveries"].values():
-        scope.read(recovery)
+        proof = scope.read(recovery)
         pins[recovery["path"]] = recovery["sha256"]
+        for case in proof["cases"]:
+            pins[case["scope"]] = case["scope_sha256"]
+            pins[case["acceptance"]] = case["acceptance_sha256"]
+            saved = scope.read({"path": case["acceptance"], "sha256": case["acceptance_sha256"]})
+            for path, checksum in saved["protected_files"].items():
+                scope.require(pins.setdefault(path, checksum) == checksum, "Recovery and science pins disagree")
     cases = {case["id"]: case for case in science["cases"]}
     rows, slots, audits = [], {}, {}
     for slot, spec in resource["slots"].items():
@@ -60,10 +68,21 @@ def reconstruct(item, resource, science):
             case = cases[case_id]
             folder = campaign.bound_folder(out, case)
             row = campaign.accepted(folder, science, case, sha)
-            scope.require(row["numeric"]["physical_uuid"] == case["physical_uuid"]
-                          and row["class_count" if science["purpose"] == scope.RECOVERY else "case"]
-                          == (resource["classes"] if science["purpose"] == scope.RECOVERY else case),
-                          "Accepted class count or physical UUID differs")
+            gpu = case["physical_uuid"]
+            heads = row["fit"]["selected"]["val"]["heads"]
+            scope.require(row["numeric"]["physical_uuid"] == gpu
+                          and (science["purpose"] != scope.RECOVERY or row["class_count"] == resource["classes"])
+                          and row["raw_gt_loaded"] is row["query_accessed"] is False
+                          and row["nonselected_event_probability_replays"] == 0
+                          and set(heads) == {"fused", "graph", "cnn"}
+                          and all(len(head["confusion"]) == resource["classes"]
+                                  and [sum(values) for values in head["confusion"]] == [5] * resource["classes"]
+                                  for head in heads.values()),
+                          "Accepted class count, validation supports or physical UUID differs")
+            if gpu is not None:
+                qualification = science["qualifications"][gpu]
+                qualified = scope.read({"path": qualification, "sha256": science["protected_files"][qualification]})
+                scope.require(row["numeric"] == qualified["numeric"], "Accepted arithmetic differs from qualification")
             pins.update(row["artifact_pins"])
             path = folder / "audit.json"
             audits[str(path)] = hash_file(path)
@@ -75,18 +94,17 @@ def reconstruct(item, resource, science):
                 committed = queue.evidence(out, case, science, sha, stage)
                 scope.require(committed is not None and campaign.read(receipt) == {
                     "attempt": scope.pin(intent), "evidence": committed}, "Stage receipt differs from its ledger")
-                log = verify_attempt(resource, item, out, case, slot, stage, prefix, dispatch)
                 attempts = sorted(prefix.parent.glob(prefix.name + ".*.attempt.json"))
                 scope.require(bool(attempts) and campaign.read(attempts[-1]) == dispatch,
                               "Committed stage is missing its recorded dispatch")
-                if log is not None:
-                    pins[log["path"]] = log["sha256"]
-                for attempt in attempts:
-                    prior_log = verify_attempt(resource, item, out, case, slot, stage, prefix, campaign.read(attempt))
-                    if prior_log is not None:
-                        pins[prior_log["path"]] = prior_log["sha256"]
-                for evidence in (*attempts, intent, receipt):
-                    pins[str(evidence)] = hash_file(evidence)
+                for serial, attempt in enumerate(attempts, 1):
+                    scope.require(attempt == prefix.parent / f"{index:02d}.{serial:04d}.attempt.json"
+                                  and attempt.resolve() == attempt, "Unexpected or missing dispatch attempt")
+                    log = verify_attempt(item, out, case, slot, stage, index, serial, campaign.read(attempt))
+                    if log is not None:
+                        pins[log["path"]] = log["sha256"]
+                for proof in (*attempts, intent, receipt):
+                    pins[str(proof)] = hash_file(proof)
             total += row["optimizer_updates"]
             rows.append(row)
         scope.require(total == spec["updates"], "Slot update count differs from its frozen allocation")
@@ -130,7 +148,10 @@ def predecessor(resource_pin, receipt_pin, approved_controller):
     """
     resource = scope.read(resource_pin)
     science = scope.validate(resource, live_worker=True)
-    scope.require(resource["mode"] == scope.REAL and resource["controller"] == approved_controller,
+    scope.require(resource["mode"] == scope.REAL and resource["controller"] == approved_controller
+                  and set(approved_controller) == {"commit", "source_hash"}
+                  and re.fullmatch("[a-f0-9]{40}", approved_controller["commit"])
+                  and re.fullmatch("[a-f0-9]{64}", approved_controller["source_hash"]),
                   "Expected separately approved real independent P4 producer")
     result = scope.read(receipt_pin)
     out = Path(resource["execution"])

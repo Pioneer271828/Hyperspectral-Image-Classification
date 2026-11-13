@@ -65,7 +65,7 @@ def reject(call, expected):
     raise AssertionError(f"Expected rejection: {expected}")
 
 
-def cpu(worker, root, runs, code):
+def cpu(worker, root, code):
     frozen = cpu_science(worker, root, 9)
     nine = scope.read(frozen)
     one = bind(worker, root, frozen, scope.CPU, 9, code, "cpu9")
@@ -197,6 +197,7 @@ def cpu(worker, root, runs, code):
         negatives["failed_worker"] = reject(job.result, "Stopped dispatch")
     assert (failure_out / "cases" / b[0] / "full" / "calls/000000-000060.json").is_file()
     assert len(list((failure_out / "logs").iterdir())) == 2
+    assert campaign.read(failure_out / "status.json")["slots"]["cpu-b"]["optimizer_updates"] == 60
     negatives["failed_resume"] = reject(lambda: queue.run(failures, code, resume=True), "retained")
     negatives["failed_acceptance"] = reject(lambda: acceptance.publish(failures, code), "nonfailed")
     write_json(root / "cpu-evidence.json", {"worker": resource["worker"], "nine": nine_status,
@@ -210,9 +211,15 @@ def gpu(worker, root, runs, code):
     rows = []
     for classes in (9, 22):
         science = scope.pin(holder / f"classes-{classes}-registration/scope.json")
-        item = bind(worker, holder, science, scope.CUDA, classes, code, root.name + f"-cuda{classes}")
-        run = queue.run(item, code)
-        assert run["status"] == "completed", run
+        name = root.name + f"-cuda{classes}"
+        previous = holder / (name + "-resource") / "resource-scope.json"
+        item = scope.pin(previous) if previous.exists() else bind(worker, holder, science, scope.CUDA, classes, code, name)
+        execution = Path(scope.read(item)["execution"])
+        run = queue.run(item, code, resume=execution.exists())
+        if run["status"] == "waiting_for_resources":
+            rows.append({"classes": classes, "resource": item, "run": run})
+            write_json(root / "gpu6-evidence.json", rows)
+            return
         receipt = acceptance.publish(item, code)
         resource = scope.read(item)
         case = scope.read(science)["cases"][0]
@@ -241,6 +248,6 @@ if __name__ == "__main__":
     code = code_snapshot()
     assert code["commit"] == options.expected_commit and not code["dirty"]
     if options.kind == "cpu":
-        cpu(options.worker, options.out, options.runs, code)
+        cpu(options.worker, options.out, code)
     else:
         gpu(options.worker, options.out, options.runs, code)

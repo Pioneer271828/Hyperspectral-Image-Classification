@@ -133,8 +133,11 @@ def run(item, code, *, resume=False, probe=device.gate, launch=start_worker, fix
                        "path": name, "operation": operation, "start": start, "until": until}
             if receipt_path.exists():
                 receipt = campaign.read(receipt_path)
+                intent = campaign.read(intent_path)
                 scope.require(prior is not None and receipt["evidence"] == prior
-                              and receipt["attempt"] == scope.pin(intent_path), "Committed dispatch evidence differs")
+                              and receipt["attempt"] == scope.pin(intent_path)
+                              and all(intent[key] == value for key, value in binding.items()),
+                              "Committed dispatch evidence differs")
                 return
             if intent_path.exists():
                 saved = campaign.read(intent_path)
@@ -153,7 +156,8 @@ def run(item, code, *, resume=False, probe=device.gate, launch=start_worker, fix
                     fixture_wait(slot, case, stage)
                 inventory = probe(gpu) if gpu is not None else None
                 if gpu is not None:
-                    scope.require(inventory["physical_uuid"] == gpu and device.eligible(inventory),
+                    scope.require(set(inventory) == {"physical_uuid", "free_mib", "utilization", "driver"}
+                                  and inventory["physical_uuid"] == gpu and device.eligible(inventory),
                                   "Physical admission does not satisfy the resource scope")
                 prefix.parent.mkdir(exist_ok=True)
                 attempts = sorted(prefix.parent.glob(prefix.name + ".*.attempt.json"))
@@ -197,7 +201,8 @@ def run(item, code, *, resume=False, probe=device.gate, launch=start_worker, fix
                                 return
                             step(slot, cases[case_id], stage, index, lock)
             except device.ResourceUnavailable as error:
-                waits[slot] = {"case": active, "reason": str(error)}
+                with mutex:
+                    waits[slot] = {"case": active, "reason": str(error)}
             except Exception as error:
                 with mutex:
                     stop.set()
@@ -209,6 +214,13 @@ def run(item, code, *, resume=False, probe=device.gate, launch=start_worker, fix
             for job in jobs:
                 job.result()
         if errors:
+            outcome = {"status": "failed", "resource_sha256": item["sha256"], "errors": errors,
+                       "waiting": waits, "updates_this_invocation": updates}
+            try:
+                outcome["slots"] = summary(resource, out, science)
+            except (ValueError, OSError) as error:
+                outcome["ledger_error"] = str(error)
+            write_json(out / "status.json", outcome)
             raise RuntimeError(f"Stopped dispatch and drained in-flight workers. See {out / 'failure.json'}")
         report = summary(resource, out, science)
         for name, value in report.items():
@@ -261,7 +273,7 @@ def main():
         else:
             resource = scope.read(item)
             science = scope.validate(resource, code=code, live_worker=True)
-            result = {"status": "verified", "scene": resource["mode"], "science": resource["science"],
+            result = {"status": "verified", "mode": resource["mode"], "science": resource["science"],
                       "same_science_fields": len(resource["science_fields"]), "slots": resource["slots"],
                       "protected_inputs": len(science["protected_files"]), "optimizer_updates": 0}
     print(json.dumps(result), flush=True)
