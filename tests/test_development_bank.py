@@ -1,7 +1,6 @@
 """Regression tests for lazy bank admission and the recoverable synthetic consumer."""
 
 from dataclasses import replace
-import io
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -118,6 +117,20 @@ class DevelopmentBankTest(unittest.TestCase):
         member.unlink()
         with self.assertRaises(FileNotFoundError):
             bank.Bank(pin, self.root, self.release)
+
+    def test_bounded_npy_header_rejects_shape_before_allocation(self):
+        opened = self.open()
+        record = opened.members[3]
+        path = self.dest / record["member"]
+        raw = path.read_bytes()
+        forged = raw.replace(b"(8, 8, 8)", b"(9, 8, 8)", 1)
+        self.assertNotEqual(forged, raw)
+        path.chmod(0o644)
+        path.write_bytes(forged)
+        content = dict(record["content"], npy_sha256=hash_file(path))
+        with patch.object(np, "load", side_effect=AssertionError("allocated using an unauthorized shape")):
+            with self.assertRaisesRegex(ValueError, "NPY header"):
+                bank._decode(self.dest, record["member"], content, opened.rows[3], 8)
 
     def test_source_identity_and_exact_synthetic_cursor(self):
         opened = self.open()

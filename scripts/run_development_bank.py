@@ -11,6 +11,7 @@ from time import perf_counter
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
 
+from joint_training import _run_lock
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code
 from transfer import development_bank as bank, development_bank_consumers as consumers
 from transfer import development_bank_custody as custody, development_bank_training as training
@@ -102,16 +103,9 @@ def register_fixture(root, output, code):
         engineering_maximum_updates=len(registrations)*2*training.STEPS, real_updates=0))
 
 
-def stage(root, matrix_pin, case, name, code):
-    reg = _read(matrix_pin, root)
-    matrix = Path(matrix_pin['path'])
-    if reg["code"] != code or case not in reg["cases"]:
-        raise ValueError("Stage is outside the frozen matrix")
-    value = _read(reg["cases"][case], root)
-    directory = matrix.parent
-    opened = _synthetic(root, reg["banks"], int(case.split("-")[0]))
-    output = directory / case
-    output.mkdir(exist_ok=True)
+def _stage_locked(root, output, value, reg, opened, case, name):
+    if any((output / f"{name}.{suffix}").exists() for suffix in ("json", "pt")):
+        raise FileExistsError("Synthetic stage publication cannot be overwritten")
     prior = {"resume": "prefix", "completed": "resume"}.get(name)
     packet = None
     if prior is not None:
@@ -124,6 +118,19 @@ def stage(root, matrix_pin, case, name, code):
     row.update(case=case, registration=reg["cases"][case], checkpoint=_pin(row["checkpoint"]))
     return transport._json_new(output / f"{name}.json", row)
 
+
+def stage(root, matrix_pin, case, name, code):
+    reg = _read(matrix_pin, root)
+    matrix = Path(matrix_pin['path'])
+    if reg["code"] != code or case not in reg["cases"]:
+        raise ValueError("Stage is outside the frozen matrix")
+    value = _read(reg["cases"][case], root)
+    directory = matrix.parent
+    opened = _synthetic(root, reg["banks"], int(case.split("-")[0]))
+    output = directory / case
+    output.mkdir(exist_ok=True)
+    with _run_lock(output):
+        return _stage_locked(root, output, value, reg, opened, case, name)
 
 def audit_fixture(root, matrix_pin, output, code):
     reg = _read(matrix_pin, root)
@@ -223,7 +230,9 @@ def supplement(root, inventory, scans, matrix, output, code, producer):
             source=row["identity"]["source"], required_before_execution=[
                 "separate_authorization", "freeze_exposure_and_assert_class_visits", "confirm_validation_and_protocol_scope",
             ], missing_roles=missing, source_has_fresh_head=authority["source_has_fresh_head"],
-            maximum_proposed_updates=len(consumers.ARMS) * 24, complete_training_claim=False,
+            maximum_proposed_updates=len(consumers.ARMS) * 24,
+            minimum_updates_for_all_labeled_train_blocks=row["coverage"]["devtrain"]["published_labeled_blocks"] or None,
+            proposed_budget_covers_all_labeled_train_blocks=False, complete_training_claim=False,
             training_authorized=False, optimizer_budget=0)
     request = transport._json_new(output / "future-request-draft.json", dict(code=code, scenes=requests))
     return transport._json_new(output / "supplement.json", dict(code=code, producer=producer, old_tables=tables,

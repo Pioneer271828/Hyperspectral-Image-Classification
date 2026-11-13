@@ -10,7 +10,7 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 
-from loadData.observation_sampling import sample, subset_statistics
+from loadData.observation_sampling import BandMetadata, sample, subset_statistics
 from loadData.spatial_protocol import PartitionObservation, validate_statistics
 from model.research_config import canonical_json, digest
 from research_runtime import external_directory
@@ -88,7 +88,7 @@ class BankRelease:
     shape: tuple
     classes: int
     plan_hash: str
-    bands: object
+    bands: BandMetadata
     statistics: dict
     source: dict
     custody: dict
@@ -193,7 +193,18 @@ def _decode(root, member, content, row, bands):
         raw = stream.read(content["bytes"] + 1)
     if _sha(raw) != content["npy_sha256"]:
         raise ValueError("Bank NPY digest differs")
-    value = block_values(np.load(io.BytesIO(raw), allow_pickle=False), row, bands)
+    # The producer emits ordinary NPY v1. Check the header before NumPy can
+    # allocate from a hostile shape in a payload discovered during recovery.
+    stream = io.BytesIO(raw)
+    if np.lib.format.read_magic(stream) != (1, 0):
+        raise ValueError("Unexpected bank NPY version")
+    shape, fortran, dtype = np.lib.format.read_array_header_1_0(stream, max_header_size=4096)
+    a, b, c, d = row["box"]
+    if (shape != (b-a, d-c, bands) or fortran or dtype != np.dtype("<f4")
+            or len(raw) - stream.tell() != (b-a)*(d-c)*bands*4):
+        raise ValueError("Bank NPY header differs from the authorized block")
+    stream.seek(0)
+    value = block_values(np.load(stream, allow_pickle=False), row, bands)
     if array_hash(value) != content["array_sha256"]:
         raise ValueError("Bank decoded content differs")
     value.setflags(write=False)
@@ -242,6 +253,8 @@ def publish(path, authorized, release, reader, *, resume=False, stop=None):
             raise ValueError("Unregistered array member cannot be adopted")
     completed = []
     payload_reads = 0
+    source_payload_bytes = 0
+    recovered_payload_bytes = 0
     recovered = 0
     for row in rows:
         name, member = _files(row)
@@ -250,6 +263,8 @@ def publish(path, authorized, release, reader, *, resume=False, stop=None):
             record, checksum = previous
             current = _decode(root, member, record["content"], row, release.shape[-1])
             original = block_values(reader(row), row, release.shape[-1])
+            source_payload_bytes += original.nbytes
+            recovered_payload_bytes += current.nbytes
             payload_reads += 1
             if array_hash(original) != record["content"]["array_sha256"] or not np.array_equal(current, original):
                 raise ValueError("Existing bank block differs from its original authorized source")
@@ -257,8 +272,10 @@ def publish(path, authorized, release, reader, *, resume=False, stop=None):
         else:
             if stop is not None and len(completed) >= stop:
                 return dict(status="PARTIAL", registered=registration, source_reads=payload_reads,
-                            committed=len(completed), recovered=recovered)
+                            committed=len(completed), recovered=recovered, source_payload_bytes=source_payload_bytes,
+                            recovered_payload_bytes=recovered_payload_bytes)
             value = block_values(reader(row), row, release.shape[-1])
+            source_payload_bytes += value.nbytes
             payload_reads += 1
             with io.BytesIO() as stream:
                 np.save(stream, value, allow_pickle=False)
@@ -283,7 +300,8 @@ def publish(path, authorized, release, reader, *, resume=False, stop=None):
     body = _json_bytes(dict(kind=KIND, registration=registration, members=completed))
     _atomic_new(root / "bank.json", body)
     return dict(status="COMPLETE", root=str(root), sha256=_sha(body), registration=registration,
-                source_reads=payload_reads, committed=len(completed), recovered=recovered)
+                source_reads=payload_reads, committed=len(completed), recovered=recovered,
+                source_payload_bytes=source_payload_bytes, recovered_payload_bytes=recovered_payload_bytes)
 
 
 class Bank:
@@ -312,6 +330,10 @@ class Bank:
         content = [entry["content"]["array_sha256"] for entry in self.members.values()]
         if bank["members"] != expected or len(content) != len(set(content)):
             raise ValueError("Bank completion member roster or content differs")
+        expected_names = {"bank.json", "registration.json",
+                          *(name for row in self.rows.values() for name in _files(row))}
+        if {path.name for path in self.root.iterdir() if not path.name.startswith("tmp")} != expected_names:
+            raise ValueError("Bank contains an unregistered member")
         self.pin = {key: pin[key] for key in ("root", "sha256", "registration")}
         self.reads = 0
         self.bytes = 0
