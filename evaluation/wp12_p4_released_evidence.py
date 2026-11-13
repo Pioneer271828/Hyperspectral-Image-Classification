@@ -299,12 +299,20 @@ def write_case_metrics(path, review):
 
 
 def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
-           p4_review=None, p4_release=None, comparison=None):
+           p4_review=None, p4_release=None, comparison=None, native_duty=None):
+    from evaluation import wp12_native_duty_evidence as duty
+
     p4 = p4_prepared(resource, template, root, review_pin=p4_review, approval_pin=p4_release)
     released = sparse_prepared(sparse, root)
     if comparison is not None:
         released["comparison_qualification"] = comparison_qualification(comparison, root)
     engineering = p4_engineering(queue_receipt, root)
+    if native_duty is not None:
+        prepared, audit, dual, intervention, diagnostic = native_duty
+        released["duties"] = duty.duties(prepared, audit, root, sparse)
+        released["dual_slot_qualification"] = duty.qualification(dual, root, released["duties"]["synthetic"]["worker"])
+        released["region_intervention"] = duty.intervention(intervention, root, audit, sparse)
+        p4["fit_diagnostic"] = duty.p4_fit(diagnostic, root, resource, p4_release, p4)
     tables = {}
     for folder, members in OLD.items():
         for name, checksum in members.items():
