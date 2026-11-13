@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-12",
-  "issue": 359,
+  "as_of": "2026-11-13",
+  "issue": 459,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "ffb88163a3952cd04760471e8843904f0c97aedc",
@@ -887,7 +887,7 @@
       "id": "WP01 CUR外部登记与认证恢复CLI",
       "state": "CPU工程通过；真实课程与GPU未完成",
       "evidence": "Issue335/PR336；tested89463f5a11c66acd001cdf1f93f0fef8daa3a125，LXC组合38/38 393.826s，checker538Python174JSON/help；独立9合成案例288更新/54头10332混淆612召回/9完成0，114输入不变47.216251s；原3类24步曝光拒绝和审计角色对象误接失败保留",
-      "remaining": "WP01 GPU/真实S与O等预算多种子及后续S×O仍待；按WP02继续核真实协议准入和缺失G2依赖，真实更新/query0，未启长训练值守",
+      "remaining": "本条为早期CLI工程。后续固定开发真实S见432、真实O见438、真实S×O见443；独立空间、GPU与部署待验，缺失G2依赖另见WP02",
       "report": "research/reports/CURCLI_外部登记与认证恢复工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天完整模块报告，完成交付后连续推进WP02"
     },
@@ -1239,7 +1239,7 @@
       "id": "WP06 课程逐支持机制复盘与 CUR-O 真实零更新准入",
       "state": "真实逐支持复盘、观测排列准入及实际前向核对通过",
       "evidence": "Issue433/PR435，零更新端点修订 2dedf5f64dd67b0a609a10aaa1f26d527b8578d6。逐端点前缀复算，7个选中点修正、11个选中点及18个末态一致。旧观测12例、48前向及准入身份沿用。修订复盘 9bf307260ecd07f087db35c26e276930c22aa417d10687e58ed7b8bb758d2782。",
-      "remaining": "描述性固定开发证据。真实CUR-O、S×O、空间确认及GPU待验",
+      "remaining": "本条仅固定开发描述及零更新准入。后续真实CUR-O短测见438、真实S×O见443；独立空间与GPU仍待验",
       "report": "research/reports/WP06_课程逐支持复盘与观测课程真实准入_20261112.md",
       "chat_report": "主审接受端点v2和原零更新观测准入。Issue433完成，PR435可审阅"
     }
@@ -1263,7 +1263,7 @@
       "id": "WP01 样本与观测课程双因素合成恢复",
       "state": "3/9/22类四臂、精确续接和原单因素对照通过",
       "evidence": "Issue437/PR441，实际 01aacab2a8744879c0313c97d60db2aedd82dca3。登记内448次合成更新、12个独立恢复进程、168次旧实现合成对照。45组效应算式，真实0次更新。",
-      "remaining": "真实组合保留冻结前提和预算草案，须另行授权",
+      "remaining": "本条仅合成。真实固定K5/V5单源短测后续见443；独立空间、GPU与部署待验",
       "report": "research/reports/WP01_样本与观测课程双因素合成恢复_20261112.md",
       "chat_report": "主审接受3/9/22类合成四臂工程。Issue437完成，PR441可审阅"
     }
@@ -1271,7 +1271,7 @@
       "id": "WP12 真实观测课程与双因素工程证据",
       "state": "真实表与四条件表重导、独立复算通过",
       "evidence": "Issue439/PR442，适配 b20c3b0ed2e58721a07c71230c0bb6193bd02a74。原49真实行逐项保留；共62模型184头，条件表300头。16项回归及7项真实工件篡改拒绝，独审 999edf314cf34463e3b42e57354d666edbdd2e21df24f88a317ce3eb8d4fa5d2。",
-      "remaining": "部署与GPU NOT_RUN，WP11独立确认 BLOCKED，真实S×O NOT_RUN",
+      "remaining": "本条主表不含真实组合；后续固定开发S×O及65模型接入见443。课程部署与GPU待验，WP11独立确认BLOCKED",
       "report": "research/reports/WP12_真实观测课程与双因素工程证据_20261112.md",
       "chat_report": "主审接受62真实模型、300条件头和独立合成工程栏。Issue439完成，PR442可审阅"
     }
@@ -1295,7 +1295,7 @@
       "id": "WP08/WP07/WP12 原生区域支持演化与多尺度补充",
       "state": "CPU合成矩阵和恢复、冻结、独审、成本及Xuzhou开发零更新通过，真实收益与GPU待验",
       "evidence": "Issue447/PR448。生产 ac5d5663b1ce992183ea36ce7cb570ea3a7d742c。75臂300阶段6,624合成更新，另28关闭臂工程补测；150端点三头逐位，支持调度5,346状态，NumPy 9,079,344值。Xuzhou两块16次零更新前向；5份WP12旧CSV逐字节，65模型193头。首次统一回归历史4子项错误，恢复固定执行文件后17/17及4例完成重入0",
-      "remaining": "PaviaU/HongHu开发影像块包待核验；真实候选准入、固定图同度数距离、独立空间、GPU待验。WP05长训暂停，WP11独立标签BLOCKED，WP04暂缓",
+      "remaining": "本条仅Xuzhou。后续451/453认证Xuzhou78/HongHu271及PaviaU两块只读观测；PaviaU仍缺125训练/41验证有界载荷。真实候选、固定图同度数距离、独立空间及WP08 GPU待验",
       "report": "research/reports/WP08_WP07_WP12_原生区域支持演化与多尺度补充_20261113.md",
       "chat_report": "主审核验三个归档1671文件、13/13及17/17、四例完成重入和两夹具各7步对照；接受CPU工程与登记合成，Issue447已completed，PR448已ready未合并。保留首次全量4子项错误9跳过、真实和GPU剩余范围"
     }
@@ -1303,7 +1303,7 @@
       "id": "WP06/WP08/WP12 度数与距离受控的原生区域支持干预",
       "state": "冻结合成干预与等预算恢复已验，真实仅两块零更新适用性",
       "evidence": "Issue449/PR450。6/9格合格，1,728合成更新、18臂72阶段，完成重入0。54冻态端点，60训练块匹配、36开发验证块穷举仅原图。定向17/17、集成20/20、负例5/5，七份WP12旧表字节一致",
-      "remaining": "3格在冻结约束及预算内未找到。真实Xuzhou两块无非平凡解，PaviaU/HongHu BLOCKED；真实收益、小类准入及GPU待验。WP05双卡待资格，WP11独立标签BLOCKED，WP04暂缓",
+      "remaining": "本条3格在冻结约束内无解，真实Xuzhou两块无非平凡解。451/453后续已发布HongHu全271及PaviaU两无标签训练块；真实受控图实验、收益、小类及独立空间仍未做，PaviaU验证BLOCKED",
       "report": "research/reports/WP06_WP08_WP12_度数距离受控区域支持干预与固定图恢复_20261113.md",
       "chat_report": "主审复核两份ZIP 360成员和新增实现、定向/集成/负例原日志，接受CPU工程、冻结干预和登记合成恢复。Issue449 completed，PR450 ready未合并。joint开发训练按端点全局步补推进属于反事实，3格因有界搜索未获运行资格"
     },
@@ -1325,7 +1325,7 @@
     },
     {
       "id": "WP05/WP06/WP07/WP12 块内空间退化、条件多尺度与恢复",
-      "state": "受控观测、八臂条件对照、合成恢复及真实零更新范围完成，待主审",
+      "state": "受控原网格观测、八臂合成恢复和真实零更新范围经主审通过",
       "evidence": "Issue455/PR456，tested ed54c27997da13f6a0559d0a927fe64350b7dec9。8专项及73相关回归无跳过，48合成案例192阶段2304更新与96端点精确；351真实块1448观测2168三头前向，174历史头一致，WP12旧十表验签",
       "remaining": "真实完整训练、可信物理尺度及完整标签纯度未验，PaviaU仅两块，HongHu第21类同父块，GPU未运行；WP05 2400待资格、180000暂停，WP04暂缓、WP11独立标签BLOCKED",
       "report": "research/reports/WP05_WP06_WP07_WP12_块内空间退化与条件多尺度恢复_20261113.md",
@@ -1333,15 +1333,23 @@
     },
     {
       "id": "WP02/WP05/WP06/WP07/WP12 原生尺度观测与冻结留出",
-      "state": "原生网格、面积监督、八臂恢复和冻结确认工程完成；一次性确认门禁已整改待复审，留出条件收益判据未达到",
+      "state": "原生网格、面积监督、八臂恢复、冻结确认及一次性门禁修复经主审通过；合成留出收益未达门槛",
       "evidence": "Issue457/PR458，tested 4ab1eb24efd9fe4965ca2e09ede3de6a99334017。6专项92相关回归，50案例200阶段9312合成更新100端点精确恢复，32确认观测8000前向；真实351块1086观测1506三头前向，1326旧头一致，WP12十表验签",
       "remaining": "真实GSD/SRF、完整纯度、尺度误差和真实训练效果未验，PaviaU两无标注块，HongHu第21类同父块；GPU严格确定性后向未通过，单卡warn-only合成诊断通过；WP05 2400待资格、180000暂停，WP04暂缓，WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP06_WP07_WP12_原生尺度监督与冻结留出条件_20261113.md",
-      "chat_report": "Issue457主审确认一次性门禁两中断窗口。修复tested 81e2bdd440a8d073fa61475adc019a1475145ebf；11专项92影响回归及两窗口、并发、同步和重复负例通过。旧9312更新及8000确认前向按原producer保留且未重读。新增57证据项，Issue457 open/PR458 Draft待复审"
+      "chat_report": "主审通过修复tested 81e2bdd440a8d073fa61475adc019a1475145ebf、最终 e6279300e52583a0b4f872682d2bdc9fa2f3bdeb；57成员与11专项92回归验签，旧确认未重读。Issue457 closed/completed，PR458 ready未合并"
+    },
+    {
+      "id": "WP05/WP07/WP12 原生尺度严格设备执行与成本",
+      "state": "CPU设备工程、48例恢复及真实零更新成本通过；直接算子数值资格有失败，严格GPU因资源NOT_RUN",
+      "evidence": "Issue459/PR460，tested 8938eff625772b039673d8bbd8964d2e8c1fe579；2专项118相关回归，192阶段1152合成更新96端点精确，真实189案例1323前向；377算子独立FP64对照通过，原生CPU32权重梯度4例超限，WP12原十表验签",
+      "remaining": "同GPU严格恢复、真实CPU/GPU三头和GPU成本未验；真实训练/收益未验证。WP05 2400待资格、180000暂停，WP04暂缓、WP11标签BLOCKED。候选源码未并入主入口",
+      "report": "research/reports/WP05_WP07_WP12_原生尺度设备恢复与成本_20261113.md",
+      "chat_report": "真实优化/rawGT/query/新增标签及旧确认读取0；四次GPU快照最高11523MiB，490项归档。Issue459 open，PR460 Draft"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
+  "execution_state": "wp07_native_device_cpu_complete_gpu_resource_not_run_wp05_long_training_paused",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
