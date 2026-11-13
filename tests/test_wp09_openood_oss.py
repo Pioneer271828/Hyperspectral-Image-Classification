@@ -14,7 +14,7 @@ from evaluation.open_set import OpenSetScorer, detection_metrics
 from evaluation.wp09_openood import evaluate_approval
 from evaluation.wp09_upstream import OpenOODReference
 from research_runtime import write_json
-from test_wp09_known_admission import Pipeline, _args, _read
+from test_wp09_known_admission import Pipeline, _read
 from transfer.registered_development import _pin
 
 
@@ -64,7 +64,8 @@ class OpenOODTests(unittest.TestCase):
         root.mkdir(exist_ok=True)
         pipeline=Pipeline(root)
         pipeline.train_and_admit()
-        args=[*_args("authority",pipeline.authority),*_args("source-receipt",pipeline.source),
+        args=["--authority",pipeline.authority["path"],pipeline.authority["sha256"],
+            "--source-receipt",pipeline.source["path"],pipeline.source["sha256"],
             "--expected-commit",pipeline.sha,"--openood",SOURCE]
         command=["scripts/review_wp09_openood.py"]
         prepared=pipeline.cli("ood-prepare",[*command,"prepare"],*args,"--out",str(root/"openood"))
@@ -72,7 +73,7 @@ class OpenOODTests(unittest.TestCase):
         forged=root/"forged"
         forged.mkdir()
         original=_read(prepared)
-        for mutation in ("columns","source_receipt","provider"):
+        for mutation in ("columns","source_receipt","provider","frozen","producer"):
             bad=dict(original)
             value=bad[mutation]
             bad[mutation]=list(reversed(value)) if mutation=="columns" else dict(value,wrong=True)
