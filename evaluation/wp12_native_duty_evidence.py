@@ -109,6 +109,21 @@ def intervention(item, root, audit, original):
         require(endpoint["advance_updates"] == 0 and len({v["event"]["band"] for v in endpoint["views"]}) == 2
                 and all(v["frozen_state_unchanged"] is True for v in endpoint["views"]),
                 "Intervention changed a frozen endpoint or lost a released band")
+    donors = row["synth_donor_endpoints"]
+    frozen = read(row["synthetic_donor_source"], root)
+    require(frozen["schema"] == "wp07_native_released_synthetic_acceptance_v1"
+            and frozen["scope"] == "synthetic_engineering" and frozen["status"] == "passed"
+            and frozen["raw_gt_loaded"] is frozen["query_accessed"] is False,
+            "Donor source must be synthetic")
+    require(len(donors) == 6 and {entry["case"] for entry in donors} ==
+            {f"{classes}-{seed}-f2-joint" for classes in SCENES.values() for seed in SEEDS},
+            "Missing cross-seed donor endpoints")
+    for endpoint in donors:
+        case = frozen["cases"][endpoint["case"]]
+        require(endpoint["optimizer_updates"] == 0 and endpoint["checkpoint"] == case["stages"][-1]["checkpoint"]
+                and len({view["event"]["band"] for view in endpoint["views"]}) == 2
+                and all(view["frozen_state_unchanged"] and view["arms"]["donor"]["status"] == "measured"
+                        for view in endpoint["views"]), "Donor evidence changed the frozen model or scope")
     for group in row["synth_recovery"]:
         require(set(group["arms"]) == {"baseline", "zero"} and all(a["exact_full_split_complete"] and
                 [s["updates"] for s in a["stages"]] == [6, 2, 4, 0] for a in group["arms"].values()),
@@ -126,7 +141,8 @@ def intervention(item, root, audit, original):
     return {"receipt": item, "producer": row["producer"], "source_hash": row["source_hash"],
             "real": {"scope": "observability_only", "updates": 0, "accuracy": None, "cost": None, "coverage": coverage},
             "synthetic": {"scope": "frozen_fixture_and_bounded_recovery", "endpoints": len(endpoints),
-                          "updates": row["synth_optimizer_updates"], "completed_updates": 0}}
+                          "updates": row["synth_optimizer_updates"], "completed_updates": 0,
+                          "frozen_donor_endpoints": len(donors)}}
 
 
 def p4_fit(item, root, resource, release, p4):
