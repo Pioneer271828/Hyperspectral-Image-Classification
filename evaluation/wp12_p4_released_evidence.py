@@ -70,12 +70,15 @@ def queue_states(resource, status=None, accepted=None):
                 state = "waiting"
             elif completed == cases:
                 state = "audited_pending_batch_acceptance"
+            elif status["status"] == "failed":
+                state = "drained_after_peer_failed"
             else:
                 state = status["status"]
         result[slot] = {"state": state, "planned_cases": cases, "planned_updates": budget,
                         "audited_cases": completed, "actual_updates": actual}
     if accepted is not None:
-        require(accepted["status"] == "passed" and accepted["cases"] == sum(r["planned_cases"] for r in result.values())
+        require(status is not None and status["status"] == "completed"
+                and accepted["status"] == "passed" and accepted["cases"] == sum(r["planned_cases"] for r in result.values())
                 and accepted["optimizer_updates"] == sum(r["planned_updates"] for r in result.values()),
                 "Only complete accepted P4 evidence can mark a batch accepted")
     return result
@@ -117,7 +120,9 @@ def p4_engineering(receipt_pin, root):
     failed = read(dev._pin(Path(summary["failed_directory"]) / "status.json"), root)
     failure_owner = read(dev._pin(Path(summary["failed_directory"]) / "resource-owner.json"), root)
     failure_resource = read(failure_owner["resource"], root)
-    require(failure_resource["slots"] == resource["slots"]
+    require(summary["matrix"]["resource_sha256"] == accepted["resource_scope"]["sha256"]
+            and summary["partial"]["resource_sha256"] == accepted["resource_scope"]["sha256"]
+            and failure_resource["slots"] == resource["slots"]
             and failure_resource["science"] == resource["science"]
             and failed["resource_sha256"] == failure_owner["resource"]["sha256"],
             "Failed controller evidence is unrelated")
@@ -173,6 +178,9 @@ def sparse_prepared(manifest, root):
         rows[scene] = {"receipt": pin, "bank": row["bank"], "classes": classes, "supervision": LOSS,
                        "released_point_metrics": None, "coarse_known_count_metrics": None,
                        "complete_purity": None, "factors": factors, "planned_updates": row["draft"]["planned_updates"],
+                       "role_blocks": row["role_blocks"], "point_set": row["point_set"],
+                       "point_exposure_per_class_each_case": [10]*classes,
+                       "cpu_forward_only_seconds_proxy": row["draft"]["cpu_forward_only_seconds_proxy"],
                        "minimum_exposure_updates": labeled, "actual_cost": None, "status": "NOT_RUN",
                        "training_authorized": False}
     return {"receipt": manifest, "scenes": rows, "blocked": value["blocked"], "optimizer_updates": 0}

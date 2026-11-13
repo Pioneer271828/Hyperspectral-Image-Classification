@@ -22,7 +22,8 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual([r["state"] for r in evidence.queue_states(resource, partial).values()],
                          ["audited_pending_batch_acceptance", "waiting"])
         failed = {**status, "status": "failed", "errors": {"a": {"reason": "exit"}}}
-        self.assertEqual(evidence.queue_states(resource, failed)["a"]["state"], "failed")
+        self.assertEqual([r["state"] for r in evidence.queue_states(resource, failed).values()],
+                         ["failed", "drained_after_peer_failed"])
         acceptance = {"status": "passed", "cases": 2, "optimizer_updates": 240,
                       "slots": {slot: {"cases": 1, "optimizer_updates": 120} for slot in ("a", "b")}}
         with self.assertRaisesRegex(ValueError, "full ledger"):
