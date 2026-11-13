@@ -16,6 +16,11 @@ from scripts.review_wp10_tensorly import load_scope, locations, measure, paired,
 from transfer import matched_route_admission as admission
 
 
+def probability_delta(reference, current):
+    return {head: max(float((left[i] - right[i].cpu()).abs().max())
+                      for left, right in zip(reference, current, strict=True)) for i, head in enumerate(HEADS)}
+
+
 def main():
     parser = ArgumentParser(description=__doc__)
     for name in ("runs", "legacy-checkout", "cpu-initial", "out"):
@@ -80,18 +85,20 @@ def main():
         (row, gpu_output), first = measure(lambda: score(device_model, reg, cuda_tiles, selection))
         torch.cuda.synchronize()
         peak = torch.cuda.max_memory_allocated()
-        deltas = {head: max(float((left[i]-right[i].cpu()).abs().max())
-                            for left, right in zip(cpu_output, gpu_output, strict=True))
-                  for i, head in enumerate(HEADS)}
+        deltas = probability_delta(cpu_output, gpu_output)
         changed = {head: sum(a != b for a, b in zip(cpu_rows[name]["predictions"][head],
                                                    row["predictions"][head], strict=True)) for head in HEADS}
         results[name] = dict(row, cpu_cuda_max_probability_delta=deltas, changed_predictions=changed,
                              host_to_device_model=device_load, first_instrumented_sweep=first,
                              peak_allocated_delta=peak-start, state=entry["package"]["state"])
+        (repeat, repeat_output) = score(device_model, reg, cuda_tiles, selection)
+        results[name]["repeat"] = dict(output_hash_match=repeat["output_hashes"] == row["output_hashes"],
+            deltas=probability_delta(gpu_output, repeat_output),
+            predictions_equal=repeat["predictions"] == row["predictions"], output_hashes=repeat["output_hashes"])
         if name in candidates:
             gpu_models[name] = device_model
             outputs[name] = gpu_output
-        print("cuda", name, flush=True)
+        print("cuda", name, "bitwise", results[name]["repeat"]["output_hash_match"], flush=True)
 
     def launch(model):
         torch.cuda.synchronize()
@@ -108,18 +115,23 @@ def main():
             cpu_cuda_guard={name: verify_guard(cpu_rows[name], results[name], reg["class_ids"], small, limits)
                             for name in (native, tensorly)},
             native_tensorly_guard=verify_guard(results[native], results[tensorly], reg["class_ids"], small, limits),
-            max_probability_delta={head: max(float((a[i]-b[i]).abs().max()) for a,b in
-                zip(outputs[native], outputs[tensorly], strict=True)) for i,head in enumerate(HEADS)},
+            max_probability_delta=probability_delta(outputs[native], outputs[tensorly]),
             resident=paired({name: lambda name=name: launch(gpu_models[name]) for name in (native, tensorly)}, 3, 12))
     for name, model in gpu_models.items():
-        row, _ = score(model, reg, cuda_tiles, selection)
-        if row["output_hashes"] != results[name]["output_hashes"]:
-            raise ValueError("Strict CUDA repeat changed candidate output hashes")
+        row, values_after_timing = score(model, reg, cuda_tiles, selection)
+        results[name]["post_timing"] = dict(
+            output_hash_match=row["output_hashes"] == results[name]["output_hashes"],
+            deltas=probability_delta(outputs[name], values_after_timing),
+            predictions_equal=row["predictions"] == results[name]["predictions"], output_hashes=row["output_hashes"])
+    repeat_rows = [row[key] for row in results.values() for key in ("repeat", "post_timing") if key in row]
+    stable = all(row["output_hash_match"] for row in repeat_rows)
+    numerical = all(max(row["deltas"].values()) <= 1e-5 and row["predictions_equal"] for row in repeat_rows)
     admission.check_pins([*pins.values(), *protected, initial_pin])
     require_frozen_code(code)
-    write_json(out / "cuda.json", dict(status="completed_strict_forward", commit=code["commit"], sample=sample,
+    write_json(out / "cuda.json", dict(status="completed_forward_under_strict_settings", commit=code["commit"], sample=sample,
         physical_uuid=uuid, runtime_device=torch.cuda.get_device_name(0),
-        strict=True, tf32=False, torch=str(torch.__version__), cublas=os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
+        deterministic_algorithms=True, bitwise_repeat_passed=stable, numerical_repeat_passed=numerical,
+        tf32=False, torch=str(torch.__version__), cublas=os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
         resident_input_copy=synchronized_transfer, cases=results, comparisons=comparisons,
         original_cases=len(reg["cases"]), new_cases=len(candidates), cpu_initial=initial_pin,
         query=0, gt=0, optimizer_updates=0))

@@ -109,6 +109,10 @@ class TensorLyTests(unittest.TestCase):
         torch.manual_seed(64)
         device = os.environ.get("WP10_TENSORLY_MICRO_DEVICE", "cpu")
         results = {}
+        if device == "cuda":
+            was_strict = torch.are_deterministic_algorithms_enabled()
+            torch.use_deterministic_algorithms(True)
+            self.addCleanup(torch.use_deterministic_algorithms, was_strict)
         for biased in (False, True):
             layer = nn.Conv2d(64, 128, 1, bias=biased).double().to(device)
             for rank in RANKS:
