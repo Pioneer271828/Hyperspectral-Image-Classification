@@ -33,6 +33,7 @@ class SpatialObservation:
     view: ObservationView
     _receipt: dict
     _scene_identity: tuple
+    _partition: str
 
     @property
     def receipt(self):
@@ -46,11 +47,10 @@ class SpatialObservation:
         obs = self.view.observation
         if (condition is not None and self._receipt["profile"] != "synthetic"):
             raise ValueError("Physical intervention requires a synthetic observation")
-        partition = {"devtrain": "train", "devval": "val"}[self._receipt["role"]]
         scene_identity = (self.scene.dataset, self.scene.classes, self.scene.plan["plan_hash"])
         if (scene_identity != self._scene_identity or obs.plan_hash != self._scene_identity[-1]
                 or self.tile["id"] != self._receipt["tile"] or self.tile["box"] != self._receipt["box"]
-                or self.tile["partition"] != partition or obs.partition != partition
+                or self.tile["partition"] != self._partition or obs.partition != self._partition
                 or self.view.bands.fingerprint != self._receipt["band_order"]
                 or array_hash(obs.spectral) != self._receipt["transformed"]
                 or array_hash(obs.coordinates) != self._receipt["coordinates"]
@@ -110,7 +110,7 @@ def materialize(bank, row, bands, mode, producer):
                 physical_scale="unverified_no_gsd_conversion")
     body["observation"] = digest(body)
     return SpatialObservation(scene, tile, view, deepcopy(body),
-                              (scene.dataset, scene.classes, scene.plan["plan_hash"]))
+                              (scene.dataset, scene.classes, scene.plan["plan_hash"]), tile["partition"])
 
 
 def observability(row, mode, scene_width, classes):
