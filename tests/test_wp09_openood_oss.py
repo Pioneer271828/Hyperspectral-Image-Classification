@@ -14,6 +14,7 @@ from evaluation.open_set import OpenSetScorer, detection_metrics
 from evaluation.wp09_openood import evaluate_approval
 from evaluation.wp09_upstream import OpenOODReference
 from research_runtime import write_json
+import test_wp09_known_admission as known_fixture
 from test_wp09_known_admission import Pipeline, _read
 from transfer.registered_development import _pin
 
@@ -62,7 +63,10 @@ class OpenOODTests(unittest.TestCase):
             self.addCleanup(temp.cleanup)
         root=Path(evidence or temp.name)
         root.mkdir(exist_ok=True)
-        pipeline=Pipeline(root)
+        # Keep one zero-label exclusion and real present known/unknown groups.
+        labels=np.array([2,7,19,0,31,2,19,7,0,31,2,7],dtype=np.int64)
+        with patch.object(known_fixture,"DEVELOPMENT_LABELS",labels):
+            pipeline=Pipeline(root)
         pipeline.train_and_admit()
         args=["--authority",pipeline.authority["path"],pipeline.authority["sha256"],
             "--source-receipt",pipeline.source["path"],pipeline.source["sha256"],
@@ -98,6 +102,11 @@ class OpenOODTests(unittest.TestCase):
         self.assertEqual(len(summary["methods"]),9)
         self.assertEqual(len([x for x in summary["methods"] if "openood" in x]),6)
         self.assertEqual({x["metrics"]["unlabeled_excluded"] for x in summary["methods"]},{2})
+        for row in summary["methods"]:
+            self.assertEqual(row["metrics"]["unknown_per_class"][0]["support"],2)
+            self.assertIsNotNone(row["metrics"]["hos"])
+            self.assertIsNotNone(row["metrics"]["auroc"])
+        self.assertEqual(sum(row.get("openood") is not None for row in summary["methods"]),6)
         evidence = dict(native_training_updates=2, scoring_updates=0, approved=prepared, audit=audit,
                         label_hash=sha256(release).hexdigest(), commands=pipeline.commands)
         write_json(root/"fixture-summary.json",evidence)
