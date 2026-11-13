@@ -70,6 +70,8 @@ class NativeScaleTests(TestCase):
         copied["source"]["positions"][0] = 999
         self.assertEqual(a.verify("code","devtrain")["source"]["positions"][0],0)
         self.assertTrue((target.histogram.sum(0)>0).all())
+        with self.assertRaises(ValueError):
+            target.histogram.setflags(write=True)
         self.assertTrue((target.histogram.sum(1)==target.area).all())
         self.assertEqual(np.bincount(labels.ravel())[1:].tolist(),target.summary()["known_per_class"])
         with self.assertRaises(ValueError):
@@ -80,6 +82,37 @@ class NativeScaleTests(TestCase):
             f.materialize(81,2,"full","a","code")
         with self.assertRaises(ValueError):
             f.materialize(3,4,"full","c","code")
+
+    def test_real_request_snapshots_and_rejects_before_decode(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        f = fixture.Fixture(9,"devtrain")
+        original = {"mode":"none"}
+        actual,_,_ = f.materialize(3,1,"full","a","code")
+        info = actual.receipt
+        row = dict(id=3,role="devtrain",box=info["box"],samples=[])
+        scene = SimpleNamespace(dataset="xuzhou",classes=9)
+        release = SimpleNamespace(profile="nested",shape=(*info["scene_shape"],11))
+        opened = Mock(release=release)
+        opened.role_row.return_value = row
+        context = dict(tile=3,role="devtrain",box=row["box"],samples={"count":0,"sha256":native.digest([])})
+        def take(*args):
+            self.assertEqual(args[1],{"mode":"none"})
+            return scene,None,actual.view,context
+        opened.materialize.side_effect = take
+        with self.assertRaises(ValueError):
+            native.from_bank(opened,"devtrain",3,original,2,"code",edge="padded")
+        opened.materialize.assert_not_called()
+        def change_request(*args):
+            original["mode"]="uniform_stride"
+            return row
+        opened.role_row.side_effect = change_request
+        real,_ = native.from_bank(opened,"devtrain",3,original,2,"code")
+        self.assertIsNone(real.receipt["physical"]["nominal_gsd_m"])
+        self.assertFalse(supervision.sparse_targets(real,row).summary()["trainable"])
+        with self.assertRaises(ValueError):
+            fixture.condition_for(real,"matched")
 
     def test_conditions_frozen_same_graph_and_derangement(self):
         f = fixture.Fixture(9,"devtrain")

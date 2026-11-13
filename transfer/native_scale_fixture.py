@@ -8,7 +8,7 @@ import numpy as np
 from loadData.observation_sampling import BandMetadata, sample
 from loadData.spatial_protocol import PartitionObservation
 from model.research_config import digest
-from research_runtime import tensor_hash
+from transfer.development_blocks import array_hash
 from transfer.development_bank_training import _condition
 from transfer.native_scale_observation import FACTORS, Lattice, _immutable, _materialize
 from transfer.native_scale_supervision import complete_targets
@@ -207,7 +207,7 @@ class Fixture:
         original = PartitionObservation(partition,normalized,fine.coordinates(),yy*SCENE_SHAPE[1]+xx,self._plan)
         selected, record = sample(original,original_bands,_condition(band))
         source = dict(fixture=VERSION,registration=self._plan,seed=row["seed"],tile=tile,
-                      raw=tensor_hash(raw),labels=tensor_hash(labels),positions=record["selected_positions"],
+                      raw=array_hash(raw),labels=array_hash(labels),positions=record["selected_positions"],
                       band_view=band,selection=record["record_hash"],statistics=digest(self._registration["statistics"]))
         actual = _materialize(self._registration["dataset"],self._classes,selected,lattice,source,
                               self._role,producer,profile=profile)

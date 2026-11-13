@@ -13,7 +13,7 @@ from joint_training import _run_lock
 from model.research_config import digest
 from research_runtime import tensor_hash
 from transfer import native_scale_training as training, registered_development as transport
-from transfer.development_blocks import read_pin
+from transfer.development_blocks import array_hash, read_pin
 from transfer.native_scale_fixture import Fixture, INTERVENTIONS, _CONFIRM, condition_for, confirmation_catalog
 from transfer.native_scale_observation import forward, head_hashes
 from transfer.native_scale_supervision import metrics
@@ -227,7 +227,7 @@ def confirm(root, freeze_pin, out, producer):
                     ):
                         raise ValueError("Conditions affected a condition-independent arm")
                     rows.append(dict(tile=tile,factor=factor,band=band,profile=profile,
-                        observation=actual.receipt,labels=tensor_hash(labels),supervision=targets.summary(),
+                        observation=actual.receipt,labels=array_hash(labels),supervision=targets.summary(),
                         predictions=predictions))
                 endpoints[endpoint] = rows
             cases[name] = endpoints

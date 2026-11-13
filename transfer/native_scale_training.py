@@ -15,6 +15,7 @@ from model.task_losses import detached_loss_values
 from research_runtime import tensor_hash
 from transfer.development_bank import _atomic_new
 from transfer.development_bank_training import _baseline, _initial, _state
+from transfer.development_blocks import array_hash
 from transfer.g3_training import state_hash
 from transfer.native_scale_fixture import BANDS, PROFILES, Fixture, condition_for, registration
 from transfer.native_scale_observation import EDGE_POLICY, FACTORS, forward, head_hashes
@@ -117,7 +118,7 @@ class Run:
             actual,labels,targets = self._materialize(self._val,event)
             output,graph,condition = self._forward(actual,"devval",event["condition"])
             rows.append(dict(**event,observation=actual.receipt["observation"],
-                             labels=tensor_hash(labels),condition_key=condition.source_key,
+                             labels=array_hash(labels),condition_key=condition.source_key,
                              area=int(targets.area.sum()),heads=head_hashes(output,actual),graph=graph,
                              scores=metrics(output,actual,labels,targets,detailed=detailed)))
         numerator = sum(row["scores"]["fused"]["nll_sum"] for row in rows)
@@ -163,9 +164,9 @@ class Run:
         grads = {name:None if named[name].grad is None else float(named[name].grad.abs().sum())
                  for name in self._fresh}
         self.optimizer.step()
-        self._history.append(dict(**event,observation=actual.receipt["observation"],labels=tensor_hash(labels),
+        self._history.append(dict(**event,observation=actual.receipt["observation"],labels=array_hash(labels),
             condition_key=condition.source_key,gsd_m=condition.gsd_m,area=int(targets.area.sum()),
-            supervised_area=int(mask[:,0].sum()),histogram=tensor_hash(targets.histogram),
+            supervised_area=int(mask[:,0].sum()),histogram=array_hash(targets.histogram),
             heads=head_hashes(out,actual),graph=graph,loss=detached_loss_values(terms),
             fresh={name:dict(gradient_l1=grads[name],changed=tensor_hash(named[name])!=before[name])
                    for name in self._fresh}))

@@ -12,10 +12,10 @@ from loadData.observation_sampling import ObservationView
 from loadData.spatial_protocol import PartitionObservation, forward_partition
 from model.coverage_config import coverage_forward_kwargs
 from model.research_config import canonical_json, digest
-from research_runtime import tensor_hash
 from transfer.conditional_multiscale import ConditionalMultiscaleVCASAHGCN
 from transfer.development_bank_consumers import heads
 from transfer.development_block_probe import _graph_trace
+from transfer.development_blocks import array_hash
 from transfer.native_support import _measure
 
 
@@ -113,7 +113,7 @@ class NativeObservation:
                 or self.lattice.factor != receipt["factor"] or list(self.lattice.shape) != receipt["grid_shape"]
                 or digest(self.lattice.cells) != receipt["original_boxes"]
                 or self.view.bands.fingerprint != receipt["bands"] or obs.plan_hash != receipt["namespace"]
-                or any(tensor_hash(array) != receipt[name] for name,array in (
+                or any(array_hash(array) != receipt[name] for name,array in (
                     ("spectral",obs.spectral), ("coords",obs.coordinates), ("local_ids",obs.global_ids)))):
             raise ValueError("Native observation differs from the admitted producer, role or grid")
         return receipt
@@ -140,9 +140,9 @@ def _materialize(dataset, classes, view, lattice, source, role, producer, *, pro
         partition=native.partition, box=lattice.box, scene_shape=lattice.scene_shape, factor=lattice.factor,
         namespace=namespace, id_rule="negative_local_ordinal_in_namespace", edge=EDGE_POLICY,
         coord_rule=COORDINATES, grid_shape=shape, pixels=math.prod(shape), original_pixels=int(lattice.areas().sum()),
-        bands=view.bands.fingerprint, spectral=tensor_hash(spectral), coords=tensor_hash(coords),
-        local_ids=tensor_hash(ids), area=tensor_hash(lattice.areas()), footprints=digest(lattice.footprints(gsd)),
-        original_boxes=digest(lattice.cells), membership=tensor_hash(lattice.membership()),
+        bands=view.bands.fingerprint, spectral=array_hash(spectral), coords=array_hash(coords),
+        local_ids=array_hash(ids), area=array_hash(lattice.areas()), footprints=digest(lattice.footprints(gsd)),
+        original_boxes=digest(lattice.cells), membership=array_hash(lattice.membership()),
         physical=dict(unit=None if gsd is None else "m/pixel", original_gsd_m=gsd,
                       nominal_gsd_m=None if gsd is None else gsd*lattice.factor,
                       footprint_unit="original_pixel" if gsd is None else "m",

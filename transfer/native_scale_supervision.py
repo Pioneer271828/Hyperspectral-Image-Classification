@@ -6,7 +6,8 @@ import numpy as np
 import torch
 
 from model.task_losses import probability_loss_components
-from research_runtime import tensor_hash
+from transfer.development_blocks import array_hash, sample_identity
+from transfer.native_scale_observation import _immutable
 
 
 PURITY_NUMERATOR = 3
@@ -19,6 +20,16 @@ class Targets:
     histogram: np.ndarray
     area: np.ndarray
     complete: bool
+
+    def __post_init__(self):
+        hist, area = self.histogram, self.area
+        if (not isinstance(hist,np.ndarray) or not isinstance(area,np.ndarray)
+                or hist.dtype!=np.int64 or area.dtype!=np.int64 or hist.ndim!=2 or not hist.size
+                or area.shape!=(len(hist),) or (hist<0).any() or (area<=0).any()
+                or (hist.sum(axis=1)>area).any() or (self.complete and not np.array_equal(hist.sum(axis=1),area))):
+            raise ValueError("Native label counts must fit the admitted original-pixel area")
+        object.__setattr__(self,"histogram",_immutable(hist))
+        object.__setattr__(self,"area",_immutable(area))
 
     def summary(self):
         hist = self.histogram
@@ -41,7 +52,7 @@ class Targets:
                     high_purity_represented_pixels=None if not self.complete else
                         hist[eligible].sum(axis=0).tolist(),
                     valid_hard_area=None if not self.complete else int(self.area[eligible].sum()),
-                    area=int(self.area.sum()), histogram=tensor_hash(hist),
+                    area=int(self.area.sum()), histogram=array_hash(hist),
                     trainable=self.complete)
 
     def weights(self, mode):
@@ -69,7 +80,7 @@ def complete_targets(actual, labels):
     cell = actual.lattice.membership()
     if (not isinstance(labels,np.ndarray) or labels.shape!=cell.shape or labels.dtype!=np.int64
             or (labels<1).any() or (labels>classes).any()
-            or tensor_hash(labels)!=actual.receipt["source"]["labels"]):
+            or array_hash(labels)!=actual.receipt["source"]["labels"]):
         raise ValueError("Fixture labels differ from the frozen complete raster")
     hist = np.bincount((cell*classes+labels-1).ravel(),minlength=len(actual.lattice.cells)*classes)
     return Targets(hist.reshape(-1,classes),actual.lattice.areas(),True)
@@ -77,8 +88,6 @@ def complete_targets(actual, labels):
 
 def sparse_targets(actual, row):
     """Map released points only. Sparse provenance never conveys training authority."""
-    from transfer.development_blocks import sample_identity
-
     source = actual.receipt["source"]
     if (actual.receipt["synthetic_profile"] is not None
             or (row["id"],row["role"],row["box"])!=(source["tile"],source["role"],source["box"])
