@@ -9,7 +9,7 @@ import torch
 from torch.overrides import TorchFunctionMode
 
 
-PYG_SOURCE_SHA256 = "14fb794f8d706e0d2294b32d01c251e12c0faa5c443ae30ea3bb2a003e6276f0a"
+PYG_SOURCE_SHA256 = "14fb794f8d706e0d22994b32d01c251e12c0faa5c43ae30ea3bb2a003e6276f0a"
 
 
 def load_pyg_sum(path):
