@@ -146,6 +146,7 @@ class IndependentAuditTests(TestCase):
         for seed in (64, 512, 2048):
             candidate = cases[f"exclude_out_of_reference-{seed}"]["selected"]
             candidate["macro_oa"] += .05
+            candidate["selection_macro_oa"] += .05
             candidate_class = candidate["metrics"]["paviaU"]["val"]["fused"]["per_class"][0]
             native_class = cases[f"native-{seed}"]["selected"]["metrics"]["paviaU"]["val"]["fused"]["per_class"][0]
             native_class["recall"] = candidate_class["recall"] + .03

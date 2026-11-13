@@ -351,7 +351,9 @@ def summarize(cases):
                              **distribution([row["recall"] for row in group]))
                         for group in zip(*(row["per_class"] for row in rows), strict=True)]
                     scenes[scene][role][head] = summary
-        arms[arm] = dict(macro_oa=distribution([cell["macro_oa"] for cell in cells]), metrics=scenes)
+        arms[arm] = dict(macro_oa=distribution([cell["macro_oa"] for cell in cells]),
+                         selection_macro_oa=distribution([cell["selection_macro_oa"] for cell in cells]),
+                         metrics=scenes)
     return arms
 
 
@@ -366,7 +368,8 @@ def compare(cases):
     for control in ("native", "matched_boundary_dropout"):
         pairs = [(cases[f"exclude_out_of_reference-{seed}"]["selected"], cases[f"{control}-{seed}"]["selected"])
                  for seed in SEEDS]
-        macro = [(left["macro_oa"] - right["macro_oa"]) * 100 for left, right in pairs]
+        macro = [(left["selection_macro_oa"] - right["selection_macro_oa"]) * 100 for left, right in pairs]
+        exact_macro = [(left["macro_oa"] - right["macro_oa"]) * 100 for left, right in pairs]
         scenes = {}
         for scene in CLASSES:
             pairs_by_role = {}
@@ -399,7 +402,9 @@ def compare(cases):
         gates = dict(primary=mean(macro) > 0 and sum(value > 0 for value in macro) >= 2,
                      per_scene_aa=all(value >= -GATES["per_scene_aa_drop_max_pp"] for value in aa.values()),
                      honghu_oa=honghu >= -GATES["honghu_oa_drop_max_pp"], all_small_classes=not small_failures)
-        result[control] = dict(macro_oa_delta_pp=distribution(macro), positive_seeds=sum(x > 0 for x in macro),
+        result[control] = dict(macro_oa_delta_pp=distribution(macro),
+                               exact_macro_oa_delta_pp=distribution(exact_macro),
+                               positive_seeds=sum(x > 0 for x in macro),
                                all_scene_head_class_deltas_pp=scenes, per_scene_aa_delta_pp=aa,
                                honghu_oa_delta_pp=honghu, small_class_failures=small_failures, gates=gates,
                                development_gate_passed=all(gates.values()))
