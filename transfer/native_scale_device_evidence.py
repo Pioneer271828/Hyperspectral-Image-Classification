@@ -23,6 +23,7 @@ HEADS = ("fused", "graph", "cnn")
 COST_PHASES = ("materialization","input_preparation","host_to_device","graph","network_without_graph",
                "network_with_graph","end_to_end_with_trace")
 IDENTITY = ("scene","tile","band","factor","arm")
+LEGACY_COST_FIELDS = ("protocol","uuid",*IDENTITY,"phase","p50_s","p95_s","pixels_s","peak_bytes")
 
 
 def _require(condition, message):
@@ -161,7 +162,7 @@ def summarize_cost(samples, pixels):
 
 def read_cost(root,pin,producer,audit):
     cost = read(pin,root)
-    _require(cost["schema"]==SCHEMA and cost["producer"]==producer and not cost["failures"]
+    _require(cost["schema"]==SCHEMA and cost["producer"]==producer and not cost["failures"] and cost["scope_restored"]
              and dict(audit["numerical"],input_roster=None)==cost["numeric"]
              and cost["geometry"]==audit["qualification"]["geometry"]
              and (cost["warmup"],cost["repeats"])==(WARMUP,REPEATS)
@@ -197,6 +198,10 @@ def read_cost(root,pin,producer,audit):
             _require(computed==timing,"Cost aggregate does not reproduce from samples")
         _checked_arrays(root,row)
     _require(found==expected,"Cost observation roster is incomplete")
+    cuda = cost["numeric"]["protocol"]==p4.CUDA_FP64_WEIGHT
+    forwards = len(found)*(WARMUP+REPEATS) if cuda else 0
+    _require(cost["kernels"]==dict(adaptive_avg_pool2d=forwards,sparse_mm=5*forwards),
+             "Cost kernel counts differ from the warmup and repeat roster")
     return cost
 
 
@@ -237,7 +242,51 @@ def compare(root,cpu,gpu):
     return dict(status="failed" if failures else "passed",failures=failures,rows=result)
 
 
-def publish(root,out,producer,consumer,cpu_audit_pin,cpu_cost_pin,*,gpu_audit_pin=None,gpu_cost_pin=None,partial=False):
+def _verify_comparison(root,pin,producer,cpu_pin,gpu_pin,parity):
+    record = read(pin,root)
+    expected = [dict(identity=list(row["case"]),comparisons=row["tolerance"],class_changes=row["argmax_changes"],
+                     sparse_structure_exact=row["sparse_structure_exact"]) for row in parity["rows"]]
+    _require(record["schema"]==SCHEMA and record["producer"]==producer
+             and record["cpu"]==cpu_pin and record["gpu"]==gpu_pin
+             and record["tolerances"]==dict(rtol=qual.RTOL,atol=qual.ATOL)
+             and record["real_updates"]==record["query"]==0
+             and record["failures"]==[list(key) for key in parity["failures"]] and record["rows"]==expected,
+             "Native numerical comparison receipt differs from the verified paired outputs")
+
+
+def _write_legacy_cost(out,pairs):
+    with (out/"native-numerical-cost.csv").open("x",newline="",encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(LEGACY_COST_FIELDS)
+        for audit,cost in pairs:
+            if cost is None:
+                continue
+            numeric = audit["numerical"]
+            for row in cost["rows"]:
+                peak = None if row["peaks"] is None else row["peaks"]["peak_allocated_bytes"]
+                for phase,stats in row["timings"].items():
+                    writer.writerow((numeric["protocol"],numeric["physical_uuid"],*(row[key] for key in IDENTITY),
+                                     phase,stats["p50_seconds"],stats["p95_seconds"],
+                                     stats["native_pixels_per_second"],peak))
+
+
+def _write_cost(out,states,pairs):
+    with (out/"native-numerical-cost.csv").open("x",newline="",encoding="utf-8") as stream:
+        fields = [*states[0],*IDENTITY,"phase","p50_seconds","p95_seconds","native_pixels_per_second","peak_bytes"]
+        writer = csv.DictWriter(stream,fieldnames=fields)
+        writer.writeheader()
+        for audit,cost in pairs:
+            if cost is None:
+                continue
+            for row in cost["rows"]:
+                for phase,stats in row["timings"].items():
+                    writer.writerow(dict(**audit["state"],**{key:row[key] for key in IDENTITY},phase=phase,
+                        **{k:v for k,v in stats.items() if k!="samples"},
+                        peak_bytes=None if row["peaks"] is None else row["peaks"]["peak_allocated_bytes"]))
+
+
+def publish(root,out,producer,consumer,cpu_audit_pin,cpu_cost_pin,*,gpu_audit_pin=None,gpu_cost_pin=None,
+            partial=False,comparison_pin=None,legacy_supplement=False):
     cpu = read_audit(root,cpu_audit_pin,producer)
     _require(cpu["numerical"]["protocol"]==p4.CPU,"CPU audit protocol differs")
     cpu_cost = read_cost(root,cpu_cost_pin,producer,cpu)
@@ -249,6 +298,9 @@ def publish(root,out,producer,consumer,cpu_audit_pin,cpu_cost_pin,*,gpu_audit_pi
     _require(gpu_cost_pin is None or gpu is not None,"CUDA cost needs a bound CUDA audit")
     gpu_cost = None if gpu_cost_pin is None else read_cost(root,gpu_cost_pin,producer,gpu)
     parity = dict(status="not_run",rows=[],failures=[]) if gpu_cost is None else compare(root,cpu_cost,gpu_cost)
+    if comparison_pin is not None:
+        _require(gpu_cost is not None,"A comparison receipt requires both verified device costs")
+        _verify_comparison(root,comparison_pin,producer,cpu_cost_pin,gpu_cost_pin,parity)
     old = read(historical(root,"wp12"),root)
     tables = {**old["preserved"],**old["tables"]}
     _protect(root,tables.values())
@@ -270,19 +322,18 @@ def publish(root,out,producer,consumer,cpu_audit_pin,cpu_cost_pin,*,gpu_audit_pi
         writer = csv.DictWriter(stream,fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    with (out/"native-numerical-cost.csv").open("x",newline="",encoding="utf-8") as stream:
-        fields = [*rows[0],*IDENTITY,"phase","p50_seconds","p95_seconds","native_pixels_per_second","peak_bytes"]
-        writer = csv.DictWriter(stream,fieldnames=fields)
-        writer.writeheader()
-        for audit,cost in ((cpu,cpu_cost),(gpu,gpu_cost)):
-            if cost is None:
-                continue
-            for row in cost["rows"]:
-                for phase,stats in row["timings"].items():
-                    writer.writerow(dict(**audit["state"],**{key:row[key] for key in IDENTITY},phase=phase,
-                        **{k:v for k,v in stats.items() if k!="samples"},
-                        peak_bytes=None if row["peaks"] is None else row["peaks"]["peak_allocated_bytes"]))
-    return transport._json_new(out/"evidence.json",dict(schema=EVIDENCE,producer=producer,consumer=consumer,
+    pairs = ((cpu,cpu_cost),(gpu,gpu_cost))
+    if legacy_supplement:
+        _write_legacy_cost(out,pairs)
+    else:
+        _write_cost(out,rows,pairs)
+    cost_pin = transport._pin(out/"native-numerical-cost.csv")
+    result = transport._json_new(out/"evidence.json",dict(schema=EVIDENCE,producer=producer,consumer=consumer,
         cpu=cpu,cuda=gpu,cross_device_forward=parity,old_tables=tables,old_models=65,old_heads=193,
         real_updates=0,production_authorized=False,status=transport._pin(out/"native-numerical-status.csv"),
-        cost=transport._pin(out/"native-numerical-cost.csv")))
+        cost=cost_pin))
+    if legacy_supplement:
+        return transport._json_new(out/"supplement.json",dict(producer=producer,old_tables=tables,old_models=65,
+            old_heads=193,cpu=cpu_cost_pin,cpu_audit=cpu_audit_pin,gpu=gpu_cost_pin,gpu_audit=gpu_audit_pin,
+            comparison=comparison_pin,real_updates=0,scope=cost_pin,evidence=result,production_authorized=False))
+    return result

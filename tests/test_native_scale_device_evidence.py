@@ -95,3 +95,17 @@ class DeviceEvidenceTests(TestCase):
         with patch.object(evidence,"_arrays",return_value={"fused":[],"cnn":[]}):
             with self.assertRaisesRegex(ValueError,"omit a head"):
                 evidence.compare(self.root,cpu,gpu)
+
+    def test_original_comparison_receipt_matches_recomputed_rows(self):
+        cpu, gpu = self.save({}), self.save({})
+        case = ("xuzhou",0,"full",1,"off")
+        metrics = dict(fused=dict(compatible=False))
+        parity = dict(failures=[case],rows=[dict(case=case,tolerance=metrics,argmax_changes={"fused":1},
+                                                 sparse_structure_exact=True)])
+        original = dict(schema=campaign.SCHEMA,producer="original",cpu=cpu,gpu=gpu,
+                        tolerances=dict(rtol=qual.RTOL,atol=qual.ATOL),real_updates=0,query=0,
+                        failures=[case],rows=[dict(identity=case,comparisons=metrics,class_changes={"fused":1},
+                                                   sparse_structure_exact=True)])
+        evidence._verify_comparison(self.root,self.save(original),"original",cpu,gpu,parity)
+        with self.assertRaisesRegex(ValueError,"comparison receipt differs"):
+            evidence._verify_comparison(self.root,self.save(dict(original,failures=[])),"original",cpu,gpu,parity)

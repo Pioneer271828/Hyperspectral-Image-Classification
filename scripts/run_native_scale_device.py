@@ -75,16 +75,15 @@ def main():
     elif args.mode=="compare":
         result = cost.compare_cost(root,pin(args.cpu),pin(args.cuda),out,producer)
     elif args.mode=="consume":
-        if args.protocol!=p4.CPU or args.comparison is not None or (args.partial_cuda and not args.cuda_audit):
-            parser.error("Consume reads fixed artifacts on CPU and verifies any paired comparison directly")
+        if args.protocol!=p4.CPU or (args.partial_cuda and not args.cuda_audit):
+            parser.error("Consume reads fixed artifacts on CPU and requires a CUDA audit for partial recovery")
         result = evidence.publish(root,out,args.producer,producer,pin(args.cpu_audit),pin(args.cpu),
                                   gpu_audit_pin=pin(args.cuda_audit),gpu_cost_pin=pin(args.cuda),
-                                  partial=args.partial_cuda)
+                                  partial=args.partial_cuda,comparison_pin=pin(args.comparison))
     elif args.mode=="supplement":
-        if args.comparison is not None:
-            parser.error("Supplement verifies the CPU/CUDA comparison directly from the paired cost inputs")
         result = evidence.publish(root,out,producer,producer,pin(args.cpu_audit),pin(args.cpu),
-                                  gpu_audit_pin=pin(args.cuda_audit),gpu_cost_pin=pin(args.cuda))
+                                  gpu_audit_pin=pin(args.cuda_audit),gpu_cost_pin=pin(args.cuda),
+                                  comparison_pin=pin(args.comparison),legacy_supplement=True)
     print(json.dumps(result),flush=True)
 
 

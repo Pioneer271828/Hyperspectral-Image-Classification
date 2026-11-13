@@ -241,4 +241,7 @@ def audit(root,pin,out,producer,protocol,uuid):
                                 selected=first["step"],last=12,exact=True)
     return transport._json_new(out,dict(schema=SCHEMA,producer=producer,matrix=pin,numeric=reg["numeric"],
         cases=result,updates=EXPECTED_UPDATES,endpoint_replays=96,kernels=dict(execution.calls),qualification=proof,
-        scope_restored=True,seconds=perf_counter()-started,real_updates=0,confirmation_reads=0))
+        scope_restored=True,seconds=perf_counter()-started,real_updates=0,confirmation_reads=0,
+        operator_math=proof["operator_math"],native_CPU_compatibility=proof["native_CPU_compatibility"],
+        same_device_recovery="complete",cross_device_forward="not_run",cost="not_run",
+        production_authorized=False))
