@@ -20,6 +20,7 @@ RECOVERY = "synthetic_same_device_recovery"
 PAIRED = {"full": [60], "split": [2, 30, 60]}
 GPU1, GPU6 = fit.REFERENCE_QUALIFICATION_SHA
 THRESHOLDS = {"free_mib_min": 12288, "utilization_max": 60}
+RELEASE_SCHEMA = "wp05_p4_independent_execution_release_v1"
 SCIENCE_KEYS = {
     "policy", "purpose", "commit", "source_hash", "scope_hash", "synthetic", "registration",
     "parent_registration", "prior_receipt", "protected_files", "protocol", "gpus", "source",
@@ -196,6 +197,23 @@ def validate(resource, *, code=None, live_worker=False):
         require(worker_identity(worker["root"]) == worker, "Worker checkout differs")
         authenticate_worker(resource, science, recoveries)
     return science
+
+
+def validate_release(item, resource, release):
+    """Bind a future main-reviewed release to exactly one prepared real scope."""
+    if resource["mode"] != REAL:
+        require(release is None, "Synthetic engineering cannot consume a real execution release")
+        return
+    require(release is not None, "Real independent scope is preparation-only until separately released")
+    row = read(release)
+    expected = {
+        "schema": RELEASE_SCHEMA, "decision": "approved", "research_issue": 470,
+        "resource_scope": item, "science_scope": resource["science"], "controller": resource["controller"],
+        "worker": identity(resource["worker"]), "execution": resource["execution"],
+        "physical_recoveries": resource["physical_recoveries"], "slots": resource["slots"],
+        "optimizer_updates": 2400, "raw_gt_authorized": False, "query_authorized": False,
+    }
+    require(row == expected, "Real independent execution release does not match the prepared scope")
 
 
 def prepare(science_pin, target, out, worker_root, code, *, mode, classes, recoveries):

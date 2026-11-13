@@ -87,13 +87,17 @@ def summary(resource, out, science):
     return result
 
 
-def run(item, code, *, resume=False, probe=device.gate, launch=start_worker, fixture_wait=None):
+def run(item, code, *, resume=False, release=None, probe=device.gate, launch=start_worker, fixture_wait=None):
     resource = scope.read(item)
     science = scope.validate(resource, code=code, live_worker=True)
-    scope.require(resource["mode"] != scope.REAL, "Real independent scope is preparation-only")
+    scope.validate_release(item, resource, release)
+    scope.require(resource["mode"] != scope.REAL or (probe is device.gate and launch is start_worker),
+                  "Real scope requires the frozen launch and physical resource gate")
     scope.require(fixture_wait is None or resource["mode"] == scope.CPU, "Fixture gates are CPU-only")
     out, sha = Path(resource["execution"]), resource["science"]["sha256"]
     owner = {"resource": item, "worker_owner": campaign.owner(out, resource["science"]["path"], sha)}
+    if release is not None:
+        owner["release"] = release
     if not resume:
         out.mkdir()
     else:
@@ -251,6 +255,9 @@ def main():
         sub = modes.add_parser(name)
         sub.add_argument("--scope", type=Path, required=True)
         sub.add_argument("--scope-sha256", required=True)
+        if name in ("run", "accept"):
+            sub.add_argument("--release", type=Path)
+            sub.add_argument("--release-sha256")
         if name == "run":
             sub.add_argument("--resume", action="store_true")
     args = parser.parse_args()
@@ -264,12 +271,18 @@ def main():
                                mode=args.mode, classes=args.classes, recoveries=recoveries)
     else:
         item = {"path": str(args.scope.resolve()), "sha256": args.scope_sha256}
+        release = None
+        if args.command in ("run", "accept"):
+            scope.require((args.release is None) == (args.release_sha256 is None),
+                          "A separate release path and checksum must be supplied together")
+            if args.release is not None:
+                release = {"path": str(args.release.resolve()), "sha256": args.release_sha256}
         if args.command == "run":
-            result = run(item, code, resume=args.resume)
+            result = run(item, code, resume=args.resume, release=release)
         elif args.command == "accept":
             from transfer.p4_independent_acceptance import publish
 
-            result = publish(item, code)
+            result = publish(item, code, release=release)
         else:
             resource = scope.read(item)
             science = scope.validate(resource, code=code, live_worker=True)

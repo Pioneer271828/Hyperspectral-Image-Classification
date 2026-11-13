@@ -39,18 +39,24 @@ def verify_attempt(item, out, case, slot, stage, index, serial, attempt):
     return scope.pin(log) if log.is_file() else None
 
 
-def reconstruct(item, resource, science):
+def reconstruct(item, resource, science, *, release=None):
     out = Path(resource["execution"])
     sha = resource["science"]["sha256"]
     owner_file = out / "resource-owner.json"
     worker_owner = campaign.owner(out, resource["science"]["path"], sha)
+    scope.validate_release(item, resource, release)
+    expected_owner = {"resource": item, "worker_owner": worker_owner}
+    if release is not None:
+        expected_owner["release"] = release
     scope.require(not (out / "failure.json").exists()
-                  and campaign.read(owner_file) == {"resource": item, "worker_owner": worker_owner}
+                  and campaign.read(owner_file) == expected_owner
                   and campaign.read(out / "owner.json") == worker_owner,
                   "No valid nonfailed execution to accept")
     pins = {item["path"]: item["sha256"], resource["science"]["path"]: sha,
             **science["protected_files"], str(owner_file): hash_file(owner_file),
             str(out / "owner.json"): hash_file(out / "owner.json")}
+    if release is not None:
+        pins[release["path"]] = release["sha256"]
     for recovery in resource["physical_recoveries"].values():
         proof = scope.read(recovery)
         pins[recovery["path"]] = recovery["sha256"]
@@ -119,18 +125,19 @@ def reconstruct(item, resource, science):
               "audit_optimizer_updates": 0, "completed_resume_updates": 0, "slots": slots,
               "raw_gt_loaded": False, "query_accessed": False, "case_audits": audits, "protected_files": pins}
     if resource["mode"] == scope.REAL:
+        result["release"] = release
         result["validation_diagnostics"] = campaign.admission_validation(rows)
     batch.check_pins(pins)
     return result
 
 
-def publish(item, code):
+def publish(item, code, *, release=None):
     resource = scope.read(item)
     science = scope.validate(resource, code=code, live_worker=True)
-    scope.require(resource["mode"] != scope.REAL, "Real independent scope is preparation-only")
+    scope.validate_release(item, resource, release)
     out = Path(resource["execution"])
     with device.lease(out / ".coordinator.lock"):
-        result = reconstruct(item, resource, science)
+        result = reconstruct(item, resource, science, release=release)
         path = out / "independent-acceptance.json"
         if path.exists():
             scope.require(campaign.read(path) == result, "Published independent receipt differs")
@@ -159,6 +166,7 @@ def predecessor(resource_pin, receipt_pin, approved_controller):
                   and result["synthetic"] is False and result["cases"] == 20 and result["optimizer_updates"] == 2400,
                   "Full 20-case and 2400-update independent predecessor required")
     with device.lease(out / ".coordinator.lock"):
-        scope.require(result == reconstruct(resource_pin, resource, science),
+        owner = campaign.read(out / "resource-owner.json")
+        scope.require(result == reconstruct(resource_pin, resource, science, release=owner.get("release")),
                       "Independent predecessor differs from its full stage and case evidence")
     return {**result["protected_files"], receipt_pin["path"]: receipt_pin["sha256"]}
