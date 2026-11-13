@@ -51,7 +51,7 @@ def geometry(root,out,producer):
         roster = read(dict(path=str(root_/"bank.json"),sha256=pin["sha256"]),root)
         released = {member["id"] for member in roster["members"]}
         rows = [r for r in registration["rows"] if r["id"] in released]
-        if len(rows)!=prior["blocks"]:
+        if len(rows)!=sum(entry["publishable_blocks"] for entry in prior["coverage"].values()):
             raise ValueError("Real native shape roster differs")
         groups = Counter()
         for row in rows:
