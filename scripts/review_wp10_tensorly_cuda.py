@@ -17,7 +17,7 @@ from transfer import matched_route_admission as admission
 
 
 def probability_delta(reference, current):
-    return {head: max(float((left[i] - right[i].cpu()).abs().max())
+    return {head: max(float((left[i].cpu() - right[i].cpu()).abs().max())
                       for left, right in zip(reference, current, strict=True)) for i, head in enumerate(HEADS)}
 
 
