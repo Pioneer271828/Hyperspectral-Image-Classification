@@ -2,6 +2,7 @@
 import argparse
 from collections import Counter
 from pathlib import Path
+import struct
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -10,7 +11,9 @@ import numpy as np
 import torch
 
 from evaluation.classification_metrics import metrics_from_confusion
-from research_runtime import code_snapshot, require_frozen_code, tensor_hash, write_json
+from research_runtime import code_snapshot, hash_file, require_frozen_code, tensor_hash, write_json
+from loadData.data_read import read_band_metadata
+from loadData.observation_sampling import subset_statistics
 from train_spatial import SpatialConfig
 from transfer import p4_coverage_batch as batch, p4_coverage_review as prior
 from transfer import p4_full_budget_audit as audit, p4_full_budget_campaign as campaign
@@ -19,7 +22,8 @@ from transfer import p4_independent_registration as scope, p4_runtime_device as 
 from transfer.p4_frozen_diagnostic_metrics import recompute
 from transfer.p4_spatial import initialize
 from transfer import p4_frozen_diagnostics as diagnostic
-from transfer.g3_training import state_hash
+from transfer.g3_training import Scene, state_hash
+from transfer import p4_coverage
 from scripts.review_wp05_p4_real import case_labels
 
 
@@ -34,10 +38,75 @@ def scores(values, labels):
     return result
 
 
-def cpu_frozen_forwards(model, reg, plan, case, state, science):
+BOUNDED_SOURCE = (
+    ("wp05-honghu-guarded-short01/registration-split.json",
+     "b339a1c471061a08085c92c5bbf494165994bb0eae1fe0ce6a4a9a7d9073b3bc"),
+    ("wp05-honghu-guarded-independent02/receipt.json",
+     "80063151738651736512b47a66ef907f2bb22fb80376fea1023ea5c81505aa72"),
+)
+
+
+def bounded_scene(reg, plan, exposure, runs):
+    split_pin, acceptance_pin = ({"path": str(runs / path), "sha256": sha} for path, sha in BOUNDED_SOURCE)
+    split, acceptance = (scope.read(item) for item in (split_pin, acceptance_pin))
+    image = Path(split["image"])
+    pin = split["pins"][str(image)]
+    scope.require(acceptance["status"] == "passed" and acceptance["case_pairs"] == 8
+                  and acceptance["query_accessed"] is acceptance["raw_gt_loaded"] is False
+                  and acceptance["protected_files"][str(image)] == pin
+                  and acceptance["protected_files"][split_pin["path"]] == split_pin["sha256"]
+                  and all(split[key] == reg[key] for key in ("plan", "development", "statistics", "guarded"))
+                  and image.resolve() == image and runs in image.parents and hash_file(image) == pin,
+                  "No authenticated same-role bounded counterfactual source")
+    geometry = scope.read({"path": reg["development"], "sha256": reg["pins"][reg["development"]]})
+    scene_plan, allowed = p4_guarded.bind_inputs(reg, plan, geometry)
+    with image.open("rb") as stream:
+        is_little = stream.read(128)[124:] == b"\\x00\\x01IM"
+        kind, size = struct.unpack("<II", stream.read(8))
+        flag_tag = struct.unpack("<IIII", stream.read(16))
+        dim_tag = struct.unpack("<IIiii", stream.read(20))
+        name_tag = struct.unpack("<II", stream.read(8))
+        label = stream.read(16)
+        data_kind, byte_count = struct.unpack("<II", stream.read(8))
+        offset = stream.tell()
+    h, w, depth = dim_tag[2:]
+    scope.require(is_little and kind == 14 and 136+size == image.stat().st_size
+                  and flag_tag == (6, 8, 7, 0) and dim_tag[:2] == (5, 12) and [h, w] == plan["shape"]
+                  and name_tag == (1, 13) and label.rstrip(b"\\0") == b"WHU_Hi_HongHu"
+                  and data_kind == 7 and byte_count == 4*h*w*depth
+                  and offset + byte_count + (-byte_count) % 8 == image.stat().st_size,
+                  "Bounded observation file has an incompatible data header")
+    permitted = {tuple(tile["box"]) for tiles in allowed.values() for tile in tiles}
+
+    class BoundedSpectra:
+        def __getitem__(self, slices):
+            sy, sx = slices
+            scope.require((sy.start, sy.stop, sx.start, sx.stop) in permitted and sy.step is sx.step is None,
+                          "Read requested outside registered train and devval blocks")
+            # Decode only the authorized rectangles from the independently accepted seekable copy.
+            view = np.memmap(image, dtype="<f4", mode="r", offset=offset, shape=(h, w, depth), order="F")
+            return np.array(view[sy, sx], copy=True, dtype=np.float32)
+
+    bands = read_band_metadata(p4_guarded.SCENE, depth)
+    frozen = p4_coverage.bind(reg, exposure, bands, scene_plan["plan_hash"], "none")
+    stats = scope.read({"path": reg["statistics"], "sha256": reg["pins"][reg["statistics"]]})
+    source = BoundedSpectra()
+    record = frozen["records"]["train"]
+    positions = record["selected_positions"]
+    retained = subset_statistics(stats, bands, record)
+    extrema = [source[slice(y0,y1),slice(x0,x1)][:,:,positions]
+               for y0,y1,x0,x1 in (tile["box"] for tile in allowed["train"])]
+    scope.require(np.min([tile.min(axis=(0,1)) for tile in extrema], axis=0).tolist() == retained["minimum"]
+                  and np.max([tile.max(axis=(0,1)) for tile in extrema], axis=0).tolist() == retained["maximum"],
+                  "Bounded retained-band training extrema differ from original registration")
+    return (geometry, allowed, Scene(p4_guarded.SCENE, source, scene_plan, bands, 22, stats), frozen,
+            {"image": {"path": str(image), "sha256": pin}, "split": split_pin, "acceptance": acceptance_pin})
+
+
+def cpu_frozen_forwards(model, reg, plan, case, state, science, runs):
     """Re-evaluate only released points under a separately declared CPU protocol."""
     exposure = scope.read({"path": reg["exposure"]["plan"], "sha256": reg["pins"][reg["exposure"]["plan"]]})
-    geometry, allowed, scene, frozen = prior.inputs(reg, plan, exposure)
+    geometry, allowed, scene, frozen, image = bounded_scene(reg, plan, exposure, runs)
     release = prior.released_roles(reg, plan, geometry, allowed, case)
     expected = science["exposure"][f's{case["support_seed"]}-k{case["k"]}']["populations"]
     torch.set_num_threads(1)
@@ -66,10 +135,10 @@ def cpu_frozen_forwards(model, reg, plan, case, state, science):
                            "changed_top1": int((prob.argmax(1) != state["best"]["scores"][head].argmax(1)).sum())}
                     for head, prob in values.items()}
         scope.require(not model.training and state_hash(model) == before, "Frozen eval changed parameters or DomainBN")
-    return reads
+    return reads, image
 
 
-def case_diagnostic(folder, case, science, reg, sha, accepted):
+def case_diagnostic(folder, case, science, reg, sha, accepted, runs):
     state, result, calls, _ = audit.train_state(folder / "split", science, reg, case, sha,
                                                accepted["numeric"], path_name="split")
     labels = case_labels(reg, case, science["exposure"][f's{case["support_seed"]}-k{case["k"]}'])
@@ -110,13 +179,14 @@ def case_diagnostic(folder, case, science, reg, sha, accepted):
             tiles, allowed, role, plan["shape"][1], case["k"] if role == "train" else 5)
         roles[role] = {"tiles": [tile["id"] for tile, _ in layout], "population": population,
                        "class_support": np.bincount(local_labels, minlength=23)[1:].tolist()}
+    readouts, image = cpu_frozen_forwards(fresh, reg, plan, case, state, science, runs)
     return {"case": case["id"], "class_to_column": {str(label): label-1 for label in classes},
             "selection_step": chosen["step"], "roles": roles, "fixed_validation": class_pop,
             "seed": case["model_seed"], "actual_optimizer_updates_on_one_path": len(state["trace"]),
             "events": events, "selected": {head: scores(p, labels) for head, p in chosen["scores"].items()},
             "first_loss": state["trace"][0]["loss"], "last_loss": state["trace"][-1]["loss"],
             "norm_modes": norm_training,
-            "frozen_cpu_readout": cpu_frozen_forwards(fresh, reg, plan, case, state, science),
+            "frozen_cpu_readout": readouts, "bounded_observation": image,
             "source_initialization": initial, "head_layout": head_layout, "target_head_parameters_changed": changed,
             "branch_norm": reg["config"]["model"].get("norm_type"), "normalization": reg["statistics"],
             "domain_buffer_changes": domain, "class_exposure": exposed, "class_coverage": covered,
@@ -151,7 +221,7 @@ def main():
             total += campaign.case_progress(science, out, case, sha)
             if (folder / "audit.json").is_file():
                 accepted = campaign.accepted(folder, science, case, sha)
-                rows.append(case_diagnostic(folder, case, science, reg, sha, accepted))
+                rows.append(case_diagnostic(folder, case, science, reg, sha, accepted, out.parent))
         batch.check_pins(science["protected_files"])
         args.out.mkdir()
         write_json(args.out / "diagnostic.json", {"schema": "wp05_p4_fit_sufficiency_v1", "producer": code["commit"],
