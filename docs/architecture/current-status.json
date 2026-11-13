@@ -18,7 +18,7 @@
     "m4_source_handoff": "0de46ee00946166a84c9ad50fd027bba2c56d679",
     "tool_integration": "1c40f249e2277a4356d63c8e8db35d6aa9282791"
   },
-  "frozen_runtime_reference": "8289e227275eabbafbb1eaea75cf4d6b0c1e8580",
+  "frozen_runtime_reference": "5bebbe1bc8db93d6e7b3a96d3d168abd60dc9811",
   "frozen_runtime_paths": [
     "model",
     "joint_training.py",
