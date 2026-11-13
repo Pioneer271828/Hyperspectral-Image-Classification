@@ -306,55 +306,105 @@ def publish(path, authorized, release, reader, *, resume=False, stop=None):
 
 class Bank:
     def __init__(self, pin, authorized, release):
-        self.root = _bank_root(pin["root"], authorized)
-        self.release = deepcopy(release)
-        self.identity = self.release.identity()
-        reg = _read_json(self.root, "registration.json")
-        if reg != _json_bytes(self.identity) or _sha(reg) != pin["registration"]:
+        self._root = _bank_root(pin["root"], authorized)
+        self._release = deepcopy(release)
+        self._identity = self._release.identity()
+        reg = _read_json(self._root, "registration.json")
+        if reg != _json_bytes(self._identity) or _sha(reg) != pin["registration"]:
             raise ValueError("Bank registration/custody differs")
-        body = _read_json(self.root, "bank.json")
+        body = _read_json(self._root, "bank.json")
         if _sha(body) != pin["sha256"]:
             raise ValueError("Bank root hash differs")
         bank = json.loads(body)
         if set(bank) != {"kind", "registration", "members"} or (bank["kind"], bank["registration"]) != (
                 KIND, pin["registration"]):
             raise ValueError("Bank completion identity differs")
-        self.rows = {row["id"]: row for row in self.release.rows if row["blocked"] is None}
-        self.members = {}
+        self._rows = {row["id"]: row for row in self._release.rows if row["blocked"] is None}
+        self._members = {}
         expected = []
-        for row in self.rows.values():
-            record, checksum = _manifest(self.root, self.identity, pin["registration"], row)
-            _relative(self.root, record["member"])
-            self.members[row["id"]] = record
+        for row in self._rows.values():
+            record, checksum = _manifest(self._root, self._identity, pin["registration"], row)
+            _relative(self._root, record["member"])
+            self._members[row["id"]] = record
             expected.append(dict(id=row["id"], role=row["role"], name=_files(row)[0], sha256=checksum))
-        content = [entry["content"]["array_sha256"] for entry in self.members.values()]
+        content = [entry["content"]["array_sha256"] for entry in self._members.values()]
         if bank["members"] != expected or len(content) != len(set(content)):
             raise ValueError("Bank completion member roster or content differs")
         expected_names = {"bank.json", "registration.json",
-                          *(name for row in self.rows.values() for name in _files(row))}
-        if {path.name for path in self.root.iterdir() if not path.name.startswith("tmp")} != expected_names:
+                          *(name for row in self._rows.values() for name in _files(row))}
+        if {path.name for path in self._root.iterdir() if not path.name.startswith("tmp")} != expected_names:
             raise ValueError("Bank contains an unregistered member")
-        self.pin = {key: pin[key] for key in ("root", "sha256", "registration")}
+        self._pin = {key: pin[key] for key in ("root", "sha256", "registration")}
         self.reads = 0
         self.bytes = 0
+
+    @property
+    def root(self):
+        return self._root
+
+    @property
+    def release(self):
+        return deepcopy(self._release)
+
+    @property
+    def identity(self):
+        return deepcopy(self._identity)
+
+    @property
+    def rows(self):
+        return deepcopy(self._rows)
+
+    @property
+    def members(self):
+        return deepcopy(self._members)
+
+    @property
+    def pin(self):
+        return self._pin.copy()
+
+    def verify_authority(self, expected):
+        if (expected != self._pin
+                or _sha(_read_json(self._root, "registration.json")) != self._pin["registration"]
+                or _sha(_read_json(self._root, "bank.json")) != self._pin["sha256"]):
+            raise ValueError("Bank authority changed after admission")
 
     def role_rows(self, role):
         if role not in ROLES:
             raise ValueError("Only released train/validation roles may be iterated")
-        return tuple(row for row in self.rows.values() if row["role"] == role)
+        return tuple(deepcopy(row) for row in self._rows.values() if row["role"] == role)
+
+    def _role_row(self, role, tile_id):
+        if role not in ROLES or type(tile_id) is not int:
+            raise ValueError("Only registered development roles and integer tiles are admitted")
+        row = self._rows.get(tile_id)
+        if row is None or row["role"] != role:
+            raise ValueError("Tile escapes the requested bank role")
+        return row
+
+    def role_row(self, role, tile_id):
+        return deepcopy(self._role_row(role, tile_id))
 
     def batch(self, role, tiles, condition):
-        if role not in ROLES or len(tiles) != len(set(tiles)) or any(
-                type(i) is not int or i not in self.rows or self.rows[i]["role"] != role for i in tiles):
+        tiles = tuple(tiles)
+        condition = deepcopy(condition)
+        if (role not in ROLES or any(type(i) is not int for i in tiles)
+                or len(tiles) != len(set(tiles))):
             raise ValueError("Batch escapes its authorized role or duplicates a tile")
-        return (self.materialize(self.rows[i], condition) for i in tiles)
+        for tile_id in tiles:
+            self._role_row(role, tile_id)
+        return (self._materialize(self._role_row(role, i), condition) for i in tiles)
 
     def materialize(self, row, condition):
-        if self.rows.get(row["id"]) != row:
+        expected = self._role_row(row["role"], row["id"])
+        if canonical_json(expected) != canonical_json(row):
             raise ValueError("Observation escapes its registered bank context")
-        entry = self.members[row["id"]]
-        release = self.release
-        block = _decode(self.root, entry["member"], entry["content"], row, release.shape[-1])
+        return self._materialize(expected, deepcopy(condition))
+
+    def _materialize(self, authority, condition):
+        row = deepcopy(authority)
+        entry = self._members[row["id"]]
+        release = self._release
+        block = _decode(self._root, entry["member"], entry["content"], row, release.shape[-1])
         self.reads += 1
         self.bytes += block.nbytes
         tile = {key: row[key] for key in ("id", "partition", "box")}
@@ -377,7 +427,7 @@ class Bank:
         actual.setflags(write=False)
         scene = Scene(release.scene, BlockCube(release.shape, tile, actual), plan, observed.bands,
                       release.classes, stats)
-        context = dict(bank=self.pin["sha256"], tile=row["id"], role=row["role"], box=row["box"],
+        context = dict(bank=self._pin["sha256"], tile=row["id"], role=row["role"], box=row["box"],
             source=release.source["shared_state"], raw=array_hash(actual), normalized=array_hash(observed.observation.spectral),
             original=entry["content"]["array_sha256"], coordinates=array_hash(coords), ids=array_hash(ids),
             band_order=observed.bands.fingerprint, positions=selection["selected_positions"], statistics=stats,

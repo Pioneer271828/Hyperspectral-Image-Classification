@@ -46,6 +46,84 @@ class DevelopmentBankTest(unittest.TestCase):
         self.assertEqual(next(view)[-1]["positions"], [0, 2, 4, 6])
         self.assertEqual(opened.reads, 1)
 
+    def test_lazy_batch_snapshots_ids_role_and_condition(self):
+        opened = self.open()
+        for changed in ([81, 10], [3, 3], [999, 10]):
+            ids = [3, 10]
+            condition = {"mode": "uniform_stride", "stride": 2, "offset": 0}
+            stream = opened.batch("devtrain", ids, condition)
+            ids[:] = changed
+            condition["offset"] = 1
+            with patch.object(bank, "_decode", wraps=bank._decode) as reader:
+                views = list(stream)
+            self.assertEqual([call.args[3]["id"] for call in reader.call_args_list], [3, 10])
+            self.assertTrue(all(call.args[3]["role"] == "devtrain" for call in reader.call_args_list))
+            self.assertTrue(all(view[-1]["positions"] == [0, 2, 4, 6] for view in views))
+
+    def test_public_bank_and_run_snapshots_cannot_change_admitted_input(self):
+        opened = self.open()
+        spec = training.contract(opened, 64, "off")
+        run = training.Run(opened, spec)
+        event = spec["exposure"][0].copy()
+        row = opened.role_row("devtrain", event["tile"])
+        expected_samples = [sample.copy() for sample in row["samples"]]
+        before = opened.materialize(row, VIEWS["full"])[-1]
+        copies = (opened.role_rows("devtrain")[0], opened.rows[row["id"]],
+                  opened.role_row("devtrain", row["id"]))
+        copies[0]["samples"][0][1] = 9
+        copies[1]["role"] = "devval"
+        copies[2]["box"][0] += 1
+        release = opened.release
+        release.statistics["minimum"][0] = 200.
+        release.source["shared_state"] = "wrong"
+        release.rows[0]["samples"][0][1] = 9
+        opened.identity["statistics"]["minimum"][0] = 200.
+        opened.pin["sha256"] = "wrong"
+        opened.members[row["id"]]["content"]["bytes"] = 1
+        before["box"][0] += 1
+        before["statistics"]["minimum"][0] = 200.
+        spec["exposure"][0]["tile"] = 81
+        changed = run.contract
+        changed["exposure"][0]["tile"] = 81
+        changed["bank"]["sha256"] = "wrong"
+        with (patch.object(bank, "_decode", side_effect=AssertionError("decoded altered input")) as reader,
+              patch.object(training, "forward", side_effect=AssertionError("used altered input")) as forward,
+              patch.object(run.optimizer, "step", side_effect=AssertionError("updated altered input")) as step):
+            for copy in copies:
+                with self.assertRaises(ValueError):
+                    opened.materialize(copy, VIEWS["full"])
+            with self.assertRaises(ValueError):
+                run.update(changed["exposure"][0])
+        reader.assert_not_called()
+        forward.assert_not_called()
+        step.assert_not_called()
+        run.start()
+        with patch.object(training, "_targets", wraps=training._targets) as targets:
+            run.update(event)
+        self.assertEqual(targets.call_args.args[0]["samples"], expected_samples)
+        self.assertEqual(opened.materialize(row, VIEWS["full"])[-1]["source"],
+                         self.release.source["shared_state"])
+
+    def test_changed_authority_after_run_registration_rejects_start_and_update(self):
+        opened = self.open()
+        spec = training.contract(opened, 64, "off")
+        started = training.Run(opened, spec)
+        pending = training.Run(opened, spec)
+        started.start()
+        registration = self.dest / "registration.json"
+        registration.chmod(0o644)
+        registration.write_bytes(registration.read_bytes() + b" ")
+        with (patch.object(bank, "_decode", side_effect=AssertionError("decoded altered authority")) as reader,
+              patch.object(training, "forward", side_effect=AssertionError("used altered authority")) as forward,
+              patch.object(started.optimizer, "step", side_effect=AssertionError("updated altered authority")) as step):
+            with self.assertRaisesRegex(ValueError, "authority changed"):
+                pending.start()
+            with self.assertRaisesRegex(ValueError, "authority changed"):
+                started.update(spec["exposure"][0])
+        reader.assert_not_called()
+        forward.assert_not_called()
+        step.assert_not_called()
+
     def test_invalid_roster_statistics_and_alias_root_reject_before_reader(self):
         row = self.release.rows[0]
         changed = (

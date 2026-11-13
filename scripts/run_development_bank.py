@@ -79,6 +79,31 @@ def scan(root, bank_pin, output, name, code):
         elapsed=perf_counter()-started, raw_gt=0, query=0, new_labels=0, real_updates=0))
 
 
+def replay_scan(root, previous, output, name, producer, consumer):
+    """Compare a prior scan against its original bank, with no publication or updates."""
+    original_scan = _read(previous, root)
+    if (original_scan["code"] != producer or original_scan["scene"] != name
+            or any(original_scan[key] for key in ("real_updates", "raw_gt", "query", "new_labels"))):
+        raise ValueError("Prior bank scan producer, scene, or budget differs")
+    intake = custody.PROVIDERS[name](root)
+    opened = bank.Bank(original_scan["bank"], root, intake.release)
+    opened.verify_authority(original_scan["bank"])
+    protected = [opened.root / name for name in ("registration.json", "bank.json")]
+    hashes = [hash_file(path) for path in protected]
+    legacy = _legacy(root)["scenes"][name]
+    tiles = tuple(sorted({row["context"]["tile"] for row in legacy.get("rows", ())}))
+    result = consumers.scan(opened, intake.baseline, prior_tiles=tiles)
+    if result != {key: original_scan[key] for key in result}:
+        raise ValueError("Existing-bank replay differs from its producer")
+    if hashes != [hash_file(path) for path in protected] or custody.protect(intake) != original_scan["original_files"]:
+        raise ValueError("Existing-bank replay changed a protected input")
+    return transport._json_new(_output(root, output), dict(scene=name, producer=producer, consumer=consumer,
+        previous=previous, bank=opened.pin, coverage=intake.release.coverage(), **result,
+        previous_probability_hashes=original_scan["previous_probability_hashes"],
+        previous_pavia_heads=6 if name == "paviaU" else 0, exact=True,
+        real_updates=0, raw_gt=0, query=0, new_labels=0))
+
+
 def _synthetic(root, banks, classes):
     release, arrays = training.fixture(classes)
     pin = _read(banks[str(classes)], root)
@@ -159,13 +184,11 @@ def audit_fixture(root, matrix_pin, output, code):
         first = min(full["validation"], key=lambda item: item["fused_nll"])
         if (full["selected"]["step"], full["selected"]["fused_nll"]) != (first["step"], first["fused_nll"]):
             raise ValueError("Synthetic first-minimum record differs")
-        run = training.Run(opened, value)
         checks = {}
         for name, state, selection in (("selected", full["selected"]["state"], first),
                                        ("last", full["model"], full["validation"][-1])):
+            run = training.Run(opened, value)
             run.model.load_state_dict(state, strict=True)
-            run.selected = None
-            run.validation = []
             run._evaluate(selection["step"])
             if not _exact(run.validation[0], selection):
                 raise ValueError("Synthetic validation endpoint failed independent replay")
@@ -245,15 +268,18 @@ def main():
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
     commands = parser.add_subparsers(dest="command", required=True)
-    for action in ("inspect", "publish", "scan", "register-fixture", "stage", "audit-fixture", "supplement"):
+    for action in ("inspect", "publish", "scan", "replay-scan", "register-fixture", "stage", "audit-fixture", "supplement"):
         child = commands.add_parser(action)
         if action != "stage":
             child.add_argument("--out", type=Path, required=True)
-        if action in ("publish", "scan"):
+        if action in ("publish", "scan", "replay-scan"):
             child.add_argument("--scene", required=True)
         if action == "publish":
             child.add_argument("--resume", action="store_true")
             child.add_argument("--stop", type=int)
+        if action == "replay-scan":
+            child.add_argument("--producer-commit", required=True)
+            child.add_argument("--previous", nargs=2, required=True, metavar=("PATH", "SHA256"))
         if action == "scan":
             child.add_argument("--bank-pin", type=Path, required=True)
         if action in ("stage", "audit-fixture", "supplement"):
@@ -289,6 +315,9 @@ def main():
             result = transport._json_new(out.parent / (out.name + ".json"), result)
     elif command == "scan":
         result = scan(root, _read(_pin(args.bank_pin), root), out, scene_name(args.scene), code)
+    elif command == "replay-scan":
+        previous = dict(zip(("path", "sha256"), args.previous, strict=True))
+        result = replay_scan(root, previous, out, scene_name(args.scene), args.producer_commit, code)
     elif command == "register-fixture":
         result = register_fixture(root, out, code)
     elif command == "stage":

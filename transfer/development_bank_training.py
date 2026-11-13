@@ -1,7 +1,6 @@
 """A fixed-budget, synthetic-only continuation exercise over admitted bank views."""
 
 from copy import deepcopy
-
 import io
 import random
 
@@ -16,7 +15,6 @@ from model.task_losses import detached_loss_values, probability_loss_components
 from research_runtime import tensor_hash
 from transfer.development_bank import BankRelease, _atomic_new, _row_key
 from transfer.development_bank_consumers import ARMS, forward, heads, initialize, native_selector
-from transfer.development_block_probe import VIEWS
 from transfer.g3_training import state_hash
 from transfer.xuzhou_multiscale_audit import _exact
 
@@ -80,6 +78,14 @@ def _events(bank, seed):
             for i, key in enumerate(sequence, 1)]
 
 
+def _condition(name):
+    if name == "full":
+        return {"mode": "none"}
+    if name == "even_retained_positions":
+        return {"mode": "uniform_stride", "stride": 2, "offset": 0}
+    raise ValueError("Unknown registered training view")
+
+
 def _targets(row, materialized):
     _, _, observed, _ = materialized
     lookup = dict(row["samples"])
@@ -100,15 +106,16 @@ def _initial(model, baseline):
 
 
 def contract(bank, seed, arm):
-    if bank.release.profile != "synthetic" or seed not in SEEDS or arm not in ARMS:
+    release = bank.release
+    if release.profile != "synthetic" or seed not in SEEDS or arm not in ARMS:
         raise ValueError("Only the preregistered synthetic bank exercise can update")
-    coverage = bank.release.coverage()
+    coverage = release.coverage()
     if any(v["authorized_blocks"] != v["publishable_blocks"] or min(v["publishable_per_class"]) == 0
            for v in coverage.values()):
         raise ValueError("A training contract requires a complete labeled engineering fixture")
-    baseline = _baseline(bank.release, seed)
+    baseline = _baseline(release, seed)
     model = initialize(baseline, arm, seed + 7321)
-    return dict(kind=FORMAT, bank=bank.pin, scene=bank.release.scene, seed=seed, arm=arm,
+    return dict(kind=FORMAT, bank=bank.pin, scene=release.scene, seed=seed, arm=arm,
                 module_seed=seed + 7321, support_seed=seed + 19000, rng_seed=seed + 15000,
                 budget=STEPS, prefix=PREFIX, validation_steps=list(EVENTS), exposure=_events(bank, seed),
                 validation=[row["id"] for row in bank.role_rows("devval")], learning_rate=0.0001,
@@ -119,25 +126,40 @@ class Run:
     def __init__(self, bank, registered):
         if contract(bank, registered["seed"], registered["arm"]) != registered:
             raise ValueError("Synthetic source, bank, seed, role, or exposure registration differs")
-        self.bank, self.contract = bank, deepcopy(registered)
+        self._bank, self._contract = bank, deepcopy(registered)
         self.baseline = _baseline(bank.release, registered["seed"])
         self.model = initialize(self.baseline, registered["arm"], registered["module_seed"])
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=registered["learning_rate"])
         self.selectors = {}
-        self.history, self.validation = [], []
-        self.selected = None
+        self._history, self._validation = [], []
+        self._selected = None
         self.captures = 0
 
+    @property
+    def bank(self):
+        return self._bank
+
+    @property
+    def contract(self):
+        return deepcopy(self._contract)
+
+    @property
+    def validation(self):
+        return deepcopy(self._validation)
+
+    def _verify_input(self):
+        self._bank.verify_authority(self._contract["bank"])
+
     def _forward(self, row, name, step):
-        materialized = self.bank.materialize(row, VIEWS[name])
-        arm = self.contract["arm"]
+        materialized = self._bank.materialize(row, _condition(name))
+        arm = self._contract["arm"]
         selector = None
         if arm == "native":
             key = row["id"], name
             if key not in self.selectors:
-                source = initialize(self.baseline, "native", self.contract["module_seed"])
+                source = initialize(self.baseline, "native", self._contract["module_seed"])
                 self.selectors[key] = native_selector(source, materialized, row, state_hash(self.baseline), STEPS,
-                                                      self.contract["support_seed"])
+                                                      self._contract["support_seed"])
                 self.captures += 1
             selector = self.selectors[key]
             if row["role"] == "devtrain":
@@ -152,7 +174,7 @@ class Run:
         self.model.eval()
         rows = []
         total, count = 0., 0
-        for row in self.bank.role_rows("devval"):
+        for row in self._bank.role_rows("devval"):
             view, output, trace = self._forward(row, "full", 0)
             labels = _targets(row, view)
             indices = torch.where(labels > 0)[0]
@@ -161,15 +183,17 @@ class Run:
             rows.append(dict(tile=row["id"], context=digest(view[-1]), heads=heads(output, view),
                              support=trace, samples=len(indices)))
         score = total / count
-        self.validation.append(dict(step=step, fused_nll=score, rows=rows))
-        if self.selected is None or score < self.selected["fused_nll"]:
-            self.selected = dict(step=step, fused_nll=score, state=_state(self.model))
+        self._validation.append(dict(step=step, fused_nll=score, rows=rows))
+        if self._selected is None or score < self._selected["fused_nll"]:
+            self._selected = dict(step=step, fused_nll=score, state=_state(self.model))
 
     def update(self, event):
-        row = self.bank.rows[event["tile"]]
-        cursor = len(self.history)
-        if row["role"] != "devtrain" or cursor >= STEPS or event != self.contract["exposure"][cursor]:
+        self._verify_input()
+        event = deepcopy(event)
+        cursor = len(self._history)
+        if cursor >= STEPS or event != self._contract["exposure"][cursor]:
             raise ValueError("Training cursor must select the next registered train event")
+        row = self._bank.role_row("devtrain", event["tile"])
         self.model.train()
         self.optimizer.zero_grad(set_to_none=True)
         view, output, trace = self._forward(row, event["view"], event["step"])
@@ -177,14 +201,14 @@ class Run:
         present = labels > 0
         if not present.any():
             raise ValueError("Training needs a released sample in the materialized tile")
-        mask = present[:, None].expand(-1, self.bank.release.classes).float()
-        onehot = torch.nn.functional.one_hot((labels - 1).clamp_min(0), self.bank.release.classes).float() * mask
+        mask = present[:, None].expand(-1, self._bank.release.classes).float()
+        onehot = torch.nn.functional.one_hot((labels - 1).clamp_min(0), self._bank.release.classes).float() * mask
         losses = probability_loss_components(output, onehot, mask)
         if not torch.isfinite(losses["total"]):
             raise ValueError("Synthetic three-head loss became nonfinite")
         losses["total"].backward()
         self.optimizer.step()
-        self.history.append(dict(**event, context=digest(view[-1]), support=trace, heads=heads(output, view),
+        self._history.append(dict(**event, context=digest(view[-1]), support=trace, heads=heads(output, view),
             released_ids=[pixel for pixel, _ in row["samples"]], losses=detached_loss_values(losses)))
         if event["step"] in EVENTS:
             self._evaluate(event["step"])
@@ -193,45 +217,50 @@ class Run:
         return {f"{key}:{view}": item.snapshot() for (key, view), item in self.selectors.items()}
 
     def start(self):
-        seed = self.contract["rng_seed"]
+        self._verify_input()
+        if self._validation:
+            raise ValueError("Training run has already started")
+        seed = self._contract["rng_seed"]
         torch.manual_seed(seed)
         np.random.seed(seed)
         random.seed(seed)
         self._evaluate(0)
 
     def pack(self):
-        return dict(format=FORMAT, contract=digest(self.contract), cursor=len(self.history),
-            model=_state(self.model), optimizer=self.optimizer.state_dict(), rng=_rng_state(CPU),
-            history=self.history, validation=self.validation, selected=self.selected, native_clocks=self._clock())
+        return dict(format=FORMAT, contract=digest(self._contract), cursor=len(self._history),
+            model=_state(self.model), optimizer=deepcopy(self.optimizer.state_dict()), rng=_rng_state(CPU),
+            history=deepcopy(self._history), validation=deepcopy(self._validation), selected=deepcopy(self._selected), native_clocks=self._clock())
 
     def restore(self, packet, cursor):
-        if (packet["format"] != FORMAT or packet["contract"] != digest(self.contract)
+        self._verify_input()
+        packet = deepcopy(packet)
+        if (packet["format"] != FORMAT or packet["contract"] != digest(self._contract)
                 or packet["cursor"] != cursor or len(packet["history"]) != cursor
                 or [row["step"] for row in packet["validation"]] != [i for i in EVENTS if i <= cursor]
                 or any({key: row[key] for key in event} != event for row, event in
-                       zip(packet["history"], self.contract["exposure"][:cursor], strict=True))):
+                       zip(packet["history"], self._contract["exposure"][:cursor], strict=True))):
             raise ValueError("Checkpoint cursor, contract or exposure differs")
         self.model.load_state_dict(packet["model"], strict=True)
         self.optimizer.load_state_dict(packet["optimizer"])
         if not all(int(state["step"]) == cursor for state in self.optimizer.state.values()):
             raise ValueError("Optimizer cursor differs")
-        self.history, self.validation, self.selected = packet["history"], packet["validation"], packet["selected"]
-        selected = min(self.validation, key=lambda row: row["fused_nll"])
-        if (self.selected["step"], self.selected["fused_nll"]) != (selected["step"], selected["fused_nll"]):
+        self._history, self._validation, self._selected = packet["history"], packet["validation"], packet["selected"]
+        selected = min(self._validation, key=lambda row: row["fused_nll"])
+        if (self._selected["step"], self._selected["fused_nll"]) != (selected["step"], selected["fused_nll"]):
             raise ValueError("First minimum selection differs")
         expected = {}
-        if self.contract["arm"] == "native":
-            for key in self.contract["validation"]:
+        if self._contract["arm"] == "native":
+            for key in self._contract["validation"]:
                 expected[(key, "full")] = 0
-            for row in self.history:
+            for row in self._history:
                 expected[(row["tile"], row["view"])] = row["step"]
         if set(packet["native_clocks"]) != {f"{key}:{view}" for key, view in expected}:
             raise ValueError("Native clock roster differs")
         for (key, name), step in expected.items():
-            row = self.bank.rows[key]
-            view = self.bank.materialize(row, VIEWS[name])
-            source = initialize(self.baseline, "native", self.contract["module_seed"])
-            clock = native_selector(source, view, row, state_hash(self.baseline), STEPS, self.contract["support_seed"])
+            row = self._bank.role_row("devval" if step == 0 else "devtrain", key)
+            view = self._bank.materialize(row, _condition(name))
+            source = initialize(self.baseline, "native", self._contract["module_seed"])
+            clock = native_selector(source, view, row, state_hash(self.baseline), STEPS, self._contract["support_seed"])
             snapshot = packet["native_clocks"][f"{key}:{name}"]
             if snapshot["step"] != step:
                 raise ValueError("Native clock advanced outside its registered visit")
