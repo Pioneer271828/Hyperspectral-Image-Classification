@@ -12,7 +12,7 @@ from transfer.development_block_probe import VIEWS, _graph_trace, _inventory
 from transfer.g3_training import state_hash
 from transfer.multiscale_training import MultiscaleTrial
 from transfer.native_support import _measure
-from transfer.spatial_observation import MODES, materialize, observability
+from transfer.spatial_observation import MODES, degrade, materialize, observability
 
 
 ARMS = ("off", "fixed", "mean", "content", "metadata", "joint", "cnn_content", "graph_content")
@@ -150,7 +150,7 @@ def scan(bank, baseline, previous, producer):
                     forward_seconds.setdefault(arm, []).append(perf_counter()-started)
                     outputs[arm], traces[arm] = old.heads(result, actual), trace
                     counts[arm] = counts.get(arm, 0) + 1
-                if spatial == "identity":
+                if spatial == "identity" and (row["id"], band) in old_rows:
                     prior = old_rows[(row["id"], band)]
                     for arm, result in prior["probabilities"].items():
                         if outputs[arm] != result:
@@ -163,6 +163,23 @@ def scan(bank, baseline, previous, producer):
                     raise ValueError("Unknown real metadata did not use established fallback")
                 rows.append(dict(band=band, spatial=spatial, observation=actual[-1], outputs=outputs, graphs=traces,
                                  sparse=observability(row, spatial, release.shape[1], release.classes)))
+    representative = next(row for row in bank.rows.values() if row["id"] in selected)
+    benchmark = {}
+    for mode in MODES:
+        actual = materialize(bank, representative, VIEWS["full"], mode, producer)
+        raw = bank.materialize(representative, VIEWS["full"])[2].observation.spectral
+        measurements = {"transform_seconds": [], "forward_seconds": []}
+        for repeat in range(7):
+            started = perf_counter()
+            degrade(raw, mode)
+            elapsed_transform = perf_counter()-started
+            started = perf_counter()
+            forward(models["off"], "off", actual)
+            elapsed_forward = perf_counter()-started
+            if repeat >= 2:
+                measurements["transform_seconds"].append(elapsed_transform)
+                measurements["forward_seconds"].append(elapsed_forward)
+        benchmark[mode] = measurements
     if inventory(baseline, models) != before or state_hash(baseline) != expected:
         raise ValueError("Real scan mutated source or consumer state")
     def timings(groups):
@@ -172,4 +189,6 @@ def scan(bank, baseline, previous, producer):
                 representatives=sorted(selected), models=before, identity_rows=len(old_rows),
                 timings=dict(materialization=timings(transform_seconds), forward=timings(forward_seconds),
                              warmup=0, note="whole scan incl first calls; native includes capture; CPU one thread"),
+                benchmark=dict(tile=representative["id"], shape=list(raw.shape), threads=torch.get_num_threads(),
+                               warmup_per_mode=2, measured_per_mode=5, additional_forwards=28, samples=benchmark),
                 real_updates=0, raw_gt=0, query=0, new_labels=0)

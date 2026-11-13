@@ -73,9 +73,14 @@ class SpatialObservationTests(TestCase):
             self.assertEqual(mode[-1][key],identity[-1][key])
         self.assertNotEqual(mode[-1]["observation"],identity[-1]["observation"])
         model = fixtures._baseline(opened.release,64)
-        _, a = multi.forward(model,"off",identity)
-        _, b = multi.forward(model,"off",mode)
-        self.assertNotEqual(a["q"],b["q"])
+        graph = model.backbone.learnable_graph
+        with patch.object(graph.__class__, "build_graph", autospec=True,
+                          side_effect=graph.__class__.build_graph) as rebuild:
+            _, a = multi.forward(model,"off",identity)
+            _, b = multi.forward(model,"off",mode)
+        self.assertEqual(rebuild.call_count,2)
+        first, second = (call.args[1] for call in rebuild.call_args_list)
+        self.assertFalse(np.array_equal(first.detach().numpy(),second.detach().numpy()))
         self.assertEqual(a["grid"],b["grid"])
         self.assertFalse(model.backbone.adapter._eval_attention_cache)
         self.assertFalse(mode[2].observation.spectral.flags.writeable)
