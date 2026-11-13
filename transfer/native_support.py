@@ -156,7 +156,19 @@ def _measure(module, attribute, timing, name, observer=None):
         delattr(module, attribute)
 
 
-def native_forward(model, scene, tile, *, selector=None, capture=False, detail=False, timing=None):
+def _block_identity(scene, tile, observation_view):
+    raw = tensor_hash(torch.from_numpy(scene.cube[tile_slice(tile)].copy()))
+    if observation_view is None:
+        return raw
+    if observation_view.bands.fingerprint != scene.bands.fingerprint:
+        raise ValueError("Preselected native bands differ from the scene")
+    observed = observation_view.observation
+    return digest(dict(raw=raw, box=tile["box"], partition=observed.partition, plan=observed.plan_hash,
+                       statistics=scene.stats, spectral=tensor_hash(observed.spectral.copy()),
+                       coordinates=tensor_hash(observed.coordinates.copy()), ids=tensor_hash(observed.global_ids.copy())))
+
+
+def native_forward(model, scene, tile, *, selector=None, capture=False, detail=False, timing=None, observation_view=None):
     """Call the same registered block materializer and original native classifier."""
     if not isinstance(model, NativeSupportModel) or (selector is None) != capture or _active.get() is not None:
         raise ValueError("Explicit source capture or bound selector required")
@@ -164,6 +176,8 @@ def native_forward(model, scene, tile, *, selector=None, capture=False, detail=F
             selector.identity["bands"] != scene.bands.fingerprint or
             selector.context["block"] != str(tile["id"])):
         raise ValueError("Selector does not belong to this development block")
+    if selector is not None and selector.identity["block_input"] != _block_identity(scene, tile, observation_view):
+        raise ValueError("Selector observation identity differs")
     if timing is None:
         timing = {}
     frame = dict(backbone=model.backbone, selector=selector, capture=capture, detail=detail, timing=timing)
@@ -175,7 +189,7 @@ def native_forward(model, scene, tile, *, selector=None, capture=False, detail=F
     try:
         with _measure(model.backbone.adapter, "forward", timing, "vca"), _measure(
                 model.backbone.learnable_graph, "build_graph", timing, "q_a0_build", observe_graph):
-            result = _elapsed(timing, "forward", _forward, model, scene, tile)
+            result = _elapsed(timing, "forward", _forward, model, scene, tile, observation_view=observation_view)
         if selector is not None and frame["grid"] != selector.identity["grid"]:
             raise ValueError("Current graph grid differs from source capture")
         return result, frame
@@ -183,20 +197,21 @@ def native_forward(model, scene, tile, *, selector=None, capture=False, detail=F
         _active.reset(token)
 
 
-def capture_context(model, scene, role, admission, source_state, timing=None):
+def capture_context(model, scene, role, admission, source_state, timing=None, *, observation_view=None):
     """Capture source descriptions from a previously admitted development tile."""
     tile = scene.plan["tiles"][role["id"]]
-    if role["role"] not in ("devtrain", "devval") or tile["partition"] != "train":
+    expected_partitions = ("train", "val") if role["role"] == "devval" and observation_view is not None else ("train",)
+    if role["role"] not in ("devtrain", "devval") or tile["partition"] not in expected_partitions:
         raise ValueError("Only admitted development blocks can be captured")
     with torch.no_grad():
-        _, frame = native_forward(model, scene, tile, capture=True, timing=timing)
+        _, frame = native_forward(model, scene, tile, capture=True, timing=timing, observation_view=observation_view)
     height, width = frame["grid"]
     # Stable region IDs live in their own namespace inside this block.
     ids = [tile["id"] * 65536 + y * 256 + x for y in range(height) for x in range(width)]
     context = development_context(role=role["role"], block=str(tile["id"]), node_ids=ids, partitions=[tile["id"]] * len(ids))
     identity = dict(scene=scene.dataset, grid=frame["grid"], bands=scene.bands.fingerprint,
                     source=source_state, assignment=tensor_hash(frame["Q"]), admission=admission,
-                    block_input=tensor_hash(torch.from_numpy(scene.cube[tile_slice(tile)].copy())))
+                    block_input=_block_identity(scene, tile, observation_view))
     return dict(context=context, identity=identity, adjacency=frame["A0"], spectra=frame["spectra"],
                 graph_features=frame["descriptor"], mandatory=[])
 
