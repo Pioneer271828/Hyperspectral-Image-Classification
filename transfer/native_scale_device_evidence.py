@@ -195,8 +195,24 @@ def read_cost(root,pin,producer,audit):
         for timing in row["timings"].values():
             computed = summarize_cost(timing["samples"],obs["pixels"])
             _require(computed==timing,"Cost aggregate does not reproduce from samples")
+        _checked_arrays(root,row)
     _require(found==expected,"Cost observation roster is incomplete")
     return cost
+
+
+def _checked_arrays(root,row):
+    arrays = _arrays(row["arrays"],root)
+    keys = {*HEADS,"q_indices","q_values","a0_indices","a0_values"}
+    _require(set(arrays)==keys,"Cost arrays omit a head or sparse operand")
+    _require(all(list(arrays[head].shape)==row["heads"][head]["shape"]
+                 and tensor_hash(arrays[head])==row["heads"][head]["sha256"] for head in HEADS)
+             and all(tensor_hash(arrays[f"{name}_indices"])==row["graph"][f"{name}_indices"]
+                     for name in ("q","a0")),"Cost array hashes differ from graph or probability evidence")
+    q_shape = row["graph"]["q_shape"]
+    for name,shape in (("q",q_shape),("a0",[q_shape[1],q_shape[1]])):
+        graph = torch.sparse_coo_tensor(arrays[f"{name}_indices"],arrays[f"{name}_values"],shape).coalesce()
+        _require(tensor_hash(graph)==row["graph"][name],"Cost graph values differ from graph receipt")
+    return arrays
 
 
 def compare(root,cpu,gpu):
@@ -210,18 +226,7 @@ def compare(root,cpu,gpu):
     for key,left in a.items():
         right = b[key]
         _require(left["observation"]==right["observation"],"Cross-device cost observation differs")
-        x,y = (_arrays(row["arrays"],root) for row in (left,right))
-        keys = {*HEADS,"q_indices","q_values","a0_indices","a0_values"}
-        _require(set(x)==set(y)==keys,"Cross-device arrays omit a head or sparse operand")
-        for row, arrays in ((left,x),(right,y)):
-            _require(all(list(arrays[head].shape)==row["heads"][head]["shape"]
-                         and tensor_hash(arrays[head])==row["heads"][head]["sha256"] for head in HEADS)
-                     and all(tensor_hash(arrays[f"{name}_indices"])==row["graph"][f"{name}_indices"]
-                             for name in ("q","a0")),"Cost array hashes differ from graph or probability evidence")
-            q_shape = row["graph"]["q_shape"]
-            for name,shape in (("q",q_shape),("a0",[q_shape[1],q_shape[1]])):
-                graph = torch.sparse_coo_tensor(arrays[f"{name}_indices"],arrays[f"{name}_values"],shape).coalesce()
-                _require(tensor_hash(graph)==row["graph"][name],"Cost graph values differ from graph receipt")
+        x,y = (_checked_arrays(root,row) for row in (left,right))
         checked = {name:qual.compare(y[name],x[name]) for name in (*HEADS,"q_values","a0_values")
                    if x[name].shape==y[name].shape}
         argmax = {head:int((x[head].argmax(1)!=y[head].argmax(1)).sum()) for head in HEADS}
