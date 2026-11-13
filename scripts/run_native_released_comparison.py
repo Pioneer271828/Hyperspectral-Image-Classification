@@ -22,6 +22,12 @@ def main(argv=None, *, intake=None):
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
     modes = parser.add_subparsers(dest="action", required=True)
+    control = modes.add_parser("capacity")
+    control.add_argument("--classes", type=int, choices=(9, 22), required=True)
+    control.add_argument("--seed", type=int, choices=(64, 512, 2048), required=True)
+    control.add_argument("--factor", type=int, choices=(2, 4), required=True)
+    control.add_argument("--intervention", choices=(*capacity.CONDITIONS, capacity.CONSTANT), required=True)
+    control.add_argument("--out", type=Path, required=True)
     prepare = modes.add_parser("prepare")
     prepare.add_argument("--preflight", nargs=2, required=True)
     prepare.add_argument("--out", type=Path, required=True)
@@ -42,6 +48,17 @@ def main(argv=None, *, intake=None):
         dev._json_new(out / "separate-capacity-draft.json", capacity.draft(read(result, root)))
     elif args.action == "run":
         result = campaign.run(root, pin(args.matrix), pin(args.release), code, intake=intake, cli=cli)
+    elif args.action == "capacity":
+        from transfer import native_released_training as data, native_scale_training as training
+        out = external_directory(args.out)
+        campaign.require(root in out.parents and not out.exists(), "Use a fresh external synthetic control directory")
+        arm = capacity.CONSTANT if args.intervention == capacity.CONSTANT else "joint"
+        spec = capacity.experiment(args.classes, args.seed, arm, args.factor, args.intervention, code["commit"])
+        out.mkdir()
+        contract = dev._json_new(out / "registration.json", spec)
+        stage = training.execute(spec, "full", out / "model.pt", code["commit"], released=data)
+        result = dev._json_new(out / "receipt.json", {**stage, "registration": contract,
+                               "checkpoint": dev._pin(out / "model.pt"), "synthetic": True, "real_updates": 0})
     else:
         out = external_directory(args.out)
         campaign.require(root in out.parents, "Audit must stay within the authorized results root")

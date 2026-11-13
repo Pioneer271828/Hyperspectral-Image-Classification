@@ -5,10 +5,12 @@ from itertools import product
 from loadData.observation_sampling import BandMetadata
 from model.research_config import digest
 from transfer.native_scale_fixture import condition_for
+from transfer import native_released_training as sparse
 from transfer.spatial_multiscale import initialize
 
 
 SCHEMA = "wp07_native_released_condition_capacity_v1"
+FORMAT = "wp07_native_released_capacity_control_v1"
 CONSTANT = "constant_joint"
 CONDITIONS = ("matched", "permuted", "perturbed", "missing")
 # Abstract fixed encoder stimulus. It never reaches the spectral VCA or
@@ -56,6 +58,17 @@ def condition_on_bank(actual, kind):
     if kind == "missing" and actual.receipt["synthetic_profile"] is None:
         return None
     raise ValueError("Bank observations have no authenticated verified physical condition")
+
+
+def experiment(classes, seed, arm, factor, intervention, producer, *, numeric=None):
+    if factor not in (2, 4) or arm not in ("joint", CONSTANT):
+        raise ValueError("Only the separately registered conditional capacity experiment is supported")
+    if (arm == CONSTANT and intervention != CONSTANT) or (arm == "joint" and intervention not in CONDITIONS):
+        raise ValueError("Selector intervention differs from its experimental arm")
+    baseline = sparse.contract(classes, seed, "joint", factor, producer, numeric=numeric)
+    return {**baseline, "format": FORMAT, "arm": arm, "intervention": intervention,
+            "parameter_control": "same_joint_modules_same_initial_state",
+            "source_contract": digest(baseline), "counted_in_original_matrix": False}
 
 
 def draft(original):
