@@ -34,6 +34,7 @@ def contract():
             "selection": "first_min_devval_equal_stratum_binary_nll", "budget": len(SEEDS)*len(ARMS)*STEPS*2,
             "source_label": "queried one of two independent balanced sign signals",
             "pairing": "same source draws and frozen initial weights; one tie-resolved order per role",
+            "torch_rng_seed": 77771,
             "source_and_context": "cpu_fp32_single_thread_original_shared_hgcn_frozen_bn_running_buffers",
             "negative_control": "fixed label-blind message derangement across examples after stage1",
             "real_updates": 0, "query_accessed": False, "raw_gt_loaded": False,

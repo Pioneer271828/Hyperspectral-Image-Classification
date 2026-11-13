@@ -24,7 +24,9 @@ class ChannelTests(TestCase):
             with torch.no_grad():
                 left = model(base, matrix, batch, "capacity", arm)
                 right = model(swapped, matrix, batch, "capacity", arm)
-            self.assertEqual(torch.equal(left, right), arm == "bottleneck")
+            # COO summation can reorder additions. The analytic collision is
+            # a numerical equality within the registered FP32 tolerance.
+            self.assertEqual(torch.allclose(left, right, rtol=1e-6, atol=1e-7), arm == "bottleneck")
         self.assertTrue(np.all(batch["donors"] != np.arange(48)))
 
     def test_held_roles_separate_and_directed_negative(self):
