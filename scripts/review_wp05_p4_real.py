@@ -108,11 +108,21 @@ def review(item, release, output, code, *, published=None):
             scope.require(complete, "Partial run cannot have the full acceptance")
             reconstructed = acceptance.reconstruct(item, resource, science, release=release)
             scope.require(scope.read(published) == reconstructed, "Independent acceptance differs from publication")
+        first = min((p["training_start"] for c in cases for p in c["paths"].values()), default=None)
+        last = max((p["training_end"] for c in cases for p in c["paths"].values()), default=None)
+        timing = {"first_completed_case_training_start": first, "last_completed_case_training_end": last,
+                  "completed_case_elapsed_span_seconds": None if not first else (
+                      datetime.fromisoformat(last)-datetime.fromisoformat(first)).total_seconds(),
+                  "completed_case_worker_call_seconds": sum(p["recorded_training_call_seconds"]
+                      for c in cases for p in c["paths"].values()),
+                  "completed_case_resume_seconds": sum(p["completed_resume_seconds"] for c in cases for p in c["paths"].values()),
+                  "completed_case_audit_seconds": sum(c["audit_wall_seconds"] for c in cases),
+                  "resource_waiting_seconds": None}
         result = {"schema": SCHEMA, "status": "accepted" if published else "partial",
                   "producer": code["commit"], "resource": item, "release": release, "acceptance": published,
                   "scientific_scope": resource["science"], "worker": scope.identity(resource["worker"]),
                   "observed_cases": len(cases), "planned_cases": 20, "committed_optimizer_updates": total,
-                  "audit_optimizer_updates": 0, "slots": slot_stats, "cases": cases,
+                  "audit_optimizer_updates": 0, "slots": slot_stats, "cases": cases, "timing": timing,
                   "input_pins": science["protected_files"], "review_seconds": perf_counter()-start,
                   "raw_gt_loaded": False, "query_accessed": False}
         batch.check_pins(science["protected_files"])
