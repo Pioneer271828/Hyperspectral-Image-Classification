@@ -59,7 +59,7 @@ def geometry(root,out,producer):
             for f in FACTORS:
                 shape = ((y1-y0+f-1)//f,(x1-x0+f-1)//f)
                 shapes.add(shape)
-                groups[row["role"],f,*shape] += 1
+                groups[(row["role"],f,*shape)] += 1
         banks[scene] = dict(pin=pin,prior=ref)
         scenes[scene] = dict(blocks=len(rows),shapes=[[role,f,h,w,n] for (role,f,h,w),n in sorted(groups.items())],
                              representatives=prior["representatives"])
