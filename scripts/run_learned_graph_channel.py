@@ -130,7 +130,7 @@ def freeze(root, reg, manifest):
                                "confirmation_consumed": False})
 
 
-def confirmation(root, reg, freeze_pin, manifest):
+def confirmation(root, reg, freeze_pin, manifest, *, repair=None):
     require(freeze_pin["path"] == str(root / "frozen.json"), "Expected canonical selected-state manifest")
     frozen = read(freeze_pin, root)
     require(frozen["registration"] == reg and frozen["schema"] == "wp06_learned_channel_frozen_v1"
@@ -151,7 +151,14 @@ def confirmation(root, reg, freeze_pin, manifest):
         run.restore(saved, reg, task.STEPS)
         run.model.load_state_dict(saved["selected"]["weights"], strict=True)
         templates.append((run, row))
-    claim = transport._json_new(root / "confirmation.claim.json", {"freeze": freeze_pin, "registration": reg})
+    claim_path = root / "confirmation.claim.json"
+    if repair is None:
+        claim = transport._json_new(claim_path, {"freeze": freeze_pin, "registration": reg})
+    else:
+        claim = transport._pin(claim_path)
+        require(read(claim, root) == {"freeze": freeze_pin, "registration": reg}
+                and not (root / "accepted.json").exists(), "Only an interrupted, unpublished evaluation can continue")
+        transport._json_new(root / "confirmation.repair.json", {**repair, "claim": claim, "optimizer_updates": 0})
     began = perf_counter()
     output = [{"seed": row["seed"], "arm": row["arm"], "selected_step": row["selected_step"],
                "source": row["selected_logits_source"], "confirmation": review.analyze(run, "confirmation")}
@@ -164,6 +171,7 @@ def confirmation(root, reg, freeze_pin, manifest):
         "freeze": freeze_pin, "confirmation_claim": claim, "real_hsi_gain": None, "cross_sensor_gain": None,
         "oversquashing_gain": None, "confirmation_optimizer_updates": 0, "real_updates": 0,
         "query_accessed": False, "raw_gt_loaded": False, "cases": output,
+        "review_repair": repair,
         "positive_control": {"threshold": .9, "accuracy": positive, "passed": all(v >= .9 for v in positive)},
         "negative_control": {"unreachable_accuracy": unreachable, "source_jacobian_zero": True},
         "training_optimizer_updates": frozen["optimizer_updates"],
@@ -184,6 +192,7 @@ def main():
             p.add_argument("--phase", choices=PHASES, required=True)
         if action == "confirm":
             p.add_argument("--frozen", nargs=2, required=True)
+            p.add_argument("--repair-failed-confirmation", nargs=2, metavar=("LOG", "SHA256"))
     args = parser.parse_args()
     code = code_snapshot()
     require_frozen_code(code)
@@ -201,7 +210,21 @@ def main():
         result = transport._json_new(root / "registration.json", expected)
     else:
         reg = pin(args.registration)
-        require(reg["path"] == str(root / "registration.json") and read(reg, root) == expected,
+        actual = read(reg, root)
+        repair = None
+        if args.action == "confirm" and args.repair_failed_confirmation:
+            from research_runtime import hash_file
+            fixed = pin(args.repair_failed_confirmation)
+            path = Path(fixed["path"])
+            require(path.resolve() == path and path.parent == root.parent
+                    and hash_file(path) == fixed["sha256"]
+                    and "Trained signal Jacobian differs from finite difference" in path.read_text()
+                    and actual["producer"]["commit"] == "3bd23cbb0187791b831633560799b207dfb1b437",
+                    "Expected the one preserved numerical failure from the original confirmation")
+            comparable = {**actual, "producer": expected["producer"]}
+            require(comparable == expected, "Read-only repair cannot change generator, data, stages or budget")
+            repair = {"consumer": identity(code), "failed_confirmation": fixed}
+        require(reg["path"] == str(root / "registration.json") and (actual == expected or repair),
                 "Registration has foreign generator, streams, source or budget")
         with lease(root / ".experiment.lock"):
             if args.action == "stage":
@@ -209,7 +232,7 @@ def main():
             elif args.action == "freeze":
                 result = freeze(root, reg, expected)
             else:
-                result = confirmation(root, reg, pin(args.frozen), expected)
+                result = confirmation(root, reg, pin(args.frozen), actual, repair=repair)
     print(json.dumps(result), flush=True)
 
 

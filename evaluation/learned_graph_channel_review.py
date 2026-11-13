@@ -22,13 +22,13 @@ def directed_distance(pairs, source=0, target=5):
 
 def numpy_logits(state, features, pairs, batch, stratum, arm):
     """Reconstruct dense, original-node-order predictions without the producer forward."""
-    a = np.zeros((task.NODES, task.NODES), np.float32)
+    a = np.zeros((task.NODES, task.NODES), np.float64)
     for receiver, sender in pairs:
         a[receiver, sender] = 1
     a /= a.sum(axis=1, keepdims=True)
     get = lambda name: state[name].detach().numpy()
     conv = lambda x, name: a @ (x @ get(f"graph.{name}.weight") + get(f"graph.{name}.bias"))
-    x = features.detach().numpy()
+    x = np.asarray(features.detach() if torch.is_tensor(features) else features, dtype=np.float64)
     first = conv(x, "hgc1")
     prefix = next(k.rsplit(".", 1)[0] for k in state if k.startswith("graph.") and k.endswith("running_mean"))
     first = (first-get(prefix+".running_mean"))/np.sqrt(get(prefix+".running_var")+1e-5)
@@ -86,21 +86,27 @@ def analyze(run, role):
             noise[:, 1:, 4:] = noise[:, 1:, 4:].roll(1, dims=0)
             observed = {"baseline": baseline, "sender_signal_flip": score(source), "noise_permutation": score(noise),
                         "relay_zero": score(features, "relay_zero"), "relay_replace": score(features, "relay_replace")}
-            plus, minus = features.clone(), features.clone()
-            plus[recipient, asks, 0] += EPS
-            minus[recipient, asks, 0] -= EPS
-            if run.arm == "shuffle":
-                # Per-example diagonal finite difference. Perturbing all examples
-                # together would test the donor's derivative rather than the recipient's.
-                finite = []
-                for i, source_row in enumerate(asks):
-                    up, down = features.clone(), features.clone()
-                    up[i, source_row, 0] += EPS
-                    down[i, source_row, 0] -= EPS
-                    finite.append(float((margin(up)[i]-margin(down)[i])/(2*EPS)))
-                finite = torch.tensor(finite)
-            else:
-                finite = (margin(plus)-margin(minus))/(2*EPS)
+            def shifted(step):
+                # The independent dense oracle uses FP64 to resolve the local
+                # linear segment near a ReLU switch selected by the trained model.
+                raw = features.detach().numpy().astype(np.float64)
+                if run.arm != "shuffle":
+                    raw[np.arange(len(asks)), asks, 0] += step
+                    value = numpy_logits(state, raw, pairs, batch, key, run.arm)
+                    return value[:, 1]-value[:, 0]
+                values = []
+                for i, src in enumerate(asks):
+                    x = raw.copy()
+                    x[i, src, 0] += step
+                    value = numpy_logits(state, x, pairs, batch, key, run.arm)[i]
+                    values.append(value[1]-value[0])
+                return np.asarray(values)
+
+            global_fd = (shifted(EPS)-shifted(-EPS))/(2*EPS)
+            epsilon = EPS/1000
+            small_left = (shifted(0.)-shifted(-epsilon))/epsilon
+            small_right = (shifted(epsilon)-shifted(0.))/epsilon
+            finite = (small_left+small_right)/2
         inputs = features.clone().requires_grad_(True)
         values = margin(inputs)
         if run.arm == "shuffle":
@@ -108,8 +114,14 @@ def analyze(run, role):
                                     for i, s in enumerate(asks)])
         else:
             jacobian = torch.autograd.grad(values.sum(), inputs)[0][recipient, asks, 0]
-        if not torch.allclose(jacobian, finite, atol=.025, rtol=.025):
-            raise ValueError("Trained signal Jacobian differs from finite difference")
+        slope = jacobian.detach().double().numpy()
+        sharp = np.abs(small_left-small_right) > 1e-5
+        regular = ~sharp
+        tolerance = 5e-4
+        if (not np.allclose(slope[regular], finite[regular], rtol=1e-4, atol=tolerance)
+                or np.any(slope[sharp] < np.minimum(small_left, small_right)[sharp]-tolerance)
+                or np.any(slope[sharp] > np.maximum(small_left, small_right)[sharp]+tolerance)):
+            raise ValueError("Local trained signal Jacobian differs from the FP64 oracle slopes")
         base_pred = observed["baseline"].argmax(dim=1).numpy()
         base_prob = observed["baseline"].softmax(dim=1).numpy()
         interventions = {}
@@ -134,6 +146,8 @@ def analyze(run, role):
                        "with_flipped_answer": {k: m[k] for k in ("correct", "support", "accuracy", "nll", "confusion")},
                        "oracle_logits_max_abs": float(np.abs(oracle-baseline.numpy()).max()),
                        "jacobian": jacobian.tolist(), "finite_difference": finite.tolist(),
-                       "jacobian_max_abs_error": float((jacobian-finite).abs().max()),
+                       "finite_difference_large": global_fd.tolist(), "one_sided_small": [small_left.tolist(), small_right.tolist()],
+                       "epsilon_large": EPS, "epsilon_small": epsilon, "small_nonsmooth": sharp.tolist(),
+                       "jacobian_max_abs_error_at_smooth_points": float(np.max(np.abs(slope[regular]-finite[regular]))) if regular.any() else None,
                        "arms": interventions}
     return result
