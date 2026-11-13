@@ -9,7 +9,8 @@ from threading import Event, Lock
 from time import perf_counter
 
 
-SCHEMA = "wp07_native_released_dual_slots_v1"
+SCHEMA = "wp07_native_released_dual_slots_v2"
+OUTCOME = "wp07_native_released_dual_attempt_v2"
 WAITING = 75
 
 
@@ -194,6 +195,7 @@ def dispatch(args, scope, selected, code):
     from transfer import native_released_campaign as campaign, p4_runtime_device as resource
     from transfer import registered_development as transport
     from transfer.native_scale_campaign import read
+    from wp07_dual_journal import Journal, Operation, seal
 
     args.out.mkdir(exist_ok=True)
     owner = args.out / "owner.json"
@@ -217,72 +219,91 @@ def dispatch(args, scope, selected, code):
         else:
             campaign.require({p.name for p in args.out.iterdir()} == {".matrix.lock"}, "Unowned dual-slot journal")
             transport._json_new(owner, identity)
-        session = len(list(args.out.glob("attempt-*.json")))
-        transport._json_new(args.out / f"attempt-{session}.json", identity)
+        expected = {(case, phase): {"case": case, "phase": phase, "slot": scope["cases"][case],
+                    "physical_uuid": gpu, "protocol": resource.CPU if gpu is None else resource.CUDA_FP64_WEIGHT,
+                    "worker": scope["worker"]}
+                    for case, (_, _, gpu, route) in selected.items() for phase in (*campaign.ROUTES[route], "audit")}
+        journal = Journal(args.runs, args.out, identity, expected)
+        session, attempt = journal.start()
         began = perf_counter()
         stopping, lock = Event(), Lock()
         command = [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]]
+        dispatch_count = 0
+        acknowledged = {}
+
+        def failure(reason, operation=None, returncode=None):
+            # The first observation and next dispatch obey the same mutex.
+            with lock:
+                journal.failure(attempt, dispatch=operation, reason=reason, returncode=returncode)
+                stopping.set()
 
         def lane(slot):
-            rows = []
+            nonlocal dispatch_count
+            rows, pending = [], None
             try:
                 with resource.lease(args.out / f".lane-{slot}.lock"):
                     for case_id, (_, _, gpu, route) in selected.items():
                         if scope["cases"][case_id] != slot:
                             continue
                         for phase in (*campaign.ROUTES[route], "audit"):
-                            path = args.out / f"attempt{session}-{case_id.replace('/', '-')}-{phase}.json"
                             env = {**os.environ, "CUDA_VISIBLE_DEVICES": gpu or "", "PYTHONDONTWRITEBYTECODE": "1",
                                    "OMP_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"}
                             started = perf_counter()
-                            with path.with_suffix(".log").open("xb") as log:
-                                with lock:
-                                    if stopping.is_set():
-                                        return {"status": "drained", "stages": rows}
-                                    fds = (matrix_lease.fileno(), journal_lease.fileno())
-                                    child = [*command, "--operation", case_id, phase, str(path), *map(str, fds)]
+                            with lock:
+                                if stopping.is_set():
+                                    return {"status": "drained", "stages": rows}
+                                order = dispatch_count
+                                op = Operation(args.out, session, order)
+                                pending = seal(op.path(".dispatch.json"), {
+                                    **expected[case_id, phase], "attempt": attempt, "order": order})
+                                dispatch_count += 1
+                                fds = (matrix_lease.fileno(), journal_lease.fileno())
+                                path = op.path(".receipt.json")
+                                child = [*command, "--operation", case_id, phase, str(path), *map(str, fds)]
+                                with op.path(".log").open("xb") as log:
                                     process = subprocess.Popen(child, env=env, cwd=args.worker,
                                                                stdout=log, stderr=subprocess.STDOUT, pass_fds=fds)
-                                    transport._json_new(path.with_suffix(".launch.json"),
-                                                        {"pid": process.pid, "case": case_id, "phase": phase,
-                                                         "slot": slot, "physical_uuid": gpu})
-                                returncode = process.wait()
-                            if returncode == WAITING:
-                                return {"status": "waiting", "case": case_id, "phase": phase, "stages": rows}
-                            if returncode:
-                                with lock:
-                                    stopping.set()
+                                lp = seal(op.path(".launch.json"), {"dispatch": pending, "pid": process.pid})
+                            returncode = process.wait()
+                            if returncode not in (0, WAITING):
+                                failure("worker_nonzero_exit", pending, returncode)
                                 return {"status": "failed", "case": case_id, "phase": phase,
                                         "returncode": returncode, "stages": rows}
-                            committed = read(transport._pin(path), args.runs)
-                            campaign.require((committed["case"], committed["phase"], committed["slot"],
-                                              committed["worker"]) == (case_id, phase, slot, scope["worker"]),
-                                             "Unexpected subprocess receipt")
-                            rows.append({**committed, "started_seconds": started-began,
-                                         "finished_seconds": perf_counter()-began})
+                            pin = None
+                            if returncode == 0:
+                                pin = transport._pin(path)
+                                committed = read(pin, args.runs)
+                                journal.check_receipt(committed, expected[case_id, phase], process.pid)
+                                rows.append({**committed, "started_seconds": started-began,
+                                             "finished_seconds": perf_counter()-began})
+                            elif path.exists():
+                                raise ValueError("Worker waiting after writing a receipt")
+                            with lock:
+                                acknowledged[order] = seal(op.path(".ack.json"),
+                                    {"launch": lp, "returncode": returncode, "receipt": pin})
+                            pending = None
+                            if returncode == WAITING:
+                                return {"status": "waiting", "case": case_id, "phase": phase, "stages": rows}
             except resource.ResourceUnavailable as error:
                 return {"status": "waiting", "reason": str(error), "stages": rows}
             except Exception as error:
-                with lock:
-                    stopping.set()
+                failure(str(error), pending)
                 return {"status": "failed", "reason": str(error), "stages": rows}
             return {"status": "completed", "stages": rows}
 
-        if (args.out / "failure.json").exists():
-            raise ValueError("A failed dual-slot run requires independent review before any new dispatch")
         with ThreadPoolExecutor(max_workers=len(scope["slots"])) as pool:
             outcomes = dict(zip(scope["slots"], pool.map(lane, scope["slots"]), strict=True))
         failed = any(row["status"] == "failed" for row in outcomes.values())
         status = "failed" if failed else ("waiting" if any(row["status"] == "waiting" for row in outcomes.values()) else "completed")
-        report = {"schema": SCHEMA, "status": status, "worker": scope["worker"], "controller": scope["controller"],
+        report = {"schema": OUTCOME, "status": status, "worker": scope["worker"], "controller": scope["controller"],
+                  "attempt": attempt, "operation_acks": [acknowledged[k] for k in sorted(acknowledged)],
+                  "first_failure": transport._pin(journal.first) if failed else None,
                   "routing": args.routing, "synthetic": scope["synthetic"], "slots": outcomes,
                   "physical_uuids": sorted({gpu for _, _, gpu, _ in selected.values() if gpu}),
                   "query_accessed": False, "raw_gt_loaded": False,
                   "new_updates": sum(stage["new_updates"] for lane in outcomes.values() for stage in lane["stages"]),
                   "elapsed_seconds": perf_counter()-began}
-        if failed:
-            transport._json_new(args.out / "failure.json", report)
-        print(transport._json_new(args.out / f"summary-{session}.json", report), flush=True)
+        print(seal(args.out / f"summary-{session:04d}.json", report), flush=True)
         return 1 if failed else 0
 
 
