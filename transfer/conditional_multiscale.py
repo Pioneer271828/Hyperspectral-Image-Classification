@@ -15,6 +15,7 @@ from transfer.multiscale_region_graph import GRAPH_RADII, MultiRangeBackbone
 
 _observation = ContextVar("multiscale_observation", default=None)
 _partition_bands = ContextVar("multiscale_partition_bands", default=None)
+_physical_conditions = ContextVar("multiscale_physical_conditions", default=None)
 DILATIONS = (1, 2, 3)
 MODES = ("fixed", "mean", "content", "metadata", "joint")
 
@@ -34,7 +35,8 @@ class ObservationConditionEncoder(nn.Module):
             raise ValueError("Coverage fraction must be in [0, 1]")
         if gsd_m is not None and (type(gsd_m) not in (int, float) or not math.isfinite(gsd_m) or gsd_m <= 0):
             raise ValueError("Verified GSD must be positive meters per pixel")
-        physical = bands is not None and bands.wavelength_unit == "nm" and bands.wavelength_quality == "verified"
+        physical = (bands is not None and bands.wavelength_unit == "nm" and bands.wavelength_quality == "verified"
+                    and any(bands.valid))
         if not physical and coverage_fraction is None and gsd_m is None:
             return None
         if physical:
@@ -141,6 +143,14 @@ class ConditionalMultiscaleVCASAHGCN(MultiDatasetVCASAHGCN):
         finally:
             _partition_bands.reset(token)
 
+    @contextmanager
+    def physical_conditions(self, coverage_fraction, gsd_m):
+        token = _physical_conditions.set((self, coverage_fraction, gsd_m))
+        try:
+            yield
+        finally:
+            _physical_conditions.reset(token)
+
     def forward(self, dataset_name, x, Q=None, A=None, wavelengths=None, fwhm=None, superpixel_scale=100,
                 return_graph_info=False, return_diagnostics=False, graph_state=None, return_logits=False,
                 wavelength_unit="auto", fwhm_unit="auto", coverage_metadata=None, coverage_reference_nm=None,
@@ -151,6 +161,9 @@ class ConditionalMultiscaleVCASAHGCN(MultiDatasetVCASAHGCN):
         bound = _partition_bands.get()
         if bound is not None and bound[0] is self and band_metadata is None:
             band_metadata = bound[1]
+        conditions = _physical_conditions.get()
+        if conditions is not None and conditions[0] is self:
+            coverage_fraction, gsd_m = conditions[1:]
         observation = (band_metadata, coverage_fraction, gsd_m)
         cnn_trace = {} if return_graph_info else None
         token = _observation.set((first, cnn_trace, *observation))
