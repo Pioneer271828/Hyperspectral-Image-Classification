@@ -75,7 +75,7 @@ def load_scope(runs, legacy, code):
              "from inference.wp10_low_rank_execution import load_manifest; "
              "load_manifest(dict(path=sys.argv[1],sha256=sys.argv[2]),code_snapshot())")
     subprocess.run([sys.executable, "-c", check, pins["manifest"]["path"], pins["manifest"]["sha256"]],
-                   cwd=legacy, env={**os.environ, "PYTHONPATH": str(legacy)}, check=True)
+                   cwd=legacy, env={**os.environ, "PYTHONPATH": str(legacy), "CUDA_VISIBLE_DEVICES": ""}, check=True)
     reg, manifest = values["registration"], values["manifest"]
     if (reg["commit"] != PRODUCER or manifest["commit"] != DEPLOYMENT or len(manifest["cases"]) != 18
             or values["batch"]["registration"] != pins["registration"]
