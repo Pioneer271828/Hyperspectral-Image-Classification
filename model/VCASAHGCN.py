@@ -732,6 +732,9 @@ class MultiDatasetVCASAHGCN(nn.Module):
                 raise ValueError("Checkpoint requires its registered spectral observation")
             if dataset_name != registration["dataset"]:
                 raise ValueError("Checkpoint spectral registration dataset differs")
+            from research_runtime import tensor_hash
+            if tensor_hash(x) != registration["input_sha256"]:
+                raise ValueError("Checkpoint spectral registration input differs")
         features = self.backbone.forward_features(
             x,
             Q,

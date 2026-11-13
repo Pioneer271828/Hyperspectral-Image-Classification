@@ -5,6 +5,7 @@ import json
 import re
 
 from loadData.observation_sampling import BandMetadata, _digest
+from loadData.dataset_registry import file_hash
 
 
 SHA256 = re.compile(r"[a-f0-9]{64}")
@@ -16,17 +17,23 @@ def require(condition, message):
         raise ValueError(message)
 
 
-def load_calibration(path, *, dataset, bands, image_sha256, approval):
-    """An independent review supplies the table hash and expected release mapping."""
+def load_calibration(path, *, dataset, bands, image_path, approval):
+    """Authenticate bytes against an external scientific and license review.
+
+    A digest binds the reviewed artifacts. The external reviewer establishes
+    whether the table comes from measurement and whether its use is permitted.
+    """
     require(isinstance(approval, dict) and
             set(approval) == {"dataset", "image_sha256", "table_sha256", "authority", "version",
                               "license", "evidence_url", "evidence_sha256", "retained_band_ids"}
-            and approval["dataset"] == dataset and approval["image_sha256"] == image_sha256
+            and approval["dataset"] == dataset
             and all(isinstance(approval[name], str) and SHA256.fullmatch(approval[name])
                     for name in ("table_sha256", "image_sha256", "evidence_sha256"))
             and all(isinstance(approval[name], str) and approval[name].strip()
                     for name in ("authority", "version", "license", "evidence_url")),
             "Explicit reviewed source and delivered cube identity required")
+    require(image_path.is_file() and file_hash(image_path) == approval["image_sha256"],
+            "Delivered image bytes differ from the external approval")
     raw = path.read_bytes()
     require(sha256(raw).hexdigest() == approval["table_sha256"], "Spectral table bytes differ")
     table = json.loads(raw, object_pairs_hook=unique_object)
