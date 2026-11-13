@@ -28,7 +28,11 @@ def arithmetic(root, gpu):
         return
     if os.environ.get("CUDA_VISIBLE_DEVICES") != gpu or p4.UUID.fullmatch(gpu) is None:
         raise ValueError("Require the one physical GPU UUID in CUDA_VISIBLE_DEVICES")
-    leases = root / ".p4_gpu_leases"
+    shared = next((parent for parent in (root, *root.parents)
+                   if (parent / ".p4_gpu_leases").is_dir()), root)
+    leases = shared / ".p4_gpu_leases"
+    if leases.is_symlink():
+        raise ValueError("Physical GPU lease directory cannot be a symlink")
     leases.mkdir(exist_ok=True)
     with p4.lease(leases / f"{gpu}.lock"), device.arithmetic(p4.CUDA_FP64_WEIGHT, gpu) as execution:
         yield execution
