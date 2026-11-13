@@ -84,7 +84,8 @@ def negative_cases(original, new, out, code):
                                "numeric": {"protocol": "cpu_fp32_v1"}}.items():
         bad = out / (field + "-forged-science.json")
         write_json(bad, {**science, **replacement})
-        bogus = {**resource, "science": resources.pin(bad)}
+        bogus = {**resource, "science": resources.pin(bad),
+                 "execution": str(out.parent / "forged-input-unused-execution")}
         bogus["science_fields"] = {key: digest(row) for key, row in resources.read(bogus["science"]).items()}
         reject(field, lambda: resources.validate(bogus), "exact original")
     forged_resource = out / "forged-worker.json"
