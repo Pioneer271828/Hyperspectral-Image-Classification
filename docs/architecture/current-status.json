@@ -1359,11 +1359,11 @@
 ,
     {
       "id": "OSS-C 开源职责收尾与固定物理坐标短测",
-      "state": "21仓库26职责审查收尾；独立oracle与固定坐标合成工程通过，108真实短测已登记待启动",
-      "evidence": "Issue463，tested a36a389d1ff55a77f921cf7e829f42f5abd1beaa；CPU5/GPU5，52相关发现含4外部可选跳过；306历史计数，12依赖轴；PyG收据生产false。",
-      "remaining": "108真实更新尚未启动；先告知冻结预算与估时，原UUID通过资源门槛且独立签发收据后方可执行；独立确认待验，旧180000暂停。",
-      "report": "research/reports/OSS_C_开源收尾与固定坐标短测登记_20261113.md",
-      "chat_report": "主审已接受OSS-A/B工程证据的限定范围；无生产替换或分类增益。"
+      "state": "21仓库26职责审查、固定坐标工程及独立复算预检完成；真实108步因固定GPU显存不足尚未启动",
+      "evidence": "Issue463，生产 a36a389d1ff55a77f921cf7e829f42f5abd1beaa，分析 59f192b329e5b0a67059aae8daebdbd48537b93e；独立复算合成与真实登记预检通过，真实更新0。",
+      "remaining": "已告知预算且主审授权。指定RTX 4090仅1068 MiB可用，需至少12288 MiB；九例真实指标、重入、效果门槛及独立确认待验。",
+      "report": "research/reports/OSS_C_108步真实短测执行与独立审计_20261113.md",
+      "chat_report": "主审接受OSS-C隔离工程与VCA边界敏感性消融，资源通过后按冻结授权执行，生产准入待验。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
