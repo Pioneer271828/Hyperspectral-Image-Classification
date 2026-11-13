@@ -207,7 +207,8 @@ def dispatch(args, scope, selected, code):
           resource.lease(matrix_root / ".matrix.lock") as matrix_lease):
         identity = {"routing": args.routing, "controller": scope["controller"]}
         matrix_owner = matrix_root / "owner.json"
-        authority = {"matrix": args.matrix, "release": args.release}
+        authority = {"matrix": args.matrix, "release": args.release,
+                     "dual_routing": args.routing, "journal": str(args.out)}
         if matrix_owner.exists():
             campaign.require(read(transport._pin(matrix_owner), args.runs) == authority, "Matrix has another owner")
         else:

@@ -223,6 +223,16 @@ def main():
     with resource.lease(journal / ".matrix.lock"):
         conflict = subprocess.run(command, cwd=worker, capture_output=True, check=False)
         assert conflict.returncode == 75
+    alternate = root / "alternate-journal"
+    original_scope = read(dict(zip(("path", "sha256"), command[-2:])), root)
+    new_route = transport._json_new(root / "alternate-routing.json", {**original_scope, "execution": str(alternate)})
+    moved = list(command)
+    moved[moved.index("--out")+1] = str(alternate)
+    moved[-2:] = pin_args(new_route)
+    run = subprocess.run(moved, cwd=worker, capture_output=True, text=True, check=False)
+    assert run.returncode == 1 and "Matrix has another owner" in run.stderr
+    assert not list(alternate.glob("attempt-*.json"))
+    (root / "alternate-journal.log").write_text(run.stdout + run.stderr)
     result = {"schema": "wp07_native_dual_slot_crash_qualification_v2", "status": "passed",
               "worker": identity(code), "controller": identity(owner), "physical_gpus": 0,
               "actual_optimizer_updates": first["new_updates"]+resumed["new_updates"]+24+failed["new_updates"],
@@ -231,7 +241,7 @@ def main():
               "paired_states": compared, "interrupted_pid": killed, "real_scientific_cost": None,
               "coordinator_failure_window": interrupted, "unacknowledged_success": unconfirmed,
               "orphan_committed_optimizer_updates": interrupted["committed_updates"]+unconfirmed["committed_updates"],
-              "concurrent_exit": conflict.returncode}
+              "concurrent_exit": conflict.returncode, "alternate_journal_refused": True}
     print(transport._json_new(root / "cpu-qualification.json", result), flush=True)
 
 
