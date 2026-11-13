@@ -119,13 +119,17 @@ def p4_prepared(resource_pin, template_pin, root, *, review_pin=None, approval_p
             "fit_status": template["status"], "accuracy": None, "cost": None,
             "average_benefit": None, "batch_accepted": accepted is not None, "query_authorized": False,
             "review": review_pin, "reviewed_cases": 0 if reviewed is None else reviewed["observed_cases"],
-            "case_metrics_scope": None if reviewed is None else reviewed["status"]}
+            "case_metrics_scope": None if reviewed is None else reviewed["status"],
+            "measured_completed_case_cost": None if reviewed is None else reviewed.get("timing")}
 
 
 def read_real_review(review_pin, release, resource_pin, resource, science, root, progress):
     receipt = read(review_pin, root)
     approved = read(release, root)
-    require(approved["schema"] == "wp05_p4_independent_execution_release_v1"
+    owner_path = Path(resource["execution"]) / "resource-owner.json"
+    owner = read(dev._pin(owner_path), root)
+    require(owner["resource"] == resource_pin and owner["release"] == release
+            and approved["schema"] == "wp05_p4_independent_execution_release_v1"
             and approved["resource_scope"] == resource_pin and approved["decision"] == "approved"
             and approved["optimizer_updates"] == 2400 and approved["query_authorized"] is False
             and receipt["schema"] == "wp05_p4_real_selected_recompute_v1"
@@ -156,7 +160,8 @@ def read_real_review(review_pin, release, resource_pin, resource, science, root,
                 "Unrelated or tampered independently recomputed case")
     if receipt["status"] == "accepted":
         result = read(receipt["acceptance"], root)
-        require(progress["status"] == "completed" and len(observed) == 20 and result["synthetic"] is False
+        require(receipt["acceptance"]["path"] == str(Path(resource["execution"]) / "independent-acceptance.json")
+                and progress["status"] == "completed" and len(observed) == 20 and result["synthetic"] is False
                 and result["schema"] == "wp05_p4_independent_slot_acceptance_v1"
                 and result["status"] == "passed" and result["release"] == release
                 and result["science_scope"] == resource["science"] and result["resource_scope"] == resource_pin
@@ -255,8 +260,13 @@ def sparse_prepared(manifest, root):
 
 def comparison_qualification(item, root):
     row = read(item, root)
+    require(row.get("schema") == "wp07_native_released_comparison_audit_v1"
+            and row.get("synthetic") is True, "Expected complete synthetic production-entry qualification")
     matrix = read(row["matrix"], root)
-    require(row["schema"] == "wp07_native_released_comparison_audit_v1" and row["status"] == "passed"
+    authorization = read(row["release"], root)
+    require(authorization["matrix"] == row["matrix"] and authorization["synthetic"] is True
+            and authorization["optimizer_updates"] == 360 and authorization["query_authorized"] is False
+            and row["schema"] == "wp07_native_released_comparison_audit_v1" and row["status"] == "passed"
             and row["synthetic"] is True and matrix["synthetic"] is True
             and row["producer"] == matrix["controller"]["commit"]
             and row["optimizer_updates"] == matrix["optimizer_updates"] == 360
