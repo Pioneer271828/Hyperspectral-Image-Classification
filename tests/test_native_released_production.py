@@ -1,6 +1,7 @@
 """Run approved fixture releases through the real CLI, transport and training path."""
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import os
 from tempfile import TemporaryDirectory
 from threading import Event
 from unittest import TestCase
@@ -27,6 +28,38 @@ def release_for(root, preflight, case, target, code, route, gpu=None):
 
 
 class ProductionTests(TestCase):
+    def test_gpu_legal_cli_same_device(self):
+        gpu = os.environ.get("WP07_PRODUCTION_FIXTURE_GPU")
+        if not gpu:
+            self.skipTest("A physically admitted UUID is required")
+        root = Path(os.environ["WP07_PRODUCTION_FIXTURE_DIR"])
+        root.mkdir()
+        torch.set_num_threads(1)
+        code = code_snapshot()
+        pins, intake = fixture(root, code)
+        result = []
+        for scene, pin in pins.items():
+            case = read(pin, root)["draft"]["cases"][4]
+            states = {}
+            for route, phases in (("full", ("full", "completed")), ("split", ("prefix", "resume", "completed"))):
+                out = root / f"{scene}-{route}"
+                release = release_for(root, pin, case, out, code, route, gpu)
+                for phase in phases:
+                    cli.main(["--mode", "real-stage", "--runs", str(root), "--out", str(out),
+                        "--expected-commit", code["commit"], "--preflight", pin["path"], pin["sha256"],
+                        "--release", release["path"], release["sha256"], "--case", case["id"],
+                        "--phase", phase, "--gpu", gpu], intake=intake)
+                receipt = read(dev._pin(out / "completed.json"), root)
+                self.assertEqual(receipt["updates"], 0)
+                states[route] = packet(receipt["checkpoint"], root)
+            a, b = states.values()
+            self.assertTrue(all(_exact(a[key], b[key]) for key in a if key != "registration"))
+            result.append({"case": case["id"], "optimizer_updates": 2*case["planned_updates"],
+                           "selected_step": a["selected"]["step"], "completed_resume_updates": 0})
+        dev._json_new(root / "gpu-qualification.json", {"cases": result, "physical_uuid": gpu,
+                      "status": "passed", "producer": code["commit"], "synthetic": True,
+                      "raw_gt_loaded": False, "query_accessed": False})
+
     def test_authorized_cli_runs_both_routes_and_retains_terminal_intent(self):
         torch.set_num_threads(1)
         with TemporaryDirectory() as name:

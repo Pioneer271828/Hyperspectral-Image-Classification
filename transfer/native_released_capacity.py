@@ -50,6 +50,14 @@ def model(baseline, arm, seed):
     return initialize(baseline, "joint", seed)
 
 
+def condition_on_bank(actual, kind):
+    if kind == CONSTANT:
+        return condition(actual, kind)
+    if kind == "missing" and actual.receipt["synthetic_profile"] is None:
+        return None
+    raise ValueError("Bank observations have no authenticated verified physical condition")
+
+
 def draft(original):
     factor_arms = [(2, "joint"), (4, "joint")]
     candidates = [case for case in original["cases"]
