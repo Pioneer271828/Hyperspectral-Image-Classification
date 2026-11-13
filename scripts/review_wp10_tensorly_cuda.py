@@ -21,6 +21,46 @@ def probability_delta(reference, current):
                       for left, right in zip(reference, current, strict=True)) for i, head in enumerate(HEADS)}
 
 
+ATOL = 1e-6
+RTOL = 1e-5
+
+
+def probability_tolerance(reference, current):
+    """Check the original asymmetric tolerance at every pixel of every block."""
+    if not reference or len(current) != len(reference):
+        raise ValueError("Equal nonempty block sequences required")
+    rows = {head: dict(elements=0, exceeded=0, maximum_ratio=0., max_abs=0.) for head in HEADS}
+    for old, new in zip(reference, current, strict=True):
+        if len(old) != len(HEADS) or len(new) != len(HEADS):
+            raise ValueError("All three ordered heads required")
+        for head, a, b in zip(HEADS, old, new, strict=True):
+            if a.shape != b.shape or a.ndim != 2 or not a.numel():
+                raise ValueError("Equal nonempty pixel-by-class shapes required")
+            a, b = a.detach().cpu().double(), b.detach().cpu().double()
+            if not torch.isfinite(a).all() or not torch.isfinite(b).all():
+                raise ValueError("Finite probability pairs required")
+            delta = (a - b).abs()
+            bound = ATOL + RTOL * a.abs()
+            row = rows[head]
+            row["elements"] += a.numel()
+            row["exceeded"] += int((delta > bound).count_nonzero())
+            row["maximum_ratio"] = max(row["maximum_ratio"], float((delta / bound).max()))
+            row["max_abs"] = max(row["max_abs"], float(delta.max()))
+    return rows
+
+
+def repeat_evidence(name, ref, actual, outputs, repeat_outputs, arrays):
+    def cpu(blocks):
+        return tuple(tuple(value.detach().cpu().contiguous() for value in block) for block in blocks)
+
+    arrays[name] = dict(reference=cpu(outputs), actual=cpu(repeat_outputs))
+    changed = {head: sum(a != b for a, b in zip(ref["predictions"][head], actual["predictions"][head], strict=True))
+               for head in HEADS}
+    return dict(output_hash_match=ref["output_hashes"] == actual["output_hashes"],
+                tolerance=probability_tolerance(outputs, repeat_outputs), v5_classification_changes=changed,
+                v5_classification_count=len(ref["targets"]), output_hashes=actual["output_hashes"])
+
+
 def main():
     parser = ArgumentParser(description=__doc__)
     for name in ("runs", "legacy-checkout", "cpu-initial", "out"):
@@ -69,7 +109,7 @@ def main():
                   for name, row in initial["candidates"].items()}
     entries = dict(reg["cases"], **candidates)
     results, cpu_rows, gpu_models = {}, {}, {}
-    outputs = {}
+    outputs, repeat_arrays = {}, {}
     for name, entry in entries.items():
         cpu = package(entry)
         cpu_rows[name], cpu_output = score(cpu, reg, tiles, selection)
@@ -92,9 +132,8 @@ def main():
                              host_to_device_model=device_load, first_instrumented_sweep=first,
                              peak_allocated_delta=peak-start, state=entry["package"]["state"])
         (repeat, repeat_output) = score(device_model, reg, cuda_tiles, selection)
-        results[name]["repeat"] = dict(output_hash_match=repeat["output_hashes"] == row["output_hashes"],
-            deltas=probability_delta(gpu_output, repeat_output),
-            predictions_equal=repeat["predictions"] == row["predictions"], output_hashes=repeat["output_hashes"])
+        results[name]["repeat"] = repeat_evidence(name + "/repeat", row, repeat, gpu_output,
+                                                   repeat_output, repeat_arrays)
         if name in candidates:
             gpu_models[name] = device_model
             outputs[name] = gpu_output
@@ -119,18 +158,23 @@ def main():
             resident=paired({name: lambda name=name: launch(gpu_models[name]) for name in (native, tensorly)}, 3, 12))
     for name, model in gpu_models.items():
         row, values_after_timing = score(model, reg, cuda_tiles, selection)
-        results[name]["post_timing"] = dict(
-            output_hash_match=row["output_hashes"] == results[name]["output_hashes"],
-            deltas=probability_delta(outputs[name], values_after_timing),
-            predictions_equal=row["predictions"] == results[name]["predictions"], output_hashes=row["output_hashes"])
+        results[name]["post_timing"] = repeat_evidence(name + "/post_timing", results[name], row, outputs[name],
+                                                        values_after_timing, repeat_arrays)
     repeat_rows = [row[key] for row in results.values() for key in ("repeat", "post_timing") if key in row]
     stable = all(row["output_hash_match"] for row in repeat_rows)
-    numerical = all(max(row["deltas"].values()) <= 1e-5 and row["predictions_equal"] for row in repeat_rows)
+    numerical = all(head["exceeded"] == 0 for row in repeat_rows for head in row["tolerance"].values())
+    classification = all(not any(row["v5_classification_changes"].values()) for row in repeat_rows)
+    arrays_path = out / "repeat-probabilities.pt"
+    from research_runtime import hash_file
+    torch.save(repeat_arrays, arrays_path)
+    arrays_pin = dict(path=str(arrays_path), sha256=hash_file(arrays_path))
     admission.check_pins([*pins.values(), *protected, initial_pin])
     require_frozen_code(code)
     write_json(out / "cuda.json", dict(status="completed_forward_under_strict_settings", commit=code["commit"], sample=sample,
         physical_uuid=uuid, runtime_device=torch.cuda.get_device_name(0),
         deterministic_algorithms=True, bitwise_repeat_passed=stable, numerical_repeat_passed=numerical,
+        v5_repeat_classification_passed=classification, repeat_probability_arrays=arrays_pin,
+        probability_tolerances=dict(atol=ATOL, rtol=RTOL),
         tf32=False, torch=str(torch.__version__), cublas=os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
         resident_input_copy=synchronized_transfer, cases=results, comparisons=comparisons,
         original_cases=len(reg["cases"]), new_cases=len(candidates), cpu_initial=initial_pin,
