@@ -13,7 +13,7 @@ from model.variable_channel_adapter import VariableChannelAdapter
 from scripts.train_joint_m4 import graph_binding
 from test_calibrated_selection import items
 from test_joint_training import PROVENANCE, SOURCE, checkpoints, hashes, settings
-from transfer.oss_a_joint_registration import OrthogonalRuntime, options, register
+from transfer.oss_a_joint_registration import OrthogonalRuntime, options, register, verify_inputs
 from transfer.oss_a_region_layout import routed_region_attention
 from transfer.oss_a_spectral import diagnostic
 
@@ -62,6 +62,16 @@ class DiagnosticTests(TestCase):
         self.assertEqual(len(identity["cells"]),24)
         self.assertEqual(identity["registered_updates"],288)
         self.assertFalse(identity["real_training_authorized"])
+        verify_inputs(identity,data)
+        forged = dict(identity,scope="synthetic_only",provenance_authenticated=True)
+        with self.assertRaisesRegex(ValueError,"authorized provenance"):
+            verify_inputs(forged,data)
+        changed = {name:dict(item,net_input=item["net_input"]+1) for name,item in data.items()}
+        with self.assertRaisesRegex(ValueError,"inputs changed"):
+            verify_inputs(identity,changed)
+        mixed = {name:dict(item,val_samples_gt=item["train_samples_gt"]) for name,item in data.items()}
+        with self.assertRaisesRegex(ValueError,"Disjoint train and validation"):
+            verify_inputs(identity,mixed)
         for seed in (64,512,2048):
             self.assertEqual(len({row["schedule_sha256"] for row in identity["cells"] if row["seed"]==seed}),1)
         altered = {name:dict(item,test_label_mask=torch.ones(1)) for name,item in data.items()}

@@ -4,7 +4,7 @@ from io import BytesIO
 import os
 from pathlib import Path
 import subprocess
-from unittest import TestCase
+from unittest import TestCase, skipUnless
 
 import torch
 
@@ -16,10 +16,14 @@ from transfer.oss_a_dependency import compare_stage1
 
 PIN = "e80127d7c6935c319a7dd6719b8a72e3c1fcbff9"
 DEVICE = os.environ.get("OSS_A_DEVICE","cpu")
+UPSTREAM_ENABLED = os.environ.get("OSS_A_TEST_TORCH_PRUNING") == "1"
 
 
 def library():
-    import torch_pruning
+    try:
+        import torch_pruning
+    except ImportError as exc:
+        raise RuntimeError("Opt-in requires the pinned Torch-Pruning checkout on PYTHONPATH") from exc
 
     root = Path(torch_pruning.__file__).resolve().parents[1]
     head = subprocess.check_output(["git","-C",str(root),"rev-parse","HEAD"],text=True).strip()
@@ -41,6 +45,21 @@ def step(model, optimizer, value, q, a):
     return tuple(head.detach() for head in output)
 
 
+class DependencyContractTests(TestCase):
+    def test_stock_topology_guards_without_upstream(self):
+        model,_,_ = fixture("domain_bn")
+        witness = torch.rand(1,64,5,6)
+        with self.assertRaisesRegex(ValueError,"Unique stage-1"):
+            compare_stage1(model,witness,[2,2],depgraph=None)
+        incompatible,_,_ = fixture("group_norm")
+        with self.assertRaisesRegex(ValueError,"channel-independent"):
+            compare_stage1(incompatible,witness,[2],depgraph=None)
+        coupled,_,_ = fixture(interaction_mode="add")
+        with self.assertRaisesRegex(ValueError,"no intermediate interaction"):
+            compare_stage1(coupled,witness,[2],depgraph=None)
+
+
+@skipUnless(UPSTREAM_ENABLED,"Pinned Torch-Pruning acceptance requires OSS_A_TEST_TORCH_PRUNING=1")
 class DependencyOracleTests(TestCase):
     def test_axes_and_stock_forward_gradient(self):
         for norm in ("batch_norm","domain_bn"):
@@ -92,11 +111,3 @@ class DependencyOracleTests(TestCase):
         for left,right in zip(step(compact,opt,v,q,a),step(resumed,after,v,q,a),strict=True):
             torch.testing.assert_close(left,right,rtol=0,atol=0)
         self.assertEqual(snapshot(compact),snapshot(resumed))
-        with self.assertRaisesRegex(ValueError,"Unique stage-1"):
-            compare_stage1(model,witness,[2,2],depgraph=external)
-        incompatible,_,_ = fixture("group_norm")
-        with self.assertRaisesRegex(ValueError,"channel-independent"):
-            compare_stage1(incompatible.to(DEVICE),witness,[2],depgraph=external)
-        coupled,_,_ = fixture(interaction_mode="add")
-        with self.assertRaisesRegex(ValueError,"no intermediate interaction"):
-            compare_stage1(coupled.to(DEVICE),witness,[2],depgraph=external)
