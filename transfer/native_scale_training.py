@@ -90,6 +90,10 @@ class Run:
     def __init__(self, registered, producer, *, execution=None, released=None):
         numeric = None if execution is None else execution.numeric
         clean = deepcopy(registered)
+        if released is not None:
+            from transfer import native_released_training
+            if released is not native_released_training:
+                raise ValueError("Unknown released supervision provider")
         expected = (contract(clean["classes"],clean["seed"],clean["arm"],producer,
                              mode=clean["supervision"],numeric=numeric) if released is None else
                     released.contract(clean["classes"], clean["seed"], clean["arm"], clean["factor"], producer,

@@ -11,7 +11,8 @@ from transfer import development_bank as bank, development_bank_custody as custo
 from transfer.development_block_probe import VIEWS
 from transfer.development_blocks import array_hash
 from transfer.g3_training import state_hash
-from transfer.native_released_points import LOSS, bind
+from transfer.native_released_points import HEADS, LOSS, MODE, bind
+from transfer.native_scale_supervision import loss
 from transfer.native_released_training import COMPARISONS
 from transfer.native_scale_observation import FACTORS, Lattice, _materialize, forward
 from transfer.native_scale_training import SEEDS
@@ -126,7 +127,7 @@ def scan(root, scene, producer):
     base_state = state_hash(base)
     models = {arm: initialize(base, arm, 64 + 7321) for arm in ("off", "mean", "joint")}
     guards = {arm: state_hash(m) for arm, m in models.items()}
-    outputs, counts = [], defaultdict(Counter)
+    outputs, counts, timings = [], defaultdict(Counter), defaultdict(list)
     roles_and_views = product(roles, VIEWS)
     for role, band in roles_and_views:
         for row in roles[role]:
@@ -146,8 +147,22 @@ def scan(root, scene, producer):
                 counts[role, band, factor].update(label for _, label in released.points)
                 arms = ("off",) if row["id"] != roles[role][0]["id"] else ("off", "mean", "joint")
                 graphs = {}
+                losses_checked = 0
                 for arm in arms:
-                    _, graph = forward(models[arm], actual, producer, role)
+                    tick = perf_counter()
+                    output, graph = forward(models[arm], actual, producer, role)
+                    timings[role, band, factor].append(perf_counter() - tick)
+                    if arm == "off" and released.points:
+                        values, mask = released.weights(MODE)
+                        computed = loss(output, values, mask)
+                        truth = [label-1 for _, label in released.points]
+                        for index, head in enumerate(HEADS):
+                            got = float(computed[head + "_supervised"])
+                            probs = output[index].detach().cpu().numpy()
+                            independent = -np.log(np.clip(probs[released.cells, truth].astype(np.float64), 1e-8, 1.)).mean()
+                            if not np.isclose(got, independent, atol=1e-6, rtol=1e-6):
+                                raise ValueError("Independent released point loss differs on the real lattice")
+                        losses_checked += len(HEADS)
                     if graph["q_shape"][0] != actual.receipt["pixels"]:
                         raise ValueError("Q did not use the actual retained grid")
                     graphs[arm] = {"q": graph["q"], "a0": graph["a0"], "shape": graph["q_shape"]}
@@ -156,7 +171,8 @@ def scan(root, scene, producer):
                 outputs.append({"role": role, "tile": row["id"], "band": band, "factor": factor,
                                 "observation": actual.receipt["observation"], "source": actual.receipt["source"],
                                 "footprints": actual.receipt["footprints"], "grid": actual.receipt["grid_shape"],
-                                "released": target, "scalar_histogram": hist, "graphs": graphs})
+                                "released": target, "scalar_histogram": hist, "graphs": graphs,
+                                "initial_head_loss_equivalence_checks": losses_checked})
 
     expected_keys = set(product(roles, VIEWS, FACTORS))
     if set(counts) != expected_keys or any([row[i] for i in range(1, classes+1)] != [5]*classes for row in counts.values()):
@@ -166,6 +182,17 @@ def scan(root, scene, producer):
     if state_hash(base) != base_state or any(state_hash(value) != guards[arm] for arm, value in models.items()):
         raise ValueError("Read-only native preflight changed source state")
     params = {arm: sum(p.numel() for p in model.parameters()) for arm, model in models.items()}
+    proposal = draft(scene, admitted, params, train_tiles)
+    medians = {f"{role}/{band}/{factor}": float(np.median(values))
+               for (role, band, factor), values in timings.items()}
+    # An inference-only proxy records the expected number of forward calls.
+    # Backward, Adam, device transfers and artifact writes remain unmeasured.
+    proxy = 0.
+    for case in proposal["cases"]:
+        factor = case["factor"]
+        proxy += sum(medians[f"devtrain/{event['band']}/{factor}"] for event in case["schedule"])
+        proxy += len(case["events"]) * nval * sum(medians[f"devval/{band}/{factor}"] for band in VIEWS)
+    proposal["cpu_forward_only_seconds_proxy"] = proxy
     return {"schema": SCHEMA, "status": "preflight_only", "scene": scene, "producer": producer,
             "bank": admitted.pin, "prior_production": prior, "protected_inputs": source_pins,
             "objective": LOSS, "support_train_seed": 512, "validation_seed": 3031,
@@ -173,6 +200,6 @@ def scan(root, scene, producer):
             "counts": {f"{role}/{band}/{factor}": dict(sorted(row.items())) for (role,band,factor),row in counts.items()},
             "trainable_block_count": labeled, "role_blocks": {role: len(rows) for role, rows in roles.items()},
             "original_tiles_read": admitted.reads, "views": outputs, "complete_purity": None,
-            "elapsed_seconds": perf_counter()-started, "draft": draft(scene, admitted, params, train_tiles),
+            "elapsed_seconds": perf_counter()-started, "draft": proposal, "forward_median_seconds": medians,
             "optimization_updates": 0, "raw_gt_loaded": False, "query_accessed": False, "labels_added": 0,
             "shared_parent_class21": release.custody.get("class_21_shared_parent")}
