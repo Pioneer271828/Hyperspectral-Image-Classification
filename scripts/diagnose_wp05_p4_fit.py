@@ -61,10 +61,12 @@ def bounded_scene(reg, plan, exposure, runs):
     geometry = scope.read({"path": reg["development"], "sha256": reg["pins"][reg["development"]]})
     scene_plan, allowed = p4_guarded.bind_inputs(reg, plan, geometry)
     with image.open("rb") as stream:
-        is_little = stream.read(128)[124:] == b"\\x00\\x01IM"
+        is_little = stream.read(128)[124:] == b"\x00\x01IM"
         kind, size = struct.unpack("<II", stream.read(8))
         flag_tag = struct.unpack("<IIII", stream.read(16))
         dim_tag = struct.unpack("<IIiii", stream.read(20))
+        if stream.read(4) != b"\0"*4:
+            raise ValueError("Pinned guarded MAT file differs from the expected alignment")
         name_tag = struct.unpack("<II", stream.read(8))
         label = stream.read(16)
         data_kind, byte_count = struct.unpack("<II", stream.read(8))
@@ -72,7 +74,7 @@ def bounded_scene(reg, plan, exposure, runs):
     h, w, depth = dim_tag[2:]
     scope.require(is_little and kind == 14 and 136+size == image.stat().st_size
                   and flag_tag == (6, 8, 7, 0) and dim_tag[:2] == (5, 12) and [h, w] == plan["shape"]
-                  and name_tag == (1, 13) and label.rstrip(b"\\0") == b"WHU_Hi_HongHu"
+                  and name_tag == (1, 13) and label.rstrip(b"\0") == b"WHU_Hi_HongHu"
                   and data_kind == 7 and byte_count == 4*h*w*depth
                   and offset + byte_count + (-byte_count) % 8 == image.stat().st_size,
                   "Bounded observation file has an incompatible data header")
