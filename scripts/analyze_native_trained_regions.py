@@ -26,7 +26,7 @@ from transfer.native_scale_training import Run
 
 
 DUTY_SHA = "f6c1a4d706167a002d9b639378b2f33acf7ed403f07fa5f1dd0559a40c9f0547"
-SPECTRAL_SHA = "f0c7242aacb8b22edb15d4a5901e1b3b4632b7836d7dc25c0dfbfcfdb51a00"
+SPECTRAL_SHA = "f0c7242aacb8b22edb15d4a5901e1e1b3b4632b7836d7dc25c0dfbfcfdb51a00"
 DUTY_PRODUCER = "570dc46aa9f721feafd253aaa2ccc496dcf6e1b3"
 SPECTRAL_PRODUCER = "19c5ff2e3916f7bbe91146ba779e6298a057fcce"
 GEOMETRY_RULE = "dominant sparse Q with lowest row tie; most/least assigned native cells and first partial edge; closest donor and farthest source by native centers"
