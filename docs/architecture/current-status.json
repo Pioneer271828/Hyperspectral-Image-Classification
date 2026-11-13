@@ -1341,15 +1341,15 @@
     },
     {
       "id": "WP05/WP07/WP12 原生尺度严格设备执行与成本",
-      "state": "CPU 48例同卡恢复完整、真实只读成本已测；严格CUDA数学通过、同卡8/48完整；直接CPU32兼容失败",
-      "evidence": "Issue459/PR460，tested 8938eff625772b039673d8bbd8964d2e8c1fe579；2专项118相关回归，192阶段1152合成更新96端点精确，真实189案例1323前向；377算子独立FP64对照通过，原生CPU32边权梯度4处超限已独立复现，54组零更新对照三头分类一致、80个适配器参数梯度张量比较超限。WP12固定资格消费 ab897f9a80699bc39ad71f433d18d2cda827b8c8，5专项118回归及仓库检查通过，原十表验签，生产准入为false",
-      "remaining": "GPU已执行209合成更新，8例完整、1例部分；余943更新、跨设备三头及真实GPU成本受资源门槛未验；真实训练/收益未验证。WP05 2400待资格、180000暂停，WP04暂缓、WP11标签BLOCKED。候选源码未并入主入口",
+      "state": "CPU与严格CUDA各48例同卡恢复完整；跨设备三头通过、两设备真实只读成本实测；直接CPU32梯度兼容失败",
+      "evidence": "Issue459/PR460，tested 8938eff625772b039673d8bbd8964d2e8c1fe579；2专项118相关回归，192阶段1152合成更新96端点精确，真实189案例1323前向；377算子独立FP64对照通过，原生CPU32边权梯度4处超限已独立复现，54组零更新对照三头分类一致、80个适配器参数梯度张量比较超限。原GPU续跑943次合成更新，完整192阶段及独立96端点通过；189组真实跨设备三头与稀疏结构通过、分类变动0；WP12固定资格消费 b7a8af3c9a9a37e32ec2a1d49231b1db1ce5f957，6专项118回归及仓库检查通过，原十表验签，生产准入为false",
+      "remaining": "真实训练/收益和生产CUDA资格未验证。WP05 2400待资格、180000暂停，WP04暂缓、WP11标签BLOCKED。候选源码未并入主入口",
       "report": "research/reports/WP05_WP07_WP12_原生尺度设备恢复与成本_20261113.md",
-      "chat_report": "真实优化/rawGT/query/新增标签及旧确认读取0；严格单卡209次合成更新，8例精确；原682项归档及纠正47项证据加清单。Issue459 open，PR460 Draft"
+      "chat_report": "真实优化/rawGT/query/新增标签及旧确认读取0；严格单卡1152次合成更新、48例精确；原682项、纠正48项、GPU续跑447项归档含各自清单。Issue459 open，PR460 Draft"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp07_native_device_cpu_complete_gpu_partial_resource_wait_wp05_long_training_paused",
+  "execution_state": "wp07_native_device_cpu_cuda_recovery_complete_native_compatibility_failed_wp05_long_training_paused",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
@@ -1594,7 +1594,7 @@
   "primary_status_sync": {
     "scope": "pinned_reports_status_and_projection_only",
     "primary_source_head": "542268edc88b3936747dee76b83741cb3a5d25c6",
-    "delivery_status_commit": "c6fd77c0fb7effb458cbcb0115384f23535e8dc2",
+    "delivery_status_commit": "8a37c001df00415639462a1520e7fe76bef26527",
     "candidate_runtime_integrated": false,
     "report_roster": [
       {
@@ -1864,8 +1864,8 @@
       {
         "id": "WP05/WP07/WP12 原生尺度严格设备执行与成本",
         "report": "research/reports/WP05_WP07_WP12_原生尺度设备恢复与成本_20261113.md",
-        "commit": "c6fd77c0fb7effb458cbcb0115384f23535e8dc2",
-        "blob": "dc763b52ad72873a801496329cbfd7450aab33b5"
+        "commit": "8a37c001df00415639462a1520e7fe76bef26527",
+        "blob": "de1eacccad5b90a37ba7c45fcfd59b4b6def374c"
       }
     ]
   }
