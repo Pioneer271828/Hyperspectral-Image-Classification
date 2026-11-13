@@ -88,8 +88,10 @@ def main():
         ys, xs = np.mgrid[y0:y1, x0:x1]
         lattice = SimpleNamespace(factor=1, areas=lambda n=ys.size: np.ones(n, dtype=np.int64),
                                   centers=lambda y=ys, x=xs: np.stack((y.ravel(), x.ravel()), axis=1))
-        require(actual.partition == "val" and ids and torch.as_tensor(actual.spectral).isfinite().all(),
-                "Expected bounded original V5 block")
+        # The legacy nested protocol places devval inside the original train
+        # partition. The signed WP02 role and released V5 roster are authoritative.
+        require(actual.partition == tile["partition"] == row["partition"] and ids and np.isfinite(actual.spectral).all(),
+                "Expected the original nested V5 block and its unchanged partition")
         views.append((row["id"], actual, lattice, ids, positions))
         seen.extend(ids)
     require(len(views) == 5 and len(seen) == len(set(seen)) == 45 and set(seen) == set(published),
