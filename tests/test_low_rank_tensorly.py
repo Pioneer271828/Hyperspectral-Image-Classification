@@ -179,7 +179,9 @@ class TensorLyTests(unittest.TestCase):
                         for name, value in source.get_submodule(TARGET).named_parameters():
                             self.assertTrue(torch.equal(value, loaded.get_submodule(TARGET).get_parameter(name)))
                         plan, trial = plans["64"], f"{method}-r16"
-                        full = new_run(source, scene, record, plan, trial)
+                        # Observe the same uncached native execution policy after package reload.
+                        loaded.backbone.adapter.cache_attention = False
+                        full = new_run(loaded, scene, record, plan, trial)
                         full.advance(4)
                         full_state = state_hash(full.model)
                         full_packet = root / "full.pt"
@@ -201,7 +203,12 @@ class TensorLyTests(unittest.TestCase):
                         resumed.save(resumed_packet)
                         baseline, actual = [torch.load(item, weights_only=True) for item in (full_packet, resumed_packet)]
                         for name in SCIENCE:
-                            self.assertTrue(_exact(actual[name], baseline[name]), name)
+                            if name == "history":
+                                for left, right in zip(actual[name], baseline[name], strict=True):
+                                    changed = [key for key in left if not _exact(left[key], right[key])]
+                                    self.assertEqual(changed, [], f"step {left['step']}")
+                            else:
+                                self.assertTrue(_exact(actual[name], baseline[name]), name)
                         self.assertEqual(resumed.history, full.history)
                         self.assertEqual(set(resumed.history[-1]["deployment"]["heads"]), set(HEADS))
                         activity = resumed.history[-1]["target_activity"]
