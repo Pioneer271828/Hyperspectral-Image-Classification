@@ -15,6 +15,7 @@ from time import perf_counter
 from research_runtime import ROOT, code_snapshot, hash_file, require_frozen_code, write_json
 from transfer import p4_coverage_batch as batch, p4_full_budget_audit as audit
 from transfer import p4_full_budget_registration as registration, p4_runtime_device as device
+from transfer import p4_three_arm_contract as three_arm
 from transfer.g2_contract import read_pinned
 from transfer.p4_spatial import run_case
 
@@ -39,7 +40,7 @@ def bound_folder(out, case, path_name=None):
 
 def case_paths(scope, folder):
     if not scope.get('paths'):
-        return {None: (folder, None)}
+        return {None: (folder, three_arm.scope_stops(scope))}
     paths = {name: (folder / name, stops) for name, stops in registration.ADMISSION_PATHS.items()}
     device.require(all(path.resolve() == path for path, _ in paths.values()), 'Case path cannot traverse symlinks')
     return paths
@@ -90,6 +91,7 @@ def slot_lock(out, gpu):
 
 def worker(scope_path, sha, out, case_id, operation, until, code, *, lease_fds=None, path_name=None):
     scope, reg = registration.load(scope_path, sha, code, check_files=False)
+    three_arm.registered_for_dispatch(scope, out)
     out = batch.sibling(out, scope_path)
     device.require(read(out / 'owner.json') == owner(out, scope_path, sha), 'Unowned campaign directory')
     matches = [case for case in scope['cases'] if case['id'] == case_id]
@@ -175,6 +177,8 @@ def worker(scope_path, sha, out, case_id, operation, until, code, *, lease_fds=N
             if scope.get('parameter_audit'):
                 receipt['timing'] = result['timing']
                 audit.check_timing(receipt['timing'], cursor, until, scope['budget']['validation_steps'], numeric)
+            if scope.get('fit') is not None:
+                receipt['resume'] = result['resume']
             write_json(path, receipt)
             return {'status': 'advanced', 'case': case_id, 'updates': until - cursor}
 
@@ -212,10 +216,12 @@ def invoke_operation(scope_path, sha, out, code, case, operation, until, locks, 
 
 def run(scope_path, sha, out, code, *, resume=False, segment=None, launcher=invoke):
     scope, _ = registration.load(scope_path, sha, code)
+    three_arm.registered_for_dispatch(scope, out)
     out = batch.sibling(out, scope_path)
     steps = scope['budget']['steps']
     paired = scope.get('paths') is not None
-    device.require(not paired or segment is None, 'Paired admission has fixed uninterrupted and split stops')
+    fixed_stops = paired or scope.get('fit') is not None
+    device.require(not fixed_stops or segment is None, 'This scope has fixed registered worker stops')
     segment = steps if segment is None else segment
     device.require(type(segment) is int and 1 <= segment <= steps, 'Invalid controlled segment size')
     if not resume:
@@ -249,18 +255,20 @@ def run(scope_path, sha, out, code, *, resume=False, segment=None, launcher=invo
         stop, mutex = Event(), Lock()
         errors, states = {}, {}
         new_updates = 0
-        slots = device.slots(scope['protocol'], scope['gpus'], recovery=scope.get('purpose') == registration.RECOVERY)
+        recovery = (scope.get('purpose') == registration.RECOVERY
+                    or (scope.get('fit') is not None and scope['synthetic']))
+        slots = device.slots(scope['protocol'], scope['gpus'], recovery=recovery)
         if scope['gpus']:
             slot_lock(out, scope['gpus'][0]).parent.mkdir(exist_ok=True)
         event_path = out / 'queue-events.jsonl'
 
         def record(event):
-            if paired:
+            if fixed_stops:
                 with event_path.open('a', encoding='utf-8') as stream:
                     stream.write(json.dumps({'utc': batch.now(), **event}) + '\n')
 
         prelocked = {}
-        if paired and not scope['synthetic'] and not any(case_progress(scope, out, case, sha) for case in cases):
+        if fixed_stops and not scope['synthetic'] and not any(case_progress(scope, out, case, sha) for case in cases):
             try:
                 prelocked = {gpu: starting_leases.enter_context(device.lease(slot_lock(out, gpu))) for gpu in slots}
                 inventory = device.simultaneous_inventory(slots)
@@ -387,6 +395,7 @@ def admission_validation(rows):
 
 def accept(scope_path, sha, out, code):
     scope, _ = registration.load(scope_path, sha, code)
+    three_arm.registered_for_dispatch(scope, out)
     out = batch.sibling(out, scope_path)
     device.require(read(out / 'owner.json') == owner(out, scope_path, sha), 'Unowned campaign directory')
     with device.lease(out / '.coordinator.lock'):
@@ -404,12 +413,15 @@ def accept(scope_path, sha, out, code):
             case_pins[str(path)] = hash_file(path)
             all_artifacts.update(row['artifact_pins'])
             pairs.setdefault(case['pair_sha256'], []).append(case['arm'])
-        expected_arms = ('none',) if scope.get('purpose') == registration.RECOVERY else registration.coverage.ARMS
+        if scope.get('fit') is None:
+            expected_arms = ('none',) if scope.get('purpose') == registration.RECOVERY else registration.coverage.ARMS
+        else:
+            expected_arms = ('continuous',) if scope['fit']['variant'] == 'long_synthetic' else three_arm.ARMS
         device.require(len(pairs) * len(expected_arms) == len(cases)
                        and all(arms == list(expected_arms) for arms in pairs.values()),
                        'Missing matched coverage arm at acceptance')
         pins = {**scope['protected_files'], str(Path(scope_path).resolve()): sha, **case_pins, **all_artifacts}
-        if scope.get('paths'):
+        if scope.get('paths') or scope.get('fit') is not None:
             events = out / 'queue-events.jsonl'
             pins[str(events)] = hash_file(events)
             if not scope['synthetic']:
@@ -431,6 +443,8 @@ def accept(scope_path, sha, out, code):
                           synthetic=scope['synthetic'])
         if scope.get('purpose') == registration.ADMISSION and scope['protocol'] == device.CUDA_FP64_WEIGHT:
             result['validation_diagnostics'] = admission_validation(audits)
+        if scope.get('fit') is not None:
+            result['fit_variant'] = scope['fit']['variant']
         if path.exists():
             device.require(read(path) == result, 'Published full-budget acceptance differs')
         else:
@@ -446,7 +460,8 @@ def main():
     prep.add_argument('--prior-receipt', type=Path, required=True)
     prep.add_argument('--protocol', choices=(device.CPU, *device.CUDA_PROTOCOLS), required=True)
     prep.add_argument('--gpus', nargs='*', default=[])
-    prep.add_argument('--purpose', choices=registration.POLICIES, default=registration.LEGACY)
+    prep.add_argument('--purpose', choices=tuple(key for key in registration.POLICIES if key != three_arm.PURPOSE),
+                      default=registration.LEGACY)
     prep.add_argument('--qualification', type=Path, action='append', default=[])
     prep.add_argument('--recovery-receipt', type=Path)
     execute = modes.add_parser('run')
