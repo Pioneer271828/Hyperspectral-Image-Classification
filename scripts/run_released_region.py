@@ -146,6 +146,44 @@ def trained_bank(root, audit_pin, execution, ops):
     return result
 
 
+def trained_spectral_fixture(root, item, ops):
+    source = read(item, root)
+    require(source["schema"] == "wp07_native_released_synthetic_acceptance_v1"
+            and source["scope"] == "synthetic_engineering" and source["status"] == "passed"
+            and source["query_accessed"] is source["raw_gt_loaded"] is False
+            and source["optimizer_updates"] == 360 and source["completed_resume_updates"] == 0,
+            "Expected previously verified released-grid endpoints")
+    result = []
+    for classes, model_seed in product((9, 22), training.SEEDS):
+        key = f"{classes}-{model_seed}-f2-joint"
+        record = source["cases"][key]
+        stage = record["stages"][-1]
+        spec = read(stage["registration"], root)
+        clamp = packet(stage["checkpoint"], root)
+        require(record["exact_full_split_complete"] is True and record["numeric"] == ops.numeric
+                and stage["phase"] == "completed" and stage["updates"] == 0
+                and spec["producer"] == source["producer"] and (spec["classes"], spec["seed"], spec["factor"], spec["arm"])
+                    == (classes, model_seed, 2, "joint") and clamp["registration"] == digest(spec)
+                and clamp["cursor"] == spec["steps"], "Frozen cross-seed donor endpoint differs")
+        run = training.Run(spec, source["producer"], execution=ops, released=released)
+        run.model.load_state_dict(clamp["selected"]["state"], strict=True)
+        chosen = next(entry for entry in clamp["validation"] if entry["step"] == clamp["selected"]["step"])
+        views = []
+        for event, historical in zip(spec["validation"], chosen["rows"], strict=True):
+            actual, _, targets = run._materialize(run._val, event)
+
+            def call(action):
+                with nullcontext() if action is None else region_action(run.model.backbone, action):
+                    return run._forward(actual, "devval", event["condition"])[:2]
+
+            views.append({"event": event, **evaluate(run.model, actual, targets, call, historical)})
+        result.append({"case": key, "selected_step": chosen["step"], "optimizer_updates": 0,
+                       "checkpoint": stage["checkpoint"], "source": spec["initialization"], "views": views})
+    require(all(view["arms"]["donor"]["status"] == "measured" for endpoint in result for view in endpoint["views"]),
+            "Previously selected fixture has no legal same-tile donor")
+    return result
+
+
 def paired_recovery(root, out, producer, execution):
     from transfer.native_released_training import validate_history
 
@@ -236,7 +274,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("runs", "out", "execution"):
         parser.add_argument("--"+name, type=Path, required=True)
-    for name in ("audit", "real-preflight"):
+    for name in ("audit", "real-preflight", "spectral-endpoints"):
         parser.add_argument("--"+name, nargs=2, required=True)
     parser.add_argument("--expected-commit", required=True)
     args = parser.parse_args()
@@ -251,11 +289,13 @@ def main():
     started = perf_counter()
     with arithmetic(root, None) as execution:
         trained = trained_bank(root, pinned(args.audit), args.execution, execution)
+        donors = trained_spectral_fixture(root, pinned(args.spectral_endpoints), execution)
         recovery = paired_recovery(root, out, code["commit"], execution)
     coverage = real_coverage(root, pinned(args.real_preflight))
     require_frozen_code(code)
     result = {"schema": SCHEMA, "status": "passed", "producer": code["commit"], "source_hash": code["source_hash"],
               "synth_trained": trained, "synth_recovery": recovery, "real_coverage": coverage,
+              "synth_donor_endpoints": donors, "synthetic_donor_source": pinned(args.spectral_endpoints),
               "synth_optimizer_updates": 48, "real_optimizer_updates": 0, "completed_resume_updates": 0,
               "real_effect_measured": False, "raw_gt_loaded": False, "query_accessed": False,
               "cost_seconds": perf_counter()-started, "real_scientific_cost": None,
