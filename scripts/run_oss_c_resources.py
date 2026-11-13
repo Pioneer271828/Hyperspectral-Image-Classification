@@ -45,8 +45,9 @@ def require(condition, message):
 
 
 def verify_source(source):
+    extensions = {"scripts/run_oss_c_resources.py", "scripts/audit_oss_c_real.py", "tests/test_oss_c_real_audit.py"}
     unchanged = {name: sha for name, sha in source["files"].items()
-                 if name != "scripts/run_oss_c_resources.py"}
+                 if name not in extensions}
     require(digest(unchanged) == OLD_SOURCE, "Frozen production files differ from the original producer")
 
 
