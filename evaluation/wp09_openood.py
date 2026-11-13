@@ -120,12 +120,24 @@ def evaluate_approval(approval, authority, source_receipt, root, *, out, expecte
     if (a["authority"] != authority or a["source_receipt"] != source_receipt or a["code"] != code
             or a["provider"] != upstream.evidence or a["label_reads"] != 0):
         raise ValueError("Pinned approval and producer identity differ")
-    identity, _, _, _ = _verified_source(authority, source_receipt)
+    identity, _, _, protected = _verified_source(authority, source_receipt)
+    _, context, _ = read_authority(authority)
+    src = json.loads(_read(source_receipt))
+    trial = json.loads(_read(src["registration"]))
+    prepared = json.loads(_read(trial["prepared"]))
     producer = json.loads(_read(a["producer"]))
+    request = json.loads(_read(producer["registration"]))
     f = json.loads(_read(a["frozen"]))
     v, evidence, support, cal, target, pins = _load(f["registration"])
-    if (producer["arrays_registration"] != f["registration"] or producer["code"] != code
-            or v["model"] != identity["source"]["weights"] or v["labels"] != a["released_labels"]
+    if (identity["scope"] != "synthetic" or producer["arrays_registration"] != f["registration"]
+            or producer["code"] != code or producer["network_output_verified"] is not True
+            or producer["evaluation_labels_read"] is not False or producer["query"] or producer["optimizer_updates"]
+            or request["observations"] != prepared["observations"] or request["training_declaration"] != src["training_declaration"]
+            or request["sidecar"] != identity["source"]["sidecar"] or request["checkpoint"] != identity["source"]["weights"]
+            or request["temperature"] != v["temperature"] or request["known_coverage"] != v["known_coverage"]
+            or v["model"] != identity["source"]["weights"] or v["labels"] != context["labels"]
+            or v["labels"] != a["released_labels"] or v["known"] != context["known"] or v["unknown"] != context["unknown"]
+            or producer["outputs"] != {k: v[k] for k in ("source", "calibration", "evaluation")}
             or a["columns"] != [x["id"] for x in v["known"]] or f["rows"] != _rows(v,evidence,support,cal)):
         raise ValueError("Frozen producer, columns, temperature, labels or scorer differs")
     _deferred(a["released_labels"])
@@ -163,6 +175,9 @@ def evaluate_approval(approval, authority, source_receipt, root, *, out, expecte
             else:
                 entry["openood"] = None
         result.append(entry)
+    for pin in protected:
+        if pin != a["released_labels"]:
+            _read(pin)
     require_frozen_code(code)
     return _json_new(out / "openood-audit.json", dict(status="passed", authority=authority,
          original_export=export, approvals=approval, methods=result, optimizer_updates=0, raw_gt=0, query=0))
