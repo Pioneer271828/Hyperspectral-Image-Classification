@@ -17,13 +17,18 @@ def backbone_kwargs_from_config(config):
 
 def save_model_checkpoint(model, path, *, spectral_registration=None):
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
     metadata = model.export_config()
     metadata["training_config"] = getattr(model, "training_config", {})
-    if spectral_registration is not None:
+    prior = metadata["training_config"].get("spectral_registration")
+    if prior is not None or spectral_registration is not None:
+        from model.research_config import digest
         from transfer.spectral_registration import verify_registration
-        verify_registration(spectral_registration, tuple(metadata["class_counts"]))
-        metadata["training_config"] = {**metadata["training_config"], "spectral_registration": spectral_registration}
+        if prior is not None and spectral_registration is not None and digest(prior) != digest(spectral_registration):
+            raise ValueError("Checkpoint spectral registration differs")
+        binding = prior if spectral_registration is None else spectral_registration
+        verify_registration(binding, tuple(metadata["class_counts"]))
+        metadata["training_config"] = {**metadata["training_config"], "spectral_registration": binding}
+    path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), path)
     Path(str(path) + ".json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
 

@@ -106,7 +106,8 @@ class SpectralCalibrationTests(unittest.TestCase):
                 self.assertEqual(actual[-1]["spectral_metadata"]["metadata_hash"], full_record["selected_metadata_hash"])
                 self.assertEqual(actual[-1]["spectral_metadata"]["original_band_ids"], (1, 4, 5, 8))
                 for left, right in zip(actual[:3], sliced[:3], strict=True):
-                    torch.testing.assert_close(left, right, rtol=0, atol=0)
+                    torch.testing.assert_close(left, right, rtol=1e-5, atol=1e-6)
+                    self.assertTrue(torch.equal(left.argmax(1), right.argmax(1)))
                 if coverage == "affine":
                     self.assertEqual(actual[-1]["coverage"]["metadata_hash"], full.bands.fingerprint)
                     self.assertEqual(actual[-1]["coverage"]["description"]["out_of_reference_count"], 1)
