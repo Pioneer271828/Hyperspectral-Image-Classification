@@ -97,7 +97,7 @@ def negative_cases(original, new, out, code):
 
     # Use the real prepared scope and a fabricated summary in its own isolated
     # directory. A fresh fixture tests the release consumer without any training.
-    execution = out.parent / (out.name + "-fabricated-execution")
+    execution = Path(resource["execution"]).parent / (out.parent.name + "-" + out.name + "-fabricated-execution")
     execution.mkdir()
     synthetic_resource = {**resource, "execution": str(execution)}
     replacement = out / "fabricated-resource.json"
