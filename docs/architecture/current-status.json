@@ -1337,7 +1337,7 @@
       "evidence": "Issue457/PR458，tested 4ab1eb24efd9fe4965ca2e09ede3de6a99334017。6专项92相关回归，50案例200阶段9312合成更新100端点精确恢复，32确认观测8000前向；真实351块1086观测1506三头前向，1326旧头一致，WP12十表验签",
       "remaining": "真实GSD/SRF、完整纯度、尺度误差和真实训练效果未验，PaviaU两无标注块，HongHu第21类同父块；GPU严格确定性后向未通过，单卡warn-only合成诊断通过；WP05 2400待资格、180000暂停，WP04暂缓，WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP06_WP07_WP12_原生尺度监督与冻结留出条件_20261113.md",
-      "chat_report": "真实优化/rawGT/query/新增标签均0，533项证据逐项核验。Issue457 open，PR458 Draft"
+      "chat_report": "Issue457主审确认一次性门禁两中断窗口。修复tested 81e2bdd440a8d073fa61475adc019a1475145ebf；11专项92影响回归及两窗口、并发、同步和重复负例通过。旧9312更新及8000确认前向按原producer保留且未重读。新增57证据项，Issue457 open/PR458 Draft待复审"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
