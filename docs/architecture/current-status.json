@@ -1223,15 +1223,15 @@
       "id": "WP10 低秩 TensorLy 源码核查与冻结对照",
       "state": "固定TensorLy核心可作离线SVD参照；原生CPU逐位复现，CUDA整网逐位复测失败",
       "evidence": "PR471。源码候选 b106a34cb2ba1ea11ffdc835bd9a3dcf25e91f14。上游30/30、项目CPU5/5、旧10+1、严格CUDA微测1/1。原18包270个哈希一致；新十例零恢复，四秩两种初始化CPU输出逐位相同。RTX4090原生28例三头预测与CPU相同，38组复测哈希0/38一致。按原逐元素容差修正后重验，独审4021920元素零超限，最大容差比0.038153，V5分类全等；PR471 ready未合，续证据15项。原独立171个混淆及71项证据保留。",
-      "remaining": "TensorLy-Torch无同职责两核入口。r32仅固定V5零恢复三头保护通过，历史三组减参均未达标；保留原生完整FP32，独立空间/query与CUDA生产严格资格未完成。P4原双卡仍0/2400。",
+      "remaining": "TensorLy-Torch无同职责两核入口。r32仅固定V5零恢复三头保护通过，历史三组减参均未达标；保留原生完整FP32，主审接受原逐元素修复与离线SVD、CPU逐位及有界合成恢复；CUDA生产逐位资格、独立空间/query未完成。P4原双卡仍0/2400。",
       "report": "research/reports/WP10_低秩TensorLy源码核查与冻结对照_20261114.md",
       "chat_report": "CPU/CUDA运行在已授权LXC，原权重只读，真实优化0，候选源码未合并。"
     }
     ,{
       "id": "WP10 INT8 静态仿射与冻结 oneDNN 对照",
-      "state": "原静态INT8参数的可选oneDNN CPU内核对照通过；保持完整FP32默认",
-      "evidence": "PR472，tested 4bec8a2537b76ab9e8f4d068b9952bdf4e367b8a。旧原生22+8、专项4、TorchAO上游4。原五块3920像素/45开发标签，三包20次整数分派、1505280整数码和45块头概率哈希逐位相同。独立24混淆及72组AB/BA与12启动；两单层三头保护通过，双层CNN第4类新增1错，融合通过。",
-      "remaining": "按原合同比较CPU，指定TorchAO 0.19源码与Torch2.7不兼容；兼容0.15仅作算术参照，编译PT2E冻结失败。未显示稳定整网提速，真实新增校准/更新0；独立空间/query与GPU部署未验。",
+      "state": "主审接受冻结CPU包同算术的可选oneDNN对照；保持完整FP32默认",
+      "evidence": "PR472，tested 4bec8a2537b76ab9e8f4d068b9952bdf4e367b8a。旧原生22+8、专项4、TorchAO上游4。原五块3920像素/45开发标签，三包20次整数分派、1505280整数码和45块头概率哈希逐位相同。独立24混淆及72组AB/BA与12启动；两单层三头保护通过，双层CNN第4类新增1错，融合通过。主审独立核71个载荷和清单，低秩续包15个载荷和清单。",
+      "remaining": "按原合同比较CPU，指定TorchAO 0.19源码与Torch2.7不兼容；兼容0.15仅作算术参照，编译PT2E冻结失败。可选oneDNN仅验CPU推理和原包+sidecar重建，通用state_dict/训练/跨设备未验。未显示稳定整网提速，真实新增校准/更新0；独立空间/query与GPU部署未验。",
       "report": "research/reports/WP10_INT8_TorchAO静态仿射与冻结oneDNN对照_20261114.md",
       "chat_report": "旧155步权重只读，原默认完整FP32。P4 0/2400，13500及180000仍暂停。"
     }
@@ -1412,6 +1412,14 @@
       "remaining": "真实13500仍为0，待原2400接受及独立审核释放。原180000保持暂停。原双卡实体资格已通过，实际0/2400，等待同快照资源与真实独审。",
       "report": "research/reports/WP05_HongHu三臂完整拟合执行与CUDA准入衔接_20261113.md",
       "chat_report": "PR469 ready未合并，Issue470继续跟踪真实执行。关联原 #466/#468 的已接受 META 工程，保留21仓库结果与原生默认。"
+    }
+    ,{
+      "id": "WP09 Tent 同协议适配与 OpenOOD 冻结评分",
+      "state": "可选Tent熵通过同协议无标签对照，OpenOOD MSP/EBO及对齐ROC通过冻结合成对照",
+      "evidence": "Issue473/PR474。PaviaU原24组6连续和2+4，共288预测/144无标签SGD/72统计，24重入0；432份三头数组3048192项容差通过，分类变化0，144帧独立重放。可信源v2/原E4c九组合成指标复算，OpenOOD六MSP/EBO评分及ROC一致。",
+      "remaining": "Tent原完整包装器与BN白名单及预测/复位语义不同，OpenOOD只作oracle，原型/阈值和默认保留。无真实标签/GT/query、真实准确率、独立开放集与新GPU验收；P4原双卡0/2400。",
+      "report": "research/reports/WP09_Tent同协议适配与OpenOOD冻结评分_20261114.md",
+      "chat_report": "固定上游MIT，工程和无标签范围通过，原实现继续为默认。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
