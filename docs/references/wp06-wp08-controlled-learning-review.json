@@ -1,0 +1,19 @@
+{
+  "issue": 445,
+  "sections": "master §12/16/22, implementation §19.7/19.9",
+  "paper": "https://arxiv.org/pdf/2111.14522v4",
+  "read": "§2.1–2.2 Lemma 1; §3.2 topology; §4 SDRF; appendix A directed-walk interpretation bounded to this project's declared A convention",
+  "original_evidence": "Jacobian bounds depend on normalized adjacency powers for paper assumptions. The project measures the two-layer signal prediction on synthetic directed graphs.",
+  "author_code": "https://github.com/jctops/understanding-oversquashing",
+  "fixed_sha": "c14e91d31ec5e9ff2dc13d90ef61b9dc2bdce829",
+  "review": "Existing wp06-controlled-signal-review.json records MIT root license, linked official README and actual gdl/src/gdl/curvature/numba.py. No upstream source copied or executed.",
+  "reuse": [
+    "SharedHGCN.forward_stage1/forward_stage2",
+    "controlled_signal._distances",
+    "BudgetedGraphRouter._graph (canonical COO and self-loops)",
+    "registered_development content pins",
+    "CurriculumRun atomic checkpoint writer"
+  ],
+  "implementation": "Synthetic signal regression and independently implemented bounded candidate refresh, mixed-weight masking and fixed-graph reuse. No curvature score or SDRF algorithm.",
+  "real_gate": "Real HSI fixed-final-graph matched degrees/distances and efficacy remain unverified. No real training or GT access authorized."
+}
