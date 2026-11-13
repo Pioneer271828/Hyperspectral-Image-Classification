@@ -45,6 +45,18 @@ FAMILIES = {
     "CUR": ("固定曝光样本/观测课程", "外部 loader 不能替代类保护及实际更新台账"),
     "WP12": ("三头、逐类和全链路成本证据", "外部指标仅可交叉复算，保持现有收据和计时协议"),
 }
+P4_REVISIONS = {
+    65:"89253cbb5fab42762b0129e8522b13b9ff3dbebf",
+    66:"d656caddf345f2cd2a87adf7393b8b27691d54ce",
+    67:"d656caddf345f2cd2a87adf7393b8b27691d54ce",
+    68:"1218070d302d7c23b9134f42275b987488c5ff9d",
+    69:"737cd3a5087ab2e0a5f0ed5e7bab53419d6c5105",
+    70:"00bfb597543e289d2c24bafafaad30e7b99e6cea",
+    71:"c8fa0e45d6e791d539aeb8b4454083344861adb0",
+    72:"a3abde4892f8f00767e9e87140b78b6e081ad7a5",
+    73:"635213d7dd1c442b4b0fc886acc1d388db2378bb",
+    74:"c826803bf02862e704d1ae32cd24dd62fd45778c",
+}
 
 # Mixed ledger rows name distinct delivered responsibilities.
 EXPLICIT = {
@@ -140,7 +152,7 @@ def build(base):
     mapped = []
     for i, row in enumerate(modules, 1):
         report = row["report"]
-        raw = (ROOT / report).read_bytes()
+        raw = subprocess.check_output(["git","show",f"{base}:{report}"],cwd=ROOT)
         report_text = raw.decode("utf-8")
         keys = families(i, row["id"])
         stated = list(dict.fromkeys(COMMIT.findall(row["evidence"]) + report_commits(report_text)))
@@ -148,6 +160,10 @@ def build(base):
         confirmed += [resolved for token in SHORT_TESTED.findall(row["evidence"])
                       if (resolved := sha(token)) and resolved not in confirmed]
         source = source_paths(report_text, confirmed[:8]) if i not in DOCUMENTATION_ONLY else []
+        recorded = ([P4_REVISIONS[i]] if i in P4_REVISIONS else [])
+        if any(value not in stated for value in recorded):
+            raise ValueError(f"Changed recorded revision for {row['id']}")
+        report_commit = git("log","-1","--format=%H",base,"--",report).stdout.strip()
         mapped.append(dict(
             ordinal=i,id=row["id"],state=row["state"],report=report,report_sha256=hashlib.sha256(raw).hexdigest(),
             scope="planning_only" if i in DOCUMENTATION_ONLY else "delivered_evidence_and_listed_remaining_work",
@@ -156,6 +172,7 @@ def build(base):
                                   disposition=("no_same_duty_replacement_found" if key in NO_EXACT_CANDIDATE
                                                or not candidates[key] else "family_candidates_require_scope_review"),
                                   reason=FAMILIES[key][1]) for key in keys],
+            report_version_commit=report_commit,recorded_tested_revisions=recorded,
             resolved_report_revisions=confirmed,unresolved_report_hashes=[value for value in stated if value not in confirmed],
             source_mentions_verified=source,
             revision_boundary=("report_revisions_keep_distinct_run_roles" if confirmed else
