@@ -482,6 +482,7 @@ class VCASAHGCNBackbone(nn.Module):
         fwhm_unit="auto",
         coverage_metadata=None,
         coverage_reference_nm=None,
+        band_metadata=None,
     ):
         if return_diagnostics and not return_graph_info:
             raise ValueError("return_diagnostics requires return_graph_info=True")
@@ -491,17 +492,33 @@ class VCASAHGCNBackbone(nn.Module):
             if not isinstance(graph_state, GraphState):
                 raise ValueError("graph_state must be GraphState")
         height, width, _ = x.shape
-        spectral_x, extra_x = self._split_spectral_extra(x, wavelengths)
+        if band_metadata is not None:
+            from loadData.observation_sampling import BandMetadata
+            if (not isinstance(band_metadata, BandMetadata) or wavelengths is not None or fwhm is not None
+                    or wavelength_unit != "auto" or fwhm_unit != "auto" or coverage_metadata is not None):
+                raise ValueError("Use band_metadata alone for the VCA and coverage observation")
+            spectral_x, extra_x = self._split_spectral_extra(x, band_metadata.wavelengths)
+        else:
+            spectral_x, extra_x = self._split_spectral_extra(x, wavelengths)
         metadata_units = {} if wavelength_unit == fwhm_unit == "auto" else {
             "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}
         coverage_info = None
-        if self.coverage_modulation is None:
+        if band_metadata is not None:
+            if self.coverage_modulation is None and not return_graph_info:
+                latent_x = self.adapter(spectral_x, band_metadata=band_metadata)
+            else:
+                latent_x, observed = self.adapter(spectral_x, return_attention=True, band_metadata=band_metadata)
+                if self.coverage_modulation is not None:
+                    coverage_metadata = (band_metadata if all(band_metadata.valid) else
+                                         band_metadata.subset(observed["band_indices"].detach().cpu().tolist()))
+        elif self.coverage_modulation is None:
             latent_x = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm, **metadata_units)
         else:
             validate_binding(coverage_metadata, wavelengths, fwhm, spectral_x.shape[-1],
                              spectral_x.device, spectral_x.dtype, wavelength_unit, fwhm_unit)
             latent_x, observed = self.adapter(spectral_x, wavelengths=wavelengths, fwhm=fwhm,
                                               return_attention=True, **metadata_units)
+        if self.coverage_modulation is not None:
             physical_mode = self.adapter.attention_mode == 'wavelength'
             coverage = describe(coverage_metadata if physical_mode else None, observed['anchors'],
                 self.coverage_config, normalized_reference_nm=coverage_reference_nm if physical_mode else None)
@@ -535,6 +552,13 @@ class VCASAHGCNBackbone(nn.Module):
         elif Q is None or A is None:
             raise ValueError("static graph mode requires Q and A")
         if coverage_info is not None:graph_info['coverage'] = coverage_info
+        if band_metadata is not None and return_graph_info:
+            graph_info["spectral_metadata"] = {
+                "metadata_hash": observed["metadata_hash"], "source_id": observed["source_id"],
+                "original_band_ids": observed["original_band_ids"],
+                "wavelength_quality": band_metadata.wavelength_quality,
+                "fwhm_available": band_metadata.fwhm is not None,
+            }
 
         cnn_input = clean_x
         if self.region_residual is None:
@@ -700,6 +724,7 @@ class MultiDatasetVCASAHGCN(nn.Module):
         fwhm_unit="auto",
         coverage_metadata=None,
         coverage_reference_nm=None,
+        band_metadata=None,
     ):
         features = self.backbone.forward_features(
             x,
@@ -716,6 +741,7 @@ class MultiDatasetVCASAHGCN(nn.Module):
                 "wavelength_unit": wavelength_unit, "fwhm_unit": fwhm_unit}),
             **({} if self.backbone.coverage_modulation is None else {
                 'coverage_metadata':coverage_metadata,'coverage_reference_nm':coverage_reference_nm}),
+            **({} if band_metadata is None else {'band_metadata': band_metadata}),
         )
         if return_graph_info:
             fused, hgnn_result, cnn_result, graph_info = features

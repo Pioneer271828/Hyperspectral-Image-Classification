@@ -15,12 +15,16 @@ def backbone_kwargs_from_config(config):
     return {key: value for key, value in config.items() if key in fields and key != "self"}
 
 
-def save_model_checkpoint(model, path):
+def save_model_checkpoint(model, path, *, spectral_registration=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(model.state_dict(), path)
     metadata = model.export_config()
     metadata["training_config"] = getattr(model, "training_config", {})
+    if spectral_registration is not None:
+        from transfer.spectral_registration import verify_registration
+        verify_registration(spectral_registration, tuple(metadata["class_counts"]))
+        metadata["training_config"] = {**metadata["training_config"], "spectral_registration": spectral_registration}
+    torch.save(model.state_dict(), path)
     Path(str(path) + ".json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
@@ -29,8 +33,15 @@ def read_checkpoint_metadata(path):
     return json.loads(sidecar.read_text(encoding="utf-8")) if sidecar.is_file() else None
 
 
-def load_model_checkpoint(path, device="cpu", config=None, class_counts=None):
+def load_model_checkpoint(path, device="cpu", config=None, class_counts=None, *, spectral_registration=None):
     metadata = read_checkpoint_metadata(path)
+    recorded = metadata.get("training_config", {}).get("spectral_registration") if metadata is not None else None
+    if recorded is not None or spectral_registration is not None:
+        from model.research_config import digest
+        from transfer.spectral_registration import verify_registration
+        if recorded is None or spectral_registration is None or digest(recorded) != digest(spectral_registration):
+            raise ValueError("Checkpoint spectral registration differs")
+        verify_registration(recorded, tuple(metadata["class_counts"]))
     state = torch.load(path, map_location=device, weights_only=True)
     if metadata is not None:
         class_counts = metadata["class_counts"]

@@ -266,8 +266,10 @@ class VariableChannelAdapter(nn.Module):
             fwhm_key,
         )
 
-    def _get_attention(self, band_positions, fwhm):
+    def _get_attention(self, band_positions, fwhm, metadata_identity=None):
         cache_key = self._attention_cache_key(band_positions, fwhm)
+        if cache_key is not None and metadata_identity is not None:
+            cache_key = (*cache_key, metadata_identity)
         if cache_key is not None and cache_key in self._eval_attention_cache:
             # Diagnostics returned to callers must not mutate the stored entry.
             return tuple(tensor.clone() for tensor in self._eval_attention_cache[cache_key])
@@ -284,7 +286,7 @@ class VariableChannelAdapter(nn.Module):
         return attention, anchor_valid, anchors
 
     def _adapt_flat(self, flat_x, wavelengths=None, fwhm=None, return_attention=False,
-                    wavelength_unit="auto", fwhm_unit="auto", band_mask=None):
+                    wavelength_unit="auto", fwhm_unit="auto", band_mask=None, band_metadata=None):
         num_bands = flat_x.shape[1]
         if num_bands == 0:
             raise ValueError("at least one spectral band is required")
@@ -333,7 +335,11 @@ class VariableChannelAdapter(nn.Module):
         else:
             raise RuntimeError("unexpected attention_mode: {}".format(self.attention_mode))
 
-        attention, anchor_valid, anchors = self._get_attention(band_positions, fwhm_norm)
+        retained = band_metadata
+        if retained is not None and band_mask is not None:
+            retained = retained.subset(band_indices.detach().cpu().tolist())
+        identity = retained.fingerprint if retained is not None else None
+        attention, anchor_valid, anchors = self._get_attention(band_positions, fwhm_norm, identity)
         latent = self._project_to_latent_chunked(flat_x, attention)
         latent = latent * anchor_valid.view(1, self.latent_channels, 1)
         latent = latent.reshape(flat_x.shape[0], self.out_channels)
@@ -354,12 +360,25 @@ class VariableChannelAdapter(nn.Module):
                                     else "normalized_index"),
                 "fwhm_unit": resolved_fwhm_unit,
             }
+            if retained is not None:
+                info.update(metadata_hash=identity, source_id=retained.source_id, original_band_ids=retained.band_ids)
             return latent, info
         return latent
 
     def forward(self, x, wavelengths=None, fwhm=None, return_attention=False, *,
-                wavelength_unit="auto", fwhm_unit="auto", band_mask=None):
+                wavelength_unit="auto", fwhm_unit="auto", band_mask=None, band_metadata=None):
         metadata_options = dict(wavelength_unit=wavelength_unit, fwhm_unit=fwhm_unit, band_mask=band_mask)
+        if band_metadata is not None:
+            from loadData.observation_sampling import BandMetadata
+            if (not isinstance(band_metadata, BandMetadata) or
+                    any(value is not None for value in (wavelengths, fwhm, band_mask)) or
+                    wavelength_unit != "auto" or fwhm_unit != "auto"):
+                raise ValueError("Supply band_metadata as the only source of spectral metadata")
+            wavelengths, fwhm = band_metadata.wavelengths, band_metadata.fwhm
+            metadata_options.update(wavelength_unit=band_metadata.wavelength_unit,
+                                    fwhm_unit=band_metadata.fwhm_unit or "auto",
+                                    band_mask=None if all(band_metadata.valid) else band_metadata.valid,
+                                    band_metadata=band_metadata)
         if x.dim() == 3:
             height, width, bands = x.shape
             flat_x = x.reshape(height * width, bands)
