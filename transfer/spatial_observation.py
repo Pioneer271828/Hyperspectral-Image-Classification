@@ -1,22 +1,64 @@
 """Block-local resolution degradation on a fixed supervised pixel lattice."""
 
-from dataclasses import replace
+from copy import deepcopy
+from dataclasses import dataclass, replace
 from functools import lru_cache
 import math
 
 import numpy as np
 
+from loadData.observation_sampling import ObservationView
 from model.research_config import digest
 from transfer.development_blocks import array_hash
+from transfer.g3_training import Scene
 
 
 MODES = ("identity", "gaussian", "area2", "area4")
-SPEC = {
-    "identity": {"method": "identity"},
-    "gaussian": {"method": "separable_gaussian", "sigma_pixels": 1.0, "radius_pixels": 3, "boundary": "edge"},
-    "area2": {"method": "area_cell_mean_nearest", "factor": 2, "partial_cells": "retain"},
-    "area4": {"method": "area_cell_mean_nearest", "factor": 4, "partial_cells": "retain"},
-}
+
+
+def transform_spec(mode):
+    if mode == "identity":
+        return {"method": "identity"}
+    if mode == "gaussian":
+        return {"method": "separable_gaussian", "sigma_pixels": 1.0, "radius_pixels": 3, "boundary": "edge"}
+    if mode in ("area2", "area4"):
+        return {"method": "area_cell_mean_nearest", "factor": int(mode[-1]), "partial_cells": "retain"}
+    raise ValueError("Unknown spatial observation mode")
+
+
+@dataclass(frozen=True)
+class SpatialObservation:
+    scene: Scene
+    tile: dict
+    view: ObservationView
+    _receipt: dict
+    _scene_identity: tuple
+
+    @property
+    def receipt(self):
+        return deepcopy(self._receipt)
+
+    @property
+    def observation_id(self):
+        return self._receipt["observation"]
+
+    def verify(self, condition):
+        obs = self.view.observation
+        if (condition is not None and self._receipt["profile"] != "synthetic"):
+            raise ValueError("Physical intervention requires a synthetic observation")
+        partition = {"devtrain": "train", "devval": "val"}[self._receipt["role"]]
+        scene_identity = (self.scene.dataset, self.scene.classes, self.scene.plan["plan_hash"])
+        if (scene_identity != self._scene_identity or obs.plan_hash != self._scene_identity[-1]
+                or self.tile["id"] != self._receipt["tile"] or self.tile["box"] != self._receipt["box"]
+                or self.tile["partition"] != partition or obs.partition != partition
+                or self.view.bands.fingerprint != self._receipt["band_order"]
+                or array_hash(obs.spectral) != self._receipt["transformed"]
+                or array_hash(obs.coordinates) != self._receipt["coordinates"]
+                or array_hash(obs.global_ids) != self._receipt["ids"]):
+            raise ValueError("Materialized spatial observation changed after admission")
+
+    def bank_view(self):
+        return self.scene, self.tile, self.view, self.receipt
 
 
 @lru_cache(maxsize=32)
@@ -41,7 +83,7 @@ def degrade(values, mode):
             out = sum(weight * np.take(out, np.clip(indexes + shift, 0, len(indexes)-1), axis=axis)
                       for shift, weight in zip(range(-3, 4), weights, strict=True))
         return out.astype(np.float32)
-    factor = SPEC[mode]["factor"]
+    factor = transform_spec(mode)["factor"]
     y, x = (_cells(length, factor) for length in values.shape[:2])
     total = np.add.reduceat(np.add.reduceat(values.astype(np.float64), y, axis=0), x, axis=1)
     ny, nx = (np.minimum(factor, length-np.asarray(starts)) for length, starts in zip(values.shape, (y,x)))
@@ -51,8 +93,9 @@ def degrade(values, mode):
 
 
 def materialize(bank, row, bands, mode, producer):
-    if mode not in MODES:
-        raise ValueError("Unknown spatial observation mode")
+    transform = transform_spec(mode)
+    if not isinstance(producer, str) or not producer:
+        raise ValueError("Spatial observation producer required")
     scene, tile, view, original = bank.materialize(row, bands)
     old = view.observation
     # The bank has already retained the actual band subset and applied frozen per-band statistics.
@@ -61,19 +104,20 @@ def materialize(bank, row, bands, mode, producer):
     if mode != "identity":
         # Bind the original retained block and the actually transformed observation independently.
         view = replace(view, observation=replace(old, spectral=spectral))
-    body = dict(original, profile=bank.release.profile, spatial=mode, transform=dict(SPEC[mode]), producer=producer,
+    body = dict(original, profile=bank.release.profile, spatial=mode, transform=transform, producer=producer,
                 order="retain_bands_then_frozen_normalization_then_spatial",
                 transformed=array_hash(spectral), lattice="original_coordinates_and_ids",
                 physical_scale="unverified_no_gsd_conversion")
     body["observation"] = digest(body)
-    return scene, tile, view, body
+    return SpatialObservation(scene, tile, view, deepcopy(body),
+                              (scene.dataset, scene.classes, scene.plan["plan_hash"]))
 
 
 def observability(row, mode, scene_width, classes):
     """Count released labels in each cell; every other pixel is unknown."""
     y0,y1,x0,x1 = row["box"]
     h,w = y1-y0,x1-x0
-    factor = SPEC[mode].get("factor", 1)
+    factor = transform_spec(mode).get("factor", 1)
     cells = {(y//factor,x//factor): [] for y in _cells(h,factor) for x in _cells(w,factor)}
     for pixel,label in row["samples"]:
         y,x = divmod(pixel,scene_width)

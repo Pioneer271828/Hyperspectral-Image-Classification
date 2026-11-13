@@ -53,10 +53,11 @@ def fixture_conditions(view, condition, tile_id):
 
 
 def forward(model, arm, actual, *, condition=None):
-    scene, tile, view, receipt = actual
-    trace = []
-    if condition is not None and (receipt["profile"] != "synthetic" or condition not in CONDITIONS):
+    if condition is not None and condition not in CONDITIONS:
         raise ValueError("Invalid selector condition")
+    actual.verify(condition)
+    scene, tile, view = actual.scene, actual.tile, actual.view
+    trace = []
     with _measure(model.backbone.learnable_graph, "build_graph", {}, "build",
                   lambda graph: trace.append(_graph_trace(graph))):
         if condition is None or arm == "off":
@@ -96,7 +97,7 @@ def condition_audit(bank, baseline, producer):
         result[arm] = {}
         for condition in CONDITIONS:
             output, trace = forward(models[arm], arm, actual, condition=condition)
-            result[arm][condition] = dict(heads=old.heads(output, actual), trace=trace)
+            result[arm][condition] = dict(heads=old.heads(output, actual.bank_view()), trace=trace)
     for arm in ("off", "mean", "content"):
         if any(result[arm][mode] != result[arm]["matched"] for mode in CONDITIONS):
             raise ValueError("Physical intervention affected a condition-independent arm")
@@ -111,7 +112,7 @@ def condition_audit(bank, baseline, producer):
                 raise ValueError("Condition intervention did not isolate scale weights on the same Q")
     single = initialize(baseline, "single_original", 7321)
     output, trace = forward(single, "single_original", actual)
-    if (old.heads(output, actual) != result["off"]["matched"]["heads"]
+    if (old.heads(output, actual.bank_view()) != result["off"]["matched"]["heads"]
             or trace["weights"]["cnn"] != {"scales":[1], "weights":[[1.0]]}):
         raise ValueError("Single original scale differs from off")
     return dict(rows=result, synthetic_forwards=21, updates=0, single_candidate=trace)
@@ -138,17 +139,18 @@ def scan(bank, baseline, previous, producer):
                 started = perf_counter()
                 actual = materialize(bank, row, spec, spatial, producer)
                 transform_seconds.setdefault(spatial, []).append(perf_counter()-started)
+                bank_view = actual.bank_view()
                 outputs, traces = {}, {}
                 for arm in (arms if row["id"] in selected else ("off",)):
                     started = perf_counter()
                     if arm == "native":
-                        selector = old.native_selector(models[arm], actual, row, expected, 48, 19064)
-                        result, trace = old.forward(models[arm], arm, actual, selector)
+                        selector = old.native_selector(models[arm], bank_view, row, expected, 48, 19064)
+                        result, trace = old.forward(models[arm], arm, bank_view, selector)
                         reads += 1
                     else:
                         result, trace = forward(models[arm], arm, actual)
                     forward_seconds.setdefault(arm, []).append(perf_counter()-started)
-                    outputs[arm], traces[arm] = old.heads(result, actual), trace
+                    outputs[arm], traces[arm] = old.heads(result, bank_view), trace
                     counts[arm] = counts.get(arm, 0) + 1
                 if spatial == "identity" and (row["id"], band) in old_rows:
                     prior = old_rows[(row["id"], band)]
@@ -161,7 +163,7 @@ def scan(bank, baseline, previous, producer):
                 if "metadata" in outputs and (outputs["metadata"] != outputs["mean"]
                                                or outputs["joint"] != outputs["content"]):
                     raise ValueError("Unknown real metadata did not use established fallback")
-                rows.append(dict(band=band, spatial=spatial, observation=actual[-1], outputs=outputs, graphs=traces,
+                rows.append(dict(band=band, spatial=spatial, observation=actual.receipt, outputs=outputs, graphs=traces,
                                  sparse=observability(row, spatial, release.shape[1], release.classes)))
     representative = next(row for row in bank.rows.values() if row["id"] in selected)
     benchmark = {}

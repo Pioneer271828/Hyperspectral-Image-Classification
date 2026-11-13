@@ -15,7 +15,7 @@ from transfer.development_bank import _atomic_new
 from transfer.development_bank_consumers import heads
 from transfer.g3_training import state_hash
 from transfer.spatial_multiscale import ARMS, forward, initialize
-from transfer.spatial_observation import MODES, SPEC, materialize
+from transfer.spatial_observation import MODES, materialize, transform_spec
 from transfer.xuzhou_multiscale_audit import _exact
 
 
@@ -36,7 +36,8 @@ def contract(bank, seed, arm, producer):
         spatial, band = VALIDATION[i % len(VALIDATION)]
         event.update(view=band, spatial=spatial, condition="matched")
     return dict(original, kind=FORMAT, arm=arm, producer=producer,
-                exposure=exposure, validation_views=[list(pair) for pair in VALIDATION], transforms=deepcopy(SPEC),
+                exposure=exposure, validation_views=[list(pair) for pair in VALIDATION],
+                transforms={mode: transform_spec(mode) for mode in MODES},
                 initialization=parent._initial(model, baseline),
                 parameter_count=sum(p.numel() for p in model.parameters()))
 
@@ -76,9 +77,10 @@ class Run(parent.Run):
             for spatial, bands in VALIDATION:
                 actual = self._view(row, bands, spatial)
                 predictions, trace = forward(self.model, self._contract["arm"], actual, condition="matched")
-                labels = parent._targets(row, actual)
+                bank_view = actual.bank_view()
+                labels = parent._targets(row, bank_view)
                 rows.append(dict(tile=row["id"], view=bands, spatial=spatial, clock=step,
-                                 observation=actual[-1]["observation"], heads=heads(predictions, actual),
+                                 observation=actual.observation_id, heads=heads(predictions, bank_view),
                                  scores=_details(predictions, labels), graph=trace))
         nll = sum(r["scores"]["fused"]["nll_sum"] for r in rows)
         count = sum(r["scores"]["fused"]["count"] for r in rows)
@@ -98,10 +100,11 @@ class Run(parent.Run):
         self.optimizer.zero_grad(set_to_none=True)
         actual = self._view(row, event["view"], event["spatial"])
         out, trace = forward(self.model, self._contract["arm"], actual, condition=event["condition"])
-        target = parent._targets(row, actual)
+        bank_view = actual.bank_view()
+        target = parent._targets(row, bank_view)
         if not (target > 0).any():
             raise ValueError("Synthetic observation lost its released training samples")
-        classes = actual[0].classes
+        classes = actual.scene.classes
         mask = (target > 0)[:,None].expand(-1,classes).float()
         onehot = torch.nn.functional.one_hot((target-1).clamp_min(0), classes).float()*mask
         loss = probability_loss_components(out, onehot, mask)
@@ -113,7 +116,7 @@ class Run(parent.Run):
         gradient = {key: None if named[key].grad is None else float(named[key].grad.abs().sum()) for key in self.added}
         self.optimizer.step()
         fresh = {key: dict(gradient_l1=gradient[key], changed=before[key] != tensor_hash(named[key])) for key in self.added}
-        self._history.append(dict(**event, observation=actual[-1]["observation"], heads=heads(out, actual),
+        self._history.append(dict(**event, observation=actual.observation_id, heads=heads(out, bank_view),
                                   graph=trace, fresh=fresh, losses=detached_loss_values(loss)))
         if event["step"] in EVENTS:
             self._evaluate(event["step"])
@@ -145,6 +148,7 @@ class Run(parent.Run):
 
 def execute(bank, registered, phase, target, producer, prior=None):
     run = Run(bank, registered, producer)
+    registered = run.contract
     start,end = {"full":(0,STEPS), "prefix":(0,PREFIX), "resume":(PREFIX,STEPS), "completed":(STEPS,STEPS)}[phase]
     if (start > 0) != (prior is not None) or target.exists():
         raise ValueError("Spatial stage needs its exact predecessor and unused destination")

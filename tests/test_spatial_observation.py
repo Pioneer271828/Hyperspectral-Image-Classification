@@ -68,10 +68,10 @@ class SpatialObservationTests(TestCase):
         subset = fixtures._condition("even_retained_positions")
         identity = spatial.materialize(opened,row,subset,"identity","test")
         mode = spatial.materialize(opened,row,subset,"gaussian","test")
-        self.assertEqual(mode[-1]["positions"],[0,2,4,6])
+        self.assertEqual(mode.receipt["positions"],[0,2,4,6])
         for key in ("coordinates","ids","statistics","samples"):
-            self.assertEqual(mode[-1][key],identity[-1][key])
-        self.assertNotEqual(mode[-1]["observation"],identity[-1]["observation"])
+            self.assertEqual(mode.receipt[key],identity.receipt[key])
+        self.assertNotEqual(mode.observation_id,identity.observation_id)
         model = fixtures._baseline(opened.release,64)
         graph = model.backbone.learnable_graph
         with patch.object(graph.__class__, "build_graph", autospec=True,
@@ -83,7 +83,7 @@ class SpatialObservationTests(TestCase):
         self.assertFalse(np.array_equal(first.detach().numpy(),second.detach().numpy()))
         self.assertEqual(a["grid"],b["grid"])
         self.assertFalse(model.backbone.adapter._eval_attention_cache)
-        self.assertFalse(mode[2].observation.spectral.flags.writeable)
+        self.assertFalse(mode.view.observation.spectral.flags.writeable)
         with patch.object(opened,"materialize",side_effect=AssertionError("read invalid request")):
             with self.assertRaises(ValueError):
                 spatial.materialize(opened,row,subset,"bad","test")
@@ -102,6 +102,33 @@ class SpatialObservationTests(TestCase):
         source = fixtures._baseline(opened.release,64)
         evidence = multi.condition_audit(opened,source,"test")
         self.assertEqual(evidence["synthetic_forwards"],21)
+
+    def test_public_transform_and_observation_aliases(self):
+        opened = self.bank()
+        row = opened.role_rows("devtrain")[0]
+        cube = np.arange(15,dtype=np.float32).reshape(3,5,1)
+        spatial.transform_spec("area4")["factor"] = 2
+        self.assertEqual(float(spatial.degrade(cube,"area4")[-1,-1,0]),9.)
+        actual = spatial.materialize(opened,row,{"mode":"none"},"area2","test")
+        receipt = actual.receipt
+        receipt["profile"] = "fixed"
+        receipt["transform"]["factor"] = 4
+        receipt["box"][0] += 1
+        self.assertEqual(actual.receipt["profile"],"synthetic")
+        self.assertEqual(actual.receipt["transform"]["factor"],2)
+        self.assertEqual(actual.receipt["box"],row["box"])
+        model = multi.initialize(fixtures._baseline(opened.release,64),"metadata",7321)
+        multi.forward(model,"metadata",actual,condition="matched")
+        with patch.object(model.backbone.learnable_graph.__class__,"build_graph",autospec=True,
+                          side_effect=AssertionError("changed observation reached graph")):
+            with patch.dict(actual.tile,partition="val"):
+                with self.assertRaises(ValueError):
+                    multi.forward(model,"metadata",actual,condition="matched")
+            spectra = actual.view.observation.spectral
+            spectra.setflags(write=True)
+            spectra[0,0,0] += 1
+            with self.assertRaises(ValueError):
+                multi.forward(model,"metadata",actual,condition="matched")
 
     def test_contract_and_checkpoint_reject_before_observation(self):
         opened = self.bank()
