@@ -21,9 +21,8 @@ POLICY = "wp10-static-int8-onednn-frozen-v1"
 class OneDNNPointConv(nn.Module):
     """Keep the exact packed WP10 affine contract and invoke the CPU U8/S8 kernel."""
 
-    def __init__(self, native, oracle):
+    def __init__(self, native):
         super().__init__()
-        self.oracle = oracle
         p = frozen_parameters(native)
         if not torch.backends.mkldnn.is_available() or not torch.backends.mkldnn.enabled:
             raise ValueError("oneDNN must be enabled for the optional backend")
@@ -34,7 +33,7 @@ class OneDNNPointConv(nn.Module):
         self.output_zero = int(p["output_zero"].item())
         self.weight_scales = p["weight_scales"].float()
         self.weight_zero = torch.zeros_like(self.weight_scales, dtype=torch.int64)
-        self.bias = p["bias"]
+        self.bias = None if p["bias"] is None else p["bias"].detach().clone()
         weight = p["weight"][:, :, None, None].contiguous()
         self.packed = torch.ops.onednn.qconv_prepack(weight, self.weight_scales, self.input_scale,
                                                     self.input_zero, [1, 1], [0, 0], [1, 1], 1, None)
@@ -49,8 +48,10 @@ class OneDNNPointConv(nn.Module):
         scale, zero = self.input_scale, self.input_zero
         # Keep the legacy reduced-range quantizer, including float multiplication/tie behavior.
         q = torch.quantize_per_tensor(x.clamp(-zero*scale, (127-zero)*scale), scale, zero, torch.quint8)
-        codes = q.int_repr().contiguous(memory_format=torch.channels_last)
-        return torch.ops.onednn.qconv2d_pointwise(codes, scale, zero, self.packed, self.weight_scales,
+        return self.integer_conv(q.int_repr().contiguous(memory_format=torch.channels_last))
+
+    def integer_conv(self, codes):
+        return torch.ops.onednn.qconv2d_pointwise(codes, self.input_scale, self.input_zero, self.packed, self.weight_scales,
                     self.weight_zero, self.bias, [1, 1], [0, 0], [1, 1], 1,
                     self.output_scale, self.output_zero, torch.uint8, "none", [], "")
 
@@ -71,25 +72,26 @@ def convert_backend(native, oracle, *, enabled=False):
         raise ValueError("The backend consumes only a frozen native integer checkpoint")
     paths = plan["contract"]["paths"]
     # Build all replacements first. Failure leaves the original model unmodified.
-    replacements = {path: OneDNNPointConv(native.get_submodule(path), oracle) for path in paths}
+    replacements = {path: OneDNNPointConv(native.get_submodule(path)) for path in paths}
     result = deepcopy(native)
     for path, operator in replacements.items():
         _replace(result, path, operator)
     return result.eval()
 
 
-def register_backend(package, path, oracle):
+def register_backend(package, path, oracle, *, native=None):
     """Store only an authenticated native package reference and backend provenance."""
-    native = load_package(package)
+    native = load_package(package) if native is None else native
     plan = validate_plan(native)
-    convert_backend(native, oracle, enabled=True)
+    if type(oracle) is not TorchAOAffine or plan["phase"] != "integer":
+        raise ValueError("Attested backend and frozen integer plan required")
     path = external_directory(path)
     return dev._json_new(path, dict(policy=POLICY, package=package,
         calibration=digest(plan), torch=TORCH_VERSION, torchao=TORCHAO_COMMIT,
         quantized_engine=torch.backends.quantized.engine))
 
 
-def load_backend(pin, oracle, *, enabled=False):
+def load_backend(pin, oracle, *, enabled=False, native=None):
     value = admission.read(pin)
     if (value["policy"] != POLICY or value["torch"] != TORCH_VERSION or value["torchao"] != TORCHAO_COMMIT
             or value["quantized_engine"] != torch.backends.quantized.engine
@@ -97,7 +99,12 @@ def load_backend(pin, oracle, *, enabled=False):
         raise ValueError("Invalid optional backend sidecar")
     if type(enabled) is not bool or (enabled and type(oracle) is not TorchAOAffine):
         raise ValueError("Explicit attested backend or native execution required")
-    native = load_package(value["package"])
+    if native is None:
+        native = load_package(value["package"])
+    else:
+        from compression.precision_cost import _state_identity
+        if _state_identity(native) != value["package"]["state"]:
+            raise ValueError("In-memory native state differs from the backend package")
     if digest(validate_plan(native)) != value["calibration"]:
         raise ValueError("Frozen calibration differs from registered backend")
     return convert_backend(native, oracle, enabled=enabled)

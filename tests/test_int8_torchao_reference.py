@@ -11,6 +11,13 @@ import torch
 from torch import nn
 
 from compression.int8 import CalibratedMatrix
+from compression.int8_torchao_onednn import OneDNNPointConv, convert_backend, load_backend, register_backend
+from compression.int8_model import calibrate_model, calibration_contract, convert_model
+from compression.precision_fallback import LAYER_ORDER
+from compression.precision_recovery_audit import independent_predictions, save_package
+from model.research_config import digest
+from tests.test_precision_recovery import fixture
+from transfer import matched_route_admission as admission, registered_development as dev
 from compression.int8_torchao_reference import TorchAOAffine, compare_layer
 from research_runtime import write_json
 
@@ -73,6 +80,11 @@ class FrozenAffineTests(unittest.TestCase):
                     act_native, act, accum, bytes_native, bytes_oracle, native_out, real = compare_layer(native, x, self.oracle)
                 calls = {e.key: e.count for e in profiler.key_averages()}
                 self.assertEqual(calls["quantized::conv2d"], 1)
+                backend = OneDNNPointConv(native)
+                with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as actual_kernel:
+                    backend_codes = backend.codes(x)
+                self.assertEqual({e.key: e.count for e in actual_kernel.key_averages()}["onednn::qconv2d_pointwise"], 1)
+                self.assertLessEqual(int((backend_codes.int() - bytes_native.int()).abs().max()), 1)
                 self.assertTrue(torch.equal(act_native, act))
                 self.assertEqual((int(act.min()), int(act.max())), (0, 127))
                 weight = native.kernel.weight().int_repr().numpy().reshape(outputs, width)
@@ -92,7 +104,46 @@ class FrozenAffineTests(unittest.TestCase):
                 rows[kind] = dict(input_elements=act.numel(), output_elements=bytes_native.numel(),
                     output_code_mismatches=int((bytes_native != bytes_oracle).count_nonzero()),
                     max_output_code_difference=codes, max_dequantized_error=maximum, dispatch=calls,
+                    oneDNN_output_code_mismatches=int((backend_codes != bytes_native).count_nonzero()),
                     unbiased_or_biased="bias" if bias else "no_bias")
         report = os.environ.get("WP10_TORCHAO_FIXTURE_EVIDENCE")
         if report:
             write_json(Path(report), rows)
+
+    def test_three_arms_on_both_class_counts_and_reloaded_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for classes in (9, 22):
+                root = Path(tmp) / str(classes)
+                root.mkdir()
+                spec = admission.read(fixture(root / "inputs", classes))
+                dense = dev._load_source(spec["weights"], spec["sidecar"])
+                scene, record, _ = dev.load_development(spec["development"])
+                roles = [r["id"] for r in record["roles"] if r["role"] == "devtrain"][:2]
+                self.assertIs(convert_backend(dense, None), dense)
+                for arm, paths in zip(("qat-first", "qat-second", "qat-both"),
+                                      (LAYER_ORDER[:1], LAYER_ORDER[1:], LAYER_ORDER), strict=True):
+                    with self.subTest(classes=classes, arm=arm):
+                        calibration = calibration_contract(dense, scene, record, paths, roles, qat=True)
+                        frozen = calibrate_model(dense, scene, record, paths=paths, contract=calibration,
+                                                 expected_hash=digest(calibration))
+                        native = convert_model(frozen)
+                        package = save_package(native, arm, root / f"{arm}.pt")
+                        pin = register_backend(package, root / f"{arm}.json", self.oracle)
+                        with self.assertRaisesRegex(ValueError, "Attested|attested"):
+                            load_backend(pin, None, enabled=True)
+                        off = load_backend(pin, None)
+                        with patch.object(CalibratedMatrix, "observe", side_effect=AssertionError("recalibration")):
+                            model = load_backend(pin, self.oracle, enabled=True)
+                            expected = independent_predictions(off, scene, record)
+                            actual = independent_predictions(model, scene, record)
+                        self.assertEqual(actual["predictions"], expected["predictions"])
+                        self.assertEqual(len(actual["targets"]), 5*classes)
+                        for head in expected["probabilities"]:
+                            for a, b in zip(expected["probabilities"][head], actual["probabilities"][head], strict=True):
+                                np.testing.assert_allclose(b, a, atol=1e-6, rtol=1e-5)
+                        with patch("compression.int8_torchao_onednn.OneDNNPointConv", side_effect=ValueError("pack failed")):
+                            with self.assertRaisesRegex(ValueError, "pack failed"):
+                                convert_backend(off, self.oracle, enabled=True)
+                            self.assertIs(convert_backend(off, None), off)
+                        with self.assertRaises(ValueError):
+                            load_backend(dict(pin, sha256="0"*64), self.oracle, enabled=True)

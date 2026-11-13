@@ -205,7 +205,7 @@ def startup(req):
     if req["mode"] == "onednn":
         oracle, attestation = measure(lambda: TorchAOAffine(req["provider"]))
         # The sidecar is authenticated before replacing any native module.
-        model, conversion = measure(lambda: load_backend(req["backend"], oracle, enabled=True))
+        model, conversion = measure(lambda: load_backend(req["backend"], oracle, enabled=True, native=model))
     import io
     tiles, read = measure(lambda: [ResidentPrecisionTile(**row) for row in torch.load(
         io.BytesIO(dev._read(req["resident"])), weights_only=True, map_location="cpu")])
@@ -259,7 +259,7 @@ def main():
             v["backend_max_code_error"] <= 1 for v in layers.values())
         loaded[arm] = model
         if admissible:
-            pin = register_backend(packages[arm], out / (arm + "-backend.json"), provider)
+            pin = register_backend(packages[arm], out / (arm + "-backend.json"), provider, native=native[arm])
             if hashes(sweep(load_backend(pin, provider, enabled=True), tiles)) != row["probability_hashes"]:
                 raise ValueError("Reconstructed backend changed the output")
             pins_backend[arm] = pin
@@ -286,6 +286,8 @@ def main():
         "versus_same_budget_fp32_guards"]["fused"]["passes_metric_guards"]
     fallback = "qat-both" if both else next((f"qat-{name}" for name, allowed in chosen.items() if allowed), "fp32")
     receipt = dict(commit=code["commit"], provider=TORCHAO_COMMIT, scope=pins, protected=len(protected)+len(pins),
+        packaged_endpoints=packages, original_dense_package={k: reg["source"][k] for k in ("weights", "sidecar")},
+        old_ternary_authenticated_only=True,
         calibration_role="devtrain_frozen", calibration_tiles=reg["calibration_tiles"],
         calibration_timing={k: reg["initial"][k]["preparation_seconds"] for k in INT8_ARMS},
         historical_precision_steps=reg["budget"], historical_training_updates=reg["maximum_updates"],
@@ -299,6 +301,8 @@ def main():
     resident_pin = dev._pin(resident_path)
     timing = {arm: pair({"native": lambda: sweep(native[arm], tiles), "onednn": lambda: sweep(loaded[arm], tiles)})
               for arm in INT8_ARMS}
+    dense_controls = {arm: pair({"same_budget_fp32": lambda: sweep(native["fp32"], tiles),
+                                 "onednn": lambda: sweep(loaded[arm], tiles)}) for arm in INT8_ARMS}
     workers = {}
     for arm, backend in pins_backend.items():
         rows = []
@@ -319,7 +323,7 @@ def main():
         workers[arm] = rows
     admission.check_pins([*pins.values(), *protected, resident_pin])
     require_frozen_code(code)
-    write_json(out / "cost.json", dict(resident=timing, isolated_startup=workers,
+    write_json(out / "cost.json", dict(resident=timing, versus_same_budget_fp32=dense_controls, isolated_startup=workers,
         package_bytes={arm: dict(native=packages[arm]["bytes"], with_backend_sidecar=packages[arm]["bytes"] +
                                 Path(pin["path"]).stat().st_size) for arm, pin in pins_backend.items()},
         historical_cost=cost["startup_summary"],
