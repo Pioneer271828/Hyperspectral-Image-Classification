@@ -1313,7 +1313,15 @@
       "evidence": "Issue451/PR452，整改tested d444f4beb0ab84146a1355d0d7d870392b46cf17。恢复历史WP07源文件原blob，旧课程4子例修复前拒绝、后通过，12专项与50相关回归无跳过。4真实块8视图168头哈希与初版逐项一致，原Xuzhou42头及完整raw-only图回执一致。WP12旧10表通过，真实优化/rawGT/query/新标签均0",
       "remaining": "PaviaU DEVVAL_BOUNDED_ARRAY_NOT_PUBLISHED。真实机制收益、独立空间和GPU待验。WP05双卡未达标，2400待资格、180000暂停；WP04暂缓，WP11独立标签BLOCKED",
       "report": "research/reports/WP02_WP05_WP07_WP08_WP12_真实开发块认证与零更新接入_20261113.md",
-      "chat_report": "两真实场景与独立9/22类工程夹具通过。主审发现的历史兼容、预选绑定和恢复读取顺序均已远程复验，待复审"
+      "chat_report": "主审复核三项整改、fix01归档21成员及历史失败与复验，通过开发块准入和零更新范围。Issue451 closed/completed，PR452 ready未合并"
+    },
+    {
+      "id": "WP02 完整授权开发块银行与 WP05/WP07/WP08 可恢复消费",
+      "state": "Xuzhou和HongHu全部授权开发块发布，PaviaU仅两训练观测可读；合成消费恢复通过",
+      "evidence": "Issue453/PR454，tested 0f4006e9b817fdcce50a86507e3c6d554b3f01f3。真实351块逐原值核对，482三头前向和20 capture，168旧概率一致。24工程案例1152合成更新、96阶段、完成重入0。8专项与62相关回归无跳过，WP12旧十表通过，真实优化/rawGT/query/新增标签0",
+      "remaining": "PaviaU 125训练/41验证缺有界载荷；Xuzhou/HongHu 24步草案不足覆盖全部带标注训练块。真实训练效果、独立地块和GPU待验。WP05 2400待资格、180000暂停；WP04暂缓、WP11独立标签BLOCKED",
+      "report": "research/reports/WP02_WP05_WP07_WP08_完整授权开发块银行与恢复_20261113.md",
+      "chat_report": "已核HongHu 22类K5/V5及第21类同父块限制。新真实仅零更新，矩阵为合成工程，待主审"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
