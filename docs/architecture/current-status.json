@@ -1363,7 +1363,15 @@
       "evidence": "Issue463，运行 686c394bcd2751d1aa73b71d81d938b6b2aa640f，独立审计 6900569fc5b00ddf13a5efa7efb31db805c517cb；162个概率混淆复算一致，候选相对原生−0.0057pp、等带数控制0.0000pp。",
       "remaining": "保持原生VCA，12步增益门槛未达；独立确认和生产准入待验，后续不同假设另行登记。",
       "report": "research/reports/OSS_CR_按种子调度真实短测与独立复盘_20261113.md",
-      "chat_report": "主审授权自然合格RTX4090按种子绑定，VCA固定坐标实验工程通过，真实短测保留负结果。"
+      "chat_report": "主审接受Draft 464/465的资源调度、108更新与162矩阵独立复算；12步结论限于有界筛选，保留原生VCA，旧180000暂停。"
+    },
+    {
+      "id": "WP05-META 可信光谱元数据接入与真实只读核对",
+      "state": "独立可信表入口、真实裁剪与检查点绑定完成；三景历史近似路径只读核对通过",
+      "evidence": "Issue466，tested 754c9b97ecd5a86f0c2900632deb9d51ab938fa5；CPU 4/GPU 7/回归69；三景12个train/val视图同设备旧路径逐位一致，新增真实更新0。",
+      "remaining": "逐带中心、FWHM与发布映射证据缺失；候选冻结生产字节门槛未过。HongHu三组13500草案待主审和资格，旧180000暂停。",
+      "report": "research/reports/WP05META_可信光谱元数据与真实只读核对_20261113.md",
+      "chat_report": "继续原固定全局坐标与历史近似默认。新草案等待独立登记，未读取原GT或留出。"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",

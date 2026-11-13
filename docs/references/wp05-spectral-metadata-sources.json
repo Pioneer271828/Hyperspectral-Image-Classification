@@ -1,0 +1,71 @@
+{
+  "schema": "wp05-metadata-source-review-v1",
+  "issue": 466,
+  "reviewed_on": "2026-11-13",
+  "loader": "loadData/data_read.py:readWavelengths/read_band_metadata",
+  "historical_snapshot": "joint-honghu-20261103-issue97",
+  "prepared_manifest_sha256": "414084cb22aef1c1866bb6512fa1f99c4397425de625c6fc2608ce0fb3eb1b6b",
+  "prepared_commit": "592e24153bdd2e2ea4dcde498da5b1a2f50ad9a1",
+  "approved_calibrations": [],
+  "scenes": {
+    "paviaU": {
+      "sensor": "ROSIS-03",
+      "original_nominal_bands": 115,
+      "retained_bands": 103,
+      "published_range_nm": [430, 860],
+      "local_range_nm": [471.4912414550781, 856.2280883789062],
+      "historical_reconstruction": "115 equally spaced nominal points, project-retained indices 11..113; deletion mapping is a code assumption, not a verified publisher mapping",
+      "local_image_sha256": "28447fa87f7a5797845e9a189c0da85e23b1d06a4ba7361e5ff44efbf834d2fb",
+      "local_prepared_sha256": "4f6ca5f2c45ce17086ea8387dc61345cea301a33e687182b0c9421222a03c476",
+      "historical_wave_sha256": "5b690d8a7f6755e238a856db8b88bb86f9a5fdafffd301f57c8b443628ef8d94",
+      "wavelength_quality": "approximate",
+      "fwhm": null,
+      "verified_retained_band_map": null,
+      "sources": [
+        {"url": "https://www.ehu.eus/ccwintco/index.php?title=Hyperspectral_Remote_Sensing_Scenes", "role": "Gamba-contributed GIC dataset distribution", "version": "public listing inspected 2026-11-13", "sha256": null, "byte_fetch": "HTTP 403", "license": "no explicit calibration-table license confirmed", "per_band": false},
+        {"url": "https://elib.dlr.de/8810/", "role": "instrument team description; nominal 4 nm sampling", "version": "Gege et al., 1998", "sha256": "694e67476559ef638e1b22ddec739b069aa5f734ee8f660b3468c81a734ed1f3", "license": "reference only", "per_band": false}
+      ]
+    },
+    "xuzhou": {
+      "sensor": "airborne HySpex, model and acquisition calibration unconfirmed",
+      "original_nominal_bands": null,
+      "retained_bands": 436,
+      "published_range_nm": [415, 2508],
+      "local_range_nm": [415, 2508],
+      "historical_reconstruction": "436 equally spaced positions over the stated endpoints; original-band mapping unavailable",
+      "local_image_sha256": "3733fd46e7bb17b9db037700c36e245feb915326749abf5d8fc6ce0d6234e3c3",
+      "local_prepared_sha256": "d16ddc44da31fec6c76afdad467ff124ddc35494e5a932e32cc336485c59c747",
+      "historical_wave_sha256": "3953a74caabbe705d4ef87c2283bd0112977c3996cf0f33bd0bb6b20c41f67fa",
+      "wavelength_quality": "approximate",
+      "fwhm": null,
+      "verified_retained_band_map": null,
+      "sources": [
+        {"url": "https://api.datacite.org/dois/10.21227/t3c9-h862", "role": "publisher-deposited dataset metadata; 2014 acquisition, 436 retained", "version": "DOI deposited 2018-11-03, record updated 2020-09-20", "sha256": "2b557937c24111886b83fabeacca91ddf9620938d256fde039b77317281a94b4", "license": "CC BY 4.0 as declared in this DOI record; exact header/version binding not established", "per_band": false},
+        {"file": "Xuzhou/Xuzhou_Readme.txt", "role": "local release instructions list image.hdr; this snapshot contains no such header", "sha256": "f5701ba89e56a570822adbf53234096882d8b09d1850313e8f78ac85e61cb3d7", "license": "local review only", "per_band": false},
+        {"url": "https://www.hyspex.com/use-cases-application-notes/airborne-base-metal-exploration", "role": "manufacturer context for a different legacy airborne campaign", "version": "page inspected 2026-11-13", "sha256": null, "license": "reference only", "per_band": false}
+      ]
+    },
+    "whu-honghu": {
+      "sensor": "Headwall Nano-Hyperspec, 17 mm, 2017-11-20",
+      "original_nominal_bands": 270,
+      "retained_bands": 270,
+      "published_range_nm": [400, 1000],
+      "local_range_nm": [400, 1000],
+      "historical_reconstruction": "270 equally spaced positions over nominal range; delivered indices are not certified detector indices",
+      "local_image_sha256": "394eebb36e70931711b02d127f73c641ad67a83a5bbfc5294b695b2f7336dfce",
+      "local_prepared_sha256": "74e2897291efe35d6d4a3d566989ade4f184ba42930e6f1233e1e4ed602c3d8f",
+      "historical_wave_sha256": "92288f2c639285174e2994e83204e32e95e5287716304efea361a9d53117a97e",
+      "wavelength_quality": "approximate",
+      "fwhm": null,
+      "verified_retained_band_map": null,
+      "sources": [
+        {"url": "https://rsidea.whu.edu.cn/e-resources.html", "role": "publishing lab data release", "version": "2020-10-08", "sha256": null, "byte_fetch": "HTTP 444; public index visible", "license": "separate calibration-table license unconfirmed", "per_band": false},
+        {"url": "https://arxiv.org/pdf/2012.13920v2", "role": "author paper, section 2 and table 1", "version": "v2 2021-03-30", "sha256": "5031b14455013100b21a9640a1354f4243c3277777f6bf3fc1c3b75f27b76a30", "license": "paper terms do not license flight calibration", "per_band": false},
+        {"url": "https://www.hyperspectral.me/wp-content/uploads/2021/06/Nano-Hyperspec_Oct19.pdf", "role": "Headwall product sheet copy; 2.2 nm nominal dispersion, 6 nm nominal slit-image FWHM", "version": "October 2019", "sha256": "4b86ff53e9db80c03c3741747c8ce5c4b72cc4deea27af8ec4699d8d1f3e679d", "license": "copyright Headwall Photonics, reference only", "per_band": false},
+        {"url": "https://github.com/RSIDEA-WHU2020/FreeNet/tree/2cbfcd8216f1aa8a55720cf064a8b7475ccc993f", "role": "lab repository tree; no wavelength/FWHM/header files located", "version": "2020-06-05", "license": "GPL-3.0 code only; no file reused", "per_band": false}
+      ]
+    }
+  },
+  "oss_closeout": "docs/references/oss-c-source-closeout.json",
+  "decision": "No scene-specific per-band center/FWHM plus retained-band mapping and usable source terms were verified. New optical data not downloaded; historical vectors retain approximate quality."
+}
