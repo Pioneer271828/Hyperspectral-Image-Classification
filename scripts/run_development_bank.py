@@ -170,17 +170,21 @@ def audit_fixture(root, matrix_pin, output, code):
         synthetic_updates=sum(row["updates"] for row in results.values()), real_updates=0))
 
 
-def supplement(root, inventory, scans, matrix, output, code):
+def supplement(root, inventory, scans, matrix, output, code, producer):
     old = _read(original.historical(root, "wp12"), root)
     tables = {**old["preserved"], **old["tables"]}
     original._protect(root, tables.values())
     if len(tables) != 10 or (old["old_real_models"], old["old_real_heads"]) != (65, 193):
         raise ValueError("Historical WP12 table roster differs")
     scope = _read(_pin(inventory), root)
-    result = {_read(_pin(path), root)["scene"]: _read(_pin(path), root) for path in scans}
+    loaded = [_read(_pin(path), root) for path in scans]
+    result = {row["scene"]: row for row in loaded}
     synthetic = _read(matrix, root)
-    if (set(scope["scenes"]) != set(SCENES) or set(result) != set(SCENES)
-            or any(row["real_updates"] for row in result.values()) or synthetic["real_updates"]):
+    if (set(scope["scenes"]) != set(SCENES) or set(result) != set(SCENES) or len(loaded) != len(result)
+            or scope["code"] != producer or synthetic["code"] != producer
+            or synthetic["synthetic_updates"] != 1152 or len(synthetic["cases"]) != 24
+            or synthetic["real_updates"] or any(row["code"] != producer or
+               any(row[key] for key in ("real_updates", "raw_gt", "query", "new_labels")) for row in loaded)):
         raise ValueError("Full scene and zero-update evidence required")
     output.mkdir()
     table = output / "protocol-scope.csv"
@@ -192,22 +196,39 @@ def supplement(root, inventory, scans, matrix, output, code):
                 c = row["coverage"][role]
                 csv_out.writerow((name, role, c["authorized_blocks"], c["publishable_blocks"],
                                   min(c["publishable_per_class"]) > 0, 0))
+    by_class = output / "released-class-coverage.csv"
+    with by_class.open("x", newline="", encoding="utf-8") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("scene", "role", "class", "released", "readable_released", "curator_available"))
+        for name, row in scope["scenes"].items():
+            available = row["identity"]["custody"].get("curator_available_per_class", {})
+            for role, coverage in row["coverage"].items():
+                authorized = coverage["released_per_class"]
+                readable = coverage["publishable_per_class"]
+                counts = available.get(role, [""] * len(authorized))
+                for class_id, values in enumerate(zip(authorized, readable, counts, strict=True), 1):
+                    writer.writerow((name, role, class_id, *values))
     requests = {}
     for name, row in scope["scenes"].items():
         authority = row["identity"]["custody"]
         missing = [c for c, role in row["coverage"].items() if min(role["publishable_per_class"]) == 0]
-        requests[name] = dict(bank=result[name]["bank"], role_coverage=row["coverage"],
+        intake = custody.PROVIDERS[name](root)
+        registered_bank = bank.Bank(result[name]["bank"], root, intake.release)
+        if registered_bank.identity != row["identity"] or result[name]["scene"] != name:
+            raise ValueError("Inventory and consumed bank identity differ")
+        requests[name] = dict(bank=registered_bank.pin, role_coverage=row["coverage"],
             conditions=["full", "even_retained_positions"], arms=list(consumers.ARMS),
             proposed_max_updates_per_arm=24, proposed_validation_steps=list(training.EVENTS),
             release_seed=authority["release_seed"], validation_seed=authority["validation_seed"],
             source=row["identity"]["source"], required_before_execution=[
                 "separate_authorization", "freeze_exposure_and_assert_class_visits", "confirm_validation_and_protocol_scope",
             ], missing_roles=missing, source_has_fresh_head=authority["source_has_fresh_head"],
-            complete_training_claim=False, training_authorized=False, optimizer_budget=0)
+            maximum_proposed_updates=len(consumers.ARMS) * 24, complete_training_claim=False,
+            training_authorized=False, optimizer_budget=0)
     request = transport._json_new(output / "future-request-draft.json", dict(code=code, scenes=requests))
-    return transport._json_new(output / "supplement.json", dict(code=code, old_tables=tables,
+    return transport._json_new(output / "supplement.json", dict(code=code, producer=producer, old_tables=tables,
         old_real_models=65, old_real_heads=193, new_real_models=0, real_updates=0,
-        synthetic_engineering_updates=synthetic["synthetic_updates"], scope=_pin(table), request=request))
+        synthetic_engineering_updates=synthetic["synthetic_updates"], scope=_pin(table), class_coverage=_pin(by_class), request=request))
 
 
 def main():
@@ -232,6 +253,7 @@ def main():
             child.add_argument("--case", required=True)
             child.add_argument("--phase", required=True, choices=("full", "prefix", "resume", "completed"))
         if action == "supplement":
+            child.add_argument("--producer-commit", required=True)
             child.add_argument("--inventory", type=Path, required=True)
             child.add_argument("--scans", nargs=3, type=Path, required=True)
     args = parser.parse_args()
@@ -265,7 +287,7 @@ def main():
     elif command == "audit-fixture":
         result = audit_fixture(root, matrix, out, code)
     else:
-        result = supplement(root, args.inventory, args.scans, matrix, out, code)
+        result = supplement(root, args.inventory, args.scans, matrix, out, code, args.producer_commit)
     print(json.dumps(result), flush=True)
 
 
