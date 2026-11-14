@@ -32,6 +32,7 @@ def main(argv=None, *, intake=None):
     prepare.add_argument("--preflight", nargs=2, required=True)
     prepare.add_argument("--out", type=Path, required=True)
     prepare.add_argument("--execution", type=Path, required=True)
+    prepare.add_argument("--duties", action="store_true")
     for name in ("run", "audit"):
         action = modes.add_parser(name)
         action.add_argument("--matrix", nargs=2, required=True)
@@ -43,9 +44,15 @@ def main(argv=None, *, intake=None):
     campaign.require(code["commit"] == args.expected_commit, "Unexpected comparison source commit")
     if args.action == "prepare":
         out = external_directory(args.out)
-        result = campaign.prepare(root, out, external_directory(args.execution),
-                                  pin(args.preflight), code, engineering=intake is not None)
-        dev._json_new(out / "separate-capacity-draft.json", capacity.draft(read(result, root)))
+        from transfer import native_released_real as real
+        source = pin(args.preflight)
+        if args.duties and intake is None:
+            from transfer.native_released_duties import prepare as expand
+            source = expand(root, source, out.with_name(out.name + "-preflight"))
+        result = campaign.prepare(root, out, external_directory(args.execution), source, code,
+                                  engineering=intake is not None, design=real.DUTY if args.duties else None)
+        if not args.duties:
+            dev._json_new(out / "separate-capacity-draft.json", capacity.draft(read(result, root)))
     elif args.action == "run":
         result = campaign.run(root, pin(args.matrix), pin(args.release), code, intake=intake, cli=cli)
     elif args.action == "capacity":

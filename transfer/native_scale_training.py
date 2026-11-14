@@ -118,6 +118,8 @@ class Run:
         source = (baseline(clean["classes"],clean["seed"]) if released is None or released is native_released_training
                   else released.baseline(clean["seed"]))
         factory = initialize if self._capacity is None else self._capacity.model
+        if hasattr(released, "model_factory"):
+            factory = released.model_factory
         self.model = factory(source, clean["arm"], clean["module_seed"]).to(self.device)
         options = {} if numeric is None else {"foreach":False,"fused":False}
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=clean["learning_rate"],**options)
@@ -148,13 +150,15 @@ class Run:
         return result
 
     def _forward(self, actual, role, intervention):
-        if self._capacity is not None:
+        if hasattr(self._released, "selection_condition"):
+            condition = self._released.selection_condition(actual, self._contract)
+        elif self._capacity is not None:
             condition = self._capacity.condition(actual, self._contract["intervention"])
         else:
             condition = None if actual.receipt["synthetic_profile"] is None else condition_for(actual,intervention)
         timed = {}
         out,graph = forward(self.model,actual,self.producer,role,condition=condition,timed=timed,
-                            execution=self.execution)
+                            execution=self.execution, graph_scale=self._contract.get("registered_graph_scale"))
         self.timing["forward_seconds"] += timed["forward_seconds"]
         self.timing["graph_seconds"] += sum(timed["graph_seconds"])
         return out,graph,condition

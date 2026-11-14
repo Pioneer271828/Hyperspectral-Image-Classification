@@ -26,6 +26,19 @@ ENGINEERING = "wp07_native_released_bank_fixture_v1"
 ENGINEERING_RELEASE = "wp07_native_released_fixture_release_v1"
 
 
+DUTY = "wp07_native_released_duties_v1"
+DUTY_COMPARISONS = ((1, "off"), *((factor, arm) for factor in (2, 4) for arm in
+                    ("off", "fixed", "mean", "content", "metadata", "joint", "cnn_content", "graph_content", "constant_joint")))
+
+
+def comparisons(design):
+    if design == DUTY:
+        return DUTY_COMPARISONS
+    if design is None:
+        return COMPARISONS
+    raise ValueError("Unknown released comparison design")
+
+
 class RealReleasedRun:
     """Construct only after a separate approval pins one preflight case and destination."""
     scores = staticmethod(scores)
@@ -43,6 +56,8 @@ class RealReleasedRun:
         scene = receipt.get("scene")
         engineering = intake is not None
         schema = ENGINEERING if engineering else SCHEMA
+        self.design = receipt.get("design")
+        allowed_comparisons = comparisons(self.design)
         if (scene not in BANK_ROOTS or (not engineering and receipt.get("bank", {}).get("sha256") != BANK_ROOTS[scene])
                 or receipt.get("schema") != schema or receipt.get("objective") != LOSS
                 or receipt.get("synthetic", False) is not engineering
@@ -53,6 +68,8 @@ class RealReleasedRun:
         if len(cases) != 1 or receipt["draft"]["authorized_for_training"] is not False:
             raise ValueError("Expected the one unreleased, preregistered real case")
         case = cases[0]
+        if (case["factor"], case["arm"]) not in allowed_comparisons:
+            raise ValueError("Released case is outside its registered design")
         expected = {"schema": ENGINEERING_RELEASE if engineering else RELEASE,
                     "decision": "approved", "source_commit": code["commit"],
                     "source_hash": code["source_hash"], "preflight": preflight, "case_sha256": digest(case),
@@ -113,7 +130,7 @@ class RealReleasedRun:
         self._bank.verify_authority(self._bank.pin)
         read_pin(self._release, self._root)
         read_pin(self._preflight, self._root)
-        if ((classes, seed, arm, factor, producer) != expected or (factor, arm) not in COMPARISONS
+        if ((classes, seed, arm, factor, producer) != expected or (factor, arm) not in comparisons(self.design)
                 or code["source_hash"] != self._source_hash or code["commit"] != producer
                 or numeric is None or numeric["physical_uuid"] != self.physical_uuid
                 or numeric["protocol"] != self._protocol):
@@ -130,7 +147,9 @@ class RealReleasedRun:
         if self._case["events"] != [0, steps//2, steps] or steps % 2:
             raise ValueError("Real sparse selection clock differs from the frozen half/end budget")
         model = self.baseline(seed)
-        initial = initialize(model, arm, seed + 7321)
+        initial = self.model_factory(model, arm, seed + 7321)
+        extra = {"registered_graph_scale": 100, "design": self.design,
+                 "selector_input": "control_descriptor" if arm == "constant_joint" else "missing"} if self.design else {}
         return {"format": FORMAT, "producer": producer, "classes": classes, "seed": seed, "arm": arm,
                 "factor": factor, "supervision": MODE, "objective": LOSS, "training": train, "validation": val,
                 "steps": steps, "prefix": self._case["events"][1], "events": self._case["events"],
@@ -138,7 +157,19 @@ class RealReleasedRun:
                 "initialization": _initial(initial, model), "parameters": sum(p.numel() for p in initial.parameters()),
                 "edge": EDGE_POLICY, "synthetic": self.engineering, "selection": "first_min_released_point_fused_nll", "numeric": numeric,
                 "bank": self._bank.pin, "point_set": self._point_set, "preflight": self._preflight,
-                "release": self._release, "route": self.route, "destination": str(self._destination), "source_state": state_hash(model)}
+                "release": self._release, "route": self.route, "destination": str(self._destination), "source_state": state_hash(model),
+                **extra}
+
+    @staticmethod
+    def model_factory(baseline, arm, seed):
+        return initialize(baseline, "joint" if arm == "constant_joint" else arm, seed)
+
+    def selection_condition(self, actual, spec):
+        if spec.get("selector_input") == "control_descriptor":
+            from transfer.native_released_capacity import condition_on_bank
+
+            return condition_on_bank(actual, "constant_joint")
+        return None
 
     def materialize(self, role, event, producer):
         self._bank.verify_authority(self._bank.pin)
