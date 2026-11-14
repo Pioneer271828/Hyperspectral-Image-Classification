@@ -87,21 +87,32 @@ def contract(classes, seed, arm, producer, *, mode="mixture", numeric=None):
 
 
 class Run:
-    def __init__(self, registered, producer, *, execution=None):
+    def __init__(self, registered, producer, *, execution=None, released=None):
         numeric = None if execution is None else execution.numeric
         clean = deepcopy(registered)
-        if clean != contract(clean["classes"],clean["seed"],clean["arm"],producer,
-                             mode=clean["supervision"],numeric=numeric):
+        if released is not None:
+            from transfer import native_released_training
+            from transfer.native_released_real import RealReleasedRun
+            if released is not native_released_training and type(released) is not RealReleasedRun:
+                raise ValueError("Unknown released supervision provider")
+        expected = (contract(clean["classes"],clean["seed"],clean["arm"],producer,
+                             mode=clean["supervision"],numeric=numeric) if released is None else
+                    released.contract(clean["classes"], clean["seed"], clean["arm"], clean["factor"], producer,
+                                      numeric=numeric))
+        if clean != expected:
             raise ValueError("Native training registration, grid, supervision or producer differs")
         self._contract = clean
         self.producer = producer
         self.execution = execution
+        self._released = released
         self.device = CPU if numeric is None else torch.device(numeric["device"])
-        self.model = initialize(baseline(clean["classes"],clean["seed"]),clean["arm"],clean["module_seed"]).to(self.device)
+        source = (baseline(clean["classes"],clean["seed"]) if released is None or released is native_released_training
+                  else released.baseline(clean["seed"]))
+        self.model = initialize(source,clean["arm"],clean["module_seed"]).to(self.device)
         options = {} if numeric is None else {"foreach":False,"fused":False}
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=clean["learning_rate"],**options)
-        self._train = Fixture(clean["classes"],"devtrain")
-        self._val = Fixture(clean["classes"],"devval")
+        self._train, self._val = (("devtrain", "devval") if released is not None and released is not native_released_training
+                                  else (Fixture(clean["classes"],"devtrain"), Fixture(clean["classes"],"devval")))
         self._history, self._validation, self._selected = [], [], None
         self.timing = dict(train_update_seconds=0.,validation_seconds=0.,transform_seconds=0.,
                            forward_seconds=0.,graph_seconds=0.)
@@ -113,8 +124,13 @@ class Run:
 
     def _materialize(self, fixture, event):
         start = perf_counter()
-        result = fixture.materialize(event["tile"],event["factor"],event["band"],event["profile"],self.producer)
-        if self.execution is not None:
+        if self._released is not None:
+            result = self._released.materialize(fixture, event, self.producer)
+            actual, labels, targets = result
+            self._released.validate_observation(self._contract, actual, labels, targets, event)
+        else:
+            result = fixture.materialize(event["tile"],event["factor"],event["band"],event["profile"],self.producer)
+        if self.execution is not None and self._released is None:
             actual,labels,targets = result
             self.execution.validate_observation(self._contract["classes"],actual.receipt["role"],event,
                                                 actual,array_hash(labels),targets)
@@ -122,7 +138,7 @@ class Run:
         return result
 
     def _forward(self, actual, role, intervention):
-        condition = condition_for(actual,intervention)
+        condition = None if actual.receipt["synthetic_profile"] is None else condition_for(actual,intervention)
         timed = {}
         out,graph = forward(self.model,actual,self.producer,role,condition=condition,timed=timed,
                             execution=self.execution)
@@ -138,10 +154,14 @@ class Run:
         for event in self._contract["validation"]:
             actual,labels,targets = self._materialize(self._val,event)
             output,graph,condition = self._forward(actual,"devval",event["condition"])
+            observed = (metrics(output,actual,labels,targets,detailed=detailed) if self._released is None else
+                        self._released.scores(output, targets, detailed=detailed))
             rows.append(dict(**event,observation=actual.receipt["observation"],
-                             labels=array_hash(labels),condition_key=condition.source_key,
+                             labels=array_hash(labels),condition_key=None if condition is None else condition.source_key,
                              area=int(targets.area.sum()),heads=head_hashes(output,actual),graph=graph,
-                             scores=metrics(output,actual,labels,targets,detailed=detailed)))
+                             scores=observed))
+            if self._released is not None:
+                rows[-1]["released"] = targets.summary()
         numerator = sum(row["scores"]["fused"]["nll_sum"] for row in rows)
         denominator = sum(row["scores"]["fused"]["count"] for row in rows)
         self.timing["validation_seconds"] += perf_counter()-started
@@ -188,11 +208,14 @@ class Run:
                  for name in self._fresh}
         self.optimizer.step()
         self._history.append(dict(**event,observation=actual.receipt["observation"],labels=array_hash(labels),
-            condition_key=condition.source_key,gsd_m=condition.gsd_m,area=int(targets.area.sum()),
+            condition_key=None if condition is None else condition.source_key,
+            gsd_m=None if condition is None else condition.gsd_m,area=int(targets.area.sum()),
             supervised_area=int(mask[:,0].sum()),histogram=array_hash(targets.histogram),
             heads=head_hashes(out,actual),graph=graph,loss=detached_loss_values(terms),
             fresh={name:dict(gradient_l1=grads[name],changed=tensor_hash(named[name])!=before[name])
                    for name in self._fresh}))
+        if self._released is not None:
+            self._history[-1]["released"] = targets.summary()
         self.timing["train_update_seconds"] += perf_counter()-started
         if event["step"] in self._contract["events"]:
             self._record_validation(event["step"])
@@ -217,22 +240,27 @@ class Run:
                 or [x["step"] for x in packet["validation"]] != [x for x in self._contract["events"] if x<=cursor]
                 or any({k:a[k] for k in b}!=b for a,b in zip(packet["history"],expected,strict=True))):
             raise ValueError("Native checkpoint registration or cursor differs")
-        if self.execution is not None:
+        if self._released is not None:
+            self._released.validate_history(self._contract, packet)
+        elif self.execution is not None:
             self.execution.validate_history(self._contract,packet,cursor)
         selected = min(packet["validation"],key=lambda x:x["fused_nll"])
         if any(packet["selected"][key]!=selected[key] for key in ("step","fused_nll")):
             raise ValueError("Native checkpoint selection differs")
+        adam = packet["optimizer"]["state"]
+        if not adam or any(int(s["step"])!=cursor for s in adam.values()):
+            raise ValueError("Native Adam cursor differs")
         self.model.load_state_dict(packet["model"],strict=True)
         self.optimizer.load_state_dict(packet["optimizer"])
-        if not self.optimizer.state or any(int(s["step"])!=cursor for s in self.optimizer.state.values()):
-            raise ValueError("Native Adam cursor differs")
         self._history, self._validation, self._selected = packet["history"],packet["validation"],packet["selected"]
         _restore_rng(packet["rng"],self.device)
 
 
-def execute(registered, phase, path, producer, prior=None, *, execution=None):
-    run = Run(registered,producer,execution=execution)
+def execute(registered, phase, path, producer, prior=None, *, execution=None, released=None):
+    run = Run(registered,producer,execution=execution,released=released)
     spec = run.registered
+    if released is not None and spec.get("release") is not None:
+        released.check_destination(path)
     prefix,steps = spec["prefix"],spec["steps"]
     start,end = {"full":(0,steps),"prefix":(0,prefix),"resume":(prefix,steps),"completed":(steps,steps)}[phase]
     if (start>0)!=(prior is not None) or path.exists():
