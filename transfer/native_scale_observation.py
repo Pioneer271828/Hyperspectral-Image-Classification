@@ -154,15 +154,15 @@ def _materialize(dataset, classes, view, lattice, source, role, producer, *, pro
     return NativeObservation(dataset,classes,replace(view,observation=native),lattice,canonical_json(receipt))
 
 
-def from_bank(bank, role, tile, band_spec, factor, producer, *, edge=EDGE_POLICY):
+def from_bank(bank, role, tile, band_spec, factor, producer, *, edge=EDGE_POLICY, engineering=False):
     """Read one authorized real block. No physical or label override is accepted."""
     if role not in ("devtrain","devval") or not isinstance(producer,str) or not producer:
         raise ValueError("Bank role and producer required")
     request = deepcopy(band_spec)
     row = bank.role_row(role,tile)
     release = bank.release
-    if release.profile == "synthetic":
-        raise ValueError("Native synthetic observations require the registered generator")
+    if (release.profile == "synthetic") != engineering:
+        raise ValueError("Native bank source scope differs from its registered execution")
     lattice = Lattice.make(row["box"],release.shape[:2],factor,edge)
     scene, _, view, context = bank.materialize(row,request)
     return _materialize(scene.dataset,scene.classes,view,lattice,context,role,producer), row

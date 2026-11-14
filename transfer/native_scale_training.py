@@ -95,10 +95,19 @@ class Run:
             from transfer.native_released_real import RealReleasedRun
             if released is not native_released_training and type(released) is not RealReleasedRun:
                 raise ValueError("Unknown released supervision provider")
-        expected = (contract(clean["classes"],clean["seed"],clean["arm"],producer,
-                             mode=clean["supervision"],numeric=numeric) if released is None else
-                    released.contract(clean["classes"], clean["seed"], clean["arm"], clean["factor"], producer,
-                                      numeric=numeric))
+        self._capacity = None
+        if released is not None and released is native_released_training:
+            from transfer import native_released_capacity
+            if clean["format"] == native_released_capacity.FORMAT:
+                self._capacity = native_released_capacity
+        if self._capacity is not None:
+            expected = self._capacity.experiment(clean["classes"], clean["seed"], clean["arm"], clean["factor"],
+                                                 clean["intervention"], producer, numeric=numeric)
+        else:
+            expected = (contract(clean["classes"],clean["seed"],clean["arm"],producer,
+                                 mode=clean["supervision"],numeric=numeric) if released is None else
+                        released.contract(clean["classes"], clean["seed"], clean["arm"], clean["factor"], producer,
+                                          numeric=numeric))
         if clean != expected:
             raise ValueError("Native training registration, grid, supervision or producer differs")
         self._contract = clean
@@ -108,7 +117,8 @@ class Run:
         self.device = CPU if numeric is None else torch.device(numeric["device"])
         source = (baseline(clean["classes"],clean["seed"]) if released is None or released is native_released_training
                   else released.baseline(clean["seed"]))
-        self.model = initialize(source,clean["arm"],clean["module_seed"]).to(self.device)
+        factory = initialize if self._capacity is None else self._capacity.model
+        self.model = factory(source, clean["arm"], clean["module_seed"]).to(self.device)
         options = {} if numeric is None else {"foreach":False,"fused":False}
         self.optimizer = torch.optim.Adam(self.model.parameters(),lr=clean["learning_rate"],**options)
         self._train, self._val = (("devtrain", "devval") if released is not None and released is not native_released_training
@@ -138,7 +148,10 @@ class Run:
         return result
 
     def _forward(self, actual, role, intervention):
-        condition = None if actual.receipt["synthetic_profile"] is None else condition_for(actual,intervention)
+        if self._capacity is not None:
+            condition = self._capacity.condition(actual, self._contract["intervention"])
+        else:
+            condition = None if actual.receipt["synthetic_profile"] is None else condition_for(actual,intervention)
         timed = {}
         out,graph = forward(self.model,actual,self.producer,role,condition=condition,timed=timed,
                             execution=self.execution)
@@ -162,6 +175,8 @@ class Run:
                              scores=observed))
             if self._released is not None:
                 rows[-1]["released"] = targets.summary()
+                if hasattr(self._released, "stage_evidence"):
+                    rows[-1].update(self._released.stage_evidence(actual))
         numerator = sum(row["scores"]["fused"]["nll_sum"] for row in rows)
         denominator = sum(row["scores"]["fused"]["count"] for row in rows)
         self.timing["validation_seconds"] += perf_counter()-started
@@ -216,6 +231,8 @@ class Run:
                    for name in self._fresh}))
         if self._released is not None:
             self._history[-1]["released"] = targets.summary()
+            if hasattr(self._released, "stage_evidence"):
+                self._history[-1].update(self._released.stage_evidence(actual))
         self.timing["train_update_seconds"] += perf_counter()-started
         if event["step"] in self._contract["events"]:
             self._record_validation(event["step"])

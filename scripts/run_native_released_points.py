@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
 
 from research_runtime import code_snapshot, external_directory, require_frozen_code
-from transfer import native_released_preflight as preflight, native_released_training as released
+from transfer import native_released_preflight as preflight_api, native_released_training as released
 from transfer import native_scale_training as training, native_scale_device as device
 from transfer import p4_runtime_device as p4, registered_development as transport
 from transfer.native_scale_campaign import packet, read
@@ -28,7 +28,11 @@ def arithmetic(root, gpu):
         return
     if os.environ.get("CUDA_VISIBLE_DEVICES") != gpu or p4.UUID.fullmatch(gpu) is None:
         raise ValueError("Require the one physical GPU UUID in CUDA_VISIBLE_DEVICES")
-    leases = root / ".p4_gpu_leases"
+    shared = next((parent for parent in (root, *root.parents)
+                   if (parent / ".p4_gpu_leases").is_dir()), root)
+    leases = shared / ".p4_gpu_leases"
+    if leases.is_symlink():
+        raise ValueError("Physical GPU lease directory cannot be a symlink")
     leases.mkdir(exist_ok=True)
     with p4.lease(leases / f"{gpu}.lock"), device.arithmetic(p4.CUDA_FP64_WEIGHT, gpu) as execution:
         yield execution
@@ -95,15 +99,16 @@ def check_real_route(out, phase):
     return "full" if seen == {"full"} else {"resume": "prefix", "completed": "resume"}.get(phase)
 
 
-def real_stage(root, out, preflight, release, case, phase, code, gpu):
-    guarded = RealReleasedRun(root, preflight, case, release, out, code)
+def real_stage(root, out, preflight_pin, release, case, phase, code, gpu, *, intake=None):
+    guarded = RealReleasedRun(root, preflight_pin, case, release, out, code, intake=intake)
     if gpu != guarded.physical_uuid:
         raise ValueError("Real sparse execution GPU must match the approved release")
-    data = read(preflight, root)
-    selected, = (row for row in data["draft"]["cases"] if row["id"] == case)
+    selected = guarded.case
+    if (guarded.route == "full" and phase in ("prefix", "resume")) or (guarded.route == "split" and phase == "full"):
+        raise ValueError("Phase differs from the released route")
     out.mkdir(exist_ok=True)
     with _run_lock(out), arithmetic(root, gpu) as execution:
-        spec = guarded.contract(preflight.EXPECTED[data["scene"]][0], selected["model_seed"], selected["arm"],
+        spec = guarded.contract(guarded.classes, selected["model_seed"], selected["arm"],
                                 selected["factor"], code["commit"], numeric=execution.numeric)
         identity = out / "registration.json"
         if identity.is_file():
@@ -116,7 +121,10 @@ def real_stage(root, out, preflight, release, case, phase, code, gpu):
         state = None
         if previous:
             prior = read(transport._pin(out / f"{previous}.json"), root)
-            if prior["registration"] != spec_pin or prior["phase"] != previous:
+            if (prior["registration"] != spec_pin or prior["phase"] != previous
+                    or Path(prior["checkpoint"]["path"]) != out / f"{previous}.pt"
+                    or prior.get("updates") != {"full": spec["steps"], "prefix": spec["prefix"],
+                                               "resume": spec["steps"] - spec["prefix"]}[previous]):
                 raise ValueError("Real predecessor belongs to another phase or registration")
             state = packet(prior["checkpoint"], root)
         path = out / f"{phase}.pt"
@@ -131,7 +139,7 @@ def real_stage(root, out, preflight, release, case, phase, code, gpu):
                                    {**actual, "registration": spec_pin, "checkpoint": transport._pin(path)})
 
 
-def main():
+def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
@@ -142,7 +150,7 @@ def main():
     parser.add_argument("--release", nargs=2, metavar=("PATH", "SHA256"))
     parser.add_argument("--case")
     parser.add_argument("--phase", choices=("full", "prefix", "resume", "completed"))
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     code = code_snapshot()
     require_frozen_code(code)
     if args.expected_commit != code["commit"] or (args.gpu is not None and args.mode == "preflight"):
@@ -158,15 +166,15 @@ def main():
     if real:
         pinned = {"path": args.preflight[0], "sha256": args.preflight[1]}
         release = {"path": args.release[0], "sha256": args.release[1]} if args.release else None
-        result = real_stage(root, out, pinned, release, args.case, args.phase, code, args.gpu)
+        result = real_stage(root, out, pinned, release, args.case, args.phase, code, args.gpu, intake=intake)
     elif args.mode == "synthetic":
         out.mkdir()
         result = synthetic(root, out, code["commit"], args.gpu)
     else:
         out.mkdir()
-        rows = {scene: transport._json_new(out / (scene+".json"), preflight.scan(root, scene, code["commit"]))
-                for scene in preflight.SCENES}
-        result = transport._json_new(out / "preflight.json", {"schema": preflight.SCHEMA,
+        rows = {scene: transport._json_new(out / (scene+".json"), preflight_api.scan(root, scene, code["commit"]))
+                for scene in preflight_api.SCENES}
+        result = transport._json_new(out / "preflight.json", {"schema": preflight_api.SCHEMA,
             "producer": code["commit"], "scenes": rows, "status": "preflight_only",
             "blocked": {"paviaU": "DEVVAL_BOUNDED_ARRAY_NOT_PUBLISHED"},
             "optimization_updates": 0, "raw_gt_loaded": False, "query_accessed": False})
