@@ -9,7 +9,6 @@ from evaluation.classification_metrics import classification_metrics
 from research_runtime import tensor_hash
 from transfer.g3_training import state_hash
 from transfer.multiscale_region_graph import MultiRangeBackbone
-from transfer.native_released_points import HEADS, scores
 
 
 SCHEMA = "wp06_native_trained_region_analysis_v1"
@@ -107,6 +106,8 @@ def branch_update(x, offset, plan, operation, variable):
 
 
 def evaluate(model, actual, targets, invoke, execution, historical):
+    from transfer.native_released_points import HEADS, scores
+
     require(actual.receipt["role"] == "devval" and len(targets.points) > 0,
             "Analysis only accepts a released development endpoint")
     model.eval()
