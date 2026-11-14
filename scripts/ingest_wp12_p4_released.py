@@ -17,6 +17,9 @@ def main():
         parser.add_argument("--" + name, type=Path, required=True)
     for name in ("p4-review", "p4-release", "comparison"):
         parser.add_argument("--" + name, nargs=2, metavar=("PATH", "SHA256"))
+    extension = ("duties-prepare", "duties-audit", "dual-qual", "intervention", "fit-diagnostic")
+    for name in extension:
+        parser.add_argument("--" + name, nargs=2, metavar=("PATH", "SHA256"))
     args = parser.parse_args()
     code = code_snapshot()
     require_frozen_code(code)
@@ -28,10 +31,13 @@ def main():
         raise ValueError("Output must remain inside the authorized runs root")
     def pinned(pair):
         return {"path": str(Path(pair[0]).resolve(strict=True)), "sha256": pair[1]} if pair else None
+    pins = tuple(pinned(getattr(args, name.replace("-", "_"))) for name in extension)
+    if any(pins) and not all(pins):
+        raise ValueError("Complete native duties, qualification, intervention and diagnostics are required together")
     print(evidence.append(out, root, dev._pin(args.p4_scope), dev._pin(args.fit_template),
                           dev._pin(args.sparse), dev._pin(args.queue_receipt), code["commit"],
                           p4_review=pinned(args.p4_review), p4_release=pinned(args.p4_release),
-                          comparison=pinned(args.comparison)), flush=True)
+                          comparison=pinned(args.comparison), native_duty=pins if any(pins) else None), flush=True)
     require_frozen_code(code)
 
 
