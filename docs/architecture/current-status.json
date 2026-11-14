@@ -1171,6 +1171,14 @@
       "report": "research/reports/WP09KnownContext_开放集完整已知区域预处理工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP09完成声明"
     }
+    ,{
+      "id": "WP09 Tent 同协议适配与 OpenOOD 冻结评分",
+      "state": "可选Tent熵通过同协议无标签对照，OpenOOD MSP/EBO及对齐ROC通过冻结合成对照",
+      "evidence": "Issue473/PR474。PaviaU原24组6连续和2+4，共288预测/144无标签SGD/72统计，24重入0；432份三头数组3048192项容差通过，分类变化0，144帧独立重放。可信源v2/原E4c九组合成指标复算，OpenOOD六MSP/EBO评分及ROC一致。",
+      "remaining": "Tent原完整包装器与BN白名单及预测/复位语义不同，OpenOOD只作oracle，原型/阈值和默认保留。无真实标签/GT/query、真实准确率、独立开放集与新GPU验收；P4原双卡0/2400。",
+      "report": "research/reports/WP09_Tent同协议适配与OpenOOD冻结评分_20261114.md",
+      "chat_report": "固定上游MIT，工程和无标签范围通过，原实现继续为默认。"
+    }
   ],
   "primary_workspace": "F:/E2E_VCA",
   "execution_state": "wp05_honghu_cuda_admission_engineering_verified_device_wait",
