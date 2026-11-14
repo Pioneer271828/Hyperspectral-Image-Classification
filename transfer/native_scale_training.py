@@ -87,15 +87,23 @@ def contract(classes, seed, arm, producer, *, mode="mixture", numeric=None):
 
 
 class Run:
-    def __init__(self, registered, producer, *, execution=None):
+    def __init__(self, registered, producer, *, execution=None, released=None):
         numeric = None if execution is None else execution.numeric
         clean = deepcopy(registered)
-        if clean != contract(clean["classes"],clean["seed"],clean["arm"],producer,
-                             mode=clean["supervision"],numeric=numeric):
+        if released is not None:
+            from transfer import native_released_training
+            if released is not native_released_training:
+                raise ValueError("Unknown released supervision provider")
+        expected = (contract(clean["classes"],clean["seed"],clean["arm"],producer,
+                             mode=clean["supervision"],numeric=numeric) if released is None else
+                    released.contract(clean["classes"], clean["seed"], clean["arm"], clean["factor"], producer,
+                                      numeric=numeric))
+        if clean != expected:
             raise ValueError("Native training registration, grid, supervision or producer differs")
         self._contract = clean
         self.producer = producer
         self.execution = execution
+        self._released = released
         self.device = CPU if numeric is None else torch.device(numeric["device"])
         self.model = initialize(baseline(clean["classes"],clean["seed"]),clean["arm"],clean["module_seed"]).to(self.device)
         options = {} if numeric is None else {"foreach":False,"fused":False}
@@ -113,8 +121,13 @@ class Run:
 
     def _materialize(self, fixture, event):
         start = perf_counter()
-        result = fixture.materialize(event["tile"],event["factor"],event["band"],event["profile"],self.producer)
-        if self.execution is not None:
+        if self._released is not None:
+            result = self._released.materialize(fixture, event, self.producer)
+            actual, labels, targets = result
+            self._released.validate_observation(self._contract, actual, labels, targets, event)
+        else:
+            result = fixture.materialize(event["tile"],event["factor"],event["band"],event["profile"],self.producer)
+        if self.execution is not None and self._released is None:
             actual,labels,targets = result
             self.execution.validate_observation(self._contract["classes"],actual.receipt["role"],event,
                                                 actual,array_hash(labels),targets)
@@ -138,10 +151,14 @@ class Run:
         for event in self._contract["validation"]:
             actual,labels,targets = self._materialize(self._val,event)
             output,graph,condition = self._forward(actual,"devval",event["condition"])
+            observed = (metrics(output,actual,labels,targets,detailed=detailed) if self._released is None else
+                        self._released.scores(output, targets, detailed=detailed))
             rows.append(dict(**event,observation=actual.receipt["observation"],
                              labels=array_hash(labels),condition_key=condition.source_key,
                              area=int(targets.area.sum()),heads=head_hashes(output,actual),graph=graph,
-                             scores=metrics(output,actual,labels,targets,detailed=detailed)))
+                             scores=observed))
+            if self._released is not None:
+                rows[-1]["released"] = targets.summary()
         numerator = sum(row["scores"]["fused"]["nll_sum"] for row in rows)
         denominator = sum(row["scores"]["fused"]["count"] for row in rows)
         self.timing["validation_seconds"] += perf_counter()-started
@@ -193,6 +210,8 @@ class Run:
             heads=head_hashes(out,actual),graph=graph,loss=detached_loss_values(terms),
             fresh={name:dict(gradient_l1=grads[name],changed=tensor_hash(named[name])!=before[name])
                    for name in self._fresh}))
+        if self._released is not None:
+            self._history[-1]["released"] = targets.summary()
         self.timing["train_update_seconds"] += perf_counter()-started
         if event["step"] in self._contract["events"]:
             self._record_validation(event["step"])
@@ -217,7 +236,9 @@ class Run:
                 or [x["step"] for x in packet["validation"]] != [x for x in self._contract["events"] if x<=cursor]
                 or any({k:a[k] for k in b}!=b for a,b in zip(packet["history"],expected,strict=True))):
             raise ValueError("Native checkpoint registration or cursor differs")
-        if self.execution is not None:
+        if self._released is not None:
+            self._released.validate_history(self._contract, packet)
+        elif self.execution is not None:
             self.execution.validate_history(self._contract,packet,cursor)
         selected = min(packet["validation"],key=lambda x:x["fused_nll"])
         if any(packet["selected"][key]!=selected[key] for key in ("step","fused_nll")):
@@ -230,8 +251,8 @@ class Run:
         _restore_rng(packet["rng"],self.device)
 
 
-def execute(registered, phase, path, producer, prior=None, *, execution=None):
-    run = Run(registered,producer,execution=execution)
+def execute(registered, phase, path, producer, prior=None, *, execution=None, released=None):
+    run = Run(registered,producer,execution=execution,released=released)
     spec = run.registered
     prefix,steps = spec["prefix"],spec["steps"]
     start,end = {"full":(0,steps),"prefix":(0,prefix),"resume":(prefix,steps),"completed":(steps,steps)}[phase]
