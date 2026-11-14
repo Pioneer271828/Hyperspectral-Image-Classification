@@ -132,10 +132,15 @@ def release_pins(release, code, gpus, qualifications, execution):
     """Consume a separately authorized execution release and the old accepted 2400 evidence."""
     path = release['path']
     approval = read_pinned(Path(path), release['sha256'])
-    device.require(set(approval) == {'schema', 'decision', 'source_commit', 'source_hash', 'research_issue',
-                                     'gpus', 'qualification_sha256', 'execution', 'admission_scope',
-                                     'admission_acceptance', 'planned_optimizer_updates'}
-                   and approval['schema'] == 'wp05_three_arm_execution_release_v1'
+    fields = {'schema', 'decision', 'source_commit', 'source_hash', 'research_issue',
+              'gpus', 'qualification_sha256', 'execution', 'admission_scope',
+              'admission_acceptance', 'planned_optimizer_updates'}
+    version = approval.get('schema')
+    independent = version == 'wp05_three_arm_execution_release_v2'
+    if independent:
+        fields.add('admission_controller')
+    device.require(set(approval) == fields
+                   and version in ('wp05_three_arm_execution_release_v1', 'wp05_three_arm_execution_release_v2')
                    and approval['decision'] == 'approved'
                    and (approval['source_commit'], approval['source_hash']) ==
                        (code['commit'], code['source_hash'])
@@ -146,6 +151,10 @@ def release_pins(release, code, gpus, qualifications, execution):
                    'Separately reviewed 13500-step release required')
     pins = {path: release['sha256']}
     old_scope, receipt = [approval[key] for key in ('admission_scope', 'admission_acceptance')]
+    if independent:
+        from transfer.p4_independent_acceptance import predecessor
+
+        return {**predecessor(old_scope, receipt, approval['admission_controller']), **pins}
     device.require(old_scope['sha256'] == ADMISSION_SHA, 'Expected the frozen P4 2400 admission scope')
     scope = read_pinned(Path(old_scope['path']), ADMISSION_SHA)
     result = read_pinned(Path(receipt['path']), receipt['sha256'])
