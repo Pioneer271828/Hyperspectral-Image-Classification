@@ -15,6 +15,8 @@ import time
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from transfer.container_runtime import training_container_kind
 
 
 def git(*args):
@@ -27,8 +29,8 @@ def main():
     parser.add_argument("--out-dir", type=Path, required=True, help="New directory outside checkout")
     parser.add_argument("--skip-cuda", action="store_true", help="Explicit CPU-only validation")
     args = parser.parse_args()
-    if sys.platform != "linux" or not any(Path(p).exists() for p in ("/.dockerenv", "/run/.containerenv")):
-        parser.error("Run inside the remote Linux training container via ssh rmvision")
+    if not training_container_kind():
+        parser.error("Use the authorized Linux training container (see docs/guides/remote-validation.md)")
     if not re.fullmatch(r"[0-9a-f]{40}", args.expected_commit):
         parser.error("--expected-commit must be a full lowercase SHA")
     if git("rev-parse", "HEAD") != args.expected_commit:

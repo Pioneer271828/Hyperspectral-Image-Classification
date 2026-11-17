@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from transfer.container_runtime import training_container_kind
 import torch
 from research_runtime import code_snapshot,external_directory,hash_file,require_frozen_code,write_json
 from loadData.observation_sampling import BandMetadata
@@ -39,7 +40,7 @@ def main():
     args=p.parse_args();code=code_snapshot()
     controlled=args.low_backbone_lr or args.class_first
     if controlled and args.baseline_run is None:p.error('Cached baseline required')
-    if sys.platform!='linux' or not Path('/.dockerenv').exists() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize or not torch.cuda.is_available():
+    if not training_container_kind() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize or not torch.cuda.is_available():
         p.error('Require container, CUDA, assertions and clean exact SHA')
     out=external_directory(args.out_dir)
     for path in (args.development_root.resolve(),args.protocol_root.resolve(),args.data_root.resolve(),args.source_run.resolve(),*((args.baseline_run.resolve(),) if args.baseline_run else ())):

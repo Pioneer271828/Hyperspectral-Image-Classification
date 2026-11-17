@@ -1,0 +1,593 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-11-13",
+  "scope": "Initial source/metadata review across all module families; not an upstream reproduction or replacement acceptance. Implementation-specific evidence remains pending executor review.",
+  "plan": "research/已完成模块开源复用与替换审查计划_20261113.md",
+  "historical_inventory": "docs/references/research-code-inventory.json",
+  "entries": [
+    {
+      "repository": "zhu-xlab/DOFA",
+      "url": "https://github.com/zhu-xlab/DOFA",
+      "modules": [
+        "M2",
+        "E1",
+        "WP05"
+      ],
+      "commit": "0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [
+        "wave_dynamic_layer.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "related_mechanism_not_drop_in",
+      "reason": "波长条件动态卷积不同于VCA锚点混合；仅审查位置编码/单位和局部组件。导入级manual_seed与空间stride需隔离。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/zhu-xlab/DOFA/commits/0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9",
+        "https://github.com/zhu-xlab/DOFA/blob/0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9/wave_dynamic_layer.py",
+        "https://github.com/zhu-xlab/DOFA/blob/0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9/LICENSE"
+      ]
+    },
+    {
+      "repository": "qichaoliu/CNN_Enhanced_GCN",
+      "url": "https://github.com/qichaoliu/CNN_Enhanced_GCN",
+      "modules": [
+        "M3",
+        "M5",
+        "M6",
+        "M8",
+        "WP04"
+      ],
+      "commit": "e5bc8a007a7179d2092aa1cc1c0993ac1a171d4c",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": null,
+      "license_path": null,
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [
+        "CEGCN.py",
+        "LDA_SLIC.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "reference_only_permission_unconfirmed",
+      "reason": "双支路与Q回投相关；树中未见明确许可。源码含全局cuda设备、密集邻接及LDA/全图统计；不搬训练或划分。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/qichaoliu/CNN_Enhanced_GCN/commits/e5bc8a007a7179d2092aa1cc1c0993ac1a171d4c",
+        "https://github.com/qichaoliu/CNN_Enhanced_GCN/blob/e5bc8a007a7179d2092aa1cc1c0993ac1a171d4c/CEGCN.py",
+        "https://github.com/qichaoliu/CNN_Enhanced_GCN/blob/e5bc8a007a7179d2092aa1cc1c0993ac1a171d4c/LDA_SLIC.py"
+      ]
+    },
+    {
+      "repository": "quanweiliu/WFCG",
+      "url": "https://github.com/quanweiliu/WFCG",
+      "modules": [
+        "M5",
+        "M6",
+        "M8"
+      ],
+      "commit": "ce1a9d1a74e53800587f7fc40aac210c4c091206",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": null,
+      "license_path": null,
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "reference_only_permission_unconfirmed",
+      "reason": "结构相关；仅核仓库树，未见明确许可；尚未逐文件审阅实现，不能称高质量可替换。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/quanweiliu/WFCG/commits/ce1a9d1a74e53800587f7fc40aac210c4c091206"
+      ]
+    },
+    {
+      "repository": "iMoonLab/HGNN",
+      "url": "https://github.com/iMoonLab/HGNN",
+      "modules": [
+        "M3",
+        "M5",
+        "M7"
+      ],
+      "commit": "6212e8a43e75105b7fda7b169fc0063070861bb5",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [
+        "models/HGNN.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "algebra_reference_needs_adaptation",
+      "reason": "HGNN卷积可作数学oracle；models/HGNN.py的F.dropout未传training，eval随机性必须修正并测试；不得整网替换。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/iMoonLab/HGNN/commits/6212e8a43e75105b7fda7b169fc0063070861bb5",
+        "https://github.com/iMoonLab/HGNN/blob/6212e8a43e75105b7fda7b169fc0063070861bb5/models/HGNN.py",
+        "https://github.com/iMoonLab/HGNN/blob/6212e8a43e75105b7fda7b169fc0063070861bb5/LICENSE"
+      ]
+    },
+    {
+      "repository": "pyg-team/pytorch_geometric",
+      "url": "https://github.com/pyg-team/pytorch_geometric",
+      "modules": [
+        "M3",
+        "M5",
+        "M7",
+        "E3"
+      ],
+      "commit": "d1f2f8642387b6e0563d6aee227c39130746c738",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "library_candidate_pending_file_review",
+      "reason": "图/超图消息基础算子与测试框架候选；超边入射H与邻接A不等价，须逐项核归一化/方向/自环/重复边。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/pyg-team/pytorch_geometric/commits/d1f2f8642387b6e0563d6aee227c39130746c738",
+        "https://github.com/pyg-team/pytorch_geometric/blob/d1f2f8642387b6e0563d6aee227c39130746c738/LICENSE"
+      ]
+    },
+    {
+      "repository": "huggingface/pytorch-image-models",
+      "url": "https://github.com/huggingface/pytorch-image-models",
+      "modules": [
+        "E2",
+        "WP07"
+      ],
+      "commit": "43b549bfe9d680bc94284cfd0b611152d18e97d7",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": "Apache-2.0",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [
+        "timm/layers/selective_kernel.py",
+        "tests/test_models.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "priority_component_review",
+      "reason": "selective_kernel有可分离选择器和模型测试；其逐通道权重、输入split和BN不自动满足每景权重与固定候选合同。只在语义相同时复用组件。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/huggingface/pytorch-image-models/commits/43b549bfe9d680bc94284cfd0b611152d18e97d7",
+        "https://github.com/huggingface/pytorch-image-models/blob/43b549bfe9d680bc94284cfd0b611152d18e97d7/timm/layers/selective_kernel.py",
+        "https://github.com/huggingface/pytorch-image-models/blob/43b549bfe9d680bc94284cfd0b611152d18e97d7/tests/test_models.py",
+        "https://github.com/huggingface/pytorch-image-models/blob/43b549bfe9d680bc94284cfd0b611152d18e97d7/LICENSE"
+      ]
+    },
+    {
+      "repository": "QishuaiWen/MiTA",
+      "url": "https://github.com/QishuaiWen/MiTA",
+      "modules": [
+        "M6",
+        "E3",
+        "WP08"
+      ],
+      "commit": "0dfca9e0f6affdefc663b185da1a7330cd6bb892",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [
+        "mita/_mita_attention.py",
+        "mita/mixed_attention.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "priority_component_review_with_kernel_constraints",
+      "reason": "原作者代码，继承MoBA；规则token网格/cls约定、FlashAttention私有接口与自定义autograd需适配。区域消息不冒充删A边。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/QishuaiWen/MiTA/commits/0dfca9e0f6affdefc663b185da1a7330cd6bb892",
+        "https://github.com/QishuaiWen/MiTA/blob/0dfca9e0f6affdefc663b185da1a7330cd6bb892/mita/_mita_attention.py",
+        "https://github.com/QishuaiWen/MiTA/blob/0dfca9e0f6affdefc663b185da1a7330cd6bb892/mita/mixed_attention.py",
+        "https://github.com/QishuaiWen/MiTA/blob/0dfca9e0f6affdefc663b185da1a7330cd6bb892/LICENSE"
+      ]
+    },
+    {
+      "repository": "VainF/Torch-Pruning",
+      "url": "https://github.com/VainF/Torch-Pruning",
+      "modules": [
+        "MON",
+        "MASK",
+        "WP10"
+      ],
+      "commit": "e80127d7c6935c319a7dd6719b8a72e3c1fcbff9",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [
+        "torch_pruning/dependency/graph.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "priority_dependency_component_review",
+      "reason": "依赖图和物理通道裁剪适合对照；不能替代持续低活跃筛选/小类保护，稀疏图自定义算子需注册handler。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/VainF/Torch-Pruning/commits/e80127d7c6935c319a7dd6719b8a72e3c1fcbff9",
+        "https://github.com/VainF/Torch-Pruning/blob/e80127d7c6935c319a7dd6719b8a72e3c1fcbff9/torch_pruning/dependency/graph.py",
+        "https://github.com/VainF/Torch-Pruning/blob/e80127d7c6935c319a7dd6719b8a72e3c1fcbff9/LICENSE"
+      ]
+    },
+    {
+      "repository": "pytorch/ao",
+      "url": "https://github.com/pytorch/ao",
+      "modules": [
+        "PTQ",
+        "QAT",
+        "WP10"
+      ],
+      "commit": "4ab9d61da2937831743bc3f7904975fe1b32de7f",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": "NOASSERTION",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [
+        "torchao/quantization/qat/linear.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "tool_candidate_pending_compatibility",
+      "reason": "有QAT linear源码与测试目录；本地PyTorch/CUDA/Conv2d覆盖待核，不能把Linear或模拟量化当CNN低比特部署。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/pytorch/ao/commits/4ab9d61da2937831743bc3f7904975fe1b32de7f",
+        "https://github.com/pytorch/ao/blob/4ab9d61da2937831743bc3f7904975fe1b32de7f/torchao/quantization/qat/linear.py",
+        "https://github.com/pytorch/ao/blob/4ab9d61da2937831743bc3f7904975fe1b32de7f/LICENSE"
+      ]
+    },
+    {
+      "repository": "DequanWang/tent",
+      "url": "https://github.com/DequanWang/tent",
+      "modules": [
+        "E4b",
+        "WP09"
+      ],
+      "commit": "e9e926a668d85244c66a6d5c006efbd2b82e83e8",
+      "default_branch": "master",
+      "archived": true,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [
+        "tent.py"
+      ],
+      "tree_read_this_review": true,
+      "decision": "small_author_component_review",
+      "reason": "仓库已归档；源码简洁，仿射参数采集仅BatchNorm2d，不能直接覆盖DomainBN/区域BN或GroupNorm。steps>1需保持项目先预测后更新语义。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/DequanWang/tent/commits/e9e926a668d85244c66a6d5c006efbd2b82e83e8",
+        "https://github.com/DequanWang/tent/blob/e9e926a668d85244c66a6d5c006efbd2b82e83e8/tent.py",
+        "https://github.com/DequanWang/tent/blob/e9e926a668d85244c66a6d5c006efbd2b82e83e8/LICENSE"
+      ]
+    },
+    {
+      "repository": "Jingkang50/OpenOOD",
+      "url": "https://github.com/Jingkang50/OpenOOD",
+      "modules": [
+        "E4c",
+        "WP09"
+      ],
+      "commit": "3c35632ee91b54b09d1f085d04f94744cece7d0b",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "score_oracle_candidate",
+      "reason": "统一开放集/OOD框架与测试目录；只比较评分及指标，保留未知类别隔离、独立阈值和0号未标注语义。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/Jingkang50/OpenOOD/commits/3c35632ee91b54b09d1f085d04f94744cece7d0b",
+        "https://github.com/Jingkang50/OpenOOD/blob/3c35632ee91b54b09d1f085d04f94744cece7d0b/LICENSE"
+      ]
+    },
+    {
+      "repository": "tensorly/torch",
+      "url": "https://github.com/tensorly/torch",
+      "modules": [
+        "LR",
+        "WP10"
+      ],
+      "commit": "25c915d554476d62dfc80c91de8e50fcd3d13542",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": "BSD-3-Clause",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "factorization_oracle_candidate",
+      "reason": "factorized convolution/linear及对应测试可作低秩实现对照；张量分解、LoRA、当前两矩阵SVD不能互称等价。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/tensorly/torch/commits/25c915d554476d62dfc80c91de8e50fcd3d13542",
+        "https://github.com/tensorly/torch/blob/25c915d554476d62dfc80c91de8e50fcd3d13542/LICENSE"
+      ]
+    },
+    {
+      "repository": "gmum/Zero-Time-Waste",
+      "url": "https://github.com/gmum/Zero-Time-Waste",
+      "modules": [
+        "DY",
+        "WP11"
+      ],
+      "commit": "8341f3a6215a88171427472534ef53a9385f8cd8",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": null,
+      "license_path": "ztw_cv/LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "licensed_subtree_candidate",
+      "reason": "仅ztw_cv等明确MIT子树；早退复用组件不等于轻重模型路由，校准/确认/真实跳算和教师成本仍由项目合同约束。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/gmum/Zero-Time-Waste/commits/8341f3a6215a88171427472534ef53a9385f8cd8",
+        "https://github.com/gmum/Zero-Time-Waste/blob/8341f3a6215a88171427472534ef53a9385f8cd8/ztw_cv/LICENSE"
+      ]
+    },
+    {
+      "repository": "ethanjperez/film",
+      "url": "https://github.com/ethanjperez/film",
+      "modules": [
+        "E1",
+        "E2"
+      ],
+      "commit": "fe43ddf8a22b339dcca2efa07091ce9d498955cf",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "NOASSERTION",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "restricted_reference",
+      "reason": "LICENSE为CC-BY-NC-4.0，非无限制宽松许可；已有独立仿射实现，优先保留，不能按GitHub NOASSERTION假定MIT。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/ethanjperez/film/commits/fe43ddf8a22b339dcca2efa07091ce9d498955cf",
+        "https://github.com/ethanjperez/film/blob/fe43ddf8a22b339dcca2efa07091ce9d498955cf/LICENSE"
+      ]
+    },
+    {
+      "repository": "thuml/Transfer-Learning-Library",
+      "url": "https://github.com/thuml/Transfer-Learning-Library",
+      "modules": [
+        "E4a",
+        "WP05"
+      ],
+      "commit": "c4aa59eb565650a552b809411601d0589efbbfe4",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "secondary_protocol_reference",
+      "reason": "迁移工具候选；本次仅元数据/树，未源码验收；不得替换标签访问、episode或引入目标标签。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/thuml/Transfer-Learning-Library/commits/c4aa59eb565650a552b809411601d0589efbbfe4",
+        "https://github.com/thuml/Transfer-Learning-Library/blob/c4aa59eb565650a552b809411601d0589efbbfe4/LICENSE"
+      ]
+    },
+    {
+      "repository": "facebookresearch/DomainBed",
+      "url": "https://github.com/facebookresearch/DomainBed",
+      "modules": [
+        "C1",
+        "E4a",
+        "WP02"
+      ],
+      "commit": "b93c22a1cfc3b2428398272c1a116c8de1f4139e",
+      "default_branch": "main",
+      "archived": true,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "secondary_protocol_reference",
+      "reason": "已归档的域泛化对照参考；domain划分不证明传感器身份，不复用其训练默认或测试选模。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/facebookresearch/DomainBed/commits/b93c22a1cfc3b2428398272c1a116c8de1f4139e",
+        "https://github.com/facebookresearch/DomainBed/blob/b93c22a1cfc3b2428398272c1a116c8de1f4139e/LICENSE"
+      ]
+    },
+    {
+      "repository": "yhhhli/BRECQ",
+      "url": "https://github.com/yhhhli/BRECQ",
+      "modules": [
+        "PTQ",
+        "WP10"
+      ],
+      "commit": "e455d62e93c70351961f8991c913b59435bd165f",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": "MIT",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "secondary_reconstruction_candidate",
+      "reason": "历史已列候选；重建校准需单独计成本且禁止用验证/query校准；本次未执行或细读源码。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/yhhhli/BRECQ/commits/e455d62e93c70351961f8991c913b59435bd165f",
+        "https://github.com/yhhhli/BRECQ/blob/e455d62e93c70351961f8991c913b59435bd165f/LICENSE"
+      ]
+    },
+    {
+      "repository": "czhu95/ternarynet",
+      "url": "https://github.com/czhu95/ternarynet",
+      "modules": [
+        "TQ",
+        "WP10"
+      ],
+      "commit": "1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "Apache-2.0",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "legacy_formula_reference",
+      "reason": "原TF/tensorpack生态，与现PyTorch不兼容；最小阈值/尺度参考，核嵌套许可，不搬环境。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/czhu95/ternarynet/commits/1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+        "https://github.com/czhu95/ternarynet/blob/1a67251f7f5a1cdf854f87f90f841655c7c9f11c/LICENSE"
+      ]
+    },
+    {
+      "repository": "scikit-image/scikit-image",
+      "url": "https://github.com/scikit-image/scikit-image",
+      "modules": [
+        "C1",
+        "M3",
+        "WP02"
+      ],
+      "commit": "8dd4c63927588c324d4d2c87c4b3f127e08c449e",
+      "default_branch": "main",
+      "archived": false,
+      "license_api_label": "NOASSERTION",
+      "license_path": "LICENSE.txt",
+      "license_text_read_this_review": true,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": true,
+      "decision": "segmentation_component_candidate",
+      "reason": "SLIC组件候选，须固定mask/坐标/输入统计，标签不可用于无监督Q；源码和版本数值兼容后验。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/scikit-image/scikit-image/commits/8dd4c63927588c324d4d2c87c4b3f127e08c449e",
+        "https://github.com/scikit-image/scikit-image/blob/8dd4c63927588c324d4d2c87c4b3f127e08c449e/LICENSE.txt"
+      ]
+    },
+    {
+      "repository": "THUMNLab/CurBench",
+      "url": "https://github.com/THUMNLab/CurBench",
+      "modules": [
+        "CUR",
+        "WP01"
+      ],
+      "commit": "c03ebc4f4e85b3bf1521317b0184b743ade2f285",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": null,
+      "license_path": null,
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [
+        "curbench/algorithms/base.py",
+        "README.md"
+      ],
+      "tree_read_this_review": true,
+      "decision": "reference_only_permission_unconfirmed",
+      "reason": "有课程算法API但树中未见LICENSE/COPYING；BaseCL接管Dataset/DataLoader，不能保留项目class-first曝光合同就不直接复用。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/THUMNLab/CurBench/commits/c03ebc4f4e85b3bf1521317b0184b743ade2f285",
+        "https://github.com/THUMNLab/CurBench/blob/c03ebc4f4e85b3bf1521317b0184b743ade2f285/curbench/algorithms/base.py",
+        "https://github.com/THUMNLab/CurBench/blob/c03ebc4f4e85b3bf1521317b0184b743ade2f285/README.md"
+      ]
+    },
+    {
+      "repository": "Lightning-AI/torchmetrics",
+      "url": "https://github.com/Lightning-AI/torchmetrics",
+      "modules": [
+        "E0",
+        "WP06",
+        "WP12"
+      ],
+      "commit": "6c551c6469dc04fe92291c000ce2607860df92d2",
+      "default_branch": "master",
+      "archived": false,
+      "license_api_label": "Apache-2.0",
+      "license_path": "LICENSE",
+      "license_text_read_this_review": false,
+      "source_files_read_this_review": [],
+      "tree_read_this_review": false,
+      "decision": "independent_metric_oracle_candidate",
+      "reason": "仅元数据级候选；用于指标交叉复算，须对齐缺失类、ignore_index、macro权重与输出范围；保留原NumPy独立oracle。",
+      "upstream_executed": false,
+      "project_adapter_tested": false,
+      "replacement_approved": false,
+      "evidence": [
+        "https://api.github.com/repos/Lightning-AI/torchmetrics/commits/6c551c6469dc04fe92291c000ce2607860df92d2",
+        "https://github.com/Lightning-AI/torchmetrics/blob/6c551c6469dc04fe92291c000ce2607860df92d2/LICENSE"
+      ]
+    }
+  ],
+  "access_failures": [
+    {
+      "url": "https://api.github.com/repos/implus/SKNet",
+      "result": "404 through connector; not proof of permanent absence. timm independently maintained component examined instead."
+    }
+  ],
+  "rules": {
+    "current_delivery_state": "docs/architecture/current-status.json only",
+    "old_production_inputs": "immutable",
+    "upstream_weights": "not downloaded or authorized by this review",
+    "runtime_tests": "authorized LXC only; execution chat owns tests",
+    "replacement": "same module responsibilities + all original guards + preregistered paired independent improvement; otherwise retain original"
+  }
+}

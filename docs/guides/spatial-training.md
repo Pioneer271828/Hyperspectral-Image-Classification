@@ -1,6 +1,6 @@
 # C1c：固定多块训练适配器
 
-入口为 `train_spatial.py`，配置示例 `configs/experiments/spatial_smoke.json`。所有执行在 ssh rmvision 的容器，数据根目录显式指定，输出在本项目专用 runs/。它复用 C0 的身份/attempt/日志/失败/完整性核对机制以及现有 VCA 双分支模型，不修改历史 train_vca_multidataset.py 的默认行为。
+入口为 `train_spatial.py`，配置示例 `configs/experiments/spatial_smoke.json`。所有执行在[授权 LXC](remote-validation.md)，数据根目录显式指定，输出在本项目专用 runs/。它复用 C0 的身份/attempt/日志/失败/完整性核对机制以及现有 VCA 双分支模型，不修改历史 train_vca_multidataset.py 的默认行为。
 
 ## 冻结几何与信息边界
 
@@ -20,7 +20,7 @@
 
 ```bash
 python -m unittest discover -s tests -p 'test_*.py' -v
-python train_spatial.py --config configs/experiments/spatial_smoke.json --data-root /home/train/hsi-pioneer271828/datasets/current --out-root /home/train/hsi-pioneer271828/runs/<new-run-id> --dry-run
+python train_spatial.py --config configs/experiments/spatial_smoke.json --data-root "$REGISTERED_DATA_ROOT" --out-root /home/lbx/hsi-pioneer271828/runs/<new-run-id> --dry-run
 ```
 
 dry-run 不读取数据或构造模型。正式运行去掉 dry-run；相同运行加 resume 会重新核对原始数据、计划、统计及产物后跳过成功任务。失败重试另建 attempt，不恢复优化器中间轨迹。out-root 不得位于代码目录。

@@ -9,10 +9,18 @@ from transfer.graph_route_context import _context,route_state_hash
 from evaluation.graph_edge_intervention import _selected
 
 
-def _spectral(value):
+DEFAULT_SPECTRAL_CAP = 65_536
+XUZHOU_SPECTRAL_CAP = 28 * 28 * 436
+
+
+def _spectral(value, *, spectral_cap=DEFAULT_SPECTRAL_CAP):
+    if type(spectral_cap) is not int or spectral_cap not in (DEFAULT_SPECTRAL_CAP, XUZHOU_SPECTRAL_CAP):
+        raise ValueError('Expected a registered spectral block bound')
     if (not torch.is_tensor(value) or value.device.type!='cpu' or value.dtype not in (torch.float32,torch.float64)
-            or value.ndim!=3 or min(value.shape)<=0 or value.numel()>65536 or not torch.isfinite(value).all()):
-        raise ValueError('Finite bounded CPU floating H,W,B block required (<=65536 elements)')
+            or value.ndim!=3 or min(value.shape)<=0 or value.numel()>spectral_cap or not torch.isfinite(value).all()):
+        raise ValueError(f'Finite bounded CPU floating H,W,B block required (<= {spectral_cap} elements)')
+    if spectral_cap == XUZHOU_SPECTRAL_CAP and (value.shape[2]!=436 or max(value.shape[:2])>28 or value.dtype!=torch.float32):
+        raise ValueError('The registered Xuzhou bound requires FP32, 436 bands, and sides at most 28 pixels')
 
 
 def _box(box,shape):
@@ -22,8 +30,8 @@ def _box(box,shape):
     return slice(y0,y1),slice(x0,x1)
 
 
-def intervene_spectrum(original,spec):
-    _spectral(original)
+def intervene_spectrum(original,spec,*,spectral_cap=DEFAULT_SPECTRAL_CAP):
+    _spectral(original,spectral_cap=spectral_cap)
     if not isinstance(spec,dict):raise ValueError('Explicit intervention dictionary required')
     kind=spec.get('kind')
     keys={'kind'} if kind=='identity' else {'kind','box'} if kind=='occlusion_min' else {'kind','box','donor_box'} if kind=='replace' else set()
@@ -39,9 +47,9 @@ def intervene_spectrum(original,spec):
     return value
 
 
-def input_gradients(forward,value,*,pixel_indices,class_id):
+def input_gradients(forward,value,*,pixel_indices,class_id,spectral_cap=DEFAULT_SPECTRAL_CAP):
     """Three scalar probability targets, not a full pixel-to-pixel Jacobian."""
-    _spectral(value);n=value.shape[0]*value.shape[1]
+    _spectral(value,spectral_cap=spectral_cap);n=value.shape[0]*value.shape[1]
     if (not isinstance(pixel_indices,(list,tuple)) or not pixel_indices
             or any(type(i) is not int or not 0<=i<n for i in pixel_indices)
             or list(pixel_indices)!=sorted(set(pixel_indices)) or type(class_id) is not int or class_id<1):
@@ -65,15 +73,15 @@ def input_gradients(forward,value,*,pixel_indices,class_id):
                 probabilities=tuple(p.detach() for p in outputs[:3]))
 
 
-def _value(run,tile_id,target_ids,class_id,interventions):
+def _value(run,tile_id,target_ids,class_id,interventions,*,spectral_cap=DEFAULT_SPECTRAL_CAP):
     model=_selected(run);context=_context(run.scene,run.record,tile_id)
     obs=observe_tile(run.scene.cube,run.scene.plan,run.scene.stats,run.scene.plan['tiles'][tile_id])
-    spectrum=torch.tensor(obs.spectral.copy());_spectral(spectrum)
+    spectrum=torch.tensor(obs.spectral.copy());_spectral(spectrum,spectral_cap=spectral_cap)
     if (not isinstance(target_ids,(list,tuple)) or not target_ids or any(type(i) is not int for i in target_ids)
             or list(target_ids)!=sorted(set(target_ids)) or not set(target_ids)<=set(obs.global_ids.ravel().tolist())
             or type(class_id) is not int or not 1<=class_id<=run.scene.classes):raise ValueError('Explicit in-block global targets and class required')
     if not isinstance(interventions,(list,tuple)) or not 1<=len(interventions)<=32:raise ValueError('One to 32 predeclared interventions required')
-    rows=[dict(spec=deepcopy(spec),spectrum_hash=tensor_hash(intervene_spectrum(spectrum,spec))) for spec in interventions]
+    rows=[dict(spec=deepcopy(spec),spectrum_hash=tensor_hash(intervene_spectrum(spectrum,spec,spectral_cap=spectral_cap))) for spec in interventions]
     value=dict(version=1,contract_hash=run.contract_hash,selected_step=run.selected_step,selected_state_hash=route_state_hash(model),
         context=context,normalized_spectrum_hash=tensor_hash(spectrum),coordinates_hash=tensor_hash(torch.tensor(obs.coordinates.copy())),
         target_ids=list(target_ids),class_id=class_id,interventions=rows,

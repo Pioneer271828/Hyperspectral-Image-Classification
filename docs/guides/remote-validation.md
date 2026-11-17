@@ -14,7 +14,7 @@ Windows 仅执行编辑、文件检查、Git 和 SSH/SCP；Python、pip 和测�
 
 后续有未推送修改时，先提交并同步，或在独立工作树记录补丁/源码指纹后做开发检查。正式基线验收要求提交且工作树干净，不能测试旧代码替代当前修改。
 
-## 本次远程环境
+## 旧 Docker 环境记录（只用于追溯）
 
 容器的 Python 3.12.3、预装 NVIDIA PyTorch/CUDA 可用。保持预装框架，新建 `/home/rmvision/venvs/hsi-baseline`（`--system-site-packages`），仅补充缺失依赖。以下是本次执行过的安装方式：
 
@@ -27,12 +27,21 @@ python -m venv --system-site-packages /home/rmvision/venvs/hsi-baseline
 
 ## 验收入口
 
+当前整合验收在授权 LXC 的独立干净 checkout 根目录运行：
+
+```bash
+/home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/check_repository.py \
+  --expected-commit <完整40位SHA>
+```
+
+以下基线入口专用于匹配原始冻结源码清单的 checkout。它能识别授权 LXC，但冻结指纹检查仍按原合同执行。
+
 在代码根目录执行，将参数替换为本次预期完整 SHA 和未使用过的产物目录：
 
 ```bash
-/home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_baseline.py \
+/home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/validate_baseline.py \
   --expected-commit <完整40位SHA> \
-  --out-dir /workspace/hsi-artifacts/<run_id>
+  --out-dir /home/lbx/hsi-pioneer271828/runs/<run_id>
 ```
 
 入口检查 Linux 容器、HEAD、干净工作树、冻结源码指纹、输出目录隔离和断言开启状态，然后运行：
@@ -48,9 +57,9 @@ CUDA 不可用会报错；`--skip-cuda` 仅用于明确标注的 CPU 验收。�
 通过 SSH 运行时建议将验收入口也重定向到远程文件：
 
 ```bash
-nohup /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_baseline.py \
-  --expected-commit <完整40位SHA> --out-dir /workspace/hsi-artifacts/<run_id> \
-  > /workspace/hsi-artifacts/<run_id>-launcher.txt 2>&1 < /dev/null &
+nohup /home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/validate_baseline.py \
+  --expected-commit <完整40位SHA> --out-dir /home/lbx/hsi-pioneer271828/runs/<run_id> \
+  > /home/lbx/hsi-pioneer271828/runs/<run_id>-launcher.txt 2>&1 < /dev/null &
 ```
 
 启动后读取远程 manifest 与日志，`status=passed` 才表示完成。启动成功或进程退出本身不等于测试通过；保留中断与失败运行，重试使用新 run_id。

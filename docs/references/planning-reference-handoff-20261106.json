@@ -1,0 +1,1354 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-06",
+  "purpose": "reference_handoff_not_new_review_or_experiment",
+  "source_snapshot": "309151ad9e47dc22c9f3bd198fe3445e9f144480",
+  "document": "research/搭建与测试计划_参考文献交接_20261106.md",
+  "status_scope": "historical_review_dates_not_live_implementation_or_license_claims",
+  "references": [
+    {
+      "id": "C01",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2602.01219v6",
+      "citation": "Wen等，**Mixture-of-Top-k Attention: Efficient Attention via Scalable Fast Weights**，arXiv:2602.01219v6（2026-09-27）[原文](https://arxiv.org/abs/2602.01219v6)",
+      "use": "共享压缩专家、可复用top-k专家、路由与压缩分离的消融",
+      "limit": "M6消息后端/E3硬支持候选；不直接替换VCA，不将token选择等同于图删边；须计入top-k/gather开销"
+    },
+    {
+      "id": "C02",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2601.22841v2",
+      "citation": "Hackel、Burgert、Demir，**How Much of a Model Do We Need? Redundancy and Slimmability in Remote Sensing Foundation Models**，arXiv:2601.22841v2（2026-06-02）[原文](https://arxiv.org/abs/2601.22841v2)",
+      "use": "相关性、PCA、有效维度、内部宽度—精度保持曲线",
+      "limit": "E0冗余诊断/剪枝缩宽；对象是遥感预训练ViT，不能直接推出CNN/HGCN可无损裁剪；相对保持率不是绝对OA"
+    },
+    {
+      "id": "C03",
+      "source_group": "focus",
+      "primary_url": "https://doi.org/10.1016/j.imavis.2026.105980",
+      "citation": "Montello等，**A survey on dynamic neural networks: From computer vision to multi-modal sensor fusion**，Image and Vision Computing 170 (2026), 105980，[DOI](https://doi.org/10.1016/j.imavis.2026.105980)；[对应预印本](https://arxiv.org/abs/2501.07451)",
+      "use": "输出/路径/输入自适应分类，精度—计算曲线、难例及全链路成本",
+      "limit": "早退出、轻模型困难回退、动态路由和课程扩展；本项目重点读的是用户上传期刊版，不用预印本页码替代期刊版"
+    },
+    {
+      "id": "C04",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1502.03167",
+      "citation": "Ioffe、Szegedy，**Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift**，2015，[原文](https://arxiv.org/abs/1502.03167)",
+      "use": "训练批统计与推理总体统计的区别",
+      "limit": "BN-ALIGN统计一致性；不等于已有空间隔离或跨传感器精度证明"
+    },
+    {
+      "id": "C05",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2105.07576v1",
+      "citation": "Wu、Johnson，**Rethinking Batch in BatchNorm**，2021，[本项目阅读v1](https://arxiv.org/abs/2105.07576v1)",
+      "use": "EMA陈旧、域/总体选择及逐层统计校准，§3.1/3.2/5.1/A.2/A.3",
+      "limit": "BN-ALIGN及G4目标BN；本项目用全场景总体方差correction0，明确传导访问；校准可能有益也可能有害"
+    },
+    {
+      "id": "C06",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1609.02907",
+      "citation": "Kipf、Welling，**Semi-Supervised Classification with Graph Convolutional Networks**，ICLR 2017，[原文](https://arxiv.org/abs/1609.02907)",
+      "use": "自环、对称归一化的普通图参照",
+      "limit": "BG-ABL固定传播对照；不照搬引文网络划分或原完整GCN训练器"
+    },
+    {
+      "id": "C07",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1809.09401v3",
+      "citation": "Feng等，**Hypergraph Neural Networks**，AAAI 2019，[本项目阅读v3](https://arxiv.org/abs/1809.09401v3)",
+      "use": "超图关联矩阵传播与普通图/identity的区分",
+      "limit": "M3/M5及BG-ABL；现有SAHGCN传播保留；不能仅凭关联矩阵就宣称验证了全部高阶交互优势"
+    },
+    {
+      "id": "C08",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1709.07871v2",
+      "citation": "Perez等，**FiLM: Visual Reasoning with a General Conditioning Layer**，AAAI 2018，[本项目阅读v2](https://arxiv.org/abs/1709.07871v2)",
+      "use": "条件通道仿射调制公式",
+      "limit": "E1覆盖度调制；覆盖描述符和保护无观测通道是项目设计，不是FiLM论文结论"
+    },
+    {
+      "id": "C09",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2403.15356v1",
+      "citation": "**DOFA / Neural Plasticity-Inspired Multimodal Foundation Model for Earth Observation**，[arXiv条目](https://arxiv.org/abs/2403.15356)，项目原阅读v1",
+      "use": "波长条件化地球观测嵌入的相关工作",
+      "limit": "M2/E1背景；未以DOFA替换骨干或下载其预训练权重；不是现有VCA来源证明"
+    },
+    {
+      "id": "X01",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1612.01064",
+      "citation": "**Trained Ternary Quantization**，ICLR 2017，[arXiv:1612.01064](https://arxiv.org/abs/1612.01064)",
+      "use": "三值阈值、缩放及训练更新的原始参照",
+      "limit": "先INT8参照；浮点模拟、三值打包和实际内核速度分开"
+    },
+    {
+      "id": "X02",
+      "source_group": "focus",
+      "primary_url": "https://proceedings.mlr.press/v97/kaya19a.html",
+      "citation": "**Shallow-Deep Networks: Understanding and Mitigating Network Overthinking**，ICML 2019，[原文](https://proceedings.mlr.press/v97/kaya19a.html)",
+      "use": "浅出口、深层改错/改坏及错误互补",
+      "limit": "本项目以块/区域上下文路由，不能直接照搬图像出口阈值"
+    },
+    {
+      "id": "X03",
+      "source_group": "focus",
+      "primary_url": "https://proceedings.neurips.cc/paper_files/paper/2021/hash/149ef6419512be56a93169cd5e6fa8fd-Abstract.html",
+      "citation": "**Zero Time Waste: Recycling Predictions in Early Exit Neural Networks**，NeurIPS 2021，[原文](https://proceedings.neurips.cc/paper_files/paper/2021/hash/149ef6419512be56a93169cd5e6fa8fd-Abstract.html)",
+      "use": "多出口预测复用与组合",
+      "limit": "拟复用子目录许可分别核查，不能由局部MIT推及整个仓库"
+    },
+    {
+      "id": "X04",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1711.09485",
+      "citation": "**SkipNet: Learning Dynamic Routing in Convolutional Networks**，[原文](https://arxiv.org/abs/1711.09485)",
+      "use": "输入相关块级跳算",
+      "limit": "路由课程不等于小样本类别课程；许可尚未核实不复制源码"
+    },
+    {
+      "id": "X05",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1711.08393",
+      "citation": "**BlockDrop: Dynamic Inference Paths in Residual Networks**，[原文](https://arxiv.org/abs/1711.08393)",
+      "use": "动态执行路径与策略开销",
+      "limit": "硬执行路径对照，软门不等于真正跳算；源码许可需补查"
+    },
+    {
+      "id": "X06",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2104.10461v2",
+      "citation": "Bakhtiarnia等，**Improving the Accuracy of Early Exits in Multi-Exit Architectures via Curriculum Learning**，IJCNN 2021，[v2](https://arxiv.org/abs/2104.10461v2)",
+      "use": "早退出课程学习的直接原始依据",
+      "limit": "不是HSI少样本课程已有效；作者GitLab可见但源码SHA/许可历史未核实"
+    },
+    {
+      "id": "X07",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2406.14404",
+      "citation": "Regol等，**Predicting Probabilities of Error to Combine Quantization and Early Exiting: QuEE**，2024，[原文](https://arxiv.org/abs/2406.14404)",
+      "use": "量化与早退出组合的错误概率/计算预算视角",
+      "limit": "历史限定搜索未确认官方仓库，不宣称不存在代码或已实现"
+    },
+    {
+      "id": "X08",
+      "source_group": "focus",
+      "primary_url": "https://doi.org/10.1016/j.neucom.2020.02.035",
+      "citation": "**Sparse low rank factorization for deep neural network compression（SLR）**，Neurocomputing 2020，[DOI定位](https://doi.org/10.1016/j.neucom.2020.02.035)",
+      "use": "低秩分解方法候选，作者仓库sridarah/slr",
+      "limit": "本次由出版社检索条目补齐题名；历史源码许可仍未确认"
+    },
+    {
+      "id": "T01",
+      "source_group": "focus",
+      "primary_url": "https://tensorly.org/torch/stable/",
+      "citation": "[TensorLy-Torch](https://tensorly.org/torch/stable/)",
+      "use": "低秩算子工具库候选",
+      "limit": "**工具而非SLR论文实现**，BSD-3-Clause记录不替代具体文件审查"
+    },
+    {
+      "id": "P01",
+      "source_group": "focus",
+      "primary_url": "https://ieeexplore.ieee.org/document/9356245/",
+      "citation": "**DCFSL**，TGRS 2021，[出版社入口](https://ieeexplore.ieee.org/document/9356245/)",
+      "use": "K-shot、支持集重复；固定作者代码有每类5支持及10预设重复种子",
+      "limit": "历史核查发现按query/test精度决定保存；本项目不能复制该选模行为。完整正式题名以原文补核"
+    },
+    {
+      "id": "P02",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/html/2309.12865v4",
+      "citation": "**Bridging Sensor Gaps via Attention Gated Tuning for Hyperspectral Image Classification（AGT）**，[arXiv:2309.12865v4](https://arxiv.org/html/2309.12865v4)",
+      "use": "不同传感器微调每类50样本及25/50/75预算对照",
+      "limit": "不等于无目标标签DG；独立验证比例未确认，不能补造。论文v4与仓库版本对应须补核"
+    },
+    {
+      "id": "P03",
+      "source_group": "focus",
+      "primary_url": "https://www.jmlr.org/papers/v17/15-239.html",
+      "citation": "**Domain-Adversarial Training of Neural Networks**，JMLR 2016，[原文](https://www.jmlr.org/papers/v17/15-239.html)",
+      "use": "UDA允许访问源标签/目标无标签输入的任务定义",
+      "limit": "不能用一个随机比例替代标签/输入访问契约"
+    },
+    {
+      "id": "P04",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2007.01434",
+      "citation": "**In Search of Lost Domain Generalization**，ICLR 2021，[原文](https://arxiv.org/abs/2007.01434)",
+      "use": "DomainBed源域开发验证与选模规则",
+      "limit": "holdout_fraction=0.2是该框架示例，不是HSI通用标准；Oracle选模另列"
+    },
+    {
+      "id": "P05",
+      "source_group": "focus",
+      "primary_url": "https://www.mdpi.com/2072-4292/15/12/3084",
+      "citation": "**Network Collaborative Pruning**，Remote Sensing 2023, 15(12):3084，[入口](https://www.mdpi.com/2072-4292/15/12/3084)",
+      "use": "压缩组应匹配标签预算",
+      "limit": "原记录只从索引方法段确认10%，全文429，验证/测试细节及完整题名待补核"
+    },
+    {
+      "id": "P06",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/2102.05426",
+      "citation": "**BRECQ: Pushing the Limit of Post-Training Quantization by Block Reconstruction**，ICLR 2021，[原文](https://arxiv.org/abs/2102.05426)",
+      "use": "PTQ校准输入与评测分开",
+      "limit": "1024张自然图像不能机械换成1024个像素或重叠patch"
+    },
+    {
+      "id": "P07",
+      "source_group": "focus",
+      "primary_url": "https://arxiv.org/abs/1902.08153",
+      "citation": "**Learned Step Size Quantization**，ICLR 2020，[原文](https://arxiv.org/abs/1902.08153)",
+      "use": "QAT量化步长与模型参数共同学习",
+      "limit": "当前记录未核查其完整划分/实现许可，不据摘要补写细节"
+    },
+    {
+      "id": "B01",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/1803.03635",
+      "citation": "The Lottery Ticket Hypothesis，ICLR 2019",
+      "use": "稠密网络中可训练稀疏子网及初始化作用",
+      "limit": "存在性/实证不等于任意剪枝策略都有效"
+    },
+    {
+      "id": "B02",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/1712.01312",
+      "citation": "Learning Sparse Neural Networks through L0 Regularization，ICLR 2018",
+      "use": "Hard-concrete 随机门与期望 L0",
+      "limit": "权重门可启发图边门，但图任务收益要另证"
+    },
+    {
+      "id": "B03",
+      "source_group": "historical_background",
+      "primary_url": "https://proceedings.mlr.press/v119/evci20a.html",
+      "citation": "Rigging the Lottery: Making All Tickets Winners，ICML 2020",
+      "use": "固定预算下删边/权重并重新生长，避免静态稀疏结构锁死",
+      "limit": "不保证找出全局最优子网"
+    },
+    {
+      "id": "B04",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2305.02299",
+      "citation": "Dynamic Sparse Training with Structured Sparsity，ICLR 2024",
+      "use": "SRigL：结构化稀疏与实际硬件加速",
+      "limit": "不能把特定算子的加速比直接套用到图稀疏计算"
+    },
+    {
+      "id": "B05",
+      "source_group": "historical_background",
+      "primary_url": "https://proceedings.mlr.press/v235/ji24a.html",
+      "citation": "Advancing Dynamic Sparse Training by Exploring Optimization Opportunities，ICML 2024",
+      "use": "BiDST：权重与掩码更新的双层优化观点",
+      "limit": "工程与调参复杂度高于简单门控"
+    },
+    {
+      "id": "B06",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2404.04612",
+      "citation": "Spectral Graph Pruning Against Over-Squashing and Over-Smoothing，NeurIPS 2024",
+      "use": "某些删边可改善归一化谱隙，并同时缓解两种退化",
+      "limit": "存在特定条件和图结构；并非任意删边均改善传播"
+    },
+    {
+      "id": "B07",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/0803.0929",
+      "citation": "Graph Sparsification by Effective Resistances，Spielman 与 Srivastava",
+      "use": "用有效电阻保留图的二次型，提供“删边保什么”的严格基准",
+      "limit": "适用于相应无向加权图；保图能量不保证提升分类/解混"
+    },
+    {
+      "id": "B08",
+      "source_group": "historical_background",
+      "primary_url": "https://proceedings.mlr.press/v258/wang25a.html",
+      "citation": "Empirical Error Estimates for Graph Sparsification，AISTATS 2025",
+      "use": "估计稀疏化带来的算子/下游计算误差",
+      "limit": "是图稀疏化误差分析，不是高光谱精度保证"
+    },
+    {
+      "id": "B09",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/1807.10174",
+      "citation": "Superpixel Sampling Networks，ECCV 2018",
+      "use": "可微任务驱动超像素",
+      "limit": "可微不意味着区域必然同质"
+    },
+    {
+      "id": "B10",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2105.03889",
+      "citation": "Conformer: Local Features Coupling Global Representations for Visual Recognition，ICCV 2021",
+      "use": "持续耦合局部与全局表示",
+      "limit": "不是高光谱或 GCN 专用证据"
+    },
+    {
+      "id": "B11",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2205.12454",
+      "citation": "Recipe for a General, Powerful, Scalable Graph Transformer，NeurIPS 2022",
+      "use": "GraphGPS：局部消息、全局注意力和结构编码分工",
+      "limit": "是否线性依赖具体全局注意力实现"
+    },
+    {
+      "id": "B12",
+      "source_group": "historical_background",
+      "primary_url": "https://ieeexplore.ieee.org/abstract/document/11003964",
+      "citation": "Multiscale Graph Transformer Network With Dynamic Superpixel Pyramid for Hyperspectral Image Classification，JSTARS 2025",
+      "use": "可微超像素与多尺度图、区域全局依赖",
+      "limit": "动态超像素与多尺度融合已非空白"
+    },
+    {
+      "id": "B13",
+      "source_group": "historical_background",
+      "primary_url": "https://ieeexplore.ieee.org/document/11003430/",
+      "citation": "Graph-Based Adaptive Network With Spatial-Spectral Features for Hyperspectral Unmixing，JSTARS 2025",
+      "use": "区域 GAT 与像素 CNN、丰度约束",
+      "limit": "不能只凭摘要认定其等同多层循环交互"
+    },
+    {
+      "id": "B14",
+      "source_group": "historical_background",
+      "primary_url": "https://ieeexplore.ieee.org/abstract/document/10858757",
+      "citation": "A Joint Multiscale Graph Attention and Classify-Driven Autoencoder Framework for Hyperspectral Unmixing，TGRS 2025",
+      "use": "MSGA-CD：多尺度图注意力、局部/全局丰度、端元学习相互关联",
+      "limit": "“Classify-driven”不等于你的地物分类标签监督"
+    },
+    {
+      "id": "B15",
+      "source_group": "historical_background",
+      "primary_url": "https://www.mdpi.com/2072-4292/17/14/2517",
+      "citation": "DGMNet: Hyperspectral Unmixing Dual-Branch Network Integrating Adaptive Hop-Aware GCN and Neighborhood Offset Mamba，Remote Sensing 2025",
+      "use": "自适应多跳图、偏移邻域、双路融合",
+      "limit": "光谱库剪枝与神经连接剪枝应区分"
+    },
+    {
+      "id": "B16",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/1706.03762",
+      "citation": "Attention Is All You Need，2017",
+      "use": "QKV、多头与缩放点积机制",
+      "limit": "固定总宽度时，增加头数不必然增加投影参数"
+    },
+    {
+      "id": "B17",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/1710.10903",
+      "citation": "Graph Attention Networks，ICLR 2018",
+      "use": "在图邻域内学习聚合权重",
+      "limit": "既定候选图之外的连接不会自动出现"
+    },
+    {
+      "id": "B18",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2403.01232",
+      "citation": "Polynormer: Polynomial-Expressive Graph Transformer in Linear Time，ICLR 2024",
+      "use": "局部到全局的线性注意力与乘法交互",
+      "limit": "多项式表达力是特定定义，不等于全面优于所有 GNN"
+    },
+    {
+      "id": "B19",
+      "source_group": "historical_background",
+      "primary_url": "https://proceedings.mlr.press/v235/xing24b.html",
+      "citation": "Less is More: on the Over-Globalizing Problem in Graph Transformers，ICML 2024",
+      "use": "CoBFormer：簇内/簇间建模，控制过度全局化",
+      "limit": "更大感受野可能削弱有效近邻信息"
+    },
+    {
+      "id": "B20",
+      "source_group": "historical_background",
+      "primary_url": "https://aclanthology.org/2025.acl-long.1126/",
+      "citation": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention，ACL 2025",
+      "use": "压缩、选择和局部注意力配合硬件实现",
+      "limit": "原任务为长文本；迁移到二维光谱图像是研究假设"
+    },
+    {
+      "id": "B21",
+      "source_group": "historical_background",
+      "primary_url": "https://proceedings.mlr.press/v337/ayday26a.html",
+      "citation": "Gaussian Process Limit Reveals Structural Benefits of Graph Transformers，UAI 2026",
+      "use": "用无限宽/无限头核极限分析结构信息与深层可分性",
+      "limit": "不能推出有限宽、少样本高光谱模型必然无过平滑"
+    },
+    {
+      "id": "B22",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2202.04579",
+      "citation": "Neural Sheaf Diffusion: A Topological Perspective on Heterophily and Oversmoothing in GNNs，NeurIPS 2022",
+      "use": "给节点空间和边映射赋予几何结构",
+      "limit": "理论可表达与实际可学习要分开"
+    },
+    {
+      "id": "B23",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2605.19021",
+      "citation": "Deep Neural Sheaf Diffusion，2026-05-18 预印本",
+      "use": "矩阵值边函数、sheaf 邻接传播，以及深层归一化/门控",
+      "limit": "本次未核实正式录用；未提供高光谱迁移验证"
+    },
+    {
+      "id": "B24",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2106.13264",
+      "citation": "You are AllSet: A Multiset Function Framework for Hypergraph Neural Networks，ICLR 2022",
+      "use": "学习集合到超边、超边到节点的聚合",
+      "limit": "线性关联矩阵传播不自动具有非平凡高阶交互"
+    },
+    {
+      "id": "B25",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/1703.06211",
+      "citation": "Deformable Convolutional Networks，ICCV 2017",
+      "use": "可学习空间采样位置",
+      "limit": "不保证采样会自动对应材料语义"
+    },
+    {
+      "id": "B26",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/1801.07829",
+      "citation": "Dynamic Graph CNN for Learning on Point Clouds",
+      "use": "在中间特征空间更新邻域",
+      "limit": "kNN 构图/离散选择成本与稳定性仍需处理"
+    },
+    {
+      "id": "B27",
+      "source_group": "historical_background",
+      "primary_url": "https://ieeexplore.ieee.org/document/10659840/",
+      "citation": "Feedback Information-Guided Spectral Variability Attention Network for Hyperspectral Unmixing，TGRS 2024",
+      "use": "FSVA-Net：重建残差反馈与光谱变异建模",
+      "limit": "不能把光照/端元变化全部解释为连接不足"
+    },
+    {
+      "id": "B28",
+      "source_group": "historical_background",
+      "primary_url": "https://openaccess.thecvf.com/content/CVPR2025/html/Li_HyperFree_A_Channel-adaptive_and_Tuning-free_Foundation_Model_for_Hyperspectral_Remote_CVPR_2025_paper.html",
+      "citation": "HyperFree: A Channel-adaptive and Tuning-free Foundation Model for Hyperspectral Remote Sensing Imagery，CVPR 2025",
+      "use": "通道适配与大规模预训练提供语义来源",
+      "limit": "使用外部数据需单独控制；掩码语义不等于丰度真值"
+    },
+    {
+      "id": "B29",
+      "source_group": "historical_background",
+      "primary_url": "https://ieeexplore.ieee.org/document/11367059/",
+      "citation": "DTU-Net: A Multi-Scale Dilated Transformer Network for Nonlinear Hyperspectral Unmixing，TGRS 2026-01-28",
+      "use": "多尺度空洞注意力与 PPNMM 非线性解码",
+      "limit": "仅适用于相应混合假设；不是普适物理模型"
+    },
+    {
+      "id": "B30",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2607.15128",
+      "citation": "DAPGNet: Dynamic Adaptive Physics-Guided Graph Diffusion Network for Hyperspectral Image Classification，2026-07-16 预印本",
+      "use": "光谱结构先验进入稀疏构图、边偏置及传播门控",
+      "limit": "波段连续/平滑先验不等同完整辐射传输方程；本次未核实录用"
+    },
+    {
+      "id": "B31",
+      "source_group": "historical_background",
+      "primary_url": "https://ieeexplore.ieee.org/abstract/document/11668961/",
+      "citation": "Prompt-Guided Cross-Network Distillation for Open-Set Cross-Domain Few-Shot Hyperspectral Image Classification，TGRS 2026-08-28",
+      "use": "PG-CPD：原型蒸馏传递语义结构，避免直接逐点对齐",
+      "limit": "任务是开放集跨域少样本分类，不能直接宣称解混有效"
+    },
+    {
+      "id": "B32",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2404.14944",
+      "citation": "Importance of Disjoint Sampling in Conventional and Transformer Models for Hyperspectral Image Classification，2024 预印本",
+      "use": "",
+      "limit": ""
+    },
+    {
+      "id": "B33",
+      "source_group": "historical_background",
+      "primary_url": "https://ieeexplore.ieee.org/document/10508406/",
+      "citation": "Image Processing and Machine Learning for Hyperspectral Unmixing: An Overview and the HySUPP Python Package，TGRS 2024",
+      "use": "",
+      "limit": ""
+    },
+    {
+      "id": "B34",
+      "source_group": "historical_background",
+      "primary_url": "https://arxiv.org/abs/2607.21050",
+      "citation": "HyperImageNet: A Large-Scale High-Spatial Resolution Hyperspectral Imagery Classification Benchmark，2026-07 预印本",
+      "use": "",
+      "limit": ""
+    },
+    {
+      "id": "B35",
+      "source_group": "historical_background",
+      "primary_url": "https://proceedings.mlr.press/v202/di-giovanni23a.html",
+      "citation": "On Over-Squashing in Message Passing Neural Networks: The Impact of Width, Depth, and Topology，ICML 2023",
+      "use": "",
+      "limit": ""
+    }
+  ],
+  "historical_rows": [
+    {
+      "id": "B01",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "The Lottery Ticket Hypothesis，ICLR 2019",
+      "url": "https://arxiv.org/abs/1803.03635",
+      "historical_review": "作者摘要、正式年份",
+      "historical_use": "稠密网络中可训练稀疏子网及初始化作用",
+      "historical_limit": "存在性/实证不等于任意剪枝策略都有效",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B02",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "Learning Sparse Neural Networks through L0 Regularization，ICLR 2018",
+      "url": "https://arxiv.org/abs/1712.01312",
+      "historical_review": "作者摘要",
+      "historical_use": "Hard-concrete 随机门与期望 L0",
+      "historical_limit": "权重门可启发图边门，但图任务收益要另证",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B03",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "Rigging the Lottery: Making All Tickets Winners，ICML 2020",
+      "url": "https://proceedings.mlr.press/v119/evci20a.html",
+      "historical_review": "正式会议页面",
+      "historical_use": "固定预算下删边/权重并重新生长，避免静态稀疏结构锁死",
+      "historical_limit": "不保证找出全局最优子网",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B04",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "Dynamic Sparse Training with Structured Sparsity，ICLR 2024",
+      "url": "https://arxiv.org/abs/2305.02299",
+      "historical_review": "作者摘要及录用说明",
+      "historical_use": "SRigL：结构化稀疏与实际硬件加速",
+      "historical_limit": "不能把特定算子的加速比直接套用到图稀疏计算",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B05",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "Advancing Dynamic Sparse Training by Exploring Optimization Opportunities，ICML 2024",
+      "url": "https://proceedings.mlr.press/v235/ji24a.html",
+      "historical_review": "正式会议摘要",
+      "historical_use": "BiDST：权重与掩码更新的双层优化观点",
+      "historical_limit": "工程与调参复杂度高于简单门控",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B06",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "Spectral Graph Pruning Against Over-Squashing and Over-Smoothing，NeurIPS 2024",
+      "url": "https://arxiv.org/abs/2404.04612",
+      "historical_review": "全文相关理论、算法段落及会议版",
+      "historical_use": "某些删边可改善归一化谱隙，并同时缓解两种退化",
+      "historical_limit": "存在特定条件和图结构；并非任意删边均改善传播",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B07",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "Graph Sparsification by Effective Resistances，Spielman 与 Srivastava",
+      "url": "https://arxiv.org/abs/0803.0929",
+      "historical_review": "作者摘要中的定理形式",
+      "historical_use": "用有效电阻保留图的二次型，提供“删边保什么”的严格基准",
+      "historical_limit": "适用于相应无向加权图；保图能量不保证提升分类/解混",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B08",
+      "group": "方向一：连接、剪枝与稀疏训练。",
+      "citation_label": "Empirical Error Estimates for Graph Sparsification，AISTATS 2025",
+      "url": "https://proceedings.mlr.press/v258/wang25a.html",
+      "historical_review": "正式会议摘要",
+      "historical_use": "估计稀疏化带来的算子/下游计算误差",
+      "historical_limit": "是图稀疏化误差分析，不是高光谱精度保证",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B09",
+      "group": "方向二：跨分支交互与可学习对齐。",
+      "citation_label": "Superpixel Sampling Networks，ECCV 2018",
+      "url": "https://arxiv.org/abs/1807.10174",
+      "historical_review": "作者摘要、CVF 页面",
+      "historical_use": "可微任务驱动超像素",
+      "historical_limit": "可微不意味着区域必然同质",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B10",
+      "group": "方向二：跨分支交互与可学习对齐。",
+      "citation_label": "Conformer: Local Features Coupling Global Representations for Visual Recognition，ICCV 2021",
+      "url": "https://arxiv.org/abs/2105.03889",
+      "historical_review": "作者摘要、CVF 信息",
+      "historical_use": "持续耦合局部与全局表示",
+      "historical_limit": "不是高光谱或 GCN 专用证据",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B11",
+      "group": "方向二：跨分支交互与可学习对齐。",
+      "citation_label": "Recipe for a General, Powerful, Scalable Graph Transformer，NeurIPS 2022",
+      "url": "https://arxiv.org/abs/2205.12454",
+      "historical_review": "作者摘要",
+      "historical_use": "GraphGPS：局部消息、全局注意力和结构编码分工",
+      "historical_limit": "是否线性依赖具体全局注意力实现",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B12",
+      "group": "方向二：跨分支交互与可学习对齐。",
+      "citation_label": "Multiscale Graph Transformer Network With Dynamic Superpixel Pyramid for Hyperspectral Image Classification，JSTARS 2025",
+      "url": "https://ieeexplore.ieee.org/abstract/document/11003964",
+      "historical_review": "出版社摘要、日期",
+      "historical_use": "可微超像素与多尺度图、区域全局依赖",
+      "historical_limit": "动态超像素与多尺度融合已非空白",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B13",
+      "group": "方向二：跨分支交互与可学习对齐。",
+      "citation_label": "Graph-Based Adaptive Network With Spatial-Spectral Features for Hyperspectral Unmixing，JSTARS 2025",
+      "url": "https://ieeexplore.ieee.org/document/11003430/",
+      "historical_review": "出版社摘要、日期",
+      "historical_use": "区域 GAT 与像素 CNN、丰度约束",
+      "historical_limit": "不能只凭摘要认定其等同多层循环交互",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B14",
+      "group": "方向二：跨分支交互与可学习对齐。",
+      "citation_label": "A Joint Multiscale Graph Attention and Classify-Driven Autoencoder Framework for Hyperspectral Unmixing，TGRS 2025",
+      "url": "https://ieeexplore.ieee.org/abstract/document/10858757",
+      "historical_review": "出版社摘要、日期",
+      "historical_use": "MSGA-CD：多尺度图注意力、局部/全局丰度、端元学习相互关联",
+      "historical_limit": "“Classify-driven”不等于你的地物分类标签监督",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B15",
+      "group": "方向二：跨分支交互与可学习对齐。",
+      "citation_label": "DGMNet: Hyperspectral Unmixing Dual-Branch Network Integrating Adaptive Hop-Aware GCN and Neighborhood Offset Mamba，Remote Sensing 2025",
+      "url": "https://www.mdpi.com/2072-4292/17/14/2517",
+      "historical_review": "出版社可检索方法概要",
+      "historical_use": "自适应多跳图、偏移邻域、双路融合",
+      "historical_limit": "光谱库剪枝与神经连接剪枝应区分",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B16",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Attention Is All You Need，2017",
+      "url": "https://arxiv.org/abs/1706.03762",
+      "historical_review": "作者页面",
+      "historical_use": "QKV、多头与缩放点积机制",
+      "historical_limit": "固定总宽度时，增加头数不必然增加投影参数",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B17",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Graph Attention Networks，ICLR 2018",
+      "url": "https://arxiv.org/abs/1710.10903",
+      "historical_review": "作者页面",
+      "historical_use": "在图邻域内学习聚合权重",
+      "historical_limit": "既定候选图之外的连接不会自动出现",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B18",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Polynormer: Polynomial-Expressive Graph Transformer in Linear Time，ICLR 2024",
+      "url": "https://arxiv.org/abs/2403.01232",
+      "historical_review": "全文表达力、结构段落及录用信息",
+      "historical_use": "局部到全局的线性注意力与乘法交互",
+      "historical_limit": "多项式表达力是特定定义，不等于全面优于所有 GNN",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B19",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Less is More: on the Over-Globalizing Problem in Graph Transformers，ICML 2024",
+      "url": "https://proceedings.mlr.press/v235/xing24b.html",
+      "historical_review": "正式会议摘要",
+      "historical_use": "CoBFormer：簇内/簇间建模，控制过度全局化",
+      "historical_limit": "更大感受野可能削弱有效近邻信息",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B20",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention，ACL 2025",
+      "url": "https://aclanthology.org/2025.acl-long.1126/",
+      "historical_review": "正式会议页面",
+      "historical_use": "压缩、选择和局部注意力配合硬件实现",
+      "historical_limit": "原任务为长文本；迁移到二维光谱图像是研究假设",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B21",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Gaussian Process Limit Reveals Structural Benefits of Graph Transformers，UAI 2026",
+      "url": "https://proceedings.mlr.press/v337/ayday26a.html",
+      "historical_review": "正式会议信息、作者全文相关假设",
+      "historical_use": "用无限宽/无限头核极限分析结构信息与深层可分性",
+      "historical_limit": "不能推出有限宽、少样本高光谱模型必然无过平滑",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B22",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Neural Sheaf Diffusion: A Topological Perspective on Heterophily and Oversmoothing in GNNs，NeurIPS 2022",
+      "url": "https://arxiv.org/abs/2202.04579",
+      "historical_review": "作者摘要、正式会议版",
+      "historical_use": "给节点空间和边映射赋予几何结构",
+      "historical_limit": "理论可表达与实际可学习要分开",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B23",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "Deep Neural Sheaf Diffusion，2026-05-18 预印本",
+      "url": "https://arxiv.org/abs/2605.19021",
+      "historical_review": "作者全文相关方法段落",
+      "historical_use": "矩阵值边函数、sheaf 邻接传播，以及深层归一化/门控",
+      "historical_limit": "本次未核实正式录用；未提供高光谱迁移验证",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B24",
+      "group": "方向三：注意力、图卷积与替代数学表示。",
+      "citation_label": "You are AllSet: A Multiset Function Framework for Hypergraph Neural Networks，ICLR 2022",
+      "url": "https://arxiv.org/abs/2106.13264",
+      "historical_review": "作者摘要及会议版",
+      "historical_use": "学习集合到超边、超边到节点的聚合",
+      "historical_limit": "线性关联矩阵传播不自动具有非平凡高阶交互",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B25",
+      "group": "方向四：语义来源、物理约束与自适应感受野。",
+      "citation_label": "Deformable Convolutional Networks，ICCV 2017",
+      "url": "https://arxiv.org/abs/1703.06211",
+      "historical_review": "作者摘要",
+      "historical_use": "可学习空间采样位置",
+      "historical_limit": "不保证采样会自动对应材料语义",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B26",
+      "group": "方向四：语义来源、物理约束与自适应感受野。",
+      "citation_label": "Dynamic Graph CNN for Learning on Point Clouds",
+      "url": "https://arxiv.org/abs/1801.07829",
+      "historical_review": "作者摘要",
+      "historical_use": "在中间特征空间更新邻域",
+      "historical_limit": "kNN 构图/离散选择成本与稳定性仍需处理",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B27",
+      "group": "方向四：语义来源、物理约束与自适应感受野。",
+      "citation_label": "Feedback Information-Guided Spectral Variability Attention Network for Hyperspectral Unmixing，TGRS 2024",
+      "url": "https://ieeexplore.ieee.org/document/10659840/",
+      "historical_review": "出版社摘要、日期",
+      "historical_use": "FSVA-Net：重建残差反馈与光谱变异建模",
+      "historical_limit": "不能把光照/端元变化全部解释为连接不足",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B28",
+      "group": "方向四：语义来源、物理约束与自适应感受野。",
+      "citation_label": "HyperFree: A Channel-adaptive and Tuning-free Foundation Model for Hyperspectral Remote Sensing Imagery，CVPR 2025",
+      "url": "https://openaccess.thecvf.com/content/CVPR2025/html/Li_HyperFree_A_Channel-adaptive_and_Tuning-free_Foundation_Model_for_Hyperspectral_Remote_CVPR_2025_paper.html",
+      "historical_review": "CVF 正式页面",
+      "historical_use": "通道适配与大规模预训练提供语义来源",
+      "historical_limit": "使用外部数据需单独控制；掩码语义不等于丰度真值",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B29",
+      "group": "方向四：语义来源、物理约束与自适应感受野。",
+      "citation_label": "DTU-Net: A Multi-Scale Dilated Transformer Network for Nonlinear Hyperspectral Unmixing，TGRS 2026-01-28",
+      "url": "https://ieeexplore.ieee.org/document/11367059/",
+      "historical_review": "出版社摘要、作者仓库",
+      "historical_use": "多尺度空洞注意力与 PPNMM 非线性解码",
+      "historical_limit": "仅适用于相应混合假设；不是普适物理模型",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B30",
+      "group": "方向四：语义来源、物理约束与自适应感受野。",
+      "citation_label": "DAPGNet: Dynamic Adaptive Physics-Guided Graph Diffusion Network for Hyperspectral Image Classification，2026-07-16 预印本",
+      "url": "https://arxiv.org/abs/2607.15128",
+      "historical_review": "作者全文相关方法段落",
+      "historical_use": "光谱结构先验进入稀疏构图、边偏置及传播门控",
+      "historical_limit": "波段连续/平滑先验不等同完整辐射传输方程；本次未核实录用",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B31",
+      "group": "方向四：语义来源、物理约束与自适应感受野。",
+      "citation_label": "Prompt-Guided Cross-Network Distillation for Open-Set Cross-Domain Few-Shot Hyperspectral Image Classification，TGRS 2026-08-28",
+      "url": "https://ieeexplore.ieee.org/abstract/document/11668961/",
+      "historical_review": "出版社可检索摘要、日期",
+      "historical_use": "PG-CPD：原型蒸馏传递语义结构，避免直接逐点对齐",
+      "historical_limit": "任务是开放集跨域少样本分类，不能直接宣称解混有效",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B32",
+      "group": "方向五：机制验证与评价。",
+      "citation_label": "Importance of Disjoint Sampling in Conventional and Transformer Models for Hyperspectral Image Classification，2024 预印本",
+      "url": "https://arxiv.org/abs/2404.14944",
+      "historical_review": "作者摘要；用于理解空间相关、采样方式与评估偏差",
+      "historical_use": "",
+      "historical_limit": "",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B33",
+      "group": "方向五：机制验证与评价。",
+      "citation_label": "Image Processing and Machine Learning for Hyperspectral Unmixing: An Overview and the HySUPP Python Package，TGRS 2024",
+      "url": "https://ieeexplore.ieee.org/document/10508406/",
+      "historical_review": "出版社摘要及作者版本；用于统一解混类别、数据与基线",
+      "historical_use": "",
+      "historical_limit": "",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B34",
+      "group": "方向五：机制验证与评价。",
+      "citation_label": "HyperImageNet: A Large-Scale High-Spatial Resolution Hyperspectral Imagery Classification Benchmark，2026-07 预印本",
+      "url": "https://arxiv.org/abs/2607.21050",
+      "historical_review": "作者页面；提出严格空间分离的开放环境基准，本次没有下载核验数据",
+      "historical_use": "",
+      "historical_limit": "",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    },
+    {
+      "id": "B35",
+      "group": "方向五：机制验证与评价。",
+      "citation_label": "On Over-Squashing in Message Passing Neural Networks: The Impact of Width, Depth, and Topology，ICML 2023",
+      "url": "https://proceedings.mlr.press/v202/di-giovanni23a.html",
+      "historical_review": "正式会议摘要；区分宽度、深度和拓扑的作用，避免用一个代理指标解释全部问题",
+      "historical_use": "",
+      "historical_limit": "",
+      "source": "research/five_directions_sources_and_feasibility_2026-09-21.md"
+    }
+  ],
+  "code_reuse_records": [
+    {
+      "name": "facebookresearch/fvcore",
+      "url": "https://github.com/facebookresearch/fvcore",
+      "commit": "8363d8d9e048e04a528112a15a50696fe125f97f",
+      "license": "Apache-2.0",
+      "kind": "official_Meta_preciseBN_library",
+      "scope": "Actual root license and precise_bn.py copyright header inspected; no claim about unrelated nested sources.",
+      "checked_on": "2026-11-03",
+      "source": "docs/references/bn-calibration-review.json",
+      "original_record": {
+        "repository": "https://github.com/facebookresearch/fvcore",
+        "kind": "official_Meta_preciseBN_library",
+        "commit": "8363d8d9e048e04a528112a15a50696fe125f97f",
+        "source_read": [
+          "fvcore/nn/precise_bn.py"
+        ],
+        "license_path": "LICENSE",
+        "license_spdx": "Apache-2.0",
+        "license_scope": "Actual root license and precise_bn.py copyright header inspected; no claim about unrelated nested sources.",
+        "source_copied": false,
+        "code_executed": false,
+        "decision": "Independently adapt the published moment/layer-order method using existing torch.var_mean and model blocks. The generic fvcore loader would not bind per-domain full-scene access or protect all unrelated state. No external implementation, trainer, data policy or dependency incorporated."
+      }
+    },
+    {
+      "name": "tkipf/gcn",
+      "url": "https://github.com/tkipf/gcn",
+      "commit": "39a4089fe72ad9f055ed6fdb9746abdcfebc4d81",
+      "license": "MIT",
+      "kind": "official_author_implementation",
+      "scope": "Actual root LICENCE read from pinned Git object; copyright Thomas Kipf2016. No claim about arbitrary external datasets or dependencies.",
+      "checked_on": "2026-11-03",
+      "source": "docs/references/branch-graph-ablation-review.json",
+      "original_record": {
+        "repository": "https://github.com/tkipf/gcn",
+        "kind": "official_author_implementation",
+        "commit": "39a4089fe72ad9f055ed6fdb9746abdcfebc4d81",
+        "source_read": [
+          "gcn/utils.py:normalize_adj/preprocess_adj"
+        ],
+        "license_path": "LICENCE",
+        "license_spdx": "MIT",
+        "license_scope": "Actual root LICENCE read from pinned Git object; copyright Thomas Kipf2016. No claim about arbitrary external datasets or dependencies.",
+        "source_copied": false,
+        "code_executed": false
+      }
+    },
+    {
+      "name": "iMoonLab/HGNN",
+      "url": "https://github.com/iMoonLab/HGNN",
+      "commit": "6212e8a43e75105b7fda7b169fc0063070861bb5",
+      "license": "MIT",
+      "kind": "official_author_team_implementation",
+      "scope": "Actual root LICENSE read from pinned Git object; copyright Yue's Group of THU2018. No license claim on this project's pre-existing imported code.",
+      "checked_on": "2026-11-03",
+      "source": "docs/references/branch-graph-ablation-review.json",
+      "original_record": {
+        "repository": "https://github.com/iMoonLab/HGNN",
+        "kind": "official_author_team_implementation",
+        "commit": "6212e8a43e75105b7fda7b169fc0063070861bb5",
+        "source_read": [
+          "utils/hypergraph_utils.py:generate_G_from_H/_generate_G_from_H"
+        ],
+        "license_path": "LICENSE",
+        "license_spdx": "MIT",
+        "license_scope": "Actual root LICENSE read from pinned Git object; copyright Yue's Group of THU2018. No license claim on this project's pre-existing imported code.",
+        "source_copied": false,
+        "code_executed": false
+      }
+    },
+    {
+      "name": "FiLM",
+      "url": "https://github.com/ethanjperez/film",
+      "commit": "fe43ddf8a22b339dcca2efa07091ce9d498955cf",
+      "license": "CC-BY-NC-4.0",
+      "kind": "author_code",
+      "scope": "Actual root LICENSE inspected; repository is also a fork of CLEVR code. No external source copied, so no claim of relicensing or unrestricted reuse of that fork.",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/e1-reference-review.json",
+      "original_record": {
+        "id": "FiLM",
+        "paper": "https://arxiv.org/html/1709.07871v2",
+        "sections_read": [
+          "2.1",
+          "2.2",
+          "4.3"
+        ],
+        "relevance": "Conditional channel-wise affine modulation; experiments concern visual reasoning, not evidence for this HSI coverage descriptor.",
+        "repository": "https://github.com/ethanjperez/film",
+        "kind": "author_code",
+        "commit": "fe43ddf8a22b339dcca2efa07091ce9d498955cf",
+        "source_read": [
+          "vr/models/filmed_net.py:FiLM"
+        ],
+        "license_path": "LICENSE",
+        "license_spdx": "CC-BY-NC-4.0",
+        "license_scope": "Actual root LICENSE inspected; repository is also a fork of CLEVR code. No external source copied, so no claim of relicensing or unrestricted reuse of that fork.",
+        "github_license_metadata": "NOASSERTION; actual license text takes precedence in this record",
+        "source_copied": false,
+        "code_executed": false,
+        "adaptation": "Independent shared per-anchor MLP and bounded residual affine for HWC/PC/NCHW, local RNG, zero output initialization, descriptor/schema checks and protected unsupported channels. No CLEVR training code used."
+      }
+    },
+    {
+      "name": "DOFA",
+      "url": "https://github.com/zhu-xlab/DOFA",
+      "commit": "0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9",
+      "license": "MIT",
+      "kind": "author_code",
+      "scope": "Root LICENSE inspected, copyright (c) 2024 Zhitong Xiong. No borrowed subprojects or source incorporated.",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/e1-reference-review.json",
+      "original_record": {
+        "id": "DOFA",
+        "paper": "https://arxiv.org/html/2403.15356v1",
+        "sections_read": [
+          "Introduction",
+          "Dynamic weight generation / wavelength conditioning"
+        ],
+        "relevance": "Related wavelength-conditioned Earth-observation embedding; a different dynamic hypernetwork mechanism. Does not supply our nearest-distance/count/gap descriptor.",
+        "repository": "https://github.com/zhu-xlab/DOFA",
+        "kind": "author_code",
+        "commit": "0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9",
+        "source_read": [
+          "wave_dynamic_layer.py"
+        ],
+        "license_path": "LICENSE",
+        "license_spdx": "MIT",
+        "license_scope": "Root LICENSE inspected, copyright (c) 2024 Zhitong Xiong. No borrowed subprojects or source incorporated.",
+        "source_copied": false,
+        "code_executed": false,
+        "adaptation": "Reference only; no foundation-model replacement, pretraining or weight download."
+      }
+    },
+    {
+      "name": "DTU-PAS/awesome-dynn-for-cv",
+      "url": "https://github.com/DTU-PAS/awesome-dynn-for-cv",
+      "commit": "5e7a99a2e3bc0a79e85f5d1b974fcc1581e6c551",
+      "license": null,
+      "kind": "author_bibliography",
+      "scope": "not_verified",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "DTU-PAS/awesome-dynn-for-cv",
+        "url": "https://github.com/DTU-PAS/awesome-dynn-for-cv",
+        "kind": "author_bibliography",
+        "topic": "survey",
+        "paper": "https://doi.org/10.1016/j.imavis.2026.105980",
+        "verified_commit": "5e7a99a2e3bc0a79e85f5d1b974fcc1581e6c551",
+        "default_branch": "main",
+        "readme_path": "README.md",
+        "license_spdx": null,
+        "license_path": null,
+        "license_scope": "not_verified",
+        "root_license_api": null,
+        "status": "bibliography_only_no_model",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "Links to original references; no implementation; root contains README and gitignore.",
+        "evidence": [
+          "https://github.com/DTU-PAS/awesome-dynn-for-cv/tree/5e7a99a2e3bc0a79e85f5d1b974fcc1581e6c551"
+        ]
+      }
+    },
+    {
+      "name": "tensorly/torch",
+      "url": "https://github.com/tensorly/torch",
+      "commit": "25c915d554476d62dfc80c91de8e50fcd3d13542",
+      "license": "BSD-3-Clause",
+      "kind": "maintainer_tool_library",
+      "scope": "repository_file_subject_to_per_file_review",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "tensorly/torch",
+        "url": "https://github.com/tensorly/torch",
+        "kind": "maintainer_tool_library",
+        "topic": "low_rank",
+        "paper": "https://tensorly.org/torch/stable/",
+        "verified_commit": "25c915d554476d62dfc80c91de8e50fcd3d13542",
+        "default_branch": "main",
+        "readme_path": "README.rst",
+        "license_spdx": "BSD-3-Clause",
+        "license_path": "LICENSE",
+        "license_scope": "repository_file_subject_to_per_file_review",
+        "root_license_api": "BSD-3-Clause",
+        "status": "licensed_candidate_not_run",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "Not SLR paper implementation; factorized convolution/linear operators behind a local adapter.",
+        "evidence": [
+          "https://github.com/tensorly/torch/tree/25c915d554476d62dfc80c91de8e50fcd3d13542",
+          "https://github.com/tensorly/torch/blob/25c915d554476d62dfc80c91de8e50fcd3d13542/LICENSE"
+        ]
+      }
+    },
+    {
+      "name": "sridarah/slr",
+      "url": "https://github.com/sridarah/slr",
+      "commit": "2c18ec9b356b83425933d2d0843c186621fc08fc",
+      "license": null,
+      "kind": "author_code",
+      "scope": "not_verified",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "sridarah/slr",
+        "url": "https://github.com/sridarah/slr",
+        "kind": "author_code",
+        "topic": "low_rank",
+        "paper": "https://doi.org/10.1016/j.neucom.2020.02.035",
+        "verified_commit": "2c18ec9b356b83425933d2d0843c186621fc08fc",
+        "default_branch": "master",
+        "readme_path": "README.md",
+        "license_spdx": null,
+        "license_path": null,
+        "license_scope": "not_verified",
+        "root_license_api": null,
+        "status": "reference_only_license_unconfirmed",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "README identifies paper; recursive repository tree has no license/copying/notice path; do not copy source pending permission review.",
+        "evidence": [
+          "https://github.com/sridarah/slr/tree/2c18ec9b356b83425933d2d0843c186621fc08fc"
+        ]
+      }
+    },
+    {
+      "name": "czhu95/ternarynet",
+      "url": "https://github.com/czhu95/ternarynet",
+      "commit": "1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+      "license": "Apache-2.0",
+      "kind": "author_code",
+      "scope": "repository_file_subject_to_per_file_review",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "czhu95/ternarynet",
+        "url": "https://github.com/czhu95/ternarynet",
+        "kind": "author_code",
+        "topic": "ternary",
+        "paper": "https://arxiv.org/abs/1612.01064",
+        "verified_commit": "1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+        "default_branch": "master",
+        "readme_path": "README.md",
+        "license_spdx": "Apache-2.0",
+        "license_path": "LICENSE",
+        "license_scope": "repository_file_subject_to_per_file_review",
+        "root_license_api": "Apache-2.0",
+        "status": "licensed_candidate_not_run",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "TensorFlow/tensorpack; adapt minimal threshold/scaling logic with attribution, do not replace project trainer/environment.",
+        "evidence": [
+          "https://github.com/czhu95/ternarynet/tree/1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+          "https://github.com/czhu95/ternarynet/blob/1a67251f7f5a1cdf854f87f90f841655c7c9f11c/LICENSE"
+        ]
+      }
+    },
+    {
+      "name": "gmum/Zero-Time-Waste",
+      "url": "https://github.com/gmum/Zero-Time-Waste",
+      "commit": "8341f3a6215a88171427472534ef53a9385f8cd8",
+      "license": "MIT",
+      "kind": "author_code",
+      "scope": "specified_subtrees_only",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "gmum/Zero-Time-Waste",
+        "url": "https://github.com/gmum/Zero-Time-Waste",
+        "kind": "author_code",
+        "topic": "early_exit",
+        "paper": "https://proceedings.neurips.cc/paper_files/paper/2021/hash/149ef6419512be56a93169cd5e6fa8fd-Abstract.html",
+        "verified_commit": "8341f3a6215a88171427472534ef53a9385f8cd8",
+        "default_branch": "main",
+        "readme_path": "README.md",
+        "license_spdx": "MIT",
+        "license_path": "ztw_cv/LICENSE",
+        "license_scope": "specified_subtrees_only",
+        "root_license_api": null,
+        "status": "licensed_subtree_candidate_not_run",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "Root license metadata null; MIT verified at ztw_cv/LICENSE and ztw_cv_original/LICENSE. Scope review to chosen subtree/files; do not copy implicit resume/Slurm/W&B flow.",
+        "evidence": [
+          "https://github.com/gmum/Zero-Time-Waste/tree/8341f3a6215a88171427472534ef53a9385f8cd8",
+          "https://github.com/gmum/Zero-Time-Waste/blob/8341f3a6215a88171427472534ef53a9385f8cd8/ztw_cv/LICENSE"
+        ]
+      }
+    },
+    {
+      "name": "ucbdrive/skipnet",
+      "url": "https://github.com/ucbdrive/skipnet",
+      "commit": "4825e53aaf72a505c3328cd89ad27533946d8a96",
+      "license": null,
+      "kind": "author_code",
+      "scope": "not_verified",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "ucbdrive/skipnet",
+        "url": "https://github.com/ucbdrive/skipnet",
+        "kind": "author_code",
+        "topic": "dynamic_routing",
+        "paper": "https://arxiv.org/abs/1711.09485",
+        "verified_commit": "4825e53aaf72a505c3328cd89ad27533946d8a96",
+        "default_branch": "master",
+        "readme_path": "README.md",
+        "license_spdx": null,
+        "license_path": null,
+        "license_scope": "not_verified",
+        "root_license_api": null,
+        "status": "reference_only_license_unconfirmed",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "README identifies paper; recursive tree has no license/copying/notice path. Mechanism reference; do not copy source until scope resolved.",
+        "evidence": [
+          "https://github.com/ucbdrive/skipnet/tree/4825e53aaf72a505c3328cd89ad27533946d8a96"
+        ]
+      }
+    },
+    {
+      "name": "Tushar-N/blockdrop",
+      "url": "https://github.com/Tushar-N/blockdrop",
+      "commit": "ec52b36d38dc21335df539ac24e51462c6012b5c",
+      "license": null,
+      "kind": "author_code",
+      "scope": "not_verified",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "Tushar-N/blockdrop",
+        "url": "https://github.com/Tushar-N/blockdrop",
+        "kind": "author_code",
+        "topic": "dynamic_routing",
+        "paper": "https://arxiv.org/abs/1711.08393",
+        "verified_commit": "ec52b36d38dc21335df539ac24e51462c6012b5c",
+        "default_branch": "master",
+        "readme_path": "Readme.md",
+        "license_spdx": null,
+        "license_path": null,
+        "license_scope": "not_verified",
+        "root_license_api": null,
+        "status": "reference_only_license_unconfirmed",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "Readme.md identifies paper; recursive tree has no license/copying/notice path. Routing curriculum differs from sample curriculum.",
+        "evidence": [
+          "https://github.com/Tushar-N/blockdrop/tree/ec52b36d38dc21335df539ac24e51462c6012b5c"
+        ]
+      }
+    },
+    {
+      "name": "yigitcankaya/Shallow-Deep-Networks",
+      "url": "https://github.com/yigitcankaya/Shallow-Deep-Networks",
+      "commit": "a55644624c9dc064d1372f6a486055edd94c9def",
+      "license": "MIT",
+      "kind": "author_code",
+      "scope": "repository_file_subject_to_per_file_review",
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "yigitcankaya/Shallow-Deep-Networks",
+        "url": "https://github.com/yigitcankaya/Shallow-Deep-Networks",
+        "kind": "author_code",
+        "topic": "early_exit",
+        "paper": "https://proceedings.mlr.press/v97/kaya19a.html",
+        "verified_commit": "a55644624c9dc064d1372f6a486055edd94c9def",
+        "default_branch": "master",
+        "readme_path": "README.md",
+        "license_spdx": "MIT",
+        "license_path": "LICENSE",
+        "license_scope": "repository_file_subject_to_per_file_review",
+        "root_license_api": "MIT",
+        "status": "licensed_candidate_not_run",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "MIT root file read; retain actual notices and verify copied files individually. Early exits/overthinking diagnostics, not unchanged image-classification training protocol.",
+        "evidence": [
+          "https://github.com/yigitcankaya/Shallow-Deep-Networks/tree/a55644624c9dc064d1372f6a486055edd94c9def",
+          "https://github.com/yigitcankaya/Shallow-Deep-Networks/blob/a55644624c9dc064d1372f6a486055edd94c9def/LICENSE"
+        ]
+      }
+    },
+    {
+      "name": "MultiExitCurriculumLearning",
+      "url": "https://gitlab.au.dk/maleci/MultiExitCurriculumLearning",
+      "commit": null,
+      "license": null,
+      "kind": "author_link_confirmed_code_access_unverified",
+      "scope": null,
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "MultiExitCurriculumLearning",
+        "url": "https://gitlab.au.dk/maleci/MultiExitCurriculumLearning",
+        "kind": "author_link_confirmed_code_access_unverified",
+        "topic": "curriculum",
+        "paper": "https://arxiv.org/abs/2104.10461",
+        "verified_commit": null,
+        "license_spdx": null,
+        "license_path": null,
+        "status": "page_visible_raw_api_unreadable_recheck_before_reuse",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "Paper explicitly supplies link; repository page visible. Raw/API inaccessible in this review; no verified source, license or reproduction."
+      }
+    },
+    {
+      "name": "QuEE",
+      "url": "https://arxiv.org/abs/2406.14404",
+      "commit": null,
+      "license": null,
+      "kind": "paper_only_official_code_unconfirmed",
+      "scope": null,
+      "checked_on": "2026-11-02",
+      "source": "docs/references/research-code-inventory.json",
+      "original_record": {
+        "id": "QuEE",
+        "url": "https://arxiv.org/abs/2406.14404",
+        "kind": "paper_only_official_code_unconfirmed",
+        "topic": "quantization_early_exit",
+        "paper": "https://arxiv.org/abs/2406.14404",
+        "verified_commit": null,
+        "license_spdx": null,
+        "license_path": null,
+        "status": "bounded_search_no_official_repository_confirmed",
+        "code_run": false,
+        "integrated": false,
+        "reuse_boundary": "Read original paper/HTML and bounded title/author/code queries. No verified official repository; this is not a claim no code exists anywhere."
+      }
+    },
+    {
+      "name": "DCFSL-2021",
+      "url": "https://github.com/Li-ZK/DCFSL-2021",
+      "commit": "ec92b1cca5ce3779f0cec4435daa714f902e07e3",
+      "license": null,
+      "scope": "根许可未核实，仅只读协议参考；不复制按test选模行为",
+      "checked_on": "2026-11-03",
+      "source": "research/reports/三主线数据划分文献核查与推荐协议_20261103.md",
+      "kind": "protocol_reference_not_reproduced"
+    },
+    {
+      "name": "AGT",
+      "url": "https://github.com/Cecilia-xue/AGT",
+      "commit": "0680eab99fb29f952ee5f241d626117fa1f66770",
+      "license": null,
+      "scope": "根许可/论文v4与实现版本对应未完全核实",
+      "checked_on": "2026-11-03",
+      "source": "research/reports/三主线数据划分文献核查与推荐协议_20261103.md",
+      "kind": "protocol_reference_not_reproduced"
+    },
+    {
+      "name": "DomainBed",
+      "url": "https://github.com/facebookresearch/DomainBed",
+      "commit": "b93c22a1cfc3b2428398272c1a116c8de1f4139e",
+      "license": null,
+      "scope": "本项目只读协议；未完成拟复用文件的许可审查",
+      "checked_on": "2026-11-03",
+      "source": "research/reports/三主线数据划分文献核查与推荐协议_20261103.md",
+      "kind": "protocol_reference_not_reproduced"
+    },
+    {
+      "name": "BRECQ",
+      "url": "https://github.com/yhhhli/BRECQ",
+      "commit": "e455d62e93c70351961f8991c913b59435bd165f",
+      "license": "MIT",
+      "scope": "根LICENSE已读，目标文件/嵌套许可仍须复查",
+      "checked_on": "2026-11-03",
+      "source": "research/reports/三主线数据划分文献核查与推荐协议_20261103.md",
+      "kind": "protocol_reference_not_reproduced"
+    },
+    {
+      "name": "MiTA",
+      "url": "https://github.com/QishuaiWen/MiTA",
+      "commit": null,
+      "license": null,
+      "scope": "历史只核查作者页面；采用前固定SHA和文件级许可",
+      "checked_on": "2026-10-30",
+      "source": "research/reports/MiTA与遥感宽度冗余论文评审及候选计划_20261030.md",
+      "kind": "author_page_only"
+    }
+  ],
+  "live_pages_rechecked": [
+    "https://arxiv.org/abs/2602.01219v6",
+    "https://arxiv.org/abs/2601.22841v2",
+    "https://arxiv.org/abs/2501.07451",
+    "https://arxiv.org/abs/2104.10461",
+    "https://arxiv.org/abs/2406.14404",
+    "https://arxiv.org/abs/1612.01064",
+    "https://arxiv.org/abs/2309.12865",
+    "https://arxiv.org/abs/2403.15356",
+    "https://www.sciencedirect.com/science/article/pii/S0925231220302253"
+  ],
+  "access_limits": [
+    "Journal DOI direct page unavailable in this run; journal metadata and PDF hashes inherited from prior uploaded-file review.",
+    "Primary search retry transport failed; subsequent arXiv page reads succeeded.",
+    "Not a fresh license or full-text review of every listed paper.",
+    "MDPI3084 returned429 and IEEE9356245 returned robot challenge on this run; P01/P05 retain incomplete bibliography/full-text status.",
+    "SLR title obtained from the publisher search entry; not a full-text review."
+  ],
+  "original_review_manifests": [
+    "docs/references/bn-calibration-review.json",
+    "docs/references/target-bn-calibration-review.json",
+    "docs/references/branch-graph-ablation-review.json",
+    "docs/references/e1-reference-review.json",
+    "docs/references/research-code-inventory.json",
+    "docs/references/m4-transfer-reuse.json"
+  ]
+}

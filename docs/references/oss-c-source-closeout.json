@@ -1,0 +1,968 @@
+{
+  "schema": 1,
+  "issue": 463,
+  "source_precedent": "docs/references/oss-b-source-review.json",
+  "families": [
+    {
+      "family": "C0",
+      "duty": "登记、预算、恢复和独立证据",
+      "reason": "外部 trainer 不能保持原更新、选模和证据身份",
+      "candidates": [],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "project_only",
+      "production_replacement": false
+    },
+    {
+      "family": "C1",
+      "duty": "数据空间、标签角色和传感器准入",
+      "reason": "只审空间算子和协议，数据权限仍由项目合同控制",
+      "candidates": [
+        "facebookresearch/DomainBed",
+        "scikit-image/scikit-image"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "CUR",
+      "duty": "固定曝光样本/观测课程",
+      "reason": "外部 loader 不能替代类保护及实际更新台账",
+      "candidates": [
+        "THUMNLab/CurBench"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "license_blocked",
+      "production_replacement": false
+    },
+    {
+      "family": "DY",
+      "duty": "冻结出口、轻重回退、阈值和成本",
+      "reason": "早退出、双模型回退及独立阈值分别保留",
+      "candidates": [
+        "gmum/Zero-Time-Waste"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "different_duty",
+      "production_replacement": false
+    },
+    {
+      "family": "E0",
+      "duty": "冻结表征、机制干预和质量指标",
+      "reason": "独立 oracle 可复算，指标库不替代访问和审计合同",
+      "candidates": [
+        "Lightning-AI/torchmetrics"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "oracle_only",
+      "production_replacement": false
+    },
+    {
+      "family": "E1",
+      "duty": "观测覆盖调制",
+      "reason": "普通 FiLM 不等价于覆盖描述，原许可有限制",
+      "candidates": [
+        "zhu-xlab/DOFA",
+        "ethanjperez/film"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "license_restricted_formula_only",
+      "production_replacement": false
+    },
+    {
+      "family": "E2",
+      "duty": "每景条件多尺度与图半径控制",
+      "reason": "timm 逐通道路由、BN 和 split 需通过职责门槛",
+      "candidates": [
+        "huggingface/pytorch-image-models",
+        "ethanjperez/film"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "different_duty",
+      "production_replacement": false
+    },
+    {
+      "family": "E3",
+      "duty": "区域远程支持和固定图受控优化",
+      "reason": "MiTA 的 KV 路由不能替代显式固定候选图",
+      "candidates": [
+        "pyg-team/pytorch_geometric",
+        "QishuaiWen/MiTA"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "different_duty",
+      "production_replacement": false
+    },
+    {
+      "family": "E4a",
+      "duty": "源/目标隔离、初始化与迁移",
+      "reason": "外部域协议不覆盖本项目的家族和标签边界",
+      "candidates": [
+        "thuml/Transfer-Learning-Library",
+        "facebookresearch/DomainBed"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "E4b",
+      "duty": "无标签顺序适配与恢复",
+      "reason": "须保留先预测后更新、场景重置和顺序隔离",
+      "candidates": [
+        "DequanWang/tent"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "E4c",
+      "duty": "未知隔离、开放集评分与独立确认",
+      "reason": "只审评分组件，阈值和未知类证据权限仍需独立验证",
+      "candidates": [
+        "Jingkang50/OpenOOD"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "LR",
+      "duty": "物理低秩分解与部署",
+      "reason": "CP/Tucker、LoRA 与原 SVD 分解分别核验",
+      "candidates": [
+        "tensorly/torch"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "M1",
+      "duty": "真实波段子集、条件和逐类曝光",
+      "reason": "上游动态输入不等价于真实删带及图观测隔离",
+      "candidates": [],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "project_only",
+      "production_replacement": false
+    },
+    {
+      "family": "M2",
+      "duty": "可变波段集合映射、波长与锚点",
+      "reason": "DOFA 只作量纲参照，动态卷积和锚点混合职责不同",
+      "candidates": [
+        "zhu-xlab/DOFA"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "oracle_only",
+      "production_replacement": false
+    },
+    {
+      "family": "M3",
+      "duty": "区域归属、固定或学习图和稀疏传播",
+      "reason": "必须先匹配归属、归一化、空行及重复边",
+      "candidates": [
+        "qichaoliu/CNN_Enhanced_GCN",
+        "iMoonLab/HGNN",
+        "pyg-team/pytorch_geometric",
+        "scikit-image/scikit-image"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "diagnostic_only_failed_numeric",
+      "production_replacement": false
+    },
+    {
+      "family": "M4",
+      "duty": "区域均值回投与像素残差",
+      "reason": "普通残差和解混重建与该算子职责不同",
+      "candidates": [],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "project_only",
+      "production_replacement": false
+    },
+    {
+      "family": "M5",
+      "duty": "两阶段 CNN/GCN 骨干和分类读出",
+      "reason": "保留双支路、区域回投、DomainBN 和三头语义",
+      "candidates": [
+        "qichaoliu/CNN_Enhanced_GCN",
+        "quanweiliu/WFCG",
+        "iMoonLab/HGNN",
+        "pyg-team/pytorch_geometric"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "M6",
+      "duty": "区域像素对齐与方向消息",
+      "reason": "上游整网或视觉 token 消息不能直接接入",
+      "candidates": [
+        "qichaoliu/CNN_Enhanced_GCN",
+        "quanweiliu/WFCG",
+        "QishuaiWen/MiTA"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "different_duty",
+      "production_replacement": false
+    },
+    {
+      "family": "M7",
+      "duty": "候选支持内边权、方向与归一化",
+      "reason": "保持自环、边方向和原候选支持",
+      "candidates": [
+        "iMoonLab/HGNN",
+        "pyg-team/pytorch_geometric"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "diagnostic_only_failed_numeric",
+      "production_replacement": false
+    },
+    {
+      "family": "M8",
+      "duty": "融合、主头/辅助头和监督",
+      "reason": "保持类别语义、分支预算和监督开关",
+      "candidates": [
+        "qichaoliu/CNN_Enhanced_GCN",
+        "quanweiliu/WFCG"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "MASK",
+      "duty": "依赖组、可逆屏蔽和物理缩宽",
+      "reason": "DepGraph 仅核通道结构，保留逐类准入",
+      "candidates": [
+        "VainF/Torch-Pruning"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "oracle_only",
+      "production_replacement": false
+    },
+    {
+      "family": "MON",
+      "duty": "逐层持续监控与小类保护",
+      "reason": "库的默认重要度不能替代持续窗口或逐类保护",
+      "candidates": [
+        "VainF/Torch-Pruning"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "project_only",
+      "production_replacement": false
+    },
+    {
+      "family": "PTQ",
+      "duty": "固定校准与物理整数推理",
+      "reason": "算子和硬件覆盖必须实测",
+      "candidates": [
+        "pytorch/ao",
+        "yhhhli/BRECQ"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "evidence_blocked",
+      "production_replacement": false
+    },
+    {
+      "family": "QAT",
+      "duty": "量化训练、恢复和落地",
+      "reason": "fake quant 不等价于物理低比特",
+      "candidates": [
+        "pytorch/ao"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "evidence_blocked",
+      "production_replacement": false
+    },
+    {
+      "family": "TQ",
+      "duty": "三值训练、编码和解码",
+      "reason": "原权重/比例/位编码需逐项对齐",
+      "candidates": [
+        "czhu95/ternarynet"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "reference_only",
+      "production_replacement": false
+    },
+    {
+      "family": "WP12",
+      "duty": "三头、逐类和全链路成本证据",
+      "reason": "外部指标仅可交叉复算，保持现有收据和计时协议",
+      "candidates": [
+        "Lightning-AI/torchmetrics"
+      ],
+      "decision": "原生产职责保留。固定源码候选状态见各条目。",
+      "outcome": "oracle_only",
+      "production_replacement": false
+    }
+  ],
+  "entries": [
+    {
+      "repository": "pyg-team/pytorch_geometric",
+      "commit": "d1f2f8642387b6e0563d6aee227c39130746c738",
+      "families": [
+        "M3",
+        "M5",
+        "M7",
+        "E3"
+      ],
+      "paper": "https://arxiv.org/abs/1903.02428",
+      "association": "Author/team library",
+      "project_duty": "Coalesced COO weighted row sum; preserve shape, empty rows, duplicate gradient, ordered graph construction",
+      "license": "MIT",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "89cfb6edc309735916a0c1189dccf761add4af6062ddb34b5a26f60d3efadfea",
+        "pyproject.toml": "61e83d1f1ddfaa364ac5403dcd6e7e72779aaa7ed0f1c7f8538b086ee8cd7e2e",
+        "test/utils/test_scatter.py": "e328d279599c619142eadf2e417793661afc2a3ef6e66b1e4e25f69933b792c1",
+        "test/utils/test_spmm.py": "a8d52e2af80e4307d05ceb51690b1fbb50618fb9280f62af8b068f662104fa26",
+        "torch_geometric/utils/_scatter.py": "14fb794f8d706e0d2294b32d01c251e12c0faa5c43ae30ea3bb2a003e6276f0a",
+        "torch_geometric/utils/_spmm.py": "d9f05c965a3ecb0b2db1df267e833048fd2dc88fe5054d37dcfd5877d061bb3f"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [
+        "LICENSE",
+        "torch_geometric/graphgym/utils/LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 435,
+      "source_observation": "Sum branch delegates to Torch scatter_add; optional CUDA extensions in other branches are outside scope",
+      "decision": "Engineering arithmetic and same-backend continuation pass, paired trajectory fails; retain project backend",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "only pinned isolated arithmetic function",
+      "dependencies_checked": "Runtime arithmetic uses existing PyTorch; optional full-package dependencies outside this test.",
+      "outcome": "diagnostic_only_failed_numeric",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "iMoonLab/HGNN",
+      "commit": "6212e8a43e75105b7fda7b169fc0063070861bb5",
+      "families": [
+        "M3",
+        "M5",
+        "M7"
+      ],
+      "paper": "https://arxiv.org/abs/1809.09401",
+      "association": "Author repository",
+      "project_duty": "Fixed hypergraph propagation and Q/A projection",
+      "license": "MIT",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "34814d9f4a8bd55b4d2413089484733fe10815b4cd195cc25163954d0e51abd5",
+        "README.md": "f05a4c9ff5df836dd754b7dc6239d61e9fc811c7e2a818925112eadaf16219c0",
+        "models/HGNN.py": "4aed9ce2232f29ec3ea74bd265f1dca3a11bbf7a15bf7d67562ff80606947eef",
+        "models/layers.py": "a59d08325de4e1b152af11915d57eec35fe3807371ed465ae86f2bb4038a3d20",
+        "utils/hypergraph_utils.py": "1c0dc10f6c40c82a57cf2894fe564d49ec87224ee7ff451902bc67ef655700da"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 0,
+      "source_observation": "Dense graph multiplication and functional dropout defaults to training even in eval; hypergraph utility builds its own normalized incidence operator",
+      "decision": "Formula reference; do not copy the trainer or substitute fixed-support normalization",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "reference_only",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "Lightning-AI/torchmetrics",
+      "commit": "6c551c6469dc04fe92291c000ce2607860df92d2",
+      "families": [
+        "E0",
+        "WP06",
+        "WP12"
+      ],
+      "paper": "https://joss.theoj.org/papers/10.21105/joss.04101",
+      "association": "Maintainer software paper",
+      "project_duty": "Fixed class order and true-row/predicted-column confusion, ignore unlabeled only at authorized caller",
+      "license": "Apache-2.0",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "fa31f433f5b4bc1fb730fb9c678f90182d93bf76b6d98ba4d00f40454ac8b832",
+        "requirements/base.txt": "2b3622b2285a55623cf2512f36981248c6fb5319c9472913a87a4b44093476e9",
+        "src/torchmetrics/functional/classification/confusion_matrix.py": "219b4af29637ea9a2c356ec550402a56241d192f5a98edebd35897504db7a80c",
+        "src/torchmetrics/functional/classification/f_beta.py": "774dd61a09c8705e93056e976c310b95aab3ab12892fecd319c428e0b538861c",
+        "tests/unittests/classification/test_confusion_matrix.py": "52b2fbdd331848f2850b5066ad5636f34d5df69933ece9b476c12bc0cebd3ee4"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 190,
+      "source_observation": "Pinned matrix update; CPU bincount matches on fixed nonnegative integer labels; library full reduction/DDP outside scope",
+      "decision": "Accepted CPU scoring oracle; 306 frozen matrices, no training or model replacement",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "only pinned isolated arithmetic function",
+      "dependencies_checked": "Runtime arithmetic uses existing PyTorch; optional full-package dependencies outside this test.",
+      "outcome": "oracle_only",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "tensorly/torch",
+      "commit": "25c915d554476d62dfc80c91de8e50fcd3d13542",
+      "families": [
+        "LR",
+        "WP10"
+      ],
+      "paper": "https://tensorly.org/torch/dev/",
+      "association": "Maintainer TensorLy-Torch software",
+      "project_duty": "Physical SVD two factors and original restore mapping",
+      "license": "BSD-3-Clause",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "bf22aafda22fa9ec54a6244d16ceb12b0ef90b049afd5b81a35828653657fd1b",
+        "tltorch/factorized_layers/factorized_convolution.py": "deeadcb7981f17d4679a65d5cbfc6a6354495b803386a599eade6c8e4146cc06",
+        "tltorch/factorized_tensors/factorized_tensors.py": "30f12a7d9b259080445a13d7831fcf44044a16cd7b197e99e5aa5c39ddbb56c9"
+      },
+      "connector_git_blobs": {
+        "README.rst": "899dbaa93997f1800f6d89ac56bdf4198a625762"
+      },
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 9,
+      "source_observation": "CP/Tucker/TT contraction paths rely on TensorLy and PyTorch, while original SVD and Conv2d rank/stride semantics must stay",
+      "decision": "Algebra comparison only; no same-function drop-in established",
+      "unchecked_paths": [
+        "README.md"
+      ],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "reference_only",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "pytorch/ao",
+      "commit": "4ab9d61da2937831743bc3f7904975fe1b32de7f",
+      "families": [
+        "PTQ",
+        "QAT",
+        "WP10"
+      ],
+      "paper": "https://github.com/pytorch/ao",
+      "association": "PyTorch maintainer library",
+      "project_duty": "Existing PTQ/QAT integer inference and model recovery",
+      "license": "BSD-3-Clause (Meta root text)",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "67901e351baeaa5aef967cccd0886ba679f085df8673d1ecd49592bf284115af",
+        "README.md": "e183e1317f413cac21789bc7e473a6ff47735cff7b7ed96b48d92179f3b1b6e6",
+        "torchao/quantization/qat/linear.py": "1dfdf2a4f4e0d7a1d59e324f4fd7f580c0a48ed9e9302fdccf08076383cfaa3a"
+      },
+      "connector_git_blobs": {
+        "test/quantization/test_qat.py": "c27a8c6c5c221d970a1c5c1f846cf6acfd9c3182"
+      },
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 147,
+      "source_observation": "Fake-quant Linear wrappers and packed kernel paths have distinct supported operators; source tests exist; backend/device parity remains untested",
+      "decision": "Retain current physical CPU deployment; isolate compatible backend separately",
+      "unchecked_paths": [
+        "test/quantization/qat/test_qat.py"
+      ],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "evidence_blocked",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "yhhhli/BRECQ",
+      "commit": "e455d62e93c70351961f8991c913b59435bd165f",
+      "families": [
+        "PTQ",
+        "WP10"
+      ],
+      "paper": "https://arxiv.org/abs/2102.05426",
+      "association": "Paper author repository",
+      "project_duty": "Original calibration scope and integer deployment witnesses",
+      "license": "MIT",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "a00876225b359982d5c7e9a4c58b2e52f4dee4dae9d5b467bb5cb35668193b3c",
+        "README.md": "0e1b3ed852c453f859620a86bf4d42d07625c091d6dc8a00c08a8053e93a0098",
+        "quant/block_recon.py": "5b00499e83ce5b90dfb325ffcbbf26b612c03906006eb4e8dd9abb5a762ce471",
+        "quant/layer_recon.py": "dd68d5535640885a084e4115c2f5469c82dd3024aa97620292e5033fcde0ca86",
+        "quant/quant_layer.py": "144fed07e5ed5f3adc0498a8412e829e89553563ad6830d8beae96d1e45bc1d1"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 0,
+      "source_observation": "Reconstructs blocks via cached inputs/targets and learned rounding; calibration accesses and extra optimization differ; depends on torch",
+      "decision": "New calibration candidate only; direct replacement would change budget and roles",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "different_duty",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "DequanWang/tent",
+      "commit": "e9e926a668d85244c66a6d5c006efbd2b82e83e8",
+      "families": [
+        "E4b",
+        "WP09"
+      ],
+      "paper": "https://arxiv.org/abs/2006.10726",
+      "association": "Author repository",
+      "project_duty": "Unlabeled stream predict-before-update, reset/continual and scene isolation",
+      "license": "MIT",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "c782f284d1caaab37e0022e826622f898b9527c5eec0eba3fa16c0d85f418df6",
+        "README.md": "61ab2670b481714a030ea8cf1326e073d338fb56536262151c626f6e3432afb5",
+        "tent.py": "d854e1f65f741aa1632dfb55420ca1bcf5405c978bef890e45caad04980514c8"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 0,
+      "source_observation": "BatchNorm2d affine selection and disables running stats; multiple steps return a forward after earlier updates, state and batch semantics differ",
+      "decision": "One-step formula reference; project DomainBN/recovery retained",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "reference_only",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "Jingkang50/OpenOOD",
+      "commit": "3c35632ee91b54b09d1f085d04f94744cece7d0b",
+      "families": [
+        "E4c",
+        "WP09"
+      ],
+      "paper": "https://arxiv.org/abs/2210.07242",
+      "association": "Author benchmark",
+      "project_duty": "Known/unknown separation, fixed class and calibrated threshold only on allowed roles",
+      "license": "MIT",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "82c3d9772f2655f5b0316f48ec58d01d444e82d36bb8cacf481751efe91c3979"
+      },
+      "connector_git_blobs": {
+        "openood/evaluators/metrics.py": "9e5501d52a4b55e9e8883cd799114c88f4173290",
+        "openood/postprocessors/ebo_postprocessor.py": "5c3fef996a6f5ef9daa98939d8c6e85a49747f8e",
+        "openood/postprocessors/base_postprocessor.py": "5c6659acc1793cba8bad2b06e90b03c150b88f62"
+      },
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 10,
+      "source_observation": "Energy is positive T·logsumexp confidence (align sign before use); metric utility imports NumPy and scikit-learn; external loaders do not encode project authorization",
+      "decision": "Scoring reference; no threshold transfer or query access",
+      "unchecked_paths": [
+        "openood/postprocessors/msp_postprocessor.py",
+        "openood/postprocessors/energy_postprocessor.py",
+        "requirements.txt"
+      ],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "reference_only",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "thuml/Transfer-Learning-Library",
+      "commit": "c4aa59eb565650a552b809411601d0589efbbfe4",
+      "families": [
+        "E4a",
+        "WP05"
+      ],
+      "paper": "https://github.com/thuml/Transfer-Learning-Library",
+      "association": "THU maintainer library; DANN original https://jmlr.org/papers/v17/15-239.html",
+      "project_duty": "Frozen source/target roles, support-only graph, domain and sensor split",
+      "license": "MIT root text",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "d9b9bdb8569b419dd891bfd269253fb946c08f6fa1b5ce96250992ffae6a0f4d",
+        "tllib/alignment/dann.py": "6129cd807f7e43e79880e7eabb7917617c4eb5ac554cf992a833ee8ff5caf5b2",
+        "tllib/normalization/ibn.py": "a234ef6a14463f70dc820516656cf8c635ac51386deee247132c6b8b49bc07da"
+      },
+      "connector_git_blobs": {
+        "tllib/alignment/dann.py": "362c861b7bc04933c6231a5850d2c4f0d58fbd2b",
+        "tllib/modules/classifier.py": "59d08baae6318a1f0f16c76902acacde797e1386"
+      },
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 0,
+      "source_observation": "DANN uses source/target feature minibatches and automatic warm-start GRL schedule; heads use separate optimizer parameter groups",
+      "decision": "No drop-in to strict source-only or target support protocol",
+      "unchecked_paths": [
+        "tllib/vision/models/classifier.py",
+        "README.md"
+      ],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "different_duty",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "facebookresearch/DomainBed",
+      "commit": "b93c22a1cfc3b2428398272c1a116c8de1f4139e",
+      "families": [
+        "C1",
+        "E4a",
+        "WP02"
+      ],
+      "paper": "https://arxiv.org/abs/2007.01434",
+      "association": "Author repository",
+      "project_duty": "Same published train/validation roles and first maximum calibrated joint selection",
+      "license": "MIT",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "LICENSE": "a74dc7c7d1650b2ef611962794f33e5432ff60227ad11fe8ff599eb892713fcb",
+        "README.md": "09b61daa2f976dcdbbafc4ca08172400b63834f67c2a3fba4ef9f8d97f6338a1",
+        "domainbed/model_selection.py": "4404ca7cdf85bf5f8ef4fe4304369b7d590f89b03c630f6b1c60285b0844caf4",
+        "domainbed/scripts/train.py": "0409b55e3de4019086c5cac769e966cde7e1abc213ba86ea4552f5967de4d469",
+        "domainbed/test/test_model_selection.py": "7c67ab645fde7cbb0a7280f61f824b5d1f186f42b24a558b28fbba8b63106801"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [
+        "LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 10,
+      "source_observation": "Separate IID, leave-one-domain-out and oracle test-domain model selection; tests exercise selector behavior",
+      "decision": "Protocol comparison; oracle selector prohibited for real confirmation",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "reference_only",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "qichaoliu/CNN_Enhanced_GCN",
+      "commit": "e5bc8a007a7179d2092aa1cc1c0993ac1a171d4c",
+      "families": [
+        "M3",
+        "M5",
+        "M6",
+        "M8",
+        "WP04"
+      ],
+      "paper": "https://doi.org/10.1109/TGRS.2020.3037361",
+      "association": "Author repository linked by its README",
+      "project_duty": "Unlabeled/legal Q, two-stage CNN/HGCN with same projection, support and split",
+      "license": "Unconfirmed",
+      "license_path": null,
+      "license_text_evidence": "unconfirmed",
+      "remote_files_sha256": {
+        "CEGCN.py": "e292268a33a8a3f51284905d2ee3131d9011984481bbea1e29ee37ac9de86508",
+        "LDA_SLIC.py": "366560056c1496de68b1ff67abbc267bc4b8821f341ab129f6bdaaf0385528c6",
+        "README.md": "c79345c896c29209f0bd65f4838320151e99c88408044992cb9aabca9b2a839a"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [],
+      "tests_named_in_fixed_tree": 0,
+      "source_observation": "LDA-SLIC uses labels; frozen tree lacks explicit license; graph/CNN integration differs",
+      "decision": "Reference only, no reuse",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "license_blocked",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "quanweiliu/WFCG",
+      "commit": "ce1a9d1a74e53800587f7fc40aac210c4c091206",
+      "families": [
+        "M5",
+        "M6",
+        "M8"
+      ],
+      "paper": "https://github.com/quanweiliu/WFCG",
+      "association": "Repository association; original publication link not confirmed in frozen README",
+      "project_duty": "Fixed graph and branch-weight contracts; independent development split",
+      "license": "Unconfirmed",
+      "license_path": null,
+      "license_text_evidence": "unconfirmed",
+      "remote_files_sha256": {},
+      "connector_git_blobs": {
+        "createGraph/create_graph.py": "15b3922ba945c024b0aab5775bb65a5d56470ec3",
+        "main.py": "bc590bc8d9548058e968fb396524db0390d3d26b"
+      },
+      "tree_license_paths": [],
+      "tests_named_in_fixed_tree": 0,
+      "source_observation": "main.py constructs its own split and create_graph.py materializes train/val/test labels; fixed tree lacks explicit license",
+      "decision": "Reference only, no reuse",
+      "unchecked_paths": [
+        "README.md"
+      ],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "license_blocked",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "gmum/Zero-Time-Waste",
+      "commit": "8341f3a6215a88171427472534ef53a9385f8cd8",
+      "families": [
+        "DY",
+        "WP11"
+      ],
+      "paper": "https://arxiv.org/abs/2106.05409",
+      "association": "Author repository",
+      "project_duty": "Frozen light/heavy fallback and independent threshold plus whole-pipeline cost",
+      "license": "MIT for ztw_cv subtree",
+      "license_path": "ztw_cv/LICENSE",
+      "license_text_evidence": "fixed LXC file",
+      "remote_files_sha256": {
+        "README.md": "8804400ff4a826bf12337fe13e09c38e2021ca8a1c5576a780244b6102fd2689",
+        "ztw_cv/LICENSE": "2d59b8b59547464a45290b537d38b202c9b38451848825782d501d30fb321268",
+        "ztw_cv/architectures/early_exits/base.py": "37f2e31c56d60ea2854d0a41bf19310ba1b8ef19312ba83fb75f0e4a79a4a137",
+        "ztw_cv/eval.py": "39fa2db6cd23cd6999dc41f28658fa8c3c6c4e4f3809955563058604dbcde59d"
+      },
+      "connector_git_blobs": {},
+      "tree_license_paths": [
+        "ztw_cv/LICENSE",
+        "ztw_cv_original/LICENSE",
+        "ztw_nlp/LICENSE",
+        "ztw_rl/LICENSE"
+      ],
+      "tests_named_in_fixed_tree": 0,
+      "source_observation": "Early exits recycle earlier classifier features/predictions; different execution and calibration; sibling subtree licenses separate",
+      "decision": "Scoped candidate for early-exit study, not same light/heavy mechanism",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "different_duty",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "ethanjperez/film",
+      "commit": "fe43ddf8a22b339dcca2efa07091ce9d498955cf",
+      "families": [
+        "E1",
+        "E2"
+      ],
+      "paper": "https://arxiv.org/abs/1709.07871",
+      "association": "Author repository",
+      "project_duty": "Coverage/missingness-conditioned affine and default-off bypass",
+      "license": "CC-BY-NC-4.0",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed GitHub file HTML",
+      "remote_files_sha256": {},
+      "connector_git_blobs": {
+        "vr/models/film_gen.py": "cdc0c7979750ed22fe64129b974a7074b1122bec",
+        "vr/models/filmed_net.py": "aff948334641e15a69f4f166449c39ca3d866268"
+      },
+      "tree_license_paths": null,
+      "tests_named_in_fixed_tree": null,
+      "source_observation": "Visual reasoning conditioning via FiLM generator and feature-wise affine; does not establish physical metadata validity",
+      "decision": "Formula reference; no code copied under noncommercial terms",
+      "unchecked_paths": [
+        "LICENSE",
+        "README.md"
+      ],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "license_restricted",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": null
+    },
+    {
+      "repository": "czhu95/ternarynet",
+      "commit": "1a67251f7f5a1cdf854f87f90f841655c7c9f11c",
+      "families": [
+        "TQ",
+        "WP10"
+      ],
+      "paper": "https://arxiv.org/abs/1612.01064",
+      "association": "Author repository",
+      "project_duty": "Trained ternary values, packed two-bit encode/decode and separate deployment",
+      "license": "Apache-2.0",
+      "license_path": "LICENSE",
+      "license_text_evidence": "fixed GitHub file bytes",
+      "remote_files_sha256": {},
+      "connector_git_blobs": {
+        "LICENSE": "065dca64b20676f18883098167cff688d1e8f637",
+        "README.md": "3eecac9ae8d355ae5358215a71370b1473302f22"
+      },
+      "tree_license_paths": null,
+      "tests_named_in_fixed_tree": null,
+      "source_observation": "Fixed README describes TensorFlow TTQ asymmetric learned scales; source implementation files not verified this round",
+      "decision": "Legacy mathematical reference only; no cross-framework deployment equivalence",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "reference_only",
+      "additional_fixed_git_blobs": {
+        "examples/Ternary-Net/ternary.py": "a1db7f5183a51a366a7c707446c1badef67feb67",
+        "examples/Ternary-Net/tw-imagenet-alexnet.py": "540e237264056560a19ed27334be9936732439b8"
+      },
+      "production_authorized": false,
+      "final_note": "Located author ternary.py and AlexNet caller. tf.select with learned asymmetric positive/negative scales and stopped masks; legacy TensorFlow/Tensorpack stack, no portable 2-bit execution equivalence. Root Apache-2.0; bundled old Tensorpack full provenance not cleared for reuse."
+    },
+    {
+      "repository": "scikit-image/scikit-image",
+      "commit": "8dd4c63927588c324d4d2c87c4b3f127e08c449e",
+      "families": [
+        "C1",
+        "M3",
+        "WP02"
+      ],
+      "paper": "https://doi.org/10.1109/TPAMI.2012.120",
+      "association": "Maintainer implementation of Achanta SLIC; library paper https://doi.org/10.7717/peerj.453",
+      "project_duty": "Region Q only from legal scene data with original boundaries and geometric budget",
+      "license": "BSD-3-Clause root with per-file exceptions",
+      "license_path": "LICENSE.txt",
+      "license_text_evidence": "fixed GitHub file bytes",
+      "remote_files_sha256": {},
+      "connector_git_blobs": {
+        "LICENSE.txt": "710ea3c93015813ea401bebbfd85073a2c6ecdfc",
+        "src/skimage/segmentation/slic_superpixels.py": "5f16fea6c067c4680849c13423859b75ef1b238f",
+        "src/_skimage2/segmentation/slic_superpixels.py": "8dc8b37db92d4c5ef11cddadfda0e75a70ea6649",
+        "src/_skimage2/segmentation/_slic.pyx": "726f0ec868862760916be2ffcb62148a4e12ffa8"
+      },
+      "tree_license_paths": null,
+      "tests_named_in_fixed_tree": null,
+      "source_observation": "Shim delegates to _skimage2 Cython SLIC; spacing, mask, optional Lab/color conversion and connectivity can change Q",
+      "decision": "Useful future unlabeled segmentation comparator; no graph or label transfer",
+      "unchecked_paths": [
+        "src/skimage/segmentation/_slic.pyx",
+        "src/skimage/segmentation/tests/test_slic.py"
+      ],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "reference_only",
+      "additional_fixed_git_blobs": {
+        "tests/skimage/segmentation/test_slic.py": "5768594d3e9535e5c7143e627ef5a53222d06022",
+        "tests/skimage2/segmentation/test_slic.py": "9fed1756d23eb6a8ecf3c8924396f18e4fd8c044",
+        "LICENSE.txt": "710ea3c93015813ea401bebbfd85073a2c6ecdfc"
+      },
+      "production_authorized": false,
+      "final_note": "Located both test suites (mask, spacing, 2D/3D, connectivity, image scale and degenerate requests). BSD-3-Clause umbrella applies to inspected SLIC paths; file list contains unrelated exceptions. Read only."
+    },
+    {
+      "repository": "THUMNLab/CurBench",
+      "commit": "c03ebc4f4e85b3bf1521317b0184b743ade2f285",
+      "families": [
+        "CUR",
+        "WP01"
+      ],
+      "paper": "https://proceedings.mlr.press/v235/zhou24o.html",
+      "association": "Author benchmark repository",
+      "project_duty": "Class-first exposure, effective support, fixed observer and optimizer budget",
+      "license": "Unconfirmed",
+      "license_path": null,
+      "license_text_evidence": "unconfirmed",
+      "remote_files_sha256": {},
+      "connector_git_blobs": {
+        "curbench/algorithms/base.py": "81793b62921a4884f61b0aee93a34398ed200f7f",
+        "README.md": "ee7074f78cb364619b06d10ab4987f19e6591cde"
+      },
+      "tree_license_paths": null,
+      "tests_named_in_fixed_tree": null,
+      "source_observation": "BaseCL wraps Dataset/DataLoader and chooses shuffled curriculum; no verified license at fixed SHA",
+      "decision": "Protocol reference; no code copied",
+      "unchecked_paths": [],
+      "replacement_approved": false,
+      "upstream_executed": "not_run",
+      "dependencies_checked": null,
+      "outcome": "license_blocked",
+      "additional_fixed_git_blobs": {},
+      "production_authorized": false,
+      "final_note": "Fixed Git tree complete and has no license/notice paths. No reuse."
+    },
+    {
+      "repository": "zhu-xlab/DOFA",
+      "commit": "0cfb7e1099f4d4c4022946ff7862c7cd7b8411b9",
+      "license": "MIT",
+      "outcome": "oracle_only",
+      "decision": "Position encoding unit check only; no dynamic spatial patch embedding.",
+      "production_authorized": false,
+      "file_level_evidence": "docs/references/oss-a-priority-source-review.json"
+    },
+    {
+      "repository": "huggingface/pytorch-image-models",
+      "commit": "43b549bfe9d680bc94284cfd0b611152d18e97d7",
+      "license": "Apache-2.0",
+      "outcome": "different_duty",
+      "decision": "Per-channel routing, BN, separate kernels and optional channel split change WP07 scene/shared-kernel semantics.",
+      "production_authorized": false,
+      "file_level_evidence": "docs/references/oss-a-priority-source-review.json"
+    },
+    {
+      "repository": "QishuaiWen/MiTA",
+      "commit": "0dfca9e0f6affdefc663b185da1a7330cd6bb892",
+      "license": "MIT with nested origin caveat",
+      "outcome": "different_duty",
+      "decision": "Fixed regional IDs and candidate support differ; original MoBA borrowed revision unknown.",
+      "production_authorized": false,
+      "file_level_evidence": "docs/references/oss-a-priority-source-review.json"
+    },
+    {
+      "repository": "VainF/Torch-Pruning",
+      "commit": "e80127d7c6935c319a7dd6719b8a72e3c1fcbff9",
+      "license": "MIT",
+      "outcome": "oracle_only",
+      "decision": "Fixed stock CNN dependence map only; no approval to prune.",
+      "production_authorized": false,
+      "file_level_evidence": "docs/references/oss-a-priority-source-review.json"
+    }
+  ],
+  "execution_boundary": "Fixed PyG arithmetic, TorchMetrics CPU counting, DepGraph and DOFA unit helper were executed in their stated restricted scopes across OSS-A/B/C. The other fixed repositories were read or kept as bounded references; no test claim.",
+  "production_replacement": false
+}

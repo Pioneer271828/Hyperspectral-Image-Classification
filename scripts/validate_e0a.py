@@ -11,6 +11,7 @@ import traceback
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from transfer.container_runtime import training_container_kind
 M8_PATHS = ['model/', 'train_vca_multidataset.py', 'train_spatial.py',
             'tests/test_fusion_m8.py', 'scripts/validate_m8.py',
             'configs/experiments/m8_spatial_default.json', 'configs/experiments/m8_spatial_aux_off.json',
@@ -175,8 +176,8 @@ def main():
     parser.add_argument('--out-dir', type=Path, required=True)
     parser.add_argument('--real-data-root', type=Path, help='Optional read-only dataset root for accepted M8 test predictions')
     args = parser.parse_args()
-    if sys.platform != 'linux' or not Path('/.dockerenv').exists():
-        parser.error('Run in the training container using ssh rmvision')
+    if not training_container_kind():
+        parser.error('Use the authorized Linux training container (see docs/guides/remote-validation.md)')
     if not re.fullmatch(r'[0-9a-f]{40}', args.expected_commit) or git('rev-parse', 'HEAD') != args.expected_commit:
         parser.error('Full expected SHA differs from HEAD')
     if git('status', '--porcelain', '--untracked-files=all') or sys.flags.optimize or os.environ.get('PYTHONOPTIMIZE'):

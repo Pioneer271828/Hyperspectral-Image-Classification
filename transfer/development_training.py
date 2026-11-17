@@ -1,4 +1,5 @@
 """Role-isolated development adaptation; does not evaluate external test."""
+from dataclasses import asdict
 from pathlib import Path
 import numpy as np
 import torch
@@ -10,15 +11,23 @@ from research_runtime import write_json,hash_file
 from transfer.g3_training import Scene,build_target,_optimizer,_update,_forward,state_hash,head_hash
 from transfer.tile_sampling import SupportTileSampler
 from transfer.run_provenance import resolve_budget,run_fields,verify_run_artifacts
+from transfer.multiscale_training import MultiscaleTrial
+
+
+WP02_SPATIAL_RECORD = 'wp02_accepted_xuzhou_k5_v5_v1'
 
 
 def development_counts(record):
-    """Fixed per-class 10/5 contract; totals vary only with declared classes."""
+    """Preserve K10/V5 and the separate WP02 K5/V5 release."""
     classes=record['classes']
     if (not isinstance(classes,list) or not 1<=len(classes)<=256 or
             any(type(c) is not int for c in classes) or classes!=list(range(1,len(classes)+1))):
         raise ValueError('Bounded contiguous positive classes required')
-    training,validation=10*len(classes),5*len(classes)
+    wp02 = record.get('kind') == WP02_SPATIAL_RECORD
+    if wp02 and (classes != list(range(1, 10)) or record['train_support']['seed'] != 512
+                 or record['validation_support']['seed'] != 3031):
+        raise ValueError('WP02 Xuzhou release requires nine classes and its original support seeds')
+    training,validation=(5 if wp02 else 10)*len(classes),5*len(classes)
     for key,expected in (('training_labels',training),('validation_labels',validation),
                          ('total_training_selection_labels',training+validation)):
         if type(record.get(key)) is not int or record[key]!=expected:
@@ -35,9 +44,11 @@ def validate(record,plan):
         if {k:v for k,v in role.items() if k!='role'}!=tile:raise ValueError('Role geometry altered')
         allowed=('devtrain','devval') if tile['partition']=='train' else ('test',) if tile['partition']=='test' else ('unused',)
         if role['role'] not in allowed:raise ValueError('Invalid role')
-    development_counts(record)
+    training, validation = development_counts(record)
     width=plan['shape'][1];seen=set()
-    for name,role,budget in [('train_support','devtrain',10),('validation_support','devval',5)]:
+    classes = len(record['classes'])
+    for name,role,budget in [('train_support','devtrain',training//classes),
+                             ('validation_support','devval',validation//classes)]:
         support=record[name];ids=support['indices'];labels=support['labels']
         if ids!=sorted(set(ids)) or len(ids)!=len(labels) or seen.intersection(ids):raise ValueError('Support overlap/order')
         seen.update(ids)
@@ -70,12 +81,15 @@ def sparse_labels(record,plan,name):
     return result
 
 
-def evaluate_validation(model,scene,record,*,observation_policy=None,condition='full'):
+def evaluate_validation(model,scene,record,*,observation_policy=None,condition='full',multiscale_condition_only=False):
     validate(record,scene.plan)
     _,validation_count=development_counts(record)
     if scene.classes!=len(record['classes']):raise ValueError('Scene/record class counts differ')
     if observation_policy is None and condition!='full':raise ValueError('Perturbation condition requires frozen policy')
-    expected=getattr(model,'training_config',{}).get('observation_policy_hash')
+    settings = getattr(model, 'training_config', {})
+    if 'multiscale_metadata_hash' in settings and settings['multiscale_metadata_hash'] != scene.bands.fingerprint:
+        raise ValueError('Multiscale validation requires the registered band metadata')
+    expected=settings.get('observation_policy_hash')
     if expected is not None and (observation_policy is None or observation_policy.policy_hash!=expected):
         raise ValueError('Reload the matching frozen observation policy for this checkpoint')
     if observation_policy is not None:observation_policy.validate(scene,record)
@@ -89,6 +103,8 @@ def evaluate_validation(model,scene,record,*,observation_policy=None,condition='
             if not valid.any():continue
             original=scene.plan['tiles'][tile['id']]
             extra={} if observation_policy is None else {'observation_view':observation_policy.view(scene,record,original,phase='validation',condition=condition)}
+            if multiscale_condition_only:
+                extra['multiscale_condition_only'] = True
             output=_forward(model,scene,original,**extra)[0].detach().cpu().numpy()
             target=target[valid]-1;probs=output[valid]
             prediction=probs.argmax(1)
@@ -100,12 +116,16 @@ def evaluate_validation(model,scene,record,*,observation_policy=None,condition='
             'support':matrix.sum(1).tolist(),'recall':(np.diag(matrix)/matrix.sum(1)).tolist()}
 
 
-def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036,progress=None,sampling='uniform',observation_policy=None):
+def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,steps=2,val_every=1,device='cpu',seed=2036,progress=None,sampling='uniform',observation_policy=None,multiscale=None):
     validate(record,scene.plan)
     if type(steps) is not int or steps<=0 or type(val_every) is not int or val_every<=0:raise ValueError('Positive budgets required')
     if observation_policy is not None:observation_policy.validate(scene,record,steps)
-    folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
+    if multiscale is not None and (not isinstance(multiscale, MultiscaleTrial) or method == 'source_pretrained_head_only'):
+        raise ValueError('Multiscale trial requires explicit controls and a trainable backbone')
     model,config=build_target(base,scene,method,source,model_seed=seed,head_seed=seed+2,device=device)
+    if multiscale is not None:
+        model = multiscale.initialize(model, seed)
+    folder=Path(folder);folder.mkdir(parents=True,exist_ok=False)
     config=resolve_budget(config,steps,val_every)
     initial_backbone=state_hash(model.backbone);initial_heads=head_hash(model)
     optimizer=_optimizer(model,config);labels=sparse_labels(record,scene.plan,'train_support')
@@ -122,6 +142,9 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
     policy_fields={} if observation_policy is None else {'observation_policy_hash':observation_policy.policy_hash,
                                                         'observation_selection_condition':'full'}
     model.training_config.update(policy_fields)
+    trial_fields = {} if multiscale is None else {'multiscale': asdict(multiscale),
+                                                'multiscale_metadata_hash': scene.bands.fingerprint}
+    model.training_config.update(trial_fields)
     if observation_policy is not None:write_json(folder/'observation-policy.json',observation_policy.to_dict())
     for step in range(1,steps+1):
         tile,anchor=sampler.draw(rng)
@@ -144,7 +167,7 @@ def adapt(scene,record,base,folder,*,method='target_scratch_full',source=None,st
             'final_backbone_hash':state_hash(model.backbone),'final_head_hash':head_hash(model),
             'development_hash':record['validation_hash'],'checkpoint_sha256':hash_file(folder/'model.pt'),
             'sidecar_sha256':hash_file(folder/'model.pt.json'),'sampler':sampler.metadata,
-            **records,**policy_fields}
+            **records,**policy_fields,**trial_fields}
     write_json(folder/'result.json',result);write_json(folder/'statistics.json',scene.stats)
     verify_run_artifacts(folder)
     return result
