@@ -4,7 +4,7 @@
   "issue": 368,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "9bc7fbfb51fd17b0df7f214fc2d407e2d8b901ee",
+  "main_snapshot": "d00aeea1744a0e627ef3a1c24108ee02666ab100",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -1596,15 +1596,22 @@
     },
     {
       "id": "WP05-META 逐带元数据激活",
-      "state": "保留历史，仅审查",
-      "evidence": "保留 #467 的公共接口与真实只读核对报告；当前运行入口、模型与数据加载保持冻结",
-      "remaining": "需可信逐带标定及兼容且失败关闭的 checkpoint 元数据绑定；#467 与 #468 不进入启用路径",
-      "report": "research/reports/WP05META_公共接口与P4v4真实准入复核_20261113.md"
+      "state": "可选登记入口已合 main；真实标定待验",
+      "evidence": "#496 替代 #467 和 #468；32 项 CPU、4 项 CUDA 短测通过。专用 checkpoint 绑定像素、分区、空间计划、图尺度及 coverage 范围。三个既有场景仅做 train/val 只读审查。",
+      "remaining": "需要可信且获准使用的逐带标定表，以及独立真实迁移和精度验证。",
+      "report": "research/reports/2026-11-17-repository-integration/review.md"
+    },
+    {
+      "id": "仓库整合最终审查",
+      "state": "#494、#495、#496 已合 main；研究训练暂停",
+      "evidence": "78 个旧 PR 以替代方式关闭；另审查 68 个无 PR 分支头。#495 全仓 CPU 1499 通过、39 按条件跳过、0 失败，3 项 CUDA 短测通过；#496 测试树与实际合并树一致。",
+      "remaining": "P4 双卡和 WP07 严格 CUDA 短测受资源门槛阻塞；P4 真实保留 10/20 例，WP07 两份真实预算均未放行，其他真实实验按原报告验收。专用 CI 运行器待注册。",
+      "report": "research/reports/2026-11-17-repository-integration/review.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "repository_integration_candidate_research_training_paused",
-  "long_training_policy": "当前研究训练暂停；整合只做工程回归、合成短测及既存证据的只读复核。已授权容器内的八张 GPU 可按实时空闲显存、利用率及物理 UUID 排他租约选用；此授权不启动真实长训练。",
+  "execution_state": "repository_integration_reviewed_merged_research_training_paused",
+  "long_training_policy": "当前研究训练暂停；本轮合并后的工作只同步审查结果与状态投影。历史工程回归、合成短测和既存证据的只读复核留档。",
   "main_merge_evidence": [
     {
       "tested_sha": "b985634b22ba77422bb8c91143bbc0a0337707ff",
@@ -1850,6 +1857,20 @@
       "tested_sha": "3df9c70aad1842da2e3f0f8718355c5b7378d08c",
       "merge_sha": "9bc7fbfb51fd17b0df7f214fc2d407e2d8b901ee",
       "scope": "Opt-in low-rank code only; LXC 7 targeted passes and 1125 full-suite passes with 7 skips; exact merge tree matched tested tree"
+    },
+    {
+      "pr_number": 495,
+      "head_sha": "36eb43eb530378fbe9af19f4ecf59614530175db",
+      "tested_sha": "f95c2a120948b3a085f3c7b05adaf5c32e9ebf7b",
+      "merge_sha": "eb7e5f20882551b6c879b1ba1a5931dc78ec2838",
+      "scope": "75 reviewed replacement scopes; LXC CPU 1499 passed, 39 skipped, 0 failures and 3 bounded CUDA passes. Merge tree matches the tested tree. P4 and WP07 strict CUDA checks remained resource-gated."
+    },
+    {
+      "pr_number": 496,
+      "head_sha": "60804913568165c50e54d80b70070e851117be52",
+      "tested_sha": "eeb5b3f1807bb1ed95d01ee41ad5bb6723984d7b",
+      "merge_sha": "d00aeea1744a0e627ef3a1c24108ee02666ab100",
+      "scope": "Opt-in spectral metadata and spatial checkpoint binding replaces PRs 467 and 468; LXC CPU 32 and CUDA 4 passed. Merge tree matches the tested tree. Real per-band calibration remains pending."
     }
   ]
 }
