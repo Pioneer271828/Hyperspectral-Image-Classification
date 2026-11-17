@@ -1,5 +1,6 @@
 """Opt-in checkpoints that only accept the registered spatial observation."""
 
+from collections.abc import Mapping
 from copy import deepcopy
 from hashlib import sha256
 import io
@@ -62,14 +63,25 @@ def _protocol(superpixel_scale, coverage_reference_nm):
     return dict(superpixel_scale=superpixel_scale, coverage_reference_nm=coverage_reference_nm)
 
 
+def _check_weights(weights):
+    if (not isinstance(weights, Mapping) or not weights
+            or any(not isinstance(t, torch.Tensor) or t.is_complex()
+                   or (t.is_floating_point() and t.dtype != torch.float32) for t in weights.values())):
+        raise ValueError("Registered spectral checkpoint requires FP32 weights and floating buffers")
+
+
 def save_registered_checkpoint(model, path, *, registration, superpixel_scale=100, coverage_reference_nm=None):
+    if type(model) is not MultiDatasetVCASAHGCN:
+        raise ValueError("Registered spectral checkpoints require the original MultiDatasetVCASAHGCN model type")
     metadata = model.export_config()
     verify_registration(registration, tuple(metadata["class_counts"]))
     if model.backbone.graph_mode != "learned":
         raise ValueError("Registered spectral checkpoints require a label-free learned graph")
     protocol = _protocol(superpixel_scale, coverage_reference_nm)
+    weights = model.state_dict()
+    _check_weights(weights)
     payload = dict(format=FORMAT, metadata=json.dumps(metadata, allow_nan=False), protocol=json.dumps(protocol),
-                   registration=json.dumps(registration, allow_nan=False), weights=model.state_dict())
+                   registration=json.dumps(registration, allow_nan=False), weights=weights)
     with Path(path).open("xb") as stream:
         torch.save(payload, stream)
 
@@ -103,8 +115,14 @@ def load_registered_checkpoint(path, *, expected_sha256, registration, device="c
     verify_registration(recorded, tuple(metadata["class_counts"]))
     if digest(recorded) != digest(registration):
         raise ValueError("Checkpoint spectral registration differs")
-    model = MultiDatasetVCASAHGCN(metadata["class_counts"], **metadata["backbone_kwargs"]).to(device)
+    _check_weights(value["weights"])
+    model = MultiDatasetVCASAHGCN(metadata["class_counts"], **metadata["backbone_kwargs"])
+    model.to(device=device, dtype=torch.float32)
     if model.backbone.graph_mode != "learned":
         raise ValueError("Registered spectral checkpoints require a label-free learned graph")
+    expected = model.state_dict()
+    if (set(expected) != set(value["weights"])
+            or any(expected[k].dtype != t.dtype for k, t in value["weights"].items())):
+        raise ValueError("Registered checkpoint parameter or buffer dtype differs from the original model")
     model.load_state_dict(value["weights"], strict=True)
     return RegisteredSpectralCheckpoint(model, recorded, protocol)

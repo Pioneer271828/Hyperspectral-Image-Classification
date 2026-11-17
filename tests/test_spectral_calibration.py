@@ -145,3 +145,27 @@ class SpectralCalibrationTests(unittest.TestCase):
         self.assertNotIn("spectral_registration", load_model_checkpoint(legacy).training_config)
         with self.assertRaisesRegex(ValueError, "legacy state dictionary"):
             load_registered_checkpoint(legacy, expected_sha256=hash_file(legacy), registration=registered)
+
+    def test_checkpoint_rejects_non_fp32_weights_without_creating_an_artifact(self):
+        bands = self.load()
+        _, record = sample(self.obs, bands, {"mode": "none"})
+        registered = register("fixture", self.obs, bands, record)
+        path = self.root / "unsupported.pt"
+        mixed = self.model()
+        mixed.heads["fixture"].double()
+        for model in (self.model().double(), self.model().half(), mixed):
+            with self.assertRaisesRegex(ValueError, "requires FP32"):
+                save_registered_checkpoint(model, path, registration=registered)
+            self.assertFalse(path.exists())
+        with self.assertRaisesRegex(ValueError, "original MultiDatasetVCASAHGCN"):
+            save_registered_checkpoint(torch.nn.Linear(1, 1), path, registration=registered)
+        self.assertFalse(path.exists())
+
+        original = self.root / "original.pt"
+        save_registered_checkpoint(self.model(), original, registration=registered)
+        payload = torch.load(original, weights_only=True, map_location="cpu")
+        name = next(k for k, v in payload["weights"].items() if v.is_floating_point())
+        payload["weights"][name] = payload["weights"][name].double()
+        torch.save(payload, path)
+        with self.assertRaisesRegex(ValueError, "requires FP32"):
+            load_registered_checkpoint(path, expected_sha256=hash_file(path), registration=registered, device=DEVICE)

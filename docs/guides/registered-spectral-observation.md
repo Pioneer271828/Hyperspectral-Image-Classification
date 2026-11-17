@@ -16,8 +16,10 @@ The HongHu proposal remains a draft and does not authorize training.
    and partition. Original labels and held-out scores are not part of this API.
 3. Pass the registration, graph scale and optional coverage reference to
    `transfer.spectral_checkpoint.save_registered_checkpoint`. Keep the package
-   digest with the independent registration. This package cannot be interpreted
-   as a legacy state dictionary by the baseline loader.
+   digest with the independent registration. The package accepts the original
+   learned-graph model and FP32 floating parameters and buffers; it rejects
+   other model types or floating dtypes before writing. The baseline loader
+   cannot interpret this package as a legacy state dictionary.
 4. Use `load_registered_checkpoint` with that exact package digest and
    registration. Its spatial forward accepts the original observation and
    authenticated metadata. It replays the fixed subset, rejects an identity
