@@ -23,6 +23,7 @@ POLICY = "dy-independent-development-v1"
 HISTORY_POLICY = "dy-audited-devtrain-devval-footprint-v1"
 TIMING_SCOPE = "resident_cpu_batch_public_api_validation_and_compute"
 DESIGN_PINS = {"confirmation_design_sha256", "confirmation_labels_file_sha256"}
+MATCHED_PIN = {"matched_release_sha256"}
 
 
 def confirmation_environment():
@@ -113,10 +114,10 @@ def validate_admission(full, published, scene, record, history, registration, *,
             "Pinned confirmation registration required")
     fields = {"policy", "history_sha256", "light_spec_sha256", "light_artifact_sha256",
               "blocks", "request_sha256", "labels_sha256", "scale", "benchmark"}
-    require(set(registration) in (fields, fields | DESIGN_PINS)
+    require(set(registration) in (fields, fields | DESIGN_PINS, fields | DESIGN_PINS | MATCHED_PIN)
             and registration["policy"] == POLICY
             and all(pin(registration[key]) for key in ({"labels_sha256", "light_artifact_sha256"} |
-                                                       (DESIGN_PINS & registration.keys()))),
+                                                       ((DESIGN_PINS | MATCHED_PIN) & registration.keys()))),
             "Exact confirmation registration required")
     require(digest(history) == registration["history_sha256"], "Full history registration differs")
     identity = validate_full_history(full, scene, record, history)

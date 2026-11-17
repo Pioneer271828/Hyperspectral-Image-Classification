@@ -7,19 +7,18 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.dynamic_curve import pin
 from evaluation.wp11_confirmation import (POLICY, build_requests, layout, load_held_aside_tiles, unused_tiles,
-                                            validate_benchmark, validate_full_history, validate_gate_inputs)
+                                            validate_benchmark, validate_gate_inputs)
 from inference.gate_calibration import GateProtocol, SPARSE_PROTOCOL
 from inference.route_controls import _fixed_routes, request_hash
-from inference.trained_light import load_trained_light
+from evaluation.wp11_model_pair import LIGHT_PINS, MATCHED, MODEL_FILES, load_pair
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, write_json
 from scripts.prepare_wp11_confirmation import confirmation_protocols
 from scripts.prepare_wp11_label_custody import COMMITMENT, PLAN, ROLES, read, verify_inputs
-from transfer.registered_development import _load_source, _pin as file_pin, _read, load_development
+from transfer.registered_development import _pin as file_pin, load_development
 
 
-MODEL_FILES = ("development", "full_weights", "full_metadata", "full_history", "history_evidence", "light")
-LIGHT_PINS = ("light_training_sha256", "light_contract_hash")
+
 COMMITMENT_FIELDS = {"policy", "role", "plan_sha256", "authority_sha256", "receipt_sha256", "labels_sha256",
                      "labels_content_sha256", "blocks_sha256"}
 
@@ -27,7 +26,7 @@ COMMITMENT_FIELDS = {"policy", "role", "plan_sha256", "authority_sha256", "recei
 def run(registration, out, code):
     spec = read(registration)
     fields = {*MODEL_FILES, *LIGHT_PINS, "role_plan", "calibration", "confirmation", "settings", "scale", "benchmark"}
-    if set(spec) not in (fields, fields | {"confirmation_design"}) or set(spec["calibration"]) != {"commitment", "blocks", "labels", "receipt"} or set(
+    if set(spec) not in (fields, fields | {"confirmation_design"}, fields | {"confirmation_design", MATCHED}) or set(spec["calibration"]) != {"commitment", "blocks", "labels", "receipt"} or set(
             spec["confirmation"]) != {"commitment", "blocks"}:
         raise ValueError("Only the registered calibration and confirmation metadata are allowed")
     if set(spec["settings"]) != {"name", "criterion", "thresholds", "min_coverage", "min_class_support", "max_drop"}:
@@ -98,15 +97,13 @@ def run(registration, out, code):
             raise ValueError(f"Deferred calibration {key} pin differs from custody")
     layout(scene.plan, record, blocks)
 
-    history = read(spec["full_history"])
-    if history["history_evidence_sha256"] != spec["history_evidence"]["sha256"]:
-        raise ValueError("Full history evidence differs")
-    _read(spec["history_evidence"])
-    full = _load_source(spec["full_weights"], spec["full_metadata"])
-    light = load_trained_light(full, spec["light"]["path"], expected_sha256=spec["light"]["sha256"],
-                               expected_training_sha256=spec["light_training_sha256"],
-                               expected_contract_hash=spec["light_contract_hash"])
-    identity = validate_full_history(full, scene, record, history)
+    forbidden = [*deferred, {"sha256": commitments["confirmation"]["labels_sha256"]}]
+    if MATCHED in spec:
+        safe([spec[MATCHED]])
+    full, light, history, pair_pins = load_pair(spec, scene, record, forbidden=forbidden)
+    safe(pair_pins)
+    inputs.extend(pair_pins)
+    identity = history["scene_identity"]
     light_spec = light.specification
     if light.validate(full) != scene.dataset or light_spec["training_spec"]["identity"] != identity:
         raise ValueError("Light training and selection footprint differs")
@@ -121,6 +118,8 @@ def run(registration, out, code):
     admission = dict(policy=POLICY, history_sha256=digest(history), light_spec_sha256=digest(light_spec),
                      light_artifact_sha256=spec["light"]["sha256"], blocks=blocks, request_sha256=request_hash(requests),
                      labels_sha256=hashes["confirmation"], scale=spec["scale"], benchmark=spec["benchmark"])
+    if MATCHED in spec:
+        admission["matched_release_sha256"] = spec[MATCHED]["sha256"]
     design_pin = spec.get("confirmation_design")
     if design_pin is not None:
         admission.update(confirmation_design_sha256=design_pin["sha256"],
@@ -156,6 +155,8 @@ def run(registration, out, code):
     write_json(out / "admission.json", admission)
     write_json(out / "gate-protocol.json", gate)
     base = {key: spec[key] for key in (*MODEL_FILES, *LIGHT_PINS)}
+    if MATCHED in spec:
+        base[MATCHED] = spec[MATCHED]
     base.update(admission=file_pin(out / "admission.json"), gate_protocol=file_pin(out / "gate-protocol.json"))
     cal_tiles = {b["tile_id"] for b in calibration.values()}
     tile_files = [dict(tile_id=i, file=p) for i, p in sorted(tiles.items())]

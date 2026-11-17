@@ -12,10 +12,11 @@ from evaluation.wp11_confirmation import build_requests, endpoint_records, load_
 from evaluation.dynamic_curve import pin
 from inference.gate_calibration import GateProtocol, SPARSE_PROTOCOL, calibrate, save_freeze
 from inference.route_controls import _output_hash, request_hash
-from inference.trained_light import load_trained_light, trained_cascade
+from evaluation.wp11_model_pair import MATCHED, forbid_aliases, load_pair
+from inference.trained_light import trained_cascade
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
-from transfer.registered_development import _load_source, _read, load_development
+from transfer.registered_development import _read, load_development
 
 
 def run(registration, out, code):
@@ -23,7 +24,7 @@ def run(registration, out, code):
     fields = {"development", "full_weights", "full_metadata", "full_history", "history_evidence", "light",
               "light_training_sha256", "light_contract_hash", "admission", "calibration_tiles", "gate_protocol",
               "calibration_receipt", "calibration_blocks", "calibration_labels"}
-    if set(spec) not in (fields, fields | {"confirmation_design_sha256"}):
+    if set(spec) not in (fields, fields | {"confirmation_design_sha256"}, fields | {"confirmation_design_sha256", MATCHED}):
         raise ValueError("Exact calibration-only registration required")
     if "confirmation_design_sha256" in spec and not pin(spec["confirmation_design_sha256"]):
         raise ValueError("Pinned confirmation design required")
@@ -43,22 +44,26 @@ def run(registration, out, code):
     protocol = GateProtocol(gate, digest(gate))
     if gate["schema"] != SPARSE_PROTOCOL:
         raise ValueError("Calibration requires the sparse commitment protocol")
-    admission, history = read("admission"), read("full_history")
+    admission = read("admission")
+    if spec.get(MATCHED, {}).get("sha256") != admission.get("matched_release_sha256"):
+        raise ValueError("Matched release differs from admission")
     if spec.get("confirmation_design_sha256") != admission.get("confirmation_design_sha256"):
         raise ValueError("Confirmation design must match admission before calibration")
-    if history["history_evidence_sha256"] != spec["history_evidence"]["sha256"]:
-        raise ValueError("Full history evidence differs")
-    _read(spec["history_evidence"])
+
     if admission["light_artifact_sha256"] != spec["light"]["sha256"]:
         raise ValueError("Light artifact differs from admission")
+    forbidden = [spec["calibration_labels"]]
+    if "confirmation_labels_file_sha256" in admission:
+        forbidden.append({"sha256": admission["confirmation_labels_file_sha256"]})
+    forbid_aliases([spec["development"]], forbidden)
     scene, record, development_files = load_development(spec["development"])
     if any(label_path == Path(p["path"]).resolve() for p in development_files):
         raise ValueError("Calibration labels cannot be part of the development package")
     pins.extend(development_files)
-    full = _load_source(spec["full_weights"], spec["full_metadata"])
-    light = load_trained_light(full, spec["light"]["path"], expected_sha256=spec["light"]["sha256"],
-                               expected_training_sha256=spec["light_training_sha256"],
-                               expected_contract_hash=spec["light_contract_hash"])
+    full, light, history, pair_pins = load_pair(spec, scene, record, forbidden=forbidden)
+    pins.extend(pair_pins)
+    if any(out == Path(p["path"]).resolve() or out in Path(p["path"]).resolve().parents for p in pair_pins):
+        raise ValueError("New external output outside model packages required")
     validate_admission(full, light, scene, record, history, admission, expected_registration_hash=gate["admission_hash"])
     blocks = validate_gate_inputs(gate, scene, history, admission)
     calibration = [b for b in blocks.values() if b["role"] == "calibration"]

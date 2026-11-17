@@ -80,6 +80,10 @@ def resolve_confirmation(spec, *, registration):
         raise ValueError("Confirmation inputs must include the frozen calibration tiles")
     metadata([base[key] for key in ("development", "full_weights", "full_metadata", "full_history", "history_evidence",
                                      "light", "admission", "gate_protocol")])
+    if "matched_release" in base:
+        metadata([base["matched_release"]])
+        if base["matched_release"]["sha256"] != admission.get("matched_release_sha256"):
+            raise ValueError("Matched release differs from the calibration admission")
     metadata(tiles.values())
     if label_path is not None and Path(base["development"]["path"]).resolve().parent in label_path.parents:
         raise ValueError("Confirmation release cannot be inside the development package")
