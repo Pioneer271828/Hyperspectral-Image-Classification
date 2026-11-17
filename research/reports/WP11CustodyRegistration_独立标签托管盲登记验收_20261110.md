@@ -1,0 +1,8 @@
+# WP11 独立标签托管与盲登记接入
+
+Issue #383 对应研究主计划 §22 WP11、实施计划 §19.12。接续真实候选块、轻模型登记及独立确认隔离。托管端仅在某角色的授权包通过时额外输出 `commitment.json`。它绑定角色、授权、角色计划、块文件、详细回执和两种标签哈希，省去标签值、类别统计及标签文件路径。已有详细托管回执供各阶段按权限使用。
+
+- `scripts/prepare_wp11_gate.py` 只用托管承诺、登记位置、影像、已发布开发包和认证权重生成准入、门控、校准登记与确认交接。核对实际块与空间角色、开发统计、完整和轻模型的同场景历史以及固定预算。确认交接只含标签文件哈希，标签路径留到冻结之后提供。校准标签和详细回执只以固定路径和哈希转交，组装时允许文件不存在。
+- 使用授权 LXC `/home/lbx/hsi-pioneer271828/envs/hsi/bin/python`，分支 `codex/wp11-custody-registration`，测试提交 `e92c8c2e075a65ecf1dc7a6ca5a92a9c53970d21`。`python -m unittest tests.test_wp11_gate_registration tests.test_wp11_calibration tests.test_wp11_registered_light tests.test_light_head_training tests.test_trained_light tests.test_wp11_confirmation tests.test_wp11_label_custody tests.test_wp11_held_aside tests.test_dynamic_cost_pairs tests.test_dynamic_curve tests.test_route_controls tests.test_gate_calibration tests.test_repository_delivery` 通过 66/66，15.601 秒。`python scripts/check_repository.py` 通过，606 Python、198 JSON。
+- 合成包验证两个角色的托管端签发、缺类无承诺、交叉替换角色与篡改延迟标签或回执哈希拒绝。两套标签与详细回执缺席时登记成功；仅恢复校准标签与回执后成功冻结。单独执行 CLI `python scripts/prepare_wp11_gate.py --expected-commit <tested-sha> --registration <spec> --registration-sha256 <sha256> --out <new-dir>`，再用生成的 `calibration-registration.json` 运行校准入口。登记阶段真实标签、模型前向、query、优化更新均为 0。合成回执根目录 `/home/lbx/hsi-pioneer271828/runs/wp11-custody-registration-validation02`，`registered/receipt.json` SHA256 `e7f44a64414821f999f6c053561ddbf9c6c74188214dd64f766309a662b0982c`，`frozen/receipt.json` SHA256 `2441ddb25f87869404cff90c8b44c1848dfc6775518d5e4e5ca4be9b8d7d6709`。
+- 真实徐州仍缺同划分训练轻模型和两份托管签发，真实门控效果、逐类保护及提速待验。下一步接通冻结后的确认登记。GPU 空闲显存最高 6000 MiB，WP12 已登记 54 例继续待资源，WP04 真实短测后补。
