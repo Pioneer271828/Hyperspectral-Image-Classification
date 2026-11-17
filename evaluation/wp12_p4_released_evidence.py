@@ -338,6 +338,7 @@ def comparison_qualification(item, root):
                     for item in row["cases"]),
             "Expected complete synthetic production-entry qualification")
     for case in row["cases"]:
+        require(len(case["stages"]) in (2, 3), "Synthetic qualification is missing released phase receipts")
         for pin in case["stages"]:
             stage = read(pin, root)
             checkpoint = inside(stage["checkpoint"]["path"], root)

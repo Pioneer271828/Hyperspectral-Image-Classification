@@ -200,19 +200,27 @@ def run(root, item, release, code, *, intake=None, cli):
                 "elapsed_seconds": perf_counter()-started}
 
 
-def scoring(endpoint, historical, classes):
-    identity = lambda rows: [(row["tile"], row["band"], row["observation"]) for row in rows]
-    require(identity(endpoint["rows"]) == identity(historical["rows"]),
+def scoring(endpoint, classes, *, historical=None):
+    rows = endpoint["rows"]
+    if historical is not None:
+        keys = ("tile", "band", "observation")
+        require(len(rows) == len(historical["rows"]) and all(
+            all(got[key] == saved[key] for key in keys)
+            for got, saved in zip(rows, historical["rows"], strict=True)),
             "Independent score replay changed the validation order")
     head_results = {}
     for head in HEADS:
         buckets = {}
-        for observed, saved in zip(endpoint["rows"], historical["rows"], strict=True):
-            got, old = observed["scores"][head], saved["scores"][head]
-            require(all(got[key] == old[key] for key in ("nll_sum", "count"))
-                    and observed["heads"][head] == saved["heads"][head]
-                    and got["point_confusion"] == got["coarse_known_count_confusion"],
-                    "Independent released-point validation differs from the selected checkpoint")
+        for index, observed in enumerate(rows):
+            got = observed["scores"][head]
+            if historical is not None:
+                saved = historical["rows"][index]
+                old = saved["scores"][head]
+                require(all(got[key] == old[key] for key in ("nll_sum", "count"))
+                        and observed["heads"][head] == saved["heads"][head],
+                        "Independent released-point validation differs from the selected checkpoint")
+            require(got["point_confusion"] == got["coarse_known_count_confusion"],
+                    "Original-point and coarse known-count confusion differ")
             matrix = np.asarray(got["point_confusion"])
             require(matrix.sum() == got["count"] and (got["count"] > 0 or got["nll_sum"] == 0),
                     "Released-point score count differs from its confusion")
@@ -283,7 +291,7 @@ def paviau_step_zero(root, scene_pin, out, code, *, cli):
                     and all(row["heads"] and all(score["count"] == score["nll_sum"] == 0
                     for score in row["scores"].values()) for row in empty),
                     "PaviaU development roster, empty observations or initial state differs")
-            summary = scoring(endpoint, endpoint, bank.classes)
+            summary = scoring(endpoint, bank.classes)
             for (head, band), (nlls, confusion) in independent.items():
                 measured = summary[head][band]
                 previous = receipt["initial_dev_metrics"][f"devval/{band}/{factor}/{arm}/{head}"]
@@ -333,7 +341,7 @@ def audit_case(root, case, proof, code, *, intake, cli):
             "Released per-class exposure or validation calendar differs")
     return {"case": case["id"], "optimizer_updates": cursor, "completed_resume_updates": 0,
             "selected_step": selected["step"], "fused_nll": selected["fused_nll"],
-            "head_metrics": scoring(evaluated, selected, guard.classes), "released_train_exposures": exposed,
+            "head_metrics": scoring(evaluated, guard.classes, historical=selected), "released_train_exposures": exposed,
             "validation": evaluated, "training_exposure": [row["released"] for row in state["history"]],
             "first_loss": state["history"][0]["loss"], "last_loss": state["history"][-1]["loss"],
             "source_state": spec["source_state"], "initialization": spec["initialization"],

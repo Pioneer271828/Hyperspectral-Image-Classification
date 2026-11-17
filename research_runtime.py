@@ -78,7 +78,9 @@ def tensor_hash(value):
         tensor = tensor.to_sparse_coo().coalesce()
         return digest({**header, "indices": tensor_hash(tensor.indices()), "values": tensor_hash(tensor.values())})
     result = hashlib.sha256(canonical_json(header).encode("utf-8"))
-    result.update(memoryview(tensor.contiguous().numpy()).cast("B"))
+    # Empty tensors have a dtype and shape but no bytes to cast.
+    if tensor.numel():
+        result.update(memoryview(tensor.contiguous().numpy()).cast("B"))
     return result.hexdigest()
 
 
