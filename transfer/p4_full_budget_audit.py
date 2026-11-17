@@ -75,7 +75,7 @@ def check_timing(cost, start, until, events, numeric):
 
 
 def train_state(folder, scope, reg, case, sha, numeric, *, path_name=None):
-    stops = scope['paths'][path_name] if path_name is not None else None
+    stops = scope['paths'][path_name] if path_name is not None else scope.get('fit', {}).get('stops')
     start, receipts = ledger(folder, case, sha, path_name=path_name, stops=stops)
     steps = scope['budget']['steps']
     device.require(start == steps and all(r['numeric'] == numeric for r in receipts),
@@ -179,6 +179,24 @@ def case_files(folder):
         (folder / 'calls').glob('*.json'))
 
 
+def verify_fit_resume(state, receipts, sequence):
+    prior_endpoint = None
+    for row in receipts:
+        before, after = (row['resume'][key] for key in ('before', 'after'))
+        for point, cursor in ((before, row['start']), (after, row['until'])):
+            device.require(set(point) == {'state_sha256', 'cursor', 'rng_sha256', 'next_tile'}
+                and point['cursor'] == cursor
+                and point['next_tile'] == (sequence[cursor] if cursor < len(sequence) else None)
+                and isinstance(point['rng_sha256'], str) and len(point['rng_sha256']) == 64,
+                'Fitting RNG or next sampled block differs from the checkpoint ledger')
+        device.require((before == prior_endpoint if prior_endpoint is not None else before['state_sha256'] is None)
+                       and after['state_sha256'] == row['state_sha256'], 'Broken fitting resume SHA or RNG chain')
+        prior_endpoint = after
+    device.require(prior_endpoint['rng_sha256'] == state['fingerprints']['rng'],
+                   'Last fitting RNG does not match the checkpoint')
+    return [{'start': row['start'], 'until': row['until'], **row['resume']} for row in receipts]
+
+
 def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded=None):
     tick = perf_counter()
     folder = Path(folder)
@@ -188,8 +206,10 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
     exposure_path = reg['exposure']['plan']
     exposure = read_pinned(Path(exposure_path), reg['pins'][exposure_path])
     geometry, allowed, scene, frozen = prior.inputs(reg, plan, exposure)
-    if scope.get('purpose') == registration.RECOVERY:
-        device.require(scene.classes == scope['recovery_classes'], 'Recovery dataset and head class count differ')
+    fit = scope.get('fit')
+    classes = scope.get('recovery_classes') if fit is None else fit['classes']
+    if classes is not None:
+        device.require(scene.classes == classes, 'Registered dataset and head class count differ')
     release = prior.released_roles(reg, plan, geometry, allowed, case)
     release_path = reg['cases'][case['index']]['release']
     raw = read_pinned(Path(release_path), reg['pins'][release_path])
@@ -197,7 +217,7 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
     expected = scope['exposure'][cohort]
     _, exposure_row = p4_exposure.bind(reg, reg['cases'][case['index']], release['train'])
     sequence = [row['tile'] for row in state['trace']]
-    if scope.get('recovery_classes') == 9:
+    if classes == 9:
         counts = {key: exposure_row[key] for key in ('first_all_classes_step','label_exposure_at_events')}
         device.require(result['exposure'] == counts and sequence == exposure_row['tile_sequence']
             and [row['step'] for row in state['trace']] == list(range(1,exposure['steps']+1)),
@@ -209,7 +229,7 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
                    expected['sequence_sha256'] == digest(sequence), 'Per-label exposure differs from the new scope')
     chosen = prior.chosen_event(state, result, scope['budget']['validation_steps'])
     populations = {role: registration.fixed_population(release[role], allowed, role, scene.plan['shape'][1], budget,
-                                                        scope.get('recovery_classes'))
+                                                        classes)
                    for role, budget in (('train', case['k']), ('val', 5))}
     device.require({role: value[2] for role, value in populations.items()} == expected['populations'],
                    'Fixed train/devval population identity differs')
@@ -242,7 +262,7 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
             selected = outputs['val']
             device.require(all(torch.equal(selected[0][head], state['best']['scores'][head]) for head in prior.HEADS),
                            'Selected probabilities differ after independent same-device reload')
-            if scope.get('recovery_classes') == 9:
+            if classes == 9:
                 for head, got in selected[1]['heads'].items():
                     saved = chosen['metrics'][head]
                     device.require(got['confusion'] == saved['confusion'] and got['recall'] == saved['recall']
@@ -289,8 +309,13 @@ def case_audit(folder, scope, reg, case, sha, numeric, *, path_name=None, loaded
     if parameter_summary is not None:
         row.update(parameter_audit=parameter_summary, synchronized_timing={
             'advance': [call['timing'] for call in receipts], 'completed': proof['timing']})
-    if scope.get('purpose') == registration.RECOVERY:
+    if classes is not None:
         row['class_count'] = scene.classes
+    if fit is not None:
+        from transfer.p4_three_arm_review import fitting_evidence
+
+        row['fitting'] = fitting_evidence(state, receipts, sequence, chosen, observation_rows,
+                                          verify_fit_resume(state, receipts, sequence))
     return row
 
 

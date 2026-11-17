@@ -12,7 +12,7 @@ from research_runtime import hash_file, require_frozen_code, write_json
 from train_spatial import SpatialConfig
 from transfer import p4_coverage as coverage, p4_coverage_batch as batch, p4_exposure as exposure
 from transfer import p4_frozen_diagnostics as diag, p4_guarded as guarded, p4_runtime_device as device
-from transfer import p4_update_evidence as updates
+from transfer import p4_update_evidence as updates, p4_three_arm_contract as three_arm
 from transfer.g2_contract import read_pinned
 from transfer.g3_training import _optimizer
 from transfer.p4_spatial import initialize, load_release
@@ -24,7 +24,7 @@ AUDITED = 'audited_full_budget'
 ADMISSION = 'real_admission'
 RECOVERY = 'synthetic_same_device_recovery'
 POLICIES = {LEGACY: POLICY, AUDITED: 'wp05_full_target_budget_v2', ADMISSION: 'wp05_honghu_cuda_admission_v1',
-            RECOVERY: 'wp05_cuda_fp64_weight_same_device_recovery_v1'}
+            RECOVERY: 'wp05_cuda_fp64_weight_same_device_recovery_v1', three_arm.PURPOSE: three_arm.POLICY}
 ADMISSION_STEPS = 60
 ADMISSION_PATHS = {'full': [60], 'split': [2, 30, 60]}
 PAIRED = (ADMISSION, RECOVERY)
@@ -44,11 +44,13 @@ def events(steps, interval):
     return list(range(interval, steps + 1, interval))
 
 
-def matrix(reg, protocol, gpus, purpose=LEGACY):
-    slots = device.slots(protocol, gpus, recovery=purpose == RECOVERY)
+def matrix(reg, protocol, gpus, purpose=LEGACY, *, fit=None):
     keys = [(r['support_seed'], r['k'], r['method']) for r in reg['cases']]
     expected = {(seed, k, method) for seed, k in batch.COHORTS for method in batch.METHODS}
     device.require(len(keys) == len(expected) and set(keys) == expected, 'Exactly eight paired source/target roles required')
+    if purpose == three_arm.PURPOSE:
+        return three_arm.matrix(reg, keys, protocol, gpus, fit)
+    slots = device.slots(protocol, gpus, recovery=purpose == RECOVERY)
     cases = []
     for index, (support_seed, k, method) in enumerate(keys):
         if purpose in PAIRED and support_seed != 2048:
@@ -68,8 +70,13 @@ def matrix(reg, protocol, gpus, purpose=LEGACY):
     return cases
 
 
-def check_budget(purpose, protocol, gpus, synthetic, steps, interval):
+def check_budget(purpose, protocol, gpus, synthetic, steps, interval, *, fit=None):
     device.require(purpose in POLICIES, 'Unknown P4 registration purpose')
+    device.require((fit is not None) == (purpose == three_arm.PURPOSE),
+                   'Fitting contract requires the explicit three-arm purpose')
+    if fit is not None:
+        three_arm.validate_budget(fit, protocol, gpus, synthetic, steps, interval)
+        return
     device.require(protocol != device.CUDA_FP64_WEIGHT or purpose in PAIRED,
                    'FP64 sparse weight arithmetic requires an explicit paired scope')
     device.require(not synthetic or protocol != device.CUDA_FP64_WEIGHT or purpose == RECOVERY,
@@ -234,11 +241,15 @@ def initialize_case(reg, case):
 
 def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, synthetic=False,
             steps=None, interval=INTERVAL, purpose=LEGACY, qualifications=(), recovery_receipt=None,
-            recovery_classes=None):
+            recovery_classes=None, fit=None, fit_reference=None):
     tick = perf_counter()
     require_frozen_code(code)
     steps = (ADMISSION_STEPS if purpose in PAIRED else STEPS) if steps is None else steps
-    check_budget(purpose, protocol, gpus, synthetic, steps, interval)
+    check_budget(purpose, protocol, gpus, synthetic, steps, interval, fit=fit)
+    device.require((fit_reference is not None) == (fit is not None and not synthetic),
+                   'Real fitting requires the pinned original 1500-step preflight')
+    if fit_reference is not None:
+        fit_reference = Path(fit_reference).resolve()
     parent, prior = Path(parent).resolve(), Path(prior).resolve()
     if not synthetic:
         device.require((parent_sha, prior_sha) == (batch.PARENT_SHA, batch.PRIOR_SHA),
@@ -256,14 +267,17 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
     batch.check_pins(reg['pins'])
     guarded_plan, allowed, releases = role_inputs(reg)
     requires_qualification = ((not synthetic and protocol in device.CUDA_QUALIFIED)
-                              or (purpose == RECOVERY and protocol == device.CUDA_FP64_WEIGHT))
+                              or ((purpose == RECOVERY or fit is not None) and protocol == device.CUDA_FP64_WEIGHT))
     qualification, qualification_pins, shape_contract = {}, {}, None
     if requires_qualification:
         from transfer.p4_cuda_qualification import geometry_contract
 
-        shape_contract = (recovery_geometry(qualifications) if purpose == RECOVERY else
+        shape_contract = (recovery_geometry(qualifications) if purpose == RECOVERY or (fit is not None and synthetic) else
                           geometry_contract(guarded_plan, allowed, reg['config']))
-        qualification, qualification_pins = qualification_bindings(qualifications, gpus, protocol, code, shape_contract)
+        qualified_code = three_arm.qualification_code(fit, synthetic, code)
+        qualification, qualification_pins = qualification_bindings(
+            qualifications, gpus, protocol, qualified_code, shape_contract)
+        three_arm.qualification_code(fit, synthetic, code, qualification, qualification_pins)
     else:
         device.require(not qualifications, 'Qualification receipts apply only to real audited CUDA scopes')
     if purpose == RECOVERY:
@@ -273,11 +287,22 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
     else:
         device.require(recovery_classes is None, 'Synthetic recovery class count cannot enter other scopes')
     recovery_pins = bind_recovery(recovery_receipt, purpose, protocol, synthetic, code)
+    fit_pins = {}
+    if fit is not None:
+        if fit_reference is not None:
+            fit_pins[str(fit_reference)] = three_arm.LONG_PREFLIGHT_SHA
+        if fit['release'] is not None:
+            fit_pins.update(three_arm.release_pins(fit['release'], code, gpus,
+                                                  qualification_pins, fit['execution']))
+        device.require(all(len(raw['validation']['labels']) == 5*fit['classes'] for raw, _ in releases.values()),
+                       'Declared fitting class count differs from the released labels')
     floor_path = reg['exposure']['floor']
     floor = read_pinned(Path(floor_path), reg['pins'][floor_path])
     validation_steps = events(steps, interval)
     rows, evidence, seen = [], {}, set()
     for case in reg['cases']:
+        if fit is not None and (case['support_seed'], case['k'], case['method']) != three_arm.ROLE:
+            continue
         if purpose in PAIRED and case['support_seed'] != 2048:
             continue
         if purpose == RECOVERY and case['k'] != 5:
@@ -291,7 +316,8 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
         row = exposure.cohort(floor, reg, case, release['train'], steps=steps,
                               events=validation_steps, seed=SAMPLER_SEED)
         rows.append(row)
-        populations = {role: fixed_population(release[role], allowed, role, guarded_plan['shape'][1], budget, recovery_classes)[2]
+        classes = recovery_classes if fit is None else fit['classes']
+        populations = {role: fixed_population(release[role], allowed, role, guarded_plan['shape'][1], budget, classes)[2]
                        for role, budget in (('train', k), ('val', 5))}
         counts = per_label_exposure(raw, release, guarded_plan['shape'][1], row['tile_sequence'], validation_steps)
         evidence[cohort_id] = {'release_sha256': row['release_sha256'], 'populations': populations,
@@ -317,7 +343,7 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
     bands = read_band_metadata(guarded.SCENE, len(stats['minimum']))
     reg['coverage'] = coverage.freeze(reg, plan, bands, observation=batch.OBSERVATION, seed=3031, metadata='nominal')
     conditions = diag.freeze_conditions(bands, guarded_plan['plan_hash'], reg['coverage']['records']['val'])
-    cases = matrix(reg, protocol, gpus, purpose)
+    cases = matrix(reg, protocol, gpus, purpose, fit=fit)
     common = {}
     for case in cases:
         model, init = initialize_case(reg, case)
@@ -328,14 +354,20 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
         if purpose != LEGACY:
             optimizer = _optimizer(model, SpatialConfig(reg['config']))
             case['parameter_layout_sha256'] = digest(updates.layout(model, optimizer))
-    if purpose not in PAIRED:
+    if fit is not None:
+        three_arm.check_initializations(cases, fit)
+        three_arm.check_observations(conditions)
+        if fit_reference is not None:
+            reference = read_pinned(fit_reference, three_arm.LONG_PREFLIGHT_SHA)
+            three_arm.check_reference(reg, cases, evidence, conditions, reference)
+    elif purpose not in PAIRED:
         for index in range(len(reg['cases'])):
             fresh = [r['initialization']['base_initial_state_sha256'] for r in cases if r['index'] == index and r['arm'] == 'none']
             device.require(len(set(fresh)) == len(MODEL_SEEDS), 'Model seeds did not yield distinct initial states')
     reg_path = out / 'registration.json'
     write_json(reg_path, reg)
     pins = {**reg['pins'], str(reg_path): hash_file(reg_path), str(parent): parent_sha, str(prior): prior_sha,
-            **qualification_pins, **recovery_pins}
+            **qualification_pins, **recovery_pins, **fit_pins}
     batch.check_pins(pins)
     require_frozen_code(code)
     paths = ADMISSION_PATHS if purpose in PAIRED else None
@@ -356,6 +388,8 @@ def prepare(parent, parent_sha, prior, prior_sha, out, code, *, protocol, gpus, 
         scope['recovery_receipt'] = next(iter(recovery_pins))
     if purpose == RECOVERY:
         scope['recovery_classes'] = recovery_classes
+    if fit is not None:
+        scope.update(fit=fit, fit_reference=str(fit_reference) if fit_reference is not None else None)
     scope['scope_hash'] = digest(scope)
     path = out / 'scope.json'
     write_json(path, scope)
@@ -379,18 +413,21 @@ def load(path, sha, code, *, check_files=True):
     accepted = read_pinned(Path(prior), pins[prior])
     synthetic = frozen['synthetic']
     budget = frozen['budget']
-    expected_keys = matrix(reg, frozen['protocol'], frozen['gpus'], purpose)
+    fit = frozen.get('fit')
     validation = budget['validation_steps']
-    check_budget(purpose, frozen['protocol'], frozen['gpus'], synthetic, budget['steps'], validation[0])
+    check_budget(purpose, frozen['protocol'], frozen['gpus'], synthetic, budget['steps'], validation[0], fit=fit)
+    expected_keys = matrix(reg, frozen['protocol'], frozen['gpus'], purpose, fit=fit)
     paths = ADMISSION_PATHS if purpose in PAIRED else None
     schema = None if purpose == LEGACY else updates.SCHEMA
     quals = frozen.get('qualifications', {})
     protocol = frozen['protocol']
-    if (not synthetic and protocol in device.CUDA_QUALIFIED) or (purpose == RECOVERY and protocol == device.CUDA_FP64_WEIGHT):
+    if (not synthetic and protocol in device.CUDA_QUALIFIED) or (
+            (purpose == RECOVERY or fit is not None) and protocol == device.CUDA_FP64_WEIGHT):
         from transfer.p4_cuda_qualification import check_receipt
 
+        qualified_code = three_arm.qualification_code(fit, synthetic, code, quals, pins)
         device.require(set(quals) == set(frozen['gpus']) and all(
-            check_receipt(read_pinned(Path(path), pins[path]), frozen['protocol'], code, frozen['operator_geometry']) == gpu
+            check_receipt(read_pinned(Path(path), pins[path]), frozen['protocol'], qualified_code, frozen['operator_geometry']) == gpu
             for gpu, path in quals.items()), 'Registered GPU operator qualification differs')
     else:
         device.require(not quals, 'Unregistered GPU operator qualification')
@@ -400,10 +437,25 @@ def load(path, sha, code, *, check_files=True):
         device.require(frozen.get('recovery_classes') in (9, 22)
             and (not quals or frozen['operator_geometry']['geometry_sha256'] == REAL_GEOMETRY),
             'Synthetic recovery class or qualification geometry differs')
+    fit_pins = {}
+    if fit is not None:
+        three_arm.check_observations(frozen['observation_diagnostics'])
+        if not synthetic:
+            reference = frozen['fit_reference']
+            fit_pins[reference] = three_arm.LONG_PREFLIGHT_SHA
+            three_arm.check_reference(reg, frozen['cases'], frozen['exposure'], frozen['observation_diagnostics'],
+                                      read_pinned(Path(reference), three_arm.LONG_PREFLIGHT_SHA))
+            if fit['release'] is not None:
+                fit_pins.update(three_arm.release_pins(fit['release'], code, frozen['gpus'],
+                                                     {p: pins[p] for p in quals.values()}, fit['execution']))
+        else:
+            device.require(frozen['fit_reference'] is None
+                           and (not quals or frozen['operator_geometry']['geometry_sha256'] == REAL_GEOMETRY),
+                           'Synthetic fitting cannot use a real preflight')
     device.require(type(synthetic) is bool and accepted['status'] == 'passed'
         and accepted['query_accessed'] is False and accepted['protected_files'].get(parent) == pins[parent]
-        and set(pins) == set(reg['pins']) | {reg_path, parent, prior} | set(quals.values()) | set(recovery_pins)
-        and all(pins[k] == v for k,v in recovery_pins.items())
+        and set(pins) == set(reg['pins']) | {reg_path, parent, prior} | set(quals.values()) | set(recovery_pins) | set(fit_pins)
+        and all(pins[k] == v for k,v in {**recovery_pins, **fit_pins}.items())
         and all(pins[k] == v for k, v in reg['pins'].items())
         and all(reg[k] == original[k] for k in ('image', 'plan', 'development', 'statistics', 'config', 'source', 'cases', 'guarded'))
         and all(reg['pins'].get(k) == v for k, v in original['pins'].items())
@@ -422,6 +474,8 @@ def load(path, sha, code, *, check_files=True):
            and (case.get('parameter_layout_sha256') is None if schema is None else
                 bool(re.fullmatch('[a-f0-9]{64}', case.get('parameter_layout_sha256', ''))))
            for case in frozen['cases']), 'Full case identity matrix differs')
+    if fit is not None:
+        three_arm.check_initializations(frozen['cases'], fit)
     if check_files:
         batch.check_pins(pins)
     return frozen, reg
