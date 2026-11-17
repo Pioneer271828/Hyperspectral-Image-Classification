@@ -37,12 +37,16 @@ def expected_case_names(scene, design=None):
 def prepare(root, out, execution, preflight_pin, code, *, engineering=False, design=None):
     require_frozen_code(code)
     request = read(preflight_pin, root)
+    pavia = not engineering and design is None and request.get("design") == released.PAVIA_DESIGN
+    if pavia:
+        design = released.PAVIA_DESIGN
+    scenes = ("paviaU",) if pavia else preflight.SCENES
     expected_schema = real.ENGINEERING if engineering else preflight.SCHEMA
     require(request["status"] == "preflight_only" and request["schema"] == expected_schema
             and request["optimization_updates"] == 0
             and request["raw_gt_loaded"] is request["query_accessed"] is False
-            and set(request["scenes"]) == set(preflight.SCENES)
-            and (engineering or design == real.DUTY or preflight_pin["sha256"] == REAL_PRE_FLIGHT_SHA),
+            and set(request["scenes"]) == set(scenes)
+            and (pavia or engineering or design == real.DUTY or preflight_pin["sha256"] == REAL_PRE_FLIGHT_SHA),
             "Unrelated frozen comparison preflight")
     if design == real.DUTY and not engineering:
         from transfer.native_released_duties import validate_expansion
@@ -51,7 +55,7 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False, des
     require(out != execution and all(root in p.parents and p == p.resolve() and not p.exists()
                                       for p in (out, execution)), "Expected empty isolated matrix and execution paths")
     cases = []
-    for name in preflight.SCENES:
+    for name in scenes:
         pin = request["scenes"][name]
         receipt = read(pin, root)
         schedule_rows = {row["id"]: row for row in receipt["draft"]["cases"]}
@@ -60,14 +64,26 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False, des
                 and receipt.get("design") == design
                 and set(schedule_rows) == set(order) and len(receipt["draft"]["cases"]) == len(order)
                 and receipt["draft"]["authorized_for_training"] is False, "Frozen complete 15-case scene draft required")
-        steps = len(schedule_rows[order[0]]["schedule"]) if engineering else 2 * preflight.EXPECTED[name][-1]
+        classes = None if engineering else 9 if pavia else preflight.EXPECTED[name][0]
+        if pavia:
+            opened, _, _ = preflight.open_bank(root, name, publication=receipt["prior_production"])
+            labeled = [row["id"] for row in opened.role_rows("devtrain") if row["samples"]]
+            expected_draft = preflight.draft(name, opened, receipt["draft"]["parameter_counts"], labeled,
+                                            comparisons=released.PAVIA_COMPARISONS)
+            require(opened.pin == receipt["bank"] and receipt["producer"] == request["producer"]
+                    and expected_draft["cases"] == receipt["draft"]["cases"]
+                    and expected_draft["fixed_devval"] == receipt["draft"]["fixed_devval"],
+                    "PaviaU case schedule does not match the completed fixed bank")
+            steps = 2 * len(labeled)
+        else:
+            steps = len(schedule_rows[order[0]]["schedule"]) if engineering else 2 * preflight.EXPECTED[name][-1]
         for key in order:
             row = schedule_rows[key]
             seed, factor, arm = key.split("/")[1:]
             require((row["model_seed"], row["factor"], row["arm"]) == (int(seed), int(factor), arm)
                     and row["planned_updates"] == steps and row["events"] == [0, steps//2, steps]
                     and len(row["schedule"]) == steps
-                    and (engineering or row["train_exposures_per_class"] == [10]*preflight.EXPECTED[name][0]),
+                    and (engineering or row["train_exposures_per_class"] == [10]*classes),
                     "Fitting role, budget, exposure or calendar differs")
             cases.append({"id": key, "preflight": pin, "sha256": digest(row), "updates": steps,
                           "destination": str(execution / key.replace("/", "-"))})
@@ -75,7 +91,7 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False, des
             group = [schedule_rows[key] for key in order if key.split("/")[1] == str(seed)]
             require(all(row["schedule"] == group[0]["schedule"] for row in group), "Paired exposure schedule differs")
     budget = sum(row["updates"] for row in cases)
-    require(engineering or budget == (2910 if design is None else 11058), "Unexpected released comparison budget")
+    require(pavia or engineering or budget == (2910 if design is None else 11058), "Unexpected released comparison budget")
     out.mkdir()
     value = {"schema": MATRIX, "controller": {"commit": code["commit"], "source_hash": code["source_hash"]},
              "synthetic": engineering, "preflight": preflight_pin, "cases": cases, "optimizer_updates": budget,
@@ -89,10 +105,12 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False, des
 def load(root, item, code, release, *, engineering):
     require_frozen_code(code)
     spec = read(item, root)
+    scenes = ("paviaU",) if spec.get("design") == released.PAVIA_DESIGN and not engineering else preflight.SCENES
     require(spec["schema"] == MATRIX and spec["synthetic"] is engineering
             and spec["controller"] == {"commit": code["commit"], "source_hash": code["source_hash"]}
             and spec["query_authorized"] is False and spec["optimization_updates"] == 0
-            and len(spec["cases"]) == 6 * len(real.comparisons(spec.get("design"))),
+            and [row["id"] for row in spec["cases"]] == [case for scene in scenes
+                for case in expected_case_names(scene, spec.get("design"))],
             "Wrong matrix source, scope or matrix cardinality")
     require(release is not None, "Only prepare is permitted without a separate matrix release")
     approved = read(release, root)
@@ -243,7 +261,8 @@ def audit(root, item, release, out, code, *, intake=None, cli):
         require(paired.setdefault(key, row["source_state"]) == row["source_state"],
                 "Paired cases do not share the same seeded pre-training weights")
     require(all(len({row["source_state"] for row in rows if row["case"].startswith(scene + "/")}) == 3
-                for scene in preflight.SCENES), "The matrix lacks three distinct seeded initializations")
+                for scene in {row["case"].split("/", 1)[0] for row in rows}),
+            "The matrix lacks three distinct seeded initializations")
     out.mkdir()
     export_csv(out / "selected-devval.csv", rows, spec["synthetic"])
     result = {"schema": AUDIT, "status": "passed", "synthetic": spec["synthetic"], "matrix": item,

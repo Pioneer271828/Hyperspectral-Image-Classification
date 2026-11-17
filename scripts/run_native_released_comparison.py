@@ -51,8 +51,9 @@ def main(argv=None, *, intake=None):
             source = expand(root, source, out.with_name(out.name + "-preflight"))
         result = campaign.prepare(root, out, external_directory(args.execution), source, code,
                                   engineering=intake is not None, design=real.DUTY if args.duties else None)
-        if not args.duties:
-            dev._json_new(out / "separate-capacity-draft.json", capacity.draft(read(result, root)))
+        matrix = read(result, root)
+        if not args.duties and matrix.get("design") is None:
+            dev._json_new(out / "separate-capacity-draft.json", capacity.draft(matrix))
     elif args.action == "run":
         result = campaign.run(root, pin(args.matrix), pin(args.release), code, intake=intake, cli=cli)
     elif args.action == "capacity":

@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import numpy as np
-import torch
 
 from model.research_config import digest
 from research_runtime import code_snapshot, require_frozen_code
@@ -13,8 +12,8 @@ from transfer.development_block_probe import VIEWS
 from transfer.development_blocks import read_pin
 from transfer.g3_training import state_hash
 from transfer.native_released_points import LOSS, MODE, bind, scores
-from transfer.native_released_preflight import BANK_ROOTS, SCHEMA, open_bank
-from transfer.native_released_training import COMPARISONS
+from transfer.native_released_preflight import BANK_ROOTS, SCHEMA, open_bank, target_head_baseline
+from transfer.native_released_training import COMPARISONS, PAVIA_COMPARISONS, PAVIA_DESIGN
 from transfer.native_scale_observation import EDGE_POLICY, from_bank
 from transfer import p4_runtime_device as p4
 from transfer.spatial_multiscale import initialize
@@ -32,6 +31,8 @@ DUTY_COMPARISONS = ((1, "off"), *((factor, arm) for factor in (2, 4) for arm in
 
 
 def comparisons(design):
+    if design == PAVIA_DESIGN:
+        return PAVIA_COMPARISONS
     if design == DUTY:
         return DUTY_COMPARISONS
     if design is None:
@@ -58,7 +59,11 @@ class RealReleasedRun:
         schema = ENGINEERING if engineering else SCHEMA
         self.design = receipt.get("design")
         allowed_comparisons = comparisons(self.design)
-        if (scene not in BANK_ROOTS or (not engineering and receipt.get("bank", {}).get("sha256") != BANK_ROOTS[scene])
+        pavia = scene == "paviaU" and not engineering
+        fixed_pavia = pavia and self.design == PAVIA_DESIGN and receipt.get("graph_scale") == 50
+        historical = (scene in BANK_ROOTS and self.design != PAVIA_DESIGN
+                      and (engineering or receipt.get("bank", {}).get("sha256") == BANK_ROOTS[scene]))
+        if ((not fixed_pavia and not historical)
                 or receipt.get("schema") != schema or receipt.get("objective") != LOSS
                 or receipt.get("synthetic", False) is not engineering
                 or receipt.get("status") != "preflight_only" or receipt.get("optimization_updates") != 0
@@ -82,7 +87,8 @@ class RealReleasedRun:
                 or expected["protocol"] != (p4.CPU if uuid is None else p4.CUDA_FP64_WEIGHT)):
             raise ValueError("Real sparse execution approval does not bind this source, case or budget")
         read_bank = intake if engineering else open_bank
-        self._bank, prior, self._intake = read_bank(root, scene)
+        self._bank, prior, self._intake = (open_bank(root, scene, publication=receipt["prior_production"])
+                                          if fixed_pavia else read_bank(root, scene))
         if (self._bank.pin != receipt["bank"] or prior != receipt["prior_production"]
                 or (self._bank.release.profile == "synthetic") != engineering):
             raise ValueError("Approved draft differs from the original bank authority")
@@ -115,12 +121,7 @@ class RealReleasedRun:
     def baseline(self, seed):
         # Preserve shared, normalized source tensors. Reset only the existing
         # dataset head to give independent initialization per registered seed.
-        source = deepcopy(self._intake.baseline)
-        with torch.random.fork_rng(devices=[]):
-            torch.manual_seed(seed)
-            for heads in (source.heads, source.hgnn_heads, source.cnn_heads):
-                heads[self._bank.release.scene].reset_parameters()
-        return source
+        return target_head_baseline(self._intake.baseline, self._bank.release.scene, seed)
 
     def contract(self, classes, seed, arm, factor, producer, *, numeric=None):
         code = code_snapshot()
@@ -148,7 +149,7 @@ class RealReleasedRun:
             raise ValueError("Real sparse selection clock differs from the frozen half/end budget")
         model = self.baseline(seed)
         initial = self.model_factory(model, arm, seed + 7321)
-        extra = {"registered_graph_scale": 100, "design": self.design,
+        extra = {"registered_graph_scale": 50 if self.design == PAVIA_DESIGN else 100, "design": self.design,
                  "selector_input": "control_descriptor" if arm == "constant_joint" else "missing"} if self.design else {}
         return {"format": FORMAT, "producer": producer, "classes": classes, "seed": seed, "arm": arm,
                 "factor": factor, "supervision": MODE, "objective": LOSS, "training": train, "validation": val,
