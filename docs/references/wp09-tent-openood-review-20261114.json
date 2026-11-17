@@ -43,10 +43,29 @@
     "license": {
       "path": "LICENSE",
       "spdx": "MIT",
-      "applies": "base_postprocessor.py, ebo_postprocessor.py, evaluators/metrics.py. utils/comm.py carries a Facebook attribution; imported only to satisfy module import; distributed functions unused.",
+      "applies": "base_postprocessor.py, ebo_postprocessor.py, evaluators/metrics.py at the fixed OpenOOD revision",
       "sha256": "82c3d9772f2655f5b0316f48ec58d01d444e82d36bb8cacf481751efe91c3979"
     },
-    "files": [
+    "executed_file_sha256": {
+      "openood/postprocessors/base_postprocessor.py": "ffacad294a09506d1e09df6f1856e90ee0c55cbd712da539c5ad7e5b14c5346c",
+      "openood/postprocessors/ebo_postprocessor.py": "0803fb0b468ac938cbdc3b778f1434c2c41bcca7f039da7a80def681cc65efa3",
+      "openood/evaluators/metrics.py": "469e09f1e43552e3847ca297508489f3fc3bd27a1e23ed830f30ad9a284ee063"
+    },
+    "distributed_dependency": {
+      "path": "openood/utils/comm.py",
+      "sha256": "2dd26e3674535d15cc967e66429f84b6774e4cbe687cc358f4b003141a454b0b5",
+      "license_status": "unresolved",
+      "observed_notice": "Facebook attribution in the file",
+      "openood_path_history": [
+        "314e154f66d6c360d6f0d46531feac0916ae80a3",
+        "aa08687e560711a387e2407b25bde40e7f80a7db"
+      ],
+      "closest_examined_detectron2_revision": "7801ac3d595a0663d16c0c9a6a339c77b2ddbdfb",
+      "detectron2_license": "https://github.com/facebookresearch/detectron2/blob/7801ac3d595a0663d16c0c9a6a339c77b2ddbdfb/LICENSE",
+      "assessment": "Nearby official Detectron2 revisions differ in bytes and the fixed OpenOOD path history does not establish the provenance or license chain of the exact file.",
+      "action": "Removed from authentication and execution. An independently authored placeholder fails on every distributed API access. New evidence excludes the unresolved source."
+    },
+    "files_reviewed": [
       "openood/postprocessors/base_postprocessor.py",
       "openood/postprocessors/ebo_postprocessor.py",
       "openood/evaluators/metrics.py",
