@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
@@ -39,3 +41,38 @@ class CostGPUIdentityTests(unittest.TestCase):
                 with gpu_measurement_lease(physical):
                     pass
                 self.assertEqual(admit.call_count, 2)
+
+    def test_inherited_lease_outlives_parent_descriptor_until_worker_exits(self):
+        physical = "GPU-ab4a0000-0000-0000-0000-00000000000a"
+        child_code = (
+            "import os, sys; "
+            "fd=int(sys.argv[1]); "
+            "sys.stdin.read(1); "
+            "print(os.fstat(fd).st_ino); "
+            "sys.exit(int(sys.argv[2]))"
+        )
+        with TemporaryDirectory() as root, patch.dict("os.environ", {"HSI_GPU_LEASE_ROOT": root}):
+            path = Path(root, physical + ".lock")
+            path.touch()
+            with patch("evaluation.wp12_resident_cost.admit_gpu"):
+                for exit_code in (0, 7):
+                    with self.subTest(exit_code=exit_code):
+                        with gpu_measurement_lease(physical) as lease:
+                            fd = lease.fileno()
+                            child = subprocess.Popen([sys.executable, "-c", child_code, str(fd), str(exit_code)],
+                                                     pass_fds=(fd,), stdin=subprocess.PIPE,
+                                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                        try:
+                            self.assertTrue(lease.closed)
+                            self.assertIsNone(child.poll())
+                            with self.assertRaisesRegex(ValueError, "already leased"), gpu_measurement_lease(physical):
+                                self.fail("Running child did not retain the inherited physical lease")
+                            out, err = child.communicate("x", timeout=15)
+                            self.assertEqual((int(out.strip()), err, child.returncode),
+                                             (path.stat().st_ino, "", exit_code))
+                            with gpu_measurement_lease(physical):
+                                pass
+                        finally:
+                            if child.poll() is None:
+                                child.kill()
+                                child.communicate(timeout=10)
