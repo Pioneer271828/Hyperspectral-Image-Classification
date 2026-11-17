@@ -9,6 +9,7 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from transfer.container_runtime import training_container_kind
 from research_runtime import ROOT, code_snapshot, external_directory, require_frozen_code, write_json
 
 
@@ -19,7 +20,7 @@ def main():
     parser.add_argument('--out-dir', type=Path, required=True)
     args = parser.parse_args()
     code = code_snapshot()
-    if (sys.platform != 'linux' or not Path('/.dockerenv').exists() or code['dirty']
+    if (not training_container_kind() or code['dirty']
             or code['commit'] != args.expected_commit or sys.flags.optimize):
         parser.error('Require container, assertions and clean exact SHA')
     root = external_directory(args.out_dir)

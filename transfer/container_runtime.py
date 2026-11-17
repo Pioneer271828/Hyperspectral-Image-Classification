@@ -8,6 +8,8 @@ def training_container_kind():
         return None
     if Path('/.dockerenv').is_file():
         return 'docker'
+    if Path('/run/.containerenv').is_file():
+        return 'podman'
     marker = Path('/run/systemd/container')
     if marker.is_file() and marker.read_text().strip() in ('lxc', 'lxc-libvirt'):
         return 'lxc'

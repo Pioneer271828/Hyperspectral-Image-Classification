@@ -6,6 +6,7 @@ import statistics
 import sys
 import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from transfer.container_runtime import training_container_kind
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 
 
@@ -39,7 +40,7 @@ def main():
     parser.add_argument('--out-dir',type=Path,required=True)
     args=parser.parse_args()
     code=code_snapshot()
-    if sys.platform!='linux' or not Path('/.dockerenv').exists() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize:
+    if not training_container_kind() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize:
         parser.error('Require container and clean exact SHA with assertions')
     out=external_directory(args.out_dir)
     campaign_root=args.campaign_root.resolve(strict=True)

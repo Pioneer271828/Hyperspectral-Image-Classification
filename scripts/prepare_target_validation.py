@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from transfer.container_runtime import training_container_kind
 from research_runtime import code_snapshot, external_directory, require_frozen_code, hash_file, write_json
 from train_cross_sensor import read_protocol
 from loadData.target_validation import make_validation
@@ -16,7 +17,7 @@ def main():
     p.add_argument('--data-root',type=Path,required=True)
     p.add_argument('--out-dir',type=Path,required=True)
     args=p.parse_args();code=code_snapshot()
-    if sys.platform!='linux' or not Path('/.dockerenv').exists() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize:
+    if not training_container_kind() or code['dirty'] or code['commit']!=args.expected_commit or sys.flags.optimize:
         p.error('Require clean exact SHA in container with assertions')
     out=external_directory(args.out_dir)
     for path in (args.protocol_root.resolve(),args.data_root.resolve()):

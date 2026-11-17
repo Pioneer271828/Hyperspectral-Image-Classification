@@ -43,13 +43,13 @@ M5 再统一骨干消费者和 CLI 配置；M3 不增加全局边、交互、剪
 
 ## 远程验收
 
-仅在 `ssh rmvision` 的干净独立 checkout 执行：
+仅在[授权 LXC](remote-validation.md) 的干净独立 checkout 执行：
 
 ```bash
-OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_m3.py \
+OMP_NUM_THREADS=1 /home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/validate_m3.py \
   --expected-commit <完整SHA> --device cuda \
-  --data-root /home/train/hsi-pioneer271828/datasets/current \
-  --out-dir /home/train/hsi-pioneer271828/runs/m3-<唯一批次>
+  --data-root "$REGISTERED_DATA_ROOT" \
+  --out-dir /home/lbx/hsi-pioneer271828/runs/m3-<唯一批次>
 ```
 
 运行完整单元测试、CPU/CUDA smoke，与旧图实现对比 Q/A、正则及梯度。真实 PaviaU/Xuzhou/HongHu 使用 C1 固定 tile32/gap2/seed2026 和训练块统计，各取首个 train/val/test 块，经 K64/embed32 VCA 后独立构图。三个主要对照用无标签数值目标检查梯度；只有训练块允许更新图参数，验证/测试块只检查图与分区访问，不计算分类指标。固定 Q/A 没有可更新图参数，记录零优化步。访问其他分区后回访训练块验证无跨块缓存影响。原始产物写 checkout 外；失败保留并用新目录重试。

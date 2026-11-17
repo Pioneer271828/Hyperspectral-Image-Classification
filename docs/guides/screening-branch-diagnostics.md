@@ -1,15 +1,15 @@
 # 完整初筛的冻结三路逐类诊断
 
-关联Issue #27。`scripts/diagnose_screening_branches.py`读取已完成的B0/Add/Gated campaign，只恢复各组按验证NLL选出的`model.pt`，分别评估原验证和测试块。它不训练、不更新归一化统计、不改alpha或选择其他checkpoint。命令只在`ssh rmvision`训练容器运行。
+关联Issue #27。`scripts/diagnose_screening_branches.py`读取已完成的B0/Add/Gated campaign，只恢复各组按验证NLL选出的`model.pt`，分别评估原验证和测试块。它不训练、不更新归一化统计、不改alpha或选择其他checkpoint。命令只在[授权 LXC](remote-validation.md)运行。
 
 ```bash
 cd /workspace/hsi-screening-branches
-OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python -u scripts/diagnose_screening_branches.py \
+OMP_NUM_THREADS=1 /home/lbx/hsi-pioneer271828/envs/hsi/bin/python -u scripts/diagnose_screening_branches.py \
   --expected-commit <本诊断入口的完整commit> \
   --training-commit b7d2b30015b27c4f9a80be4baeeefa051185bda2 \
-  --campaign-root /home/train/hsi-pioneer271828/runs/m6-screening-20261030 \
-  --data-root /home/train/hsi-pioneer271828/datasets/current \
-  --out-dir /home/train/hsi-pioneer271828/runs/m6-screening-branches-<新批次> \
+  --campaign-root "$REGISTERED_CAMPAIGN_ROOT" \
+  --data-root "$REGISTERED_DATA_ROOT" \
+  --out-dir /home/lbx/hsi-pioneer271828/runs/m6-screening-branches-<新批次> \
   --focus-class 6 --confused-as 2
 ```
 

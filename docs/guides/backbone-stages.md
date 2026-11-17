@@ -62,13 +62,13 @@ optimizer.add_param_group({'params': added, 'lr': target_lr})
 
 针对性回归：`python -m unittest discover -s tests -p test_graph_cache.py -v`；同一测试加 `GRAPH_CACHE_DEVICE=cuda` 可在远程 GPU 执行。正式验收结果另见模块交付报告。
 
-仅在 `ssh rmvision` 的独立、冻结 checkout：
+仅在[授权 LXC](remote-validation.md) 的独立、冻结 checkout：
 
 ```bash
-OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_m5.py \
+OMP_NUM_THREADS=1 /home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/validate_m5.py \
   --expected-commit <完整SHA> \
-  --data-root /home/train/hsi-pioneer271828/datasets/current \
-  --out-dir /home/train/hsi-pioneer271828/runs/m5-<唯一批次>
+  --data-root "$REGISTERED_DATA_ROOT" \
+  --out-dir /home/lbx/hsi-pioneer271828/runs/m5-<唯一批次>
 ```
 
 完整 CPU 测试含旧版骨干对照：3 种 norm × static/learned × 5 种插件配置 × 两个数据集/波段数，比较输出、输入/参数梯度、参数量/键和 BN 缓冲；另测阶段调用顺序/形状、独立 CNN 输入、图控制梯度、手工注入、新旧 checkpoint、配置/CLI 和历史 static 兼容。CPU/CUDA smoke 保留。

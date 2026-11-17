@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
+from transfer.container_runtime import training_container_kind
 
 
 def main():
@@ -20,7 +21,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--expected-commit',required=True);p.add_argument('--data-root',type=Path,required=True);p.add_argument('--out-dir',type=Path,required=True)
     args=p.parse_args();code=code_snapshot()
-    if not Path('/.dockerenv').exists() or sys.platform!='linux' or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit or not torch.cuda.is_available():
+    if not training_container_kind() or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit or not torch.cuda.is_available():
         p.error('Require training container, CUDA, assertions and clean exact SHA')
     out=external_directory(args.out_dir);out.mkdir(parents=True,exist_ok=False)
     manifest={'status':'running','commit':code['commit'],'branch':code['branch'],'source_hash':code['source_hash'],'command':[sys.executable,*sys.argv],'started_at_utc':datetime.now(timezone.utc).isoformat()}

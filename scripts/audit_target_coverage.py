@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from transfer.container_runtime import training_container_kind
 from loadData.spatial_tiles import tile_slice, validate_tile_plan
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from train_cross_sensor import read_protocol
@@ -45,7 +46,7 @@ def main():
     for name in ('protocol-root','data-root','out-dir'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--expected-commit',required=True)
     args=p.parse_args();code=code_snapshot()
-    if sys.platform!='linux' or not Path('/.dockerenv').exists() or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit:
+    if not training_container_kind() or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit:
         p.error('Require clean exact SHA in container')
     out=external_directory(args.out_dir)
     for path in (args.protocol_root.resolve(),args.data_root.resolve()):

@@ -12,6 +12,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from transfer.container_runtime import training_container_kind
 from evaluation.classification_metrics import classification_metrics, class_order, evaluation_mask
 from evaluation.branch_diagnostics import branch_diagnostics
 
@@ -312,8 +313,8 @@ def main():
     parser.add_argument('--focus-class', type=int, default=6)
     parser.add_argument('--confused-as', type=int, default=2)
     args = parser.parse_args()
-    if sys.platform != 'linux' or not Path('/.dockerenv').exists():
-        parser.error('Use ssh rmvision in the training container')
+    if not training_container_kind():
+        parser.error('Use the authorized Linux training container (see docs/guides/remote-validation.md)')
     if sys.flags.optimize:
         parser.error('Assertions must be enabled')
     import torch

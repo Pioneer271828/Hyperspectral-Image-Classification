@@ -25,6 +25,8 @@ Keep default configuration, label access, update budgets and checkpoint compatib
 
 Use the [authorized LXC environment](remote-validation.md) at `ssh -p 1222 lbx@10.69.37.243`. Check container identity, checkout cleanliness and the full SHA first. Use a separate checkout for a new candidate and keep data, logs and checkpoints outside it.
 
+Use `python scripts/check_repository.py --expected-commit <full SHA>` for current integration acceptance. `scripts/validate_baseline.py` still checks the original frozen file inventory; the M8 validator and its E0a replay require the original M8 source identity and its accepted manifest. For current frozen prediction exports use [the standalone E0a exporter](evaluation-e0a.md#冻结预测导出入口).
+
 The workflow `.github/workflows/remote-validation.yml` requires a dedicated authorized runner with labels `self-hosted`, `linux`, `hsi-training-container`. Its default interpreter is `/home/lbx/hsi-pioneer271828/envs/hsi/bin/python`; use `HSI_VALIDATION_PYTHON` to select a different existing interpreter on that runner. Report the workflow result only when an actual job has run. Manual SSH acceptance is recorded separately.
 
 The runner uses an isolated Actions workspace, full history and existing dependencies. The CPU suite runs for matching events when the runner is available. Before requesting focused GPU checks by manual dispatch, confirm a free device and the required lease. Keep failed jobs and receipts. The [2026-11-05 acceptance report](../../research/reports/仓库审查整改与开发整合验收_20261105.md) records the historical commands and exact SHAs.

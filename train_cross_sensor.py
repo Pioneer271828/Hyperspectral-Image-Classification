@@ -7,6 +7,7 @@ import sys
 import traceback
 import numpy as np
 import torch
+from transfer.container_runtime import training_container_kind
 from model.research_config import digest
 from research_runtime import code_snapshot,require_frozen_code,external_directory,write_json,hash_file
 from loadData.transfer_protocol import validate_config,_validate_record,make_support,freeze_task
@@ -118,7 +119,7 @@ def main():
     p.add_argument('mode',choices=('preflight','smoke','run'));p.add_argument('--expected-commit',required=True)
     p.add_argument('--protocol-root',type=Path);p.add_argument('--data-root',type=Path);p.add_argument('--out-dir',type=Path,required=True)
     args=p.parse_args();code=code_snapshot()
-    if sys.platform!='linux' or not Path('/.dockerenv').exists() or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit:
+    if not training_container_kind() or sys.flags.optimize or code['dirty'] or code['commit']!=args.expected_commit:
         p.error('Require training container, assertions and clean exact SHA')
     if args.mode!='preflight' and not torch.cuda.is_available():p.error('CUDA required; no silent fallback')
     frozen={};out=external_directory(args.out_dir)

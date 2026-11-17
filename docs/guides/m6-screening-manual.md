@@ -12,20 +12,20 @@
 
 ## 容器命令
 
-先在 Windows 终端执行 `ssh rmvision`，进入训练容器。此实验使用专属 `/workspace/hsi-m6-screening`，不要更新正在运行的其他checkout。实际发布SHA及本次预检命令见对应实验准备报告。
+按[远程指南](remote-validation.md)连接授权 LXC。使用 `/home/lbx/hsi-pioneer271828/checkouts/` 下的独立 checkout，不要更新其他正在运行的 checkout。实际发布SHA及本次预检命令见对应实验准备报告。
 
 新建专属tmux会话：
 
 ```bash
 tmux new -s hsi-m6-screen
-cd /workspace/hsi-m6-screening
-PY=/home/rmvision/venvs/hsi-baseline/bin/python
-SHA=$(git rev-parse HEAD)
+cd "$VERIFIED_CHECKOUT"
+PY=/home/lbx/hsi-pioneer271828/envs/hsi/bin/python
+SHA="${EXPECTED_COMMIT:?Set the full SHA from the accepted release}"
 # 启动前将SHA和交付报告核对；输出目录必须使用交付的专属路径。
 OMP_NUM_THREADS=1 "$PY" -u scripts/run_m6_screening.py run \
   --expected-commit "$SHA" \
-  --data-root /home/train/hsi-pioneer271828/datasets/current \
-  --out-root /home/train/hsi-pioneer271828/runs/m6-screening-20261030
+  --data-root "$REGISTERED_DATA_ROOT" \
+  --out-root /home/lbx/hsi-pioneer271828/runs/NEW_M6_SCREENING_RUN
 ```
 
 命令本身不依赖终端持续连接；按Ctrl+B再按D退出tmux，重连用 `tmux attach -t hsi-m6-screen`。不要使用其他项目的 `train` 会话。
@@ -37,8 +37,8 @@ OMP_NUM_THREADS=1 "$PY" -u scripts/run_m6_screening.py run \
 `<out-root>/progress.json` 是当前组最近一次进度，`progress.jsonl` 跨组按时间追加；每10步与每次验证更新。每条包含variant、实际更新步数、loss或val指标、UTC时间与耗时。所有epoch的详细进度在各attempt的training.log；run脚本每组完成打印该组状态和用时。`{none,add,gated}-result.json` 记录组结果位置。
 
 ```bash
-cat /home/train/hsi-pioneer271828/runs/m6-screening-20261030/progress.json
-tail -n 5 /home/train/hsi-pioneer271828/runs/m6-screening-20261030/progress.jsonl
+cat /home/lbx/hsi-pioneer271828/runs/NEW_M6_SCREENING_RUN/progress.json
+tail -n 5 /home/lbx/hsi-pioneer271828/runs/NEW_M6_SCREENING_RUN/progress.jsonl
 ```
 
 每组权重、model.pt.json、protocol/statistics、metrics.json与manifest在 `<out-root>/training/<run_id>/attempts/0001/`。完整metrics在完成后写入；训练期间主要看progress日志与已有验证checkpoint。进度总数10000表示当前组；三组合计30000步。
