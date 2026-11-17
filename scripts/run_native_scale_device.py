@@ -79,6 +79,8 @@ def main(argv=None):
         parser.error("This mode only reads or assembles artifacts on CPU")
     if args.gpu_lease_fd is not None and args.gpu is None:
         parser.error("An inherited lease can only be used with CUDA")
+    if args.mode=="consume" and (args.protocol!=p4.CPU or (args.partial_cuda and not args.cuda_audit)):
+        parser.error("Consume reads fixed artifacts on CPU and requires a CUDA audit for partial recovery")
     code = code_snapshot()
     producer = args.expected_commit
     if code["commit"]!=producer:
@@ -112,8 +114,6 @@ def dispatch(args, root, out, producer):
     elif args.mode=="compare":
         result = cost.compare_cost(root,pin(args.cpu),pin(args.cuda),out,producer)
     elif args.mode=="consume":
-        if args.protocol!=p4.CPU or (args.partial_cuda and not args.cuda_audit):
-            parser.error("Consume reads fixed artifacts on CPU and requires a CUDA audit for partial recovery")
         result = evidence.publish(root,out,args.producer,producer,pin(args.cpu_audit),pin(args.cpu),
                                   gpu_audit_pin=pin(args.cuda_audit),gpu_cost_pin=pin(args.cuda),
                                   partial=args.partial_cuda,comparison_pin=pin(args.comparison))

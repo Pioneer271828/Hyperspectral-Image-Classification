@@ -12,8 +12,11 @@ from compression.precision_cost import ResidentPrecisionTile
 from evaluation.wp12_low_rank_evidence import verify_guard
 from inference.wp10_low_rank_execution import _scan, package
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
+from scripts.run_native_scale_device import physical_lease
 from scripts.review_wp10_tensorly import load_scope, locations, measure, paired, resident_tiles, score
 from transfer import matched_route_admission as admission
+from transfer.container_runtime import training_container_kind
+from transfer.p4_runtime_device import UUID
 
 
 def probability_delta(reference, current):
@@ -61,19 +64,30 @@ def repeat_evidence(name, ref, actual, outputs, repeat_outputs, arrays):
                 v5_classification_count=len(ref["targets"]), output_hashes=actual["output_hashes"])
 
 
-def main():
+def main(argv=None):
     parser = ArgumentParser(description=__doc__)
     for name in ("runs", "legacy-checkout", "cpu-initial", "out"):
         parser.add_argument("--" + name, type=Path, required=True)
     for name in ("expected-commit", "gpu", "cpu-initial-sha256"):
         parser.add_argument("--" + name, required=True)
-    args = parser.parse_args()
+    parser.add_argument("--gpu-lease-fd", type=int, help="Use an inherited descriptor for the same physical lease")
+    args = parser.parse_args(argv)
     code = code_snapshot()
-    if (args.expected_commit != code["commit"] or torch.get_num_threads() != 1
-            or not args.gpu.startswith("GPU-") or os.environ.get("CUDA_VISIBLE_DEVICES") != args.gpu
-            or torch.cuda.device_count() != 1):
+    if (not training_container_kind() or not __debug__ or args.expected_commit != code["commit"]
+            or torch.get_num_threads() != 1 or UUID.fullmatch(args.gpu) is None
+            or os.environ.get("CUDA_VISIBLE_DEVICES") != args.gpu):
         raise ValueError("Exact commit and one explicitly leased physical GPU required")
     require_frozen_code(code)
+    root = external_directory(args.runs.resolve(strict=True))
+    if root.name != "runs":
+        raise ValueError("Use the authorized runs root")
+    with physical_lease(root, args.gpu, args.gpu_lease_fd):
+        if torch.cuda.device_count() != 1:
+            raise ValueError("Require exactly one visible CUDA device")
+        return execute(args, code)
+
+
+def execute(args, code):
     sample = subprocess.check_output(["nvidia-smi", "-i", args.gpu,
         "--query-gpu=uuid,memory.free,utilization.gpu", "--format=csv,noheader,nounits"], text=True).strip()
     uuid, free, utilization = (part.strip() for part in sample.split(","))
