@@ -19,6 +19,14 @@ from .open_set_producer import ROLES, _observation
 from .registered_open_set import _code, _deferred, _output
 
 
+def _nonfinite(tensors):
+    for name, value in tensors:
+        if (isinstance(value, torch.Tensor) and (value.is_floating_point() or value.is_complex())
+                and not torch.isfinite(value).all()):
+            return name
+    return None
+
+
 def _source_inputs(prepared):
     receipt = json.loads(_read(prepared))
     if (receipt['status'] != 'passed' or receipt['version'] != 1 or
@@ -126,6 +134,16 @@ def train_known_source(registration, *, out, expected_commit):
                    balance=settings.graph_balance_weight)
     output.mkdir(parents=True, exist_ok=False)
     history = []
+
+    def abort(stage, tensor, *, attempted, loss=None):
+        _json_new(output / 'failure.json', dict(
+            status='failed', reason='nonfinite_source_training', stage=stage, tensor=tensor, code=code,
+            registration=registration, failed_step=len(history)+1, accepted_optimizer_updates=len(history),
+            optimizer_steps_attempted=attempted, finite_loss=loss, accepted_loss=history,
+            calibration_read=False, evaluation_read=False, query=0,
+        ))
+        raise ValueError(f'Nonfinite source training {stage}: {tensor}')
+
     with torch.random.fork_rng(devices=[]):
         torch.random.default_generator.manual_seed(trial['seed'])
         for _ in range(trial['updates']):
@@ -135,11 +153,23 @@ def train_known_source(registration, *, out, expected_commit):
             loss = supervised_loss(values, inputs, 'train', class_balance=settings.balanced,
                                    graph_loss_weights=weights, cnn_loss_weight=settings.cnn_loss_weight,
                                    graph_branch_loss_weight=settings.graph_branch_loss_weight)
-            if not torch.isfinite(loss):
-                raise ValueError('Nonfinite source training loss')
+            if _nonfinite((('loss', loss),)) is not None:
+                abort('loss', 'loss', attempted=len(history))
+            value = loss.item()
             loss.backward()
+            bad = _nonfinite((name, parameter.grad) for name, parameter in model.named_parameters())
+            if bad is not None:
+                abort('gradient', bad, attempted=len(history), loss=value)
             optimizer.step()
-            history.append(loss.item())
+            bad = _nonfinite(model.state_dict().items())
+            if bad is not None:
+                abort('model_state', bad, attempted=len(history)+1, loss=value)
+            bad = _nonfinite((f'{name}.{key}', item)
+                             for name, param in model.named_parameters()
+                             for key, item in optimizer.state.get(param, {}).items())
+            if bad is not None:
+                abort('optimizer_state', bad, attempted=len(history)+1, loss=value)
+            history.append(value)
     for pin in used:
         _read(pin)
     require_frozen_code(code)
