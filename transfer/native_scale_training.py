@@ -86,6 +86,34 @@ def contract(classes, seed, arm, producer, *, mode="mixture", numeric=None):
     return registered
 
 
+@torch.no_grad()
+def evaluate_validation(model, events, step, materialize, forward_view, *, released=None,
+                        detailed=False, observe=None):
+    """Evaluate the registered views, preserving the evidence for unlabeled blocks."""
+    model.eval()
+    rows = []
+    for event in events:
+        actual, labels, targets = materialize(event)
+        output, graph, condition = forward_view(actual, "devval", event["condition"])
+        observed = (metrics(output, actual, labels, targets, detailed=detailed) if released is None else
+                    released.scores(output, targets, detailed=detailed))
+        row = dict(**event, observation=actual.receipt["observation"], labels=array_hash(labels),
+                   condition_key=None if condition is None else condition.source_key,
+                   area=int(targets.area.sum()), heads=head_hashes(output, actual), graph=graph, scores=observed)
+        if released is not None:
+            row["released"] = targets.summary()
+            if hasattr(released, "stage_evidence"):
+                row.update(released.stage_evidence(actual))
+        rows.append(row)
+        if observe is not None:
+            observe(event, actual, output, targets)
+    denominator = sum(row["scores"]["fused"]["count"] for row in rows)
+    if denominator <= 0:
+        raise ValueError("Validation requires at least one labeled point across its registered views")
+    numerator = sum(row["scores"]["fused"]["nll_sum"] for row in rows)
+    return dict(step=step, fused_nll=numerator/denominator, rows=rows)
+
+
 class Run:
     def __init__(self, registered, producer, *, execution=None, released=None):
         numeric = None if execution is None else execution.numeric
@@ -178,28 +206,13 @@ class Run:
         self.timing["graph_seconds"] += sum(timed["graph_seconds"])
         return out,graph,condition
 
-    @torch.no_grad()
     def evaluate(self, step, *, detailed=False):
         started = perf_counter()
-        self.model.eval()
-        rows = []
-        for event in self._contract["validation"]:
-            actual,labels,targets = self._materialize(self._val,event)
-            output,graph,condition = self._forward(actual,"devval",event["condition"])
-            observed = (metrics(output,actual,labels,targets,detailed=detailed) if self._released is None else
-                        self._released.scores(output, targets, detailed=detailed))
-            rows.append(dict(**event,observation=actual.receipt["observation"],
-                             labels=array_hash(labels),condition_key=None if condition is None else condition.source_key,
-                             area=int(targets.area.sum()),heads=head_hashes(output,actual),graph=graph,
-                             scores=observed))
-            if self._released is not None:
-                rows[-1]["released"] = targets.summary()
-                if hasattr(self._released, "stage_evidence"):
-                    rows[-1].update(self._released.stage_evidence(actual))
-        numerator = sum(row["scores"]["fused"]["nll_sum"] for row in rows)
-        denominator = sum(row["scores"]["fused"]["count"] for row in rows)
+        value = evaluate_validation(self.model, self._contract["validation"], step,
+            lambda event: self._materialize(self._val, event), self._forward, released=self._released,
+            detailed=detailed)
         self.timing["validation_seconds"] += perf_counter()-started
-        return dict(step=step,fused_nll=numerator/denominator,rows=rows)
+        return value
 
     def _record_validation(self, step):
         value = self.evaluate(step)

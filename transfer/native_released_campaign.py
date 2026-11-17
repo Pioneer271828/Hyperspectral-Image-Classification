@@ -2,6 +2,7 @@
 from collections import Counter
 import csv
 from itertools import product
+import math
 from pathlib import Path
 from time import perf_counter
 
@@ -13,8 +14,12 @@ from research_runtime import require_frozen_code
 from transfer import native_released_preflight as preflight, native_released_real as real
 from transfer import native_released_training as released, p4_runtime_device as device
 from transfer import registered_development as dev
+from transfer.development_block_probe import VIEWS
+from transfer.g3_training import state_hash
+from transfer.native_released_points import HEADS
 from transfer.native_scale_campaign import packet, read
-from transfer.native_scale_training import Run, SEEDS
+from transfer.native_scale_observation import forward
+from transfer.native_scale_training import Run, SEEDS, evaluate_validation
 from transfer.xuzhou_multiscale_audit import _exact
 
 
@@ -37,7 +42,7 @@ def expected_case_names(scene, design=None):
 def prepare(root, out, execution, preflight_pin, code, *, engineering=False, design=None):
     require_frozen_code(code)
     request = read(preflight_pin, root)
-    pavia = not engineering and design is None and request.get("design") == released.PAVIA_DESIGN
+    pavia = design is None and request.get("design") == released.PAVIA_DESIGN
     if pavia:
         design = released.PAVIA_DESIGN
     scenes = ("paviaU",) if pavia else preflight.SCENES
@@ -63,9 +68,9 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False, des
         require(receipt["scene"] == name and receipt["schema"] == expected_schema
                 and receipt.get("design") == design
                 and set(schedule_rows) == set(order) and len(receipt["draft"]["cases"]) == len(order)
-                and receipt["draft"]["authorized_for_training"] is False, "Frozen complete 15-case scene draft required")
-        classes = None if engineering else 9 if pavia else preflight.EXPECTED[name][0]
-        if pavia:
+                and receipt["draft"]["authorized_for_training"] is False, "Frozen complete scene draft required")
+        classes = 9 if pavia else preflight.EXPECTED[name][0]
+        if pavia and not engineering:
             opened, _, _ = preflight.open_bank(root, name, publication=receipt["prior_production"])
             labeled = [row["id"] for row in opened.role_rows("devtrain") if row["samples"]]
             expected_draft = preflight.draft(name, opened, receipt["draft"]["parameter_counts"], labeled,
@@ -75,8 +80,10 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False, des
                     and expected_draft["fixed_devval"] == receipt["draft"]["fixed_devval"],
                     "PaviaU case schedule does not match the completed fixed bank")
             steps = 2 * len(labeled)
+            require(steps == 60, "The fixed real PaviaU budget is 60 updates per case")
         else:
             steps = len(schedule_rows[order[0]]["schedule"]) if engineering else 2 * preflight.EXPECTED[name][-1]
+        require(steps > 0 and steps % 2 == 0, "Released comparison requires a positive paired budget")
         for key in order:
             row = schedule_rows[key]
             seed, factor, arm = key.split("/")[1:]
@@ -105,12 +112,15 @@ def prepare(root, out, execution, preflight_pin, code, *, engineering=False, des
 def load(root, item, code, release, *, engineering):
     require_frozen_code(code)
     spec = read(item, root)
-    scenes = ("paviaU",) if spec.get("design") == released.PAVIA_DESIGN and not engineering else preflight.SCENES
+    pavia = spec.get("design") == released.PAVIA_DESIGN
+    scenes = ("paviaU",) if pavia else preflight.SCENES
     require(spec["schema"] == MATRIX and spec["synthetic"] is engineering
             and spec["controller"] == {"commit": code["commit"], "source_hash": code["source_hash"]}
             and spec["query_authorized"] is False and spec["optimization_updates"] == 0
             and [row["id"] for row in spec["cases"]] == [case for scene in scenes
-                for case in expected_case_names(scene, spec.get("design"))],
+                for case in expected_case_names(scene, spec.get("design"))]
+            and spec["optimizer_updates"] == sum(case["updates"] for case in spec["cases"])
+            and (not pavia or engineering or all(case["updates"] == 60 for case in spec["cases"])),
             "Wrong matrix source, scope or matrix cardinality")
     require(release is not None, "Only prepare is permitted without a separate matrix release")
     approved = read(release, root)
@@ -137,7 +147,8 @@ def authorized_case(root, case, proof, code, *, intake):
     out = Path(case["destination"])
     raw = read(case["preflight"], root)
     chosen = [row for row in raw["draft"]["cases"] if row["id"] == case["id"]]
-    require(len(chosen) == 1 and case["sha256"] == digest(chosen[0]), "Prepared case differs from its preflight")
+    require(len(chosen) == 1 and case["sha256"] == digest(chosen[0]) and case["updates"] == chosen[0]["planned_updates"],
+            "Prepared case differs from its preflight")
     guard = real.RealReleasedRun(root, case["preflight"], case["id"], proof, out, code, intake=intake)
     return guard, out
 
@@ -190,10 +201,11 @@ def run(root, item, release, code, *, intake=None, cli):
 
 
 def scoring(endpoint, historical, classes):
-    require([row["tile"] for row in endpoint["rows"]] == [row["tile"] for row in historical["rows"]],
+    identity = lambda rows: [(row["tile"], row["band"], row["observation"]) for row in rows]
+    require(identity(endpoint["rows"]) == identity(historical["rows"]),
             "Independent score replay changed the validation order")
     head_results = {}
-    for head in ("fused", "graph", "cnn"):
+    for head in HEADS:
         buckets = {}
         for observed, saved in zip(endpoint["rows"], historical["rows"], strict=True):
             got, old = observed["scores"][head], saved["scores"][head]
@@ -201,14 +213,97 @@ def scoring(endpoint, historical, classes):
                     and observed["heads"][head] == saved["heads"][head]
                     and got["point_confusion"] == got["coarse_known_count_confusion"],
                     "Independent released-point validation differs from the selected checkpoint")
+            matrix = np.asarray(got["point_confusion"])
+            require(matrix.sum() == got["count"] and (got["count"] > 0 or got["nll_sum"] == 0),
+                    "Released-point score count differs from its confusion")
             key = observed["band"]
             bag = buckets.setdefault(key, {"matrix": np.zeros((classes, classes), dtype=np.int64), "nll": 0., "count": 0})
-            bag["matrix"] += got["point_confusion"]
+            bag["matrix"] += matrix
             bag["nll"] += got["nll_sum"]
             bag["count"] += got["count"]
+        require(buckets and all(row["count"] > 0 for row in buckets.values()),
+                "Released-point validation requires a nonempty denominator for each band")
         head_results[head] = {band: {**metrics_from_confusion(row["matrix"], range(1, classes+1)),
                                     "nll": row["nll"]/row["count"]} for band, row in buckets.items()}
     return head_results
+
+
+def _count_original_points(accumulators, event, actual, output, targets):
+    # Independent of the supervision grid and of the production score reduction.
+    y0, _, x0, _ = actual.lattice.box
+    width = actual.lattice.scene_shape[1]
+    factor = actual.lattice.factor
+    grid_width = actual.lattice.shape[1]
+    for head, values in zip(HEADS, output[:3], strict=True):
+        nlls, confusion = accumulators[head, event["band"]]
+        probability = values.cpu().numpy()
+        for pixel, label in targets.points:
+            y, x = divmod(pixel, width)
+            coarse = ((y-y0)//factor)*grid_width+(x-x0)//factor
+            prediction = probability[coarse]
+            confusion[label-1, prediction.argmax()] += 1
+            nlls.append(-math.log(min(max(float(prediction[label-1]), 1e-8), 1.)))
+
+
+def paviau_step_zero(root, scene_pin, out, code, *, cli):
+    """Replay production validation at initialization without constructing a training run."""
+    require_frozen_code(code)
+    receipt = read(scene_pin, root)
+    require(receipt.get("scene") == "paviaU" and receipt.get("design") == released.PAVIA_DESIGN
+            and receipt.get("initial_model_seed") == 64, "Expected the fixed real PaviaU preflight")
+    cases = {}
+    with cli.arithmetic(root, None) as execution:
+        case_id = "paviaU/64/1/off"
+        registered = real.registered_case(receipt, case_id, engineering=False)
+        bank = real.ReleasedBankValidation(root, receipt, registered)
+        baseline = bank.baseline(64)
+        for factor, arm in released.PAVIA_COMPARISONS:
+            case_id = f"paviaU/64/{factor}/{arm}"
+            real.registered_case(receipt, case_id, engineering=False)
+            model = bank.model_factory(baseline, arm, 64 + 7321)
+            initial_state = state_hash(model)
+            independent = {(head, band): ([], np.zeros((bank.classes, bank.classes), dtype=np.int64))
+                           for head, band in product(HEADS, VIEWS)}
+
+            def materialize(event):
+                actual, labels, targets = bank.materialize("devval", event, code["commit"])
+                bank.validate_observation(None, actual, labels, targets, event)
+                return actual, labels, targets
+
+            def predict(actual, role, condition):
+                outputs, graph = forward(model, actual, code["commit"], role, execution=execution,
+                                         graph_scale=bank.graph_scale)
+                return outputs, graph, None
+
+            endpoint = evaluate_validation(model, bank.validation_events(factor), 0, materialize, predict,
+                released=bank, detailed=True, observe=lambda *args: _count_original_points(independent, *args))
+            rows = endpoint["rows"]
+            empty = [row for row in rows if not row["released"]["points"]]
+            require(len(rows) == 82 and len(empty) == 48 and initial_state == state_hash(model)
+                    and all(row["heads"] and all(score["count"] == score["nll_sum"] == 0
+                    for score in row["scores"].values()) for row in empty),
+                    "PaviaU development roster, empty observations or initial state differs")
+            summary = scoring(endpoint, endpoint, bank.classes)
+            for (head, band), (nlls, confusion) in independent.items():
+                measured = summary[head][band]
+                previous = receipt["initial_dev_metrics"][f"devval/{band}/{factor}/{arm}/{head}"]
+                require(len(nlls) == measured["count"] == 45 and confusion.sum(axis=1).tolist() == [5]*bank.classes
+                        and confusion.tolist() == measured["confusion_matrix"] == previous["confusion"]
+                        and math.isclose(math.fsum(nlls)/45, measured["nll"], rel_tol=0, abs_tol=1e-12)
+                        and math.isclose(measured["nll"], previous["nll"], rel_tol=0, abs_tol=1e-12),
+                        "Independent original-point score differs from production validation or preflight")
+            if arm in ("metadata", "joint"):
+                paired = cases[f"paviaU/64/{factor}/" + ("mean" if arm == "metadata" else "content")]
+                require([row["heads"] for row in rows] == [row["heads"] for row in paired["validation"]["rows"]],
+                        "Missing physical metadata fallback changed PaviaU predictions")
+            cases[case_id] = {"validation": endpoint, "head_metrics": summary, "empty_views": len(empty),
+                              "initial_state": initial_state}
+    out.mkdir()
+    return dev._json_new(out / "step-zero.json", {
+        "schema": "wp07_paviau_released_step_zero_v1", "producer": code["commit"], "preflight": scene_pin,
+        "bank": receipt["bank"], "graph_scale": bank.graph_scale, "model_seed": 64, "optimization_updates": 0,
+        "scope": "released_devval_initialization_only", "raw_gt_loaded": False, "query_accessed": False,
+        "cases": cases})
 
 
 def audit_case(root, case, proof, code, *, intake, cli):

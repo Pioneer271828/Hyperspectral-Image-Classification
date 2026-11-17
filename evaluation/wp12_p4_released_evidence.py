@@ -9,8 +9,9 @@ import numpy as np
 
 from research_runtime import hash_file
 from transfer import registered_development as dev
-from transfer.development_blocks import read_pin
+from transfer.development_blocks import inside, read_pin
 from transfer.development_block_probe import VIEWS
+from transfer.native_released_campaign import expected_case_names
 from transfer.native_released_points import HEADS, LOSS
 from transfer.native_released_preflight import BANK_ROOTS, EXPECTED, SCHEMA, open_bank
 from transfer.native_released_training import COMPARISONS, PAVIA_COMPARISONS, PAVIA_DESIGN
@@ -316,21 +317,39 @@ def comparison_qualification(item, root):
             and row.get("synthetic") is True, "Expected complete synthetic production-entry qualification")
     matrix = read(row["matrix"], root)
     authorization = read(row["release"], root)
+    design = matrix.get("design")
+    if design == PAVIA_DESIGN:
+        scope = expected_case_names("paviaU", PAVIA_DESIGN)
+        case_updates = 4
+    else:
+        require(design is None, "Expected the legacy or fixed PaviaU production fixture")
+        scope = [key for scene in ("xuzhou", "whu-honghu") for key in expected_case_names(scene)]
+        case_updates = 12
+    budget = len(scope) * case_updates
     require(authorization["matrix"] == row["matrix"] and authorization["synthetic"] is True
-            and authorization["optimizer_updates"] == 360 and authorization["query_authorized"] is False
+            and authorization["optimizer_updates"] == budget and authorization["query_authorized"] is False
             and row["schema"] == "wp07_native_released_comparison_audit_v1" and row["status"] == "passed"
             and row["synthetic"] is True and matrix["synthetic"] is True
             and row["producer"] == matrix["controller"]["commit"]
-            and row["optimizer_updates"] == matrix["optimizer_updates"] == 360
-            and row["audit_optimizer_updates"] == 0 and row["query_authorized"] is False and len(row["cases"]) == 30
-            and {item["case"] for item in row["cases"]} == {item["id"] for item in matrix["cases"]}
-            and all(item["completed_resume_updates"] == 0 and item["optimizer_updates"] == 12 for item in row["cases"]),
+            and row["optimizer_updates"] == matrix["optimizer_updates"] == budget
+            and row["audit_optimizer_updates"] == 0 and row["query_authorized"] is False
+            and [item["case"] for item in row["cases"]] == [item["id"] for item in matrix["cases"]] == scope
+            and all(item["completed_resume_updates"] == 0 and item["optimizer_updates"] == case_updates
+                    for item in row["cases"]),
             "Expected complete synthetic production-entry qualification")
     for case in row["cases"]:
         for pin in case["stages"]:
             stage = read(pin, root)
-            require(hash_file(stage["checkpoint"]["path"]) == stage["checkpoint"]["sha256"],
+            checkpoint = inside(stage["checkpoint"]["path"], root)
+            require(hash_file(checkpoint) == stage["checkpoint"]["sha256"],
                     "Synthetic entry qualification has a changed checkpoint")
+        if design == PAVIA_DESIGN:
+            registration = read(stage["registration"], root)
+            views = case["validation"]["rows"]
+            require(registration["synthetic"] is True and registration["registered_graph_scale"] == 50
+                    and len(views) == 4 and sum(view["released"]["points"] == 0 for view in views) == 2
+                    and all(case["head_metrics"][head][band]["count"] == 9 for head in HEADS for band in VIEWS),
+                    "PaviaU fixture did not preserve its complete sparse validation roster")
     return {"receipt": item, "scope": "synthetic_engineering", "cases": len(row["cases"]),
             "optimizer_updates": row["optimizer_updates"], "real_release": None, "real_metrics": None}
 
