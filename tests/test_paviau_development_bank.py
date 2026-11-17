@@ -26,14 +26,17 @@ class FixedPaviaImageTests(unittest.TestCase):
             savemat(source, {"paviaU": values, "forbidden": np.ones(8)}, do_compression=True)
             pin = {"path": str(source), "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
             reader = FixedImage(pin, root, {}, release)
+            original_train = {**train, "box": train["box"].copy()}
+            train["box"][1] = 2
+            release.statistics["minimum"][0] = 0
             with patch.object(reader, "_image", side_effect=AssertionError("decoded a rejected request")):
-                for invalid in ({**train, "box": [0, 2, 0, 2]}, {**devval, "role": "devtrain"},
+                for invalid in (train, {**devval, "role": "devtrain"},
                                 {"id": 1, "role": "test", "box": [1, 3, 0, 2]}):
                     with self.assertRaisesRegex(ValueError, "escapes"):
                         reader(invalid)
             from scipy.io import loadmat
             with patch("transfer.paviau_development_bank.loadmat", wraps=loadmat) as decode:
-                np.testing.assert_array_equal(reader(train), np.float32([[[0, 0], [1, 1]]]))
+                np.testing.assert_array_equal(reader(original_train), np.float32([[[0, 0], [1, 1]]]))
                 np.testing.assert_array_equal(reader(devval), np.float32([[[-1, 4], [2, -2]]]))
                 self.assertEqual(decode.call_count, 1)
                 self.assertEqual(decode.call_args.kwargs["variable_names"], ["paviaU"])

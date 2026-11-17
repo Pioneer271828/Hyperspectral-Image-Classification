@@ -1,5 +1,6 @@
 """Complete the fixed PaviaU development release from its pinned image."""
 
+from copy import deepcopy
 from dataclasses import replace
 import hashlib
 import io
@@ -19,22 +20,25 @@ class FixedImage:
     """Only this producer decodes the MAT. Consumers open published rectangles."""
 
     def __init__(self, image, datasets, plan, release):
-        self.image = image
+        self._pin = dict(image)
         self.datasets = datasets
         self.plan = plan
-        self.release = release
-        self._rows = {row["id"]: row for row in release.rows}
+        self._shape = tuple(release.shape)
+        self._rows = {row["id"]: deepcopy(row) for row in release.rows}
+        self._lo, hi = (np.asarray(release.statistics[key], dtype=np.float32).copy()
+                        for key in ("minimum", "maximum"))
+        self._ranges = np.where(hi > self._lo, hi - self._lo, 1)
         self._cube = None
         self.decode_count = 0
 
     def _image(self):
         if self._cube is None:
-            path = inside(self.image["path"], self.datasets)
+            path = inside(self._pin["path"], self.datasets)
             raw = path.read_bytes()
-            if hashlib.sha256(raw).hexdigest() != self.image["sha256"]:
+            if hashlib.sha256(raw).hexdigest() != self._pin["sha256"]:
                 raise ValueError("PaviaU image bytes differ from its fixed release")
             image = loadmat(io.BytesIO(raw), variable_names=["paviaU"])["paviaU"]
-            if image.shape != self.release.shape or image.dtype.kind not in "iuf":
+            if image.shape != self._shape or image.dtype.kind not in "iuf":
                 raise ValueError("Unexpected PaviaU image layout")
             self._cube = image
             self.decode_count += 1
@@ -44,8 +48,7 @@ class FixedImage:
         if self._rows.get(row["id"]) != row or row["role"] not in ("devtrain", "devval"):
             raise ValueError("PaviaU image request escapes its fixed role and rectangle")
         original = np.asarray(self._image()[tile_slice(row)], dtype=np.float32)
-        lo, hi = (np.asarray(self.release.statistics[key], dtype=np.float32) for key in ("minimum", "maximum"))
-        return (original - lo) / np.where(hi > lo, hi - lo, 1)
+        return (original - self._lo) / self._ranges
 
 
 def intake(root):
@@ -93,7 +96,7 @@ def verify_publication(opened, current, old, root):
     expected_roles = {row["role"]: row["observation_sha256"] for row in staging["rows"]}
     raw_hashes = {}
     for role in ("train", "val"):
-        payload = pack_source_observations("paviaU", reader.image["sha256"], plan, role, poisoned,
+        payload = pack_source_observations("paviaU", reader._pin["sha256"], plan, role, poisoned,
                                            release.bands.wavelengths)
         raw_hashes[role] = hashlib.sha256(payload).hexdigest()
     if raw_hashes != expected_roles:
@@ -105,6 +108,8 @@ def verify_publication(opened, current, old, root):
         reference = observe_tile(poisoned, plan, release.statistics, plan["tiles"][row["id"]])
         _, _, view, context = opened.materialize(row, VIEWS["full"])
         actual = view.observation
+        if not np.array_equal(reader(row), reference.spectral):
+            raise ValueError(f"PaviaU bounded reader differs in tile {row['id']}")
         for name in ("spectral", "coordinates", "global_ids"):
             if not np.array_equal(getattr(actual, name), getattr(reference, name)):
                 raise ValueError(f"PaviaU published {name} differs in tile {row['id']}")
