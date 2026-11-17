@@ -1,7 +1,9 @@
 """Register and verify strict native-scale CPU/CUDA engineering campaigns in LXC."""
 
 import argparse
+from contextlib import contextmanager, nullcontext
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -14,12 +16,36 @@ from transfer import p4_runtime_device as p4
 from transfer.container_runtime import training_container_kind
 
 
-def main():
+CUDA_OPERATIONS = {"qualify", "register", "stage", "audit", "cost"}
+
+
+@contextmanager
+def physical_lease(root, gpu, inherited_fd=None):
+    if p4.UUID.fullmatch(gpu) is None or os.environ.get("CUDA_VISIBLE_DEVICES") != gpu:
+        raise ValueError("Require the one physical GPU UUID in CUDA_VISIBLE_DEVICES")
+    leases = root / ".p4_gpu_leases"
+    leases.mkdir(exist_ok=True)
+    path = leases / f"{gpu}.lock"
+    if path.resolve() != path:
+        raise ValueError("The shared physical lease must not traverse symlinks")
+    if inherited_fd is not None:
+        if inherited_fd < 3:
+            raise ValueError("An inherited lease descriptor must be separate from standard streams")
+        p4.check_inherited_lease(inherited_fd, path)
+        yield
+    else:
+        with p4.lease(path):
+            yield
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit",required=True)
     parser.add_argument("--runs",type=Path,required=True)
     parser.add_argument("--protocol",choices=campaign.DEVICES,default=p4.CPU)
     parser.add_argument("--gpu")
+    parser.add_argument("--gpu-lease-fd", type=int,
+                        help="Use an inherited descriptor for the same physical lease")
     modes = parser.add_subparsers(dest="mode",required=True)
     for name in ("geometry","qualify","register","stage","audit","cost","compare","supplement","consume"):
         sub = modes.add_parser(name)
@@ -44,11 +70,15 @@ def main():
         if name=="consume":
             sub.add_argument("--producer",required=True)
             sub.add_argument("--partial-cuda",action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if not training_container_kind() or not __debug__:
         parser.error("Authorized LXC with assertions required")
     if (args.protocol==p4.CPU)!=(args.gpu is None):
         parser.error("CUDA requires one physical UUID and CPU has none")
+    if args.gpu is not None and args.mode not in CUDA_OPERATIONS:
+        parser.error("This mode only reads or assembles artifacts on CPU")
+    if args.gpu_lease_fd is not None and args.gpu is None:
+        parser.error("An inherited lease can only be used with CUDA")
     code = code_snapshot()
     producer = args.expected_commit
     if code["commit"]!=producer:
@@ -58,6 +88,13 @@ def main():
     out = external_directory(args.out) if hasattr(args,"out") else None
     if root.name!="runs" or (out is not None and (out==root or not out.is_relative_to(root) or out.exists())):
         parser.error("A new bounded output under the authorized runs root is required")
+    lease = physical_lease(root, args.gpu, args.gpu_lease_fd) if args.gpu else nullcontext()
+    with lease:
+        result = dispatch(args, root, out, producer)
+    print(json.dumps(result),flush=True)
+
+
+def dispatch(args, root, out, producer):
     pin = lambda pair: None if pair is None else dict(zip(("path","sha256"),pair,strict=True))
     target = (producer,args.protocol,args.gpu)
     if args.mode=="geometry":
@@ -84,7 +121,7 @@ def main():
         result = evidence.publish(root,out,producer,producer,pin(args.cpu_audit),pin(args.cpu),
                                   gpu_audit_pin=pin(args.cuda_audit),gpu_cost_pin=pin(args.cuda),
                                   comparison_pin=pin(args.comparison),legacy_supplement=True)
-    print(json.dumps(result),flush=True)
+    return result
 
 
 if __name__=="__main__":
