@@ -96,6 +96,12 @@ class Run:
             if released is not native_released_training and type(released) is not RealReleasedRun:
                 raise ValueError("Unknown released supervision provider")
         self._capacity = None
+        self._region_action = None
+        if released is not None and released is native_released_training:
+            from monitoring import released_region
+
+            if clean["format"] == released_region.RECOVERY:
+                self._region_action = released_region
         if released is not None and released is native_released_training:
             from transfer import native_released_capacity
             if clean["format"] == native_released_capacity.FORMAT:
@@ -103,6 +109,10 @@ class Run:
         if self._capacity is not None:
             expected = self._capacity.experiment(clean["classes"], clean["seed"], clean["arm"], clean["factor"],
                                                  clean["intervention"], producer, numeric=numeric)
+        elif self._region_action is not None:
+            expected = self._region_action.recovery_contract(
+                clean["classes"], clean["seed"], clean["arm"], clean["factor"], producer,
+                clean["region_operation"], numeric)
         else:
             expected = (contract(clean["classes"],clean["seed"],clean["arm"],producer,
                                  mode=clean["supervision"],numeric=numeric) if released is None else
@@ -157,8 +167,13 @@ class Run:
         else:
             condition = None if actual.receipt["synthetic_profile"] is None else condition_for(actual,intervention)
         timed = {}
-        out,graph = forward(self.model,actual,self.producer,role,condition=condition,timed=timed,
-                            execution=self.execution, graph_scale=self._contract.get("registered_graph_scale"))
+        kwargs = dict(condition=condition, timed=timed, execution=self.execution,
+                      graph_scale=self._contract.get("registered_graph_scale"))
+        if self._region_action is not None and self._contract["region_operation"] == "zero":
+            with self._region_action.region_action(self.model.backbone, self._region_action.RegionAction("zero")):
+                out, graph = forward(self.model, actual, self.producer, role, **kwargs)
+        else:
+            out, graph = forward(self.model, actual, self.producer, role, **kwargs)
         self.timing["forward_seconds"] += timed["forward_seconds"]
         self.timing["graph_seconds"] += sum(timed["graph_seconds"])
         return out,graph,condition
