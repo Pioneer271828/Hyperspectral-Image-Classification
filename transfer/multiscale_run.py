@@ -1,6 +1,6 @@
 """Registered spatial updates for an uncoupled WP07 model."""
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import asdict
 import math
 from time import perf_counter
@@ -64,7 +64,7 @@ class MultiscaleRun(CurriculumRun):
     FORMAT = "vca-multiscale-run-v1"
     FAILURE_FORMAT = "vca-multiscale-failure-v1"
 
-    def __init__(self, baseline, scene, record, *, trial, selector_seed, **kwargs):
+    def __init__(self, baseline, scene, record, *, trial, selector_seed, synthetic_conditions=None, **kwargs):
         validate_source(baseline)
         backbone = baseline.backbone
         if (backbone.graph_assignment_mode != "learned" or backbone.graph_adjacency_mode != "learned"
@@ -83,6 +83,13 @@ class MultiscaleRun(CurriculumRun):
         self.baseline_hash = state_hash(baseline)
         self.trial = trial
         self.selector_seed = selector_seed
+        if synthetic_conditions is not None and (scene.dataset != "synthetic" or trial is None
+                or record["kind"] != "oracle_spatial_development_v1"
+                or set(synthetic_conditions) != {"coverage_fraction", "gsd_m"}
+                or not 0 <= synthetic_conditions["coverage_fraction"] <= 1
+                or not 0 < synthetic_conditions["gsd_m"] < math.inf):
+            raise ValueError("Explicit synthetic physical conditions required")
+        self.synthetic_conditions = synthetic_conditions
         self.timings = {"train_forward": [], "train_graph_build": [], "validation": [], "validation_graph_build": []}
         source = baseline
         if trial is not None:
@@ -111,10 +118,25 @@ class MultiscaleRun(CurriculumRun):
             raise ValueError("WP07 requires a sealed uncoupled FP32 evaluation state")
 
     def _contract_extensions(self):
-        return {"multiscale": dict(trial=None if self.trial is None else asdict(self.trial),
+        value = dict(trial=None if self.trial is None else asdict(self.trial),
                                    selector_seed=self.selector_seed, selector_sizes=self.selector_sizes.copy(),
                                    baseline_state=self.baseline_hash, graph_router="disabled",
-                                   metadata=metadata_contract(self.scene))}
+                                   metadata=metadata_contract(self.scene))
+        if self.synthetic_conditions is not None:
+            value["synthetic_conditions"] = self.synthetic_conditions
+        if self.trial is not None and self.trial.graph_radius == 2:
+            before = set(map(tuple, self.baseline.backbone.learnable_graph.graph_offsets.tolist()))
+            after = set(map(tuple, self.source.backbone.learnable_graph.graph_offsets.tolist()))
+            if not before < after:
+                raise ValueError("Radius-two source has incompatible generated offsets")
+            value["radius_two_offsets"] = dict(shared=sorted(before), added=sorted(after - before),
+                                               persistent_parameters=0)
+        return {"multiscale": value}
+
+    def _conditions(self, model):
+        if self.synthetic_conditions is None:
+            return nullcontext()
+        return model.physical_conditions(**self.synthetic_conditions)
 
     def _check_extensions(self):
         if (state_hash(self.baseline) != self.baseline_hash
@@ -123,14 +145,14 @@ class MultiscaleRun(CurriculumRun):
 
     def _training_forward(self, tile, step, extra):
         started = perf_counter()
-        with _measure_graph_build(self.model, self.timings["train_graph_build"]):
+        with self._conditions(self.model), _measure_graph_build(self.model, self.timings["train_graph_build"]):
             result = _forward(self.model, self.scene, tile, multiscale_condition_only=True, **extra)
         self.timings["train_forward"].append(perf_counter() - started)
         return result
 
     def _evaluate(self, model):
         started = perf_counter()
-        with _measure_graph_build(model, self.timings["validation_graph_build"]):
+        with self._conditions(model), _measure_graph_build(model, self.timings["validation_graph_build"]):
             result = evaluate_validation(model, self.scene, self.record, multiscale_condition_only=True)
         self.timings["validation"].append(perf_counter() - started)
         return result
@@ -190,7 +212,7 @@ class MultiscaleRun(CurriculumRun):
 
     @classmethod
     def load(cls, baseline, scene, record, path, *, plan, trial, selector_seed,
-             expected_sha256, expected_contract_hash):
+             expected_sha256, expected_contract_hash, synthetic_conditions=None):
         return super().load(baseline, scene, record, path, plan=plan, policy=None,
                             expected_sha256=expected_sha256, expected_contract_hash=expected_contract_hash,
-                            constructor_kwargs=dict(trial=trial, selector_seed=selector_seed))
+                            constructor_kwargs=dict(trial=trial, selector_seed=selector_seed, synthetic_conditions=synthetic_conditions))
