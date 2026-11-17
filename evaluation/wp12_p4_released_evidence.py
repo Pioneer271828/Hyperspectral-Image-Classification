@@ -11,6 +11,7 @@ from transfer.development_blocks import read_pin
 from transfer.native_released_points import LOSS
 from transfer.native_released_preflight import BANK_ROOTS, EXPECTED, SCHEMA
 from transfer.native_released_training import COMPARISONS
+from evaluation import wp12_p4_migration
 from evaluation.wp12_native_support_evidence import OLD_TABLES
 from evaluation.wp12_p4_progress import status as controller_status
 
@@ -88,7 +89,7 @@ def queue_states(resource, status=None, accepted=None):
     return result
 
 
-def p4_prepared(resource_pin, template_pin, root, *, review_pin=None, approval_pin=None):
+def p4_prepared(resource_pin, template_pin, root, *, review_pin=None, approval_pin=None, migration_pin=None):
     row, template = read(resource_pin, root), read(template_pin, root)
     science = read(row["science"], root)
     require(resource_pin["sha256"] == P4_RESOURCE and template_pin["sha256"] == FIT_TEMPLATE
@@ -102,6 +103,16 @@ def p4_prepared(resource_pin, template_pin, root, *, review_pin=None, approval_p
             and len(template["cases"]) == 9 and sum(c["planned_updates"] for c in template["cases"]) == 13500
             and all(c["status"] == "NOT_RUN" and c["actual_updates"] == 0 and c["selected_step"] is None
                     for c in template["cases"]), "Expected independently prepared P4 and fitting evidence")
+    if migration_pin is not None:
+        require(review_pin is not None and approval_pin is not None,
+                "Migration intake requires the original partial review and release")
+        migration = wp12_p4_migration.intake(migration_pin, resource_pin, row, science, review_pin, approval_pin, root)
+        return {"scope": resource_pin, "science": row["science"], "state": "combined_evidence",
+                "slots": queue_states(row, migration["original_status"]), "optimizer_updates": 2400,
+                "fit_template": template_pin, "fit_status": template["status"], "accuracy": None, "cost": None,
+                "average_benefit": None, "batch_accepted": False, "query_authorized": False,
+                "review": review_pin, "reviewed_cases": 20, "case_metrics_scope": "two_execution_scopes",
+                "migration": migration}
     progress = controller_status(resource_pin, root, approved_resource_sha=P4_RESOURCE)
     reviewed, accepted = None, None
     if review_pin is not None:
@@ -298,11 +309,28 @@ def write_case_metrics(path, review):
                                  *head["recall"]))
 
 
+def write_migrated_case_metrics(path, combined):
+    with path.open("x", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        metrics = ("oa", "aa", "kappa", "macro_f1", "nll")
+        writer.writerow(("source", "scope_sha256", "audit_sha256", "physical_uuid", "case", "k", "method",
+                         "arm", "head", "selected_step", *metrics, "case_audit_seconds", "worker_paths",
+                         *(f"recall_{i}" for i in range(1, 23)), *(f"f1_{i}" for i in range(1, 23))))
+        for row in (*combined["retained"], *combined["migrated"]):
+            c = row["case"]
+            for name, values in row["heads"].items():
+                writer.writerow((row["source"], row["scope"]["sha256"], row["audit"]["sha256"], c["physical_uuid"],
+                                 *(c[k] for k in ("id", "k", "method", "arm")), name, row["selected_step"],
+                                 *(values[k] for k in metrics), row["audit_seconds"], json.dumps(row["paths"], sort_keys=True),
+                                 *(v["recall"] for v in values["per_class"]), *(v["f1"] for v in values["per_class"])))
+
+
 def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
-           p4_review=None, p4_release=None, comparison=None, native_duty=None):
+           p4_review=None, p4_release=None, comparison=None, native_duty=None, p4_migration=None):
     from evaluation import wp12_native_duty_evidence as duty
 
-    p4 = p4_prepared(resource, template, root, review_pin=p4_review, approval_pin=p4_release)
+    p4 = p4_prepared(resource, template, root, review_pin=p4_review, approval_pin=p4_release,
+                     migration_pin=p4_migration)
     released = sparse_prepared(sparse, root)
     if comparison is not None:
         released["comparison_qualification"] = comparison_qualification(comparison, root)
@@ -312,7 +340,12 @@ def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
         released["duties"] = duty.duties(prepared, audit, root, sparse)
         released["dual_slot_qualification"] = duty.qualification(dual, root, released["duties"]["synthetic"]["worker"])
         released["region_intervention"] = duty.intervention(intervention, root, audit, sparse)
-        p4["fit_diagnostic"] = duty.p4_fit(diagnostic, root, resource, p4_release, p4)
+        original_scope = p4
+        if p4_migration is not None:
+            retained = p4["migration"]["retained"]
+            original_scope = {"reviewed_cases": len(retained),
+                              "optimizer_updates": sum(case["optimizer_updates"] for case in retained)}
+        p4["fit_diagnostic"] = duty.p4_fit(diagnostic, root, resource, p4_release, original_scope)
     tables = {}
     for folder, members in OLD.items():
         for name, checksum in members.items():
@@ -342,6 +375,9 @@ def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
     if p4_review is not None:
         write_case_metrics(out / "p4-real-case-metrics.csv", read(p4_review, root))
         names.append("p4-real-case-metrics.csv")
+    if p4_migration is not None:
+        write_migrated_case_metrics(out / "p4-migrated-case-metrics.csv", p4["migration"])
+        names.append("p4-migrated-case-metrics.csv")
     return dev._json_new(out / "supplement.json", {"schema": "wp12_development_intake_supplement_v1",
         "adapter": adapter, "p4": p4, "engineering_p4": engineering, "native_released": released, "preserved": {
             "real_models": len(model_rows), "real_heads": len(production),
