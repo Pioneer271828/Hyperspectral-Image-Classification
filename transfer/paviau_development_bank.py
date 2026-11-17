@@ -141,7 +141,7 @@ def open_publication(root, publication):
             or receipt["audit"]["legacy_equal"] != [0, 1]):
         raise ValueError("Expected the complete authenticated PaviaU bank publication")
     current, _ = intake(root)
-    opened = bank.Bank({key: receipt[key] for key in ("root", "sha256")}, root, current.release)
+    opened = bank.Bank({key: receipt[key] for key in ("root", "sha256", "registration")}, root, current.release)
     if current.release.coverage() != receipt["audit"]["coverage"]:
         raise ValueError("PaviaU publication and current frozen release disagree")
     return opened, publication, current
