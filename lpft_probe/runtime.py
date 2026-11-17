@@ -96,7 +96,7 @@ class LPFTRun:
         return (self.completed_steps if self.completed_steps < self.plan.probe_steps
                 else self.completed_steps - self.plan.probe_steps)
 
-    def _validate_live(self):
+    def _validate_live(self, *, optimizer_updates=None):
         if self._failed:
             raise RuntimeError("Failed update: restore a saved snapshot into a new run")
         self.plan.phase(self.completed_steps)
@@ -112,7 +112,7 @@ class LPFTRun:
         if any(not torch.equal(self._buffers[n], v.detach().cpu())
                for n, v in self.model.named_buffers()):
             raise ValueError("Frozen model buffer changed")
-        self._validate_optimizer(self.optimizer.state_dict())
+        self._validate_optimizer(self.optimizer.state_dict(), updates=optimizer_updates)
 
     def step(self, loss_function):
         self._validate_live()
@@ -136,10 +136,15 @@ class LPFTRun:
                     raise ValueError("Frozen parameter has a gradient: " + name)
             self.optimizer.step()
             self.optimizer.zero_grad(set_to_none=True)
-            self.completed_steps += 1
-            if self.completed_steps == self.plan.probe_steps:
-                self.optimizer, _ = start_phase(self.model, self.plan, self.completed_steps)
-            self._validate_live()
+            # Validate the updated optimizer while it still belongs to this phase.
+            self._validate_live(optimizer_updates=self._phase_updates() + 1)
+            next_cursor = self.completed_steps + 1
+            if next_cursor == self.plan.probe_steps:
+                self.optimizer, _ = start_phase(self.model, self.plan, next_cursor)
+                self.completed_steps = next_cursor
+                self._validate_live()
+            else:
+                self.completed_steps = next_cursor
             return float(loss.detach())
         except Exception:
             self._failed = True
@@ -159,7 +164,7 @@ class LPFTRun:
         result = _cpu(result)
         return result
 
-    def _validate_optimizer(self, saved):
+    def _validate_optimizer(self, saved, *, updates=None):
         boundary = 0 if self.completed_steps < self.plan.probe_steps else self.plan.probe_steps
         heads, backbone = _partition(self.model)
         groups = [{"params": [p for _, p in heads], "lr": self.plan.head_lr,
@@ -176,7 +181,8 @@ class LPFTRun:
             raise ValueError("Optimizer groups or options changed")
         ids = [i for g in expected["param_groups"] for i in g["params"]]
         parameters = [p for g in reference.param_groups for p in g["params"]]
-        updates = self._phase_updates()
+        if updates is None:
+            updates = self._phase_updates()
         if set(saved["state"]) != (set(ids) if updates else set()):
             raise ValueError("Optimizer state coverage does not match phase cursor")
         for index, parameter in zip(ids, parameters):

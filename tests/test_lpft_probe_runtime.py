@@ -91,6 +91,31 @@ class RuntimeTests(unittest.TestCase):
         resumed.step(self.loss)
         self.assertTrue(all(v["step"].item() == 1 for v in resumed.optimizer.state.values()))
 
+    def test_last_probe_update_rejects_real_adam_overflow_before_reset(self):
+        run = self.new_run()
+        for _ in range(self.plan.probe_steps - 1):
+            run.step(self.loss)
+        prior = run.snapshot()
+        probe_optimizer = run.optimizer
+
+        def large_finite_gradient(model):
+            return 1e160 * sum(p.sum() for p in model.parameters() if p.requires_grad)
+
+        with self.assertRaisesRegex(ValueError, "Malformed Adam moment: exp_avg_sq"):
+            run.step(large_finite_gradient)
+        self.assertIs(run.optimizer, probe_optimizer)
+        self.assertEqual(run.completed_steps, self.plan.probe_steps - 1)
+        self.assertTrue(all(torch.isfinite(p).all() for p in run.model.parameters()))
+        self.assertTrue(any(torch.isinf(v["exp_avg_sq"]).any() for v in probe_optimizer.state.values()))
+        with self.assertRaisesRegex(RuntimeError, "Failed update"):
+            run.snapshot()
+        with self.assertRaisesRegex(RuntimeError, "Failed update"):
+            run.step(self.loss)
+        resumed = LPFTRun.restore(self.model, self.plan, self.identity, prior)
+        resumed.step(self.loss)
+        self.assertEqual(resumed.completed_steps, self.plan.probe_steps)
+        self.assertFalse(resumed.snapshot()["optimizer"]["state"])
+
     def test_completion_rejects_updates_without_callback_or_mutation(self):
         run = self.new_run()
         for _ in range(8):
