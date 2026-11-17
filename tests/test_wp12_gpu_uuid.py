@@ -1,7 +1,9 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from evaluation.wp12_resident_cost import admit_gpu, canonical_gpu_uuid
+from evaluation.wp12_resident_cost import admit_gpu, canonical_gpu_uuid, gpu_measurement_lease
 
 
 class CostGPUIdentityTests(unittest.TestCase):
@@ -21,3 +23,19 @@ class CostGPUIdentityTests(unittest.TestCase):
         for value in ("GPU-ab4a0000", "0", "MIG-ab4a0000-0000-0000-0000-00000000000a"):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "full physical"):
                 canonical_gpu_uuid(value)
+
+    def test_shared_gpu_lease_blocks_cost_worker_and_releases_after_gate_failure(self):
+        physical = "GPU-ab4a0000-0000-0000-0000-00000000000a"
+        with TemporaryDirectory() as root, patch.dict("os.environ", {"HSI_GPU_LEASE_ROOT": root}):
+            Path(root, physical + ".lock").touch()
+            with patch("evaluation.wp12_resident_cost.admit_gpu", side_effect=ValueError("busy resource")):
+                with self.assertRaisesRegex(ValueError, "busy resource"), gpu_measurement_lease(physical):
+                    self.fail("Failed gate admitted a worker")
+            with patch("evaluation.wp12_resident_cost.admit_gpu") as admit:
+                with gpu_measurement_lease(physical) as lease:
+                    self.assertFalse(lease.closed)
+                    with self.assertRaisesRegex(ValueError, "already leased"), gpu_measurement_lease(physical):
+                        self.fail("Two workers acquired the same physical lease")
+                with gpu_measurement_lease(physical):
+                    pass
+                self.assertEqual(admit.call_count, 2)
