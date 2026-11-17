@@ -1,9 +1,8 @@
 """Register and verify strict native-scale CPU/CUDA engineering campaigns in LXC."""
 
 import argparse
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 import json
-import os
 from pathlib import Path
 import sys
 
@@ -14,28 +13,10 @@ from transfer import native_scale_device_campaign as campaign, native_scale_devi
 from transfer import native_scale_device_evidence as evidence
 from transfer import p4_runtime_device as p4
 from transfer.container_runtime import training_container_kind
+from transfer.shared_gpu_lease import physical_lease
 
 
 CUDA_OPERATIONS = {"qualify", "register", "stage", "audit", "cost"}
-
-
-@contextmanager
-def physical_lease(root, gpu, inherited_fd=None):
-    if p4.UUID.fullmatch(gpu) is None or os.environ.get("CUDA_VISIBLE_DEVICES") != gpu:
-        raise ValueError("Require the one physical GPU UUID in CUDA_VISIBLE_DEVICES")
-    leases = root / ".p4_gpu_leases"
-    leases.mkdir(exist_ok=True)
-    path = leases / f"{gpu}.lock"
-    if path.resolve() != path:
-        raise ValueError("The shared physical lease must not traverse symlinks")
-    if inherited_fd is not None:
-        if inherited_fd < 3:
-            raise ValueError("An inherited lease descriptor must be separate from standard streams")
-        p4.check_inherited_lease(inherited_fd, path)
-        yield
-    else:
-        with p4.lease(path):
-            yield
 
 
 def main(argv=None):
@@ -90,7 +71,7 @@ def main(argv=None):
     out = external_directory(args.out) if hasattr(args,"out") else None
     if root.name!="runs" or (out is not None and (out==root or not out.is_relative_to(root) or out.exists())):
         parser.error("A new bounded output under the authorized runs root is required")
-    lease = physical_lease(root, args.gpu, args.gpu_lease_fd) if args.gpu else nullcontext()
+    lease = physical_lease(args.gpu, args.gpu_lease_fd) if args.gpu else nullcontext()
     with lease:
         result = dispatch(args, root, out, producer)
     print(json.dumps(result),flush=True)

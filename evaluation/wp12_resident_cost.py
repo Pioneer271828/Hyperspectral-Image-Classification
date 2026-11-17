@@ -27,6 +27,7 @@ from m4_ordered_source import OrderedValidation
 from model.checkpoint_io import load_model_checkpoint
 from model.research_config import digest
 from research_runtime import hash_file
+from transfer.shared_gpu_lease import lease_path
 
 
 JOB_POLICY = "wp12-native-resident-job-v1"
@@ -48,10 +49,7 @@ def canonical_gpu_uuid(value):
 def gpu_measurement_lease(uuid):
     """Share the project's per-device lock with training and other cost workers."""
     gpu = canonical_gpu_uuid(uuid)
-    root = Path(os.environ.get("HSI_GPU_LEASE_ROOT", "/home/lbx/hsi-pioneer271828/runs/.p4_gpu_leases"))
-    if not root.is_absolute() or root != root.resolve(strict=True) or not root.is_dir():
-        raise ValueError("Existing absolute GPU lease directory required")
-    path = root / (gpu + ".lock")
+    path = lease_path(gpu)
     descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(descriptor, "rb") as lock:
         if not stat.S_ISREG(os.fstat(descriptor).st_mode):

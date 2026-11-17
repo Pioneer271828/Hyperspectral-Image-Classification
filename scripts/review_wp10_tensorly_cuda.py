@@ -12,11 +12,11 @@ from compression.precision_cost import ResidentPrecisionTile
 from evaluation.wp12_low_rank_evidence import verify_guard
 from inference.wp10_low_rank_execution import _scan, package
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
-from scripts.run_native_scale_device import physical_lease
 from scripts.review_wp10_tensorly import load_scope, locations, measure, paired, resident_tiles, score
 from transfer import matched_route_admission as admission
 from transfer.container_runtime import training_container_kind
 from transfer.p4_runtime_device import UUID
+from transfer.shared_gpu_lease import physical_lease
 
 
 def probability_delta(reference, current):
@@ -81,7 +81,7 @@ def main(argv=None):
     root = external_directory(args.runs.resolve(strict=True))
     if root.name != "runs":
         raise ValueError("Use the authorized runs root")
-    with physical_lease(root, args.gpu, args.gpu_lease_fd):
+    with physical_lease(args.gpu, args.gpu_lease_fd):
         if torch.cuda.device_count() != 1:
             raise ValueError("Require exactly one visible CUDA device")
         return execute(args, code)

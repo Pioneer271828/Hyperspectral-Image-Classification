@@ -48,11 +48,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.gpu
         env:
           CUDA_VISIBLE_DEVICES: ${{ inputs.gpu_uuid }}
-          HSI_GPU_LEASE_ROOT: ${{ vars.HSI_GPU_LEASE_ROOT || '/home/lbx/hsi-pioneer271828/runs/.p4_gpu_leases' }}
+          HSI_GPU_LEASE_ROOT: /home/lbx/hsi-pioneer271828/runs/.p4_gpu_leases
         run: |
           set -euo pipefail
           gpu="$CUDA_VISIBLE_DEVICES"
           [[ "$gpu" =~ ^GPU-[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$ ]]
+          [[ "$(realpath -e "$HSI_GPU_LEASE_ROOT")" == "$HSI_GPU_LEASE_ROOT" ]]
           lease="$HSI_GPU_LEASE_ROOT/$gpu.lock"
           [[ -f "$lease" && ! -L "$lease" ]]
           exec 9<"$lease"

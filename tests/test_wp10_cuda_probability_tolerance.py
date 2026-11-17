@@ -25,6 +25,7 @@ class ProbabilityToleranceTests(unittest.TestCase):
             with patch.object(cli, "code_snapshot", return_value={"commit": sha}), \
                     patch.object(cli, "require_frozen_code"), \
                     patch.object(cli, "training_container_kind", return_value="lxc"), \
+                    patch.dict("os.environ", {"HSI_GPU_LEASE_ROOT": str(lease.parent)}), \
                     patch.object(torch, "get_num_threads", return_value=1), \
                     patch.object(torch.cuda, "device_count", return_value=1), \
                     patch.object(cli, "execute", side_effect=RuntimeError("measurement failure")) as worker:

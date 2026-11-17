@@ -7,6 +7,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 from scripts import run_native_scale_device as cli
+from scripts import run_native_released_points as released_cli
 from transfer import native_scale_device_campaign as campaign, native_scale_training as training
 from transfer import p4_runtime_device as p4
 from transfer.native_scale_device import arithmetic, settings
@@ -19,7 +20,9 @@ class NativeScaleDeviceTests(TestCase):
         sha = "a" * 40
         with TemporaryDirectory() as folder, patch.dict("os.environ", {"CUDA_VISIBLE_DEVICES": gpu}):
             root = Path(folder) / "runs"
-            leases = root / ".p4_gpu_leases"
+            other_root = root / "different" / "runs"
+            other_root.mkdir(parents=True)
+            leases = Path(folder) / "shared"
             leases.mkdir(parents=True)
             common = ["--expected-commit", sha, "--runs", str(root),
                       "--protocol", p4.CUDA_FP64_WEIGHT, "--gpu", gpu]
@@ -34,11 +37,19 @@ class NativeScaleDeviceTests(TestCase):
             }
             with patch.object(cli, "code_snapshot", return_value={"commit": sha}), \
                     patch.object(cli, "require_frozen_code"), patch.object(cli, "training_container_kind", return_value="lxc"), \
+                    patch.dict("os.environ", {"HSI_GPU_LEASE_ROOT": str(leases)}), \
                     patch.object(cli, "dispatch") as dispatch:
                 with p4.lease(leases / f"{gpu}.lock") as parent:
                     for mode, args in commands.items():
                         with self.subTest(mode=mode), self.assertRaisesRegex(p4.ResourceUnavailable, "Active lease"):
                             cli.main([*common, mode, *args])
+                    other = [*common]
+                    other[other.index(str(root))] = str(other_root)
+                    with self.assertRaisesRegex(p4.ResourceUnavailable, "Active lease"):
+                        cli.main([*other, "qualify", "--out", str(other_root / "out"), "--geometry", *mark])
+                    with self.assertRaisesRegex(p4.ResourceUnavailable, "Active lease"):
+                        with released_cli.arithmetic(other_root, gpu):
+                            self.fail("Released points must share the exact native-scale lease")
                     dispatch.assert_not_called()
                     with self.assertRaisesRegex(RuntimeError, "inherited worker operation"):
                         dispatch.side_effect = RuntimeError("inherited worker operation")
@@ -55,6 +66,27 @@ class NativeScaleDeviceTests(TestCase):
                 with p4.lease(other) as wrong, self.assertRaisesRegex(ValueError, "does not match"):
                     cli.main([*common, "--gpu-lease-fd", str(wrong.fileno()), "qualify", *commands["qualify"]])
                 self.assertEqual(dispatch.call_count, 2)
+
+    def test_bad_lease_directory_or_file_never_reaches_cuda(self):
+        gpu = "GPU-11111111-1111-1111-1111-111111111111"
+        with TemporaryDirectory() as folder, patch.dict("os.environ", {"CUDA_VISIBLE_DEVICES": gpu}):
+            root = Path(folder)
+            shared = root / "shared"
+            shared.mkdir()
+            alias = root / "alias"
+            alias.symlink_to(shared, target_is_directory=True)
+            for wrong in ("relative", str(root / "missing"), str(alias)):
+                with self.subTest(wrong=wrong), patch.dict("os.environ", {"HSI_GPU_LEASE_ROOT": wrong}), \
+                        self.assertRaisesRegex(ValueError, "GPU lease directory"):
+                    with cli.physical_lease(gpu):
+                        self.fail("An invalid lease directory must be rejected")
+            original = shared / "different.lock"
+            original.touch()
+            (shared / f"{gpu}.lock").symlink_to(original)
+            with patch.dict("os.environ", {"HSI_GPU_LEASE_ROOT": str(shared)}), \
+                    self.assertRaisesRegex(ValueError, "lease file cannot be a symlink"):
+                with cli.physical_lease(gpu):
+                    self.fail("A symlink cannot redirect the shared physical lease")
 
     def test_context_restore_on_exception_and_protocol_reject(self):
         before = settings()

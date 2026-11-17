@@ -3,7 +3,6 @@ import argparse
 from contextlib import contextmanager
 from itertools import product
 from pathlib import Path
-import os
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -16,6 +15,7 @@ from transfer import native_scale_training as training, native_scale_device as d
 from transfer import p4_runtime_device as p4, registered_development as transport
 from transfer.native_scale_campaign import packet, read
 from transfer.native_released_real import RealReleasedRun
+from transfer.shared_gpu_lease import physical_lease
 from joint_training import _run_lock
 from transfer.xuzhou_multiscale_audit import _exact
 
@@ -26,15 +26,7 @@ def arithmetic(root, gpu):
         with device.arithmetic(p4.CPU) as execution:
             yield execution
         return
-    if os.environ.get("CUDA_VISIBLE_DEVICES") != gpu or p4.UUID.fullmatch(gpu) is None:
-        raise ValueError("Require the one physical GPU UUID in CUDA_VISIBLE_DEVICES")
-    shared = next((parent for parent in (root, *root.parents)
-                   if (parent / ".p4_gpu_leases").is_dir()), root)
-    leases = shared / ".p4_gpu_leases"
-    if leases.is_symlink():
-        raise ValueError("Physical GPU lease directory cannot be a symlink")
-    leases.mkdir(exist_ok=True)
-    with p4.lease(leases / f"{gpu}.lock"), device.arithmetic(p4.CUDA_FP64_WEIGHT, gpu) as execution:
+    with physical_lease(gpu), device.arithmetic(p4.CUDA_FP64_WEIGHT, gpu) as execution:
         yield execution
 
 
