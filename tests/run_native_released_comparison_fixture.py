@@ -1,5 +1,6 @@
 """Exercise the complete authenticated production comparison over synthetic banks."""
 import argparse
+from itertools import product
 from pathlib import Path
 
 import torch
@@ -36,9 +37,11 @@ def exercise(root, code, manifest, intake, design, *, mirror=False):
     else:
         raise AssertionError("Unreleased matrix entered execution")
     released = {}
+    release_dir = root / ("case-releases" + variant)
+    release_dir.mkdir()
     for i, case in enumerate(expected["cases"]):
         row = next(v for v in read(case["preflight"], root)["draft"]["cases"] if v["id"] == case["id"])
-        released[case["id"]] = release_for(root, case["preflight"], row, Path(case["destination"]), code,
+        released[case["id"]] = release_for(release_dir, case["preflight"], row, Path(case["destination"]), code,
                                           "split" if (i + int(mirror)) % 2 else "full")
     authorization = dev._json_new(root / ("matrix-release" + variant + ".json"), {
         "schema": campaign.RELEASE, "decision": "approved", "matrix": matrix, "execution": str(target),
@@ -85,15 +88,20 @@ def main():
     result = exercise(root, code, manifest, intake, design)
     if args.paviau:
         mirror = exercise(root, code, manifest, intake, design, mirror=True)
+        initial_heads = {}
         for lhs, rhs in zip(read(result["audit"], root)["cases"], read(mirror["audit"], root)["cases"], strict=True):
             assert lhs["case"] == rhs["case"] and lhs["selected_step"] == rhs["selected_step"]
             states = [packet(read(row["stages"][-1], root)["checkpoint"], root) for row in (lhs, rhs)]
             assert all(_exact(states[0][key], states[1][key]) for key in states[0] if key != "registration")
+            initial_heads[lhs["case"]] = [view["heads"] for view in states[0]["validation"][0]["rows"]]
             rows = lhs["validation"]["rows"]
             assert len(rows) == 4 and sum(row["released"]["points"] == 0 for row in rows) == 2
             assert all(sum(row["scores"]["fused"]["count"] for row in rows if row["band"] == band) == 9
                        for band in {row["band"] for row in rows})
             assert all(row["condition_key"] is None and row["heads"] for row in rows)
+        for seed, factor, (arm, fallback) in product((64, 512, 2048), (2, 4),
+                                                     (("metadata", "mean"), ("joint", "content"))):
+            assert initial_heads[f"paviaU/{seed}/{factor}/{arm}"] == initial_heads[f"paviaU/{seed}/{factor}/{fallback}"]
         result.update(mirror=mirror, exact_full_split_cases=39, graph_scale=50)
     print(dev._json_new(root / "summary.json", result), flush=True)
 
