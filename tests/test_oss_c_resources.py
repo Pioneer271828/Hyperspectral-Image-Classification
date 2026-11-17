@@ -11,6 +11,9 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+# This file also runs as a subprocess via its absolute path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from research_runtime import code_snapshot, hash_file
 from scripts import audit_oss_c_real as audit
 from scripts import run_oss_c_resources as queued
