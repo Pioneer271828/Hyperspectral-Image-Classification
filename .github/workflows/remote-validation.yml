@@ -25,7 +25,8 @@ jobs:
   validation:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, linux, hsi-training-container]
-    timeout-minutes: 45
+    # The recorded 1,125-test CPU suite took about 49 minutes on this container.
+    timeout-minutes: 120
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       OMP_NUM_THREADS: '1'
