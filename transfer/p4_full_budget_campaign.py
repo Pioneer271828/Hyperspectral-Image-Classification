@@ -2,6 +2,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, nullcontext
+from fractions import Fraction
 import json
 import os
 from pathlib import Path
@@ -248,7 +249,7 @@ def run(scope_path, sha, out, code, *, resume=False, segment=None, launcher=invo
         stop, mutex = Event(), Lock()
         errors, states = {}, {}
         new_updates = 0
-        slots = device.slots(scope['protocol'], scope['gpus'])
+        slots = device.slots(scope['protocol'], scope['gpus'], recovery=scope.get('purpose') == registration.RECOVERY)
         if scope['gpus']:
             slot_lock(out, scope['gpus'][0]).parent.mkdir(exist_ok=True)
         event_path = out / 'queue-events.jsonl'
@@ -358,6 +359,32 @@ def run(scope_path, sha, out, code, *, resume=False, segment=None, launcher=invo
         return result
 
 
+def admission_validation(rows):
+    """Report paired short-admission metrics while retaining class protection failures."""
+    references = {row['case']['pair_sha256']:row for row in rows if row['case']['arm']=='none'}
+    report = []
+    for row in rows:
+        current = row['fit']['selected']['val']['heads']
+        baseline = references[row['case']['pair_sha256']]['fit']['selected']['val']['heads']
+        heads = {}
+        for head, score in current.items():
+            other = baseline[head]
+            supports = [sum(line) for line in score['confusion']]
+            device.require(len(supports)==22 and supports == [5]*22
+                and [sum(line) for line in other['confusion']] == supports,
+                'Short admission must retain all 22 validation classes')
+            recalls = [Fraction(score['confusion'][i][i]-other['confusion'][i][i], support)
+                       for i,support in enumerate(supports)]
+            heads[head] = {'oa':score['oa'], 'aa':score['aa'], 'kappa':score['kappa'],
+                'macro_f1':score['macro_f1'], 'nll':score['nll'], 'class_support':supports,
+                'recall':score['recall'], 'zero_recall_classes':[i for i,v in enumerate(score['recall'],1) if v==0],
+                'recall_delta_vs_none':[float(value) for value in recalls],
+                'recall_drop_over_2pp_classes':[i for i,value in enumerate(recalls,1) if value < Fraction(-2,100)]}
+        report.append({'case':row['case']['id'],'baseline':references[row['case']['pair_sha256']]['case']['id'],
+                       'selected_step':row['selected_step'],'heads':heads})
+    return report
+
+
 def accept(scope_path, sha, out, code):
     scope, _ = registration.load(scope_path, sha, code)
     out = batch.sibling(out, scope_path)
@@ -368,16 +395,18 @@ def accept(scope_path, sha, out, code):
         device.require(status['status'] == 'completed' and status['scope_sha256'] == sha
             and status['cases'] == len(cases) and status['optimizer_updates'] == scope['budget']['planned_optimizer_updates'],
             'Incomplete full matrix cannot be accepted')
-        case_pins, all_artifacts, pairs = {}, {}, {}
+        case_pins, all_artifacts, pairs, audits = {}, {}, {}, []
         for case in cases:
             folder = bound_folder(out, case)
             row = accepted(folder, scope, case, sha)
+            audits.append(row)
             path = folder / 'audit.json'
             case_pins[str(path)] = hash_file(path)
             all_artifacts.update(row['artifact_pins'])
             pairs.setdefault(case['pair_sha256'], []).append(case['arm'])
-        device.require(len(pairs) * len(registration.coverage.ARMS) == len(cases)
-                       and all(arms == list(registration.coverage.ARMS) for arms in pairs.values()),
+        expected_arms = ('none',) if scope.get('purpose') == registration.RECOVERY else registration.coverage.ARMS
+        device.require(len(pairs) * len(expected_arms) == len(cases)
+                       and all(arms == list(expected_arms) for arms in pairs.values()),
                        'Missing matched coverage arm at acceptance')
         pins = {**scope['protected_files'], str(Path(scope_path).resolve()): sha, **case_pins, **all_artifacts}
         if scope.get('paths'):
@@ -400,6 +429,8 @@ def accept(scope_path, sha, out, code):
         if scope.get('parameter_audit'):
             result.update(purpose=scope['purpose'], parameter_audit=scope['parameter_audit'], paths=scope['paths'],
                           synthetic=scope['synthetic'])
+        if scope.get('purpose') == registration.ADMISSION and scope['protocol'] == device.CUDA_FP64_WEIGHT:
+            result['validation_diagnostics'] = admission_validation(audits)
         if path.exists():
             device.require(read(path) == result, 'Published full-budget acceptance differs')
         else:
@@ -417,6 +448,7 @@ def main():
     prep.add_argument('--gpus', nargs='*', default=[])
     prep.add_argument('--purpose', choices=registration.POLICIES, default=registration.LEGACY)
     prep.add_argument('--qualification', type=Path, action='append', default=[])
+    prep.add_argument('--recovery-receipt', type=Path)
     execute = modes.add_parser('run')
     execute.add_argument('--resume', action='store_true')
     execute.add_argument('--segment', type=int)
@@ -439,7 +471,7 @@ def main():
     if args.mode == 'prepare':
         path = registration.prepare(args.parent, batch.PARENT_SHA, args.prior_receipt, batch.PRIOR_SHA,
                                     args.out, code, protocol=args.protocol, gpus=args.gpus, purpose=args.purpose,
-                                    qualifications=args.qualification)
+                                    qualifications=args.qualification, recovery_receipt=args.recovery_receipt)
         result = {'path': str(path), 'sha256': hash_file(path)}
     elif args.mode == 'worker':
         try:
