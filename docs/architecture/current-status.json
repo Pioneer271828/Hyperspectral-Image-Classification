@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-18",
+  "as_of": "2026-11-19",
   "issue": 498,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
@@ -1614,6 +1614,13 @@
       "evidence": "127训练、41开发验证块，各角色9类各5点。真实生产初态13配置各82视图含48空视图，两带各45点，三头逐点复算与预检一致。39例合成走生产全程和分段共312步，完成重入0；WP12接入合成审计并保有旧表。",
       "remaining": "GPU3复查69%超资源门槛，CUDA未升级验收。PaviaU真实39例2340步未放行；真实校准、独立确认与完整研究待验，P4和Issue #249维持原进度。",
       "report": "research/reports/WP02_WP05_WP07_WP12_PaviaU固定空间发布与原生接入_20261118.md"
+    },
+    {
+      "id": "WP05/WP06/WP12 三场景同点缺带与遮挡",
+      "state": "发布验证点冻结诊断、完成重入和 WP12 接收通过",
+      "evidence": "8 个真实冻结检查点 626 次新块前向，复用 HongHu 40 例逐点预测；33 个历史三头混淆回放一致，删列污染、Q/A、VCA 和元数据缓存额外 15 次前向核查通过。WP12 接收 1464 条比较及 23784 条逐类记录。徐州连续缺带使图头类5与6全部降至零召回，PaviaU三种子融合平均下降4.44个百分点，HongHu类15与21保持零召回。",
+      "remaining": "徐州与 HongHu 各仅一个独立模型种子；逐类各5个点，HongHu原生空间分组有空组，波段轴为名义或近似。独立空间确认、校准光谱响应和迁移收益待验，真实参数更新和query访问均为零。",
+      "report": "research/reports/WP05_WP06_WP12_三场景固定验证点缺带与遮挡_20261119.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
