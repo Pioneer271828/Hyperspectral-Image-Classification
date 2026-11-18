@@ -1,5 +1,6 @@
 """Register and verify the fixed-Q/A WP04 scratch factorial through the bounded target runtime."""
 import argparse
+from collections import Counter
 from contextlib import nullcontext, redirect_stdout
 import csv
 import ctypes
@@ -9,8 +10,7 @@ import os
 import resource
 import subprocess
 import sys
-from tempfile import TemporaryDirectory
-from time import perf_counter
+from time import perf_counter, sleep
 from uuid import UUID
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -82,20 +82,24 @@ def roster():
             for seed in SEEDS for arm, (mode, fusion) in ARMS.items()]
 
 
-def plan(catalog, code, scope):
-    return {"schema": SCHEMA, "scope": scope, "code": identity(code), "catalog": pinned(catalog),
+def plan(catalog, code, scope, *, arithmetic=None):
+    require(arithmetic in (None, p4.CUDA_FP64_WEIGHT), "Unknown WP04 arithmetic")
+    value = {"schema": SCHEMA, "scope": scope, "code": identity(code), "catalog": pinned(catalog),
             "target": "xuzhou", "support_seed": 512, "per_class": 1, "cases": roster(),
             "phase_updates": STEPS, "method": METHODS[0], "graph": "input_Q_and_A_fixed",
             "selection": "first_min_fused_validation_nll", "real_updates_authorized": 0,
             "query_access_authorized": False,
             "full_source_ft": "separate_nonfactorial_scope_different_pretrained_source_by_mode"}
+    if arithmetic is not None:
+        value["arithmetic"] = arithmetic
+    return value
 
 
 def registration(args, code):
     path = verify({"path": str(Path(args.registration[0]).resolve()), "sha256": args.registration[1]})
     value = read(path)
     catalog = verify(value["catalog"])
-    require(value == plan(catalog, code, "synthetic_only")
+    require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"))
             and catalog == path.parent / "contexts" / "manifest.json",
             "Only the generated synthetic fixture registration can run optimization")
     return value
@@ -196,6 +200,11 @@ def audit_case(reg, case, out, gpu, *, real=False):
 
     first, last = terminal(out / "whole"), terminal(split)
     fields = ("model", "optimizer", "scheduler", "history", "trace", "rng", "best_model", "best_probabilities")
+    if reg.get("arithmetic"):
+        one_a, one_b = (torch.load(out / route / "state-000001.pt", map_location="cpu", weights_only=True)
+                        for route in ("whole", "split"))
+        require(all(_tree_fingerprint(one_a[k]) == _tree_fingerprint(one_b[k]) for k in fields),
+                "Independent first-step training states differed")
     require(all(_tree_fingerprint(first[k]) == _tree_fingerprint(last[k]) for k in fields),
             "Whole and split training states differed")
     minimum = min(last["history"], key=lambda row: row["val_loss"])
@@ -225,7 +234,8 @@ def audit_case(reg, case, out, gpu, *, real=False):
     return {"case": case, "inputs": inputs, "init": init, "steps": {"selected": selected_step, "last": 12},
             "endpoints": {"selected": selected, "last": final}, "head_updates": changes, "phases": costs,
             "exact_whole_split": True, "resume_completed_updates": 0, "audit_updates": 0,
-            "trace_proof": digest(last["trace"])}
+            "trace_proof": digest(last["trace"]),
+            **({"exact_independent_step_one": True} if reg.get("arithmetic") else {})}
 
 
 def paired_initialization(rows):
@@ -287,12 +297,20 @@ def stage(args, code, reg, out):
     p4.check_inherited_lease(args.matrix_fd, out.parent / ".matrix.lock")
     require(out == out.parent / f"{case['seed']}-{case['arm']}" and
             not (out / f"{phase}.json").exists(), "Wrong or already committed operation")
-    with physical_lease(gpu, inherited_fd=args.lease_fd) if gpu else nullcontext():
-        inventory = p4.gate(gpu) if gpu else None
+    numeric = reg.get("arithmetic")
+    require(numeric is None or gpu is not None, "Strict arithmetic requires a registered physical GPU")
+    calls = Counter()
+    compute = p4.arithmetic(numeric, gpu, kernel_calls=calls) if numeric else nullcontext(None)
+    lease = physical_lease(gpu, inherited_fd=args.lease_fd) if gpu else nullcontext()
+    with lease, compute as details:
+        inventory = (p4.snapshot(gpu) if numeric else p4.gate(gpu)) if gpu else None
         device = "cuda:0" if gpu else "cpu"
         card = attest(gpu) if gpu else None
         if phase == "audit":
             audit = audit_case(reg, case, out, gpu)
+            if numeric:
+                audit["arithmetic"] = details
+                audit["kernel_calls"] = dict(calls)
             write_json(out / "audit.json", audit)
             return
         if gpu:
@@ -300,12 +318,19 @@ def stage(args, code, reg, out):
         started = perf_counter()
         target = out / ("whole" if phase == "whole" else "split")
         opts, items, provenance, _, runtime, guard = bound(reg, case, target, device)
+        if numeric:
+            provenance["registered_wp04_cuda_arithmetic"] = details
         with redirect_stdout(sys.stderr):
             result = run_training(opts, items, target, provenance, code, runtime_adapter=runtime, finish_guard=guard,
                                   device=device, resume=phase in ("resume", "completed"),
                                   stop_after=2 if phase == "prefix" else None)
         require(result["updates_this_call"] == STEPS[phase], "Different optimizer cursor")
         cost = hardware(gpu, started)
+        if numeric:
+            cost["arithmetic"] = details
+            cost["kernel_calls"] = dict(calls)
+            require(phase == "completed" or calls["sparse_mm"] > 0,
+                    "Strict path did not intercept the sparse training operator")
         write_json(out / f"{phase}.json", {**cost, "updates": STEPS[phase], "gpu": card, "resources": inventory,
                    "torch": str(torch.__version__), "scope": "phase_wall_including_prepare_checkpoint_and_verification"})
 
@@ -313,6 +338,7 @@ def stage(args, code, reg, out):
 def run(args, code, reg, out):
     out.mkdir(exist_ok=True)
     gpu = args.gpu
+    require(reg.get("arithmetic") is None or gpu, "Strict arithmetic requires a registered physical GPU")
     chosen = [c for c in reg["cases"] if args.arm is None or (c["seed"], c["arm"]) == (args.seed, args.arm)]
     require(chosen, "No selected registered case")
     lock = physical_lease(gpu) if gpu else nullcontext()
@@ -336,8 +362,15 @@ def run(args, code, reg, out):
                 if gpu:
                     fd += (lease.fileno(),)
                     cmd += ["--gpu", gpu, "--lease-fd", str(lease.fileno())]
+                started = perf_counter()
                 with (directory / f"{phase}.log").open("ab") as log:
-                    subprocess.run(cmd, check=True, pass_fds=fd, stdout=log, stderr=subprocess.STDOUT)
+                    while True:
+                        result = subprocess.run(cmd, check=False, pass_fds=fd, stdout=log, stderr=subprocess.STDOUT)
+                        if result.returncode == 0:
+                            break
+                        if result.returncode != 75 or perf_counter()-started >= args.resource_wait_seconds:
+                            result.check_returncode()
+                        sleep(5)
         if args.arm is not None:
             return
         rows = [read(out / f"{c['seed']}-{c['arm']}" / "audit.json") for c in reg["cases"]]
@@ -361,7 +394,8 @@ def run(args, code, reg, out):
                    "tables": [pinned(out / f"{name}.csv") for name in products], "cases": len(rows),
                    "case_pins": [pinned(out / f"{c['seed']}-{c['arm']}" / "audit.json") for c in reg["cases"]],
                    "counts": {name: len(data) for name, data in products.items()}, "synthetic_updates": 432,
-                   "reporting_scope": "engineering_fixture_only", "real_updates": 0, "query_access": False})
+                   "reporting_scope": "engineering_fixture_only", "real_updates": 0, "query_access": False,
+                   **({"arithmetic": reg["arithmetic"], "strict_qualification": True} if reg.get("arithmetic") else {})})
         print(json.dumps({"status": "passed", "evidence": pinned(out / "evidence.json")}))
 
 
@@ -383,11 +417,17 @@ def probe(args, code, out):
             "Rebound support roles, graph or observations changed")
     static_proof = pinned(published)
     catalog = rebound / "manifest.json"
-    reg = plan(catalog, code, "real_zero_update_draft")
+    arithmetic = p4.CUDA_FP64_WEIGHT if args.strict_cuda else None
+    require(arithmetic is None or args.gpu, "Strict real probe requires a registered physical GPU")
+    reg = plan(catalog, code, "real_zero_update_draft", arithmetic=arithmetic)
     rows = []
-    with physical_lease(args.gpu) if args.gpu else nullcontext():
+    leases = physical_lease(args.gpu) if args.gpu else nullcontext()
+    calls = Counter()
+    compute = p4.arithmetic(arithmetic, args.gpu, kernel_calls=calls) if arithmetic else nullcontext(None)
+    with leases, compute as numeric:
         if args.gpu:
-            p4.gate(args.gpu)
+            if not arithmetic:
+                p4.gate(args.gpu)
             attest(args.gpu)
         for case in reg["cases"]:
             start = perf_counter()
@@ -401,7 +441,8 @@ def probe(args, code, out):
     write_json(out / "evidence.json", {"schema": SCHEMA, "scope": reg["scope"], "code": identity(code),
                "cases": rows, "registration_draft": pinned(out / "registration-draft.json"),
                "published_catalog": static_proof, "rebound_contexts_verified": 27,
-               "real_updates": 0, "query_access": False, "fixed_graph": True, "device": args.gpu or "cpu"})
+               "real_updates": 0, "query_access": False, "fixed_graph": True, "device": args.gpu or "cpu",
+               **({"arithmetic": numeric, "kernel_calls": dict(calls)} if arithmetic else {})})
     verify(static_proof)
 
 
@@ -418,6 +459,10 @@ def main():
             selector.add_argument("--arm", choices=ARMS, required=kind == "stage")
         if kind in ("run", "stage", "probe"):
             selector.add_argument("--gpu")
+        if kind in ("prepare", "probe"):
+            selector.add_argument("--strict-cuda", action="store_true")
+        if kind == "run":
+            selector.add_argument("--resource-wait-seconds", type=float, default=0)
         if kind == "stage":
             selector.add_argument("--lease-fd", type=int)
             selector.add_argument("--matrix-fd", required=True, type=int)
@@ -436,14 +481,19 @@ def main():
         out.mkdir()
         _, _, directory, _ = prepared(out)
         path = out / "registration.json"
-        write_json(path, plan(directory / "manifest.json", code, "synthetic_only"))
+        write_json(path, plan(directory / "manifest.json", code, "synthetic_only",
+                              arithmetic=p4.CUDA_FP64_WEIGHT if args.strict_cuda else None))
         print(json.dumps(pinned(path)))
     elif args.action == "probe":
         probe(args, code, out)
     else:
         require((args.seed is None) == (args.arm is None), "Specify a seed and arm together")
         value = registration(args, code)
-        (stage if args.action == "stage" else run)(args, code, value, out)
+        try:
+            (stage if args.action == "stage" else run)(args, code, value, out)
+        except p4.ResourceUnavailable as exc:
+            print(json.dumps({"status": "waiting_for_resources", "reason": str(exc)}), file=sys.stderr, flush=True)
+            raise SystemExit(75) from exc
 
 
 if __name__ == "__main__":

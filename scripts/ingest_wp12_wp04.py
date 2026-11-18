@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
 from scripts.run_wp04_factorial import REAL_CATALOG_SHA, SCHEMA, identity, require, roster, verify
+from transfer.p4_runtime_device import CUDA_FP64_WEIGHT, UUID
 
 
 COUNTS = {"endpoints": 108, "per-class": 972, "paired": 126, "paired-per-class": 1134, "costs": 72}
@@ -39,6 +40,15 @@ def intake(root, cpu, real, gpu=None):
         require([row["case"] for row in cases] == roster()
                 and all(row["exact_whole_split"] is True and row["resume_completed_updates"] == row["audit_updates"] == 0
                         for row in cases), "WP04 endpoint receipts are incomplete")
+        if label == "gpu":
+            require(UUID.fullmatch(data["device"]) and data.get("strict_qualification") is True
+                    and data.get("arithmetic") == reg.get("arithmetic") == CUDA_FP64_WEIGHT
+                    and all(case.get("exact_independent_step_one") is True
+                            and case["arithmetic"]["physical_uuid"] == data["device"]
+                            and case["arithmetic"]["deterministic_algorithms"] is True
+                            and all(phase["arithmetic"]["physical_uuid"] == data["device"]
+                                    for phase in case["phases"].values()) for case in cases),
+                    "Unqualified or mixed-device CUDA evidence cannot enter WP12")
         for item in data["tables"]:
             path = verify(item)
             require(path.is_relative_to(root) and path.stem in COUNTS, "WP04 table outside intake")
