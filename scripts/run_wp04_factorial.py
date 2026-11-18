@@ -222,7 +222,7 @@ def control_diagnostics(group, case, model, item, runtime, probabilities):
         return result
     with torch.no_grad():
         info = edge.forward_observation(model, observation(model, item),
-            expected_binding=runtime.edge_binding, diagnostics=True)[-1]
+            expected_binding=runtime.edge_binding, diagnostics=True)[-1]["interaction"]
     initial = item["A"].to_sparse_coo().coalesce()
     indices = initial.indices()[:, initial.values() > 0]
     original = {tuple(pair) for pair in indices.T.tolist()}
