@@ -7,9 +7,11 @@ import sys
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from evaluation import wp11_wp03_static as wp03
 from inference.wp11_execution import MODES, build, execute
 from research_runtime import code_snapshot, external_directory, require_frozen_code
 from transfer.container_runtime import training_container_kind
+from transfer.registered_wp11_learning import read
 
 
 def main():
@@ -22,7 +24,7 @@ def main():
         stage.add_argument("--input-sha256", required=True)
         stage.add_argument("--out", required=True)
         if name == "run":
-            stage.add_argument("--mode", choices=MODES, required=True)
+            stage.add_argument("--mode", choices=(*MODES, wp03.MODE), required=True)
             stage.add_argument("--save-predictions", action="store_true")
     deployment_commands(commands)
     args = parser.parse_args()
@@ -36,6 +38,13 @@ def main():
         raise ValueError("Clean expected Linux CPU checkout required")
     pin = dict(path=args.input, sha256=args.input_sha256)
     out = external_directory(args.out)
+    policy = read(pin).get("policy")
+    if args.command == "register" and policy == wp03.REQUEST:
+        wp03.register(pin, code, out)
+        return
+    if args.command == "run" and policy == wp03.MANIFEST:
+        wp03.run(pin, code, args.mode, out, export=args.save_predictions)
+        return
     if args.command == "register":
         build(pin, code, out)
     else:
