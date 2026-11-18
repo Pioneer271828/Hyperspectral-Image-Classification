@@ -8,7 +8,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
-from scripts.run_wp04_factorial import CONTROL_CONTRASTS, REAL_CATALOG_SHA, SCHEMA, identity, require, roster, verify
+from scripts.run_wp04_factorial import (CONTROL_CONTRASTS, HEADS, REAL_CATALOG_SHA, SCHEMA,
+                                       identity, require, roster, verify)
 from transfer.p4_runtime_device import CUDA_FP64_WEIGHT, UUID
 
 
@@ -69,9 +70,13 @@ def real_intake(root, pin, group, *, strict=False):
             and all(row["optimizer_updates"] == 0 for row in data["cases"]),
             "Preattached real context differs")
     if strict:
+        calls = [row.get("strict_sparse_mm_calls", 0) for row in data["cases"]]
         require(data["arithmetic"]["protocol"] == CUDA_FP64_WEIGHT
                 and data["arithmetic"]["physical_uuid"] == data["device"]
-                and data["kernel_calls"]["sparse_mm"] > 0, "Strict real replay did not use its arithmetic")
+                and all(count > 0 for count in calls)
+                and all(set(row.get("strict_replay", {})) == set(HEADS) for row in data["cases"])
+                and data.get("kernel_calls", {}).get("sparse_mm") == sum(calls),
+                "Strict real replay did not use its arithmetic")
     draft = load(data["registration_draft"], root)
     require(draft["approval"] is None and draft["execution_enabled"] is False
             and draft["candidate_updates_after_separate_release"] == 12*len(expected)

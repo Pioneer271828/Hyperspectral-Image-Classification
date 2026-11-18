@@ -30,7 +30,7 @@ from joint_training import _tree_fingerprint, run_training
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, tensor_hash, write_json
 from target_initialization import METHODS
-from target_training import observation
+from target_training import TargetRuntime, observation
 from g4_position_fusion_target import calibrate
 from target_initialization import state_id
 from transfer import p4_runtime_device as p4
@@ -279,10 +279,24 @@ def audit_case(reg, case, out, gpu, *, real=False):
                           source_state_sha256=state_id(model))[0]
 
     diagnostic = {}
+    strict_replay = {}
     if real or group in CONTROLS:
         before = state_id(model)
         candidate = calibrated(model)
         checked, probs = runtime.validation_snapshot(candidate, items)
+        if real and reg.get("arithmetic"):
+            # The production validation wrapper uses its own ordered FP32 mode.
+            # Use the same calibrated candidate for a separate P4 forward.
+            _, strict_probs = TargetRuntime.validation_snapshot(runtime, candidate, items)
+            for head in HEADS:
+                original = probs[target]["val"][head]
+                replay = strict_probs[target]["val"][head]
+                require(torch.allclose(replay, original, rtol=1e-5, atol=1e-6),
+                        "Strict real head differs from ordered validation")
+                strict_replay[head] = {
+                    "max_abs_difference": float((replay - original).abs().max()),
+                    "classification_changes": int((replay.argmax(1) != original.argmax(1)).sum()),
+                }
         diagnostic = control_diagnostics(group, case, candidate, items[target], runtime, probs[target]["val"])
         require(state_id(model) == before, "Zero-update audit changed initial model")
         del candidate
@@ -291,6 +305,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
         guard()
         return {"case": case, "inputs": inputs, "init": init, "optimizer_updates": 0,
                 **({"diagnostics": diagnostic} if diagnostic else {}),
+                **({"strict_replay": strict_replay} if strict_replay else {}),
                 "step_zero": validation_evidence(probs[target]["val"], item, checked["metrics"][target]["val"])}
 
     first, last = terminal(out / "whole"), terminal(split)
@@ -547,7 +562,11 @@ def probe(args, code, out):
             attest(args.gpu)
         for case in reg["cases"]:
             start = perf_counter()
+            sparse_calls_before = calls["sparse_mm"]
             row = audit_case(reg, case, out / f"{case['seed']}-{case['arm']}", args.gpu, real=True)
+            if arithmetic:
+                row["strict_sparse_mm_calls"] = calls["sparse_mm"] - sparse_calls_before
+                require(row["strict_sparse_mm_calls"] > 0, "Strict real replay did not call the P4 sparse operator")
             rows.append({**row, **hardware(args.gpu, start)})
     paired_initialization(rows, args.group)
     write_json(out / "registration-draft.json", {**reg, "candidate_updates_after_separate_release": len(rows)*12,
