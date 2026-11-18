@@ -277,6 +277,7 @@ def main():
         if action == "publish":
             child.add_argument("--resume", action="store_true")
             child.add_argument("--stop", type=int)
+            child.add_argument("--complete-paviau", action="store_true")
         if action == "replay-scan":
             child.add_argument("--producer-commit", required=True)
             child.add_argument("--previous", nargs=2, required=True, metavar=("PATH", "SHA256"))
@@ -309,8 +310,15 @@ def main():
         result = inspect(root, out, code)
     elif command == "publish":
         name = scene_name(args.scene)
-        intake = custody.PROVIDERS[name](root)
-        result = bank.publish(out, root, intake.release, intake.read, resume=args.resume, stop=args.stop)
+        if args.complete_paviau:
+            if name != "paviaU":
+                parser.error("--complete-paviau requires the PaviaU scene")
+            from transfer.paviau_development_bank import publish
+
+            result = publish(out, root, code, resume=args.resume, stop=args.stop)
+        else:
+            intake = custody.PROVIDERS[name](root)
+            result = bank.publish(out, root, intake.release, intake.read, resume=args.resume, stop=args.stop)
         if result["status"] == "COMPLETE":
             result = transport._json_new(out.parent / (out.name + ".json"), result)
     elif command == "scan":

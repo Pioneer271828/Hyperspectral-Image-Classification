@@ -1,4 +1,4 @@
-"""Drive the fixed five-arm sparse released-point comparison."""
+"""Drive the registered sparse released-point comparisons."""
 import argparse
 import json
 from pathlib import Path
@@ -33,6 +33,9 @@ def main(argv=None, *, intake=None):
     prepare.add_argument("--out", type=Path, required=True)
     prepare.add_argument("--execution", type=Path, required=True)
     prepare.add_argument("--duties", action="store_true")
+    step_zero = modes.add_parser("step-zero")
+    step_zero.add_argument("--preflight", nargs=2, required=True)
+    step_zero.add_argument("--out", type=Path, required=True)
     for name in ("run", "audit"):
         action = modes.add_parser(name)
         action.add_argument("--matrix", nargs=2, required=True)
@@ -51,10 +54,16 @@ def main(argv=None, *, intake=None):
             source = expand(root, source, out.with_name(out.name + "-preflight"))
         result = campaign.prepare(root, out, external_directory(args.execution), source, code,
                                   engineering=intake is not None, design=real.DUTY if args.duties else None)
-        if not args.duties:
-            dev._json_new(out / "separate-capacity-draft.json", capacity.draft(read(result, root)))
+        matrix = read(result, root)
+        if not args.duties and matrix.get("design") is None:
+            dev._json_new(out / "separate-capacity-draft.json", capacity.draft(matrix))
     elif args.action == "run":
         result = campaign.run(root, pin(args.matrix), pin(args.release), code, intake=intake, cli=cli)
+    elif args.action == "step-zero":
+        out = external_directory(args.out)
+        campaign.require(intake is None and root in out.parents and not out.exists(),
+                         "Step-zero validation requires a fresh external output and the real pinned bank")
+        result = campaign.paviau_step_zero(root, pin(args.preflight), out, code, cli=cli)
     elif args.action == "capacity":
         from transfer import native_released_training as data, native_scale_training as training
         out = external_directory(args.out)

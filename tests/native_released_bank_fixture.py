@@ -16,8 +16,23 @@ from transfer.native_scale_observation import FACTORS, from_bank
 from transfer.native_scale_training import SEEDS
 
 
-def release_fixture(classes):
+def release_fixture(classes, *, paviau=False):
     release, arrays = original.fixture(classes)
+    if paviau:
+        labels = {3: range(1, 6), 10: range(6, 10), 81: range(1, 10), 99: ()}
+        rows = []
+        for row in release.rows:
+            if row["id"] not in labels:
+                continue
+            y, _, x, stop = row["box"]
+            width = stop - x
+            samples = [[(y+i//width)*release.shape[1]+x+i%width, label]
+                       for i, label in enumerate(labels[row["id"]])]
+            rows.append(dict(row, samples=samples))
+        plan = digest({"fixture": "paviaU", "tiles": rows})
+        stats = {**release.statistics, "plan_hash": plan}
+        stats["statistics_hash"] = digest({k: v for k, v in stats.items() if k != "statistics_hash"})
+        return replace(release, scene="paviaU", plan_hash=plan, statistics=stats, rows=tuple(rows)), arrays
     # A distinct released point of class one makes a genuine count-weighted minority.
     rows = [dict(row, samples=[list(p) for p in row["samples"]]) for row in release.rows]
     for row in rows:
@@ -33,8 +48,10 @@ def release_fixture(classes):
 
 def fixture(root, code, *, design=None):
     receipts, intakes = {}, {}
-    for classes, scene in ((9, "xuzhou"), (22, "whu-honghu")):
-        release, arrays = release_fixture(classes)
+    paviau = design == real.PAVIA_DESIGN
+    roster = ((9, "paviaU"),) if paviau else ((9, "xuzhou"), (22, "whu-honghu"))
+    for classes, scene in roster:
+        release, arrays = release_fixture(classes, paviau=paviau)
         # Real bank transport performs the same hashing, geometry and decode.
         pin = bank.publish(root / f"bank-{classes}", root, release, lambda row: arrays[row["id"]])
         bank_pin = {key: pin[key] for key in ("root", "sha256", "registration")}
@@ -72,7 +89,8 @@ def fixture(root, code, *, design=None):
             "optimization_updates": 0, "query_accessed": False, "raw_gt_loaded": False,
             "scene": scene, "objective": LOSS, "bank": bank_pin, "point_set": point_set, "design": design,
             "prior_production": prior, "views": views,
-            "draft": {"cases": cases, "authorized_for_training": False}})
+            "draft": {"cases": cases, "authorized_for_training": False},
+            **({"graph_scale": 50} if paviau else {})})
     def open_fixture(authorized, scene):
         if authorized != root:
             raise ValueError("Wrong authorized fixture location")

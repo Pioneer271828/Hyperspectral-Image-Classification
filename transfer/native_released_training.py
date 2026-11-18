@@ -15,6 +15,9 @@ from transfer.spatial_multiscale import initialize
 FORMAT = "wp07-native-released-continuation-v1"
 ARMS = ("off", "mean", "joint")
 COMPARISONS = ((1, "off"), (2, "mean"), (2, "joint"), (4, "mean"), (4, "joint"))
+PAVIA_DESIGN = "wp07_paviau_fixed_released_points_v1"
+PAVIA_COMPARISONS = ((1, "off"), *((factor, arm) for factor in (2, 4) for arm in
+                                   ("off", "fixed", "mean", "content", "metadata", "joint")))
 STEPS, PREFIX, EVENTS = 6, 2, [0, 3, 6]
 scores = points.scores
 
@@ -52,7 +55,7 @@ def _evidence(actual, labels, released):
 
 
 def contract(classes, seed, arm, factor, producer, *, numeric=None):
-    if seed not in training.SEEDS or (factor, arm) not in COMPARISONS or not producer:
+    if seed not in training.SEEDS or (factor, arm) not in PAVIA_COMPARISONS or not producer:
         raise ValueError("Unknown released point experimental cell")
     train, val = (Fixture(classes, role) for role in ("devtrain", "devval"))
     order = np.random.default_rng(seed).permutation(train.tiles)

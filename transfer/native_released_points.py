@@ -94,15 +94,13 @@ def scores(output, released, *, detailed):
     classes = hist.shape[1]
     truth = np.asarray([label-1 for _, label in released.points], dtype=np.int64)
     count = len(truth)
-    if not count:
-        raise ValueError("No released devval points to score")
     result = {}
     for name, tensor in zip(HEADS, output[:3], strict=True):
         probs = tensor.detach().cpu().numpy()
         if probs.shape != hist.shape or not np.isfinite(probs).all():
             raise ValueError("Native output differs from released point lattice")
         choices = probs.argmax(axis=1)
-        nll_sum = float(-(hist * np.log(np.clip(probs.astype(np.float64), 1e-8, 1.0))).sum())
+        nll_sum = float(-(hist * np.log(np.clip(probs.astype(np.float64), 1e-8, 1.0))).sum()) if count else 0.0
         row = dict(nll_sum=nll_sum, count=count)
         if detailed:
             assigned = choices[released.cells]

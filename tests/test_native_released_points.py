@@ -148,6 +148,25 @@ class ReleasedPointTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "retained band"):
             sparse.validate_observation(wrong, actual, labels, target, event)
 
+    def test_empty_validation_view_scores_zero_but_all_empty_validation_is_rejected(self):
+        spec = sparse.contract(9, 64, "mean", 2, "oracle")
+        run = training.Run(spec, "oracle", released=sparse)
+        actual, labels, _ = sparse.materialize(run._val, spec["validation"][0], "oracle")
+        row = {"id": actual.receipt["source"]["tile"], "role": "devval", "box": actual.lattice.box, "samples": []}
+        empty = points.bind(actual, row, "oracle", "devval", synthetic_labels=labels)
+        prediction = torch.full(empty.histogram.shape, 1/actual.classes, dtype=torch.float32)
+        output = (prediction, prediction, prediction)
+        for score in points.scores(output, empty, detailed=True).values():
+            self.assertEqual((score["count"], score["nll_sum"]), (0, 0.0))
+            self.assertEqual(score["point_confusion"], [[0]*9 for _ in range(9)])
+            self.assertEqual(score["point_confusion"], score["coarse_known_count_confusion"])
+        with patch.object(run, "_materialize", return_value=(actual, labels, empty)), \
+             patch.object(run, "_forward", return_value=(output, {}, None)) as forward:
+            with self.assertRaisesRegex(ValueError, "at least one labeled point"):
+                run.start()
+            self.assertEqual(forward.call_count, len(spec["validation"]))
+        self.assertFalse(run.pack()["validation"])
+
 
 if __name__ == "__main__":
     torch.set_num_threads(1)

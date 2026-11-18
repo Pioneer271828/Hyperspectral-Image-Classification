@@ -5,12 +5,16 @@ import io
 import json
 from pathlib import Path
 
+import numpy as np
+
 from research_runtime import hash_file
 from transfer import registered_development as dev
-from transfer.development_blocks import read_pin
-from transfer.native_released_points import LOSS
-from transfer.native_released_preflight import BANK_ROOTS, EXPECTED, SCHEMA
-from transfer.native_released_training import COMPARISONS
+from transfer.development_blocks import inside, read_pin
+from transfer.development_block_probe import VIEWS
+from transfer.native_released_campaign import expected_case_names
+from transfer.native_released_points import HEADS, LOSS
+from transfer.native_released_preflight import BANK_ROOTS, EXPECTED, SCHEMA, open_bank
+from transfer.native_released_training import COMPARISONS, PAVIA_COMPARISONS, PAVIA_DESIGN
 from evaluation import wp12_p4_migration
 from evaluation.wp12_native_support_evidence import OLD_TABLES
 from evaluation.wp12_p4_progress import status as controller_status
@@ -269,27 +273,84 @@ def sparse_prepared(manifest, root):
     return {"receipt": manifest, "scenes": rows, "blocked": value["blocked"], "optimizer_updates": 0}
 
 
+def paviau_prepared(pin, root):
+    row = read(pin, root)
+    require(row["scene"] == "paviaU" and row["schema"] == SCHEMA and row["design"] == PAVIA_DESIGN
+            and row["status"] == "preflight_only" and row["objective"] == LOSS
+            and row["role_blocks"] == {"devtrain": 127, "devval": 41}
+            and row["optimization_updates"] == row["labels_added"] == 0
+            and row["raw_gt_loaded"] is row["query_accessed"] is False
+            and row["draft"]["status"] == "NOT_RUN" and row["draft"]["authorized_for_training"] is False
+            and row["missing_metadata_fallback_verified"] is True
+            and row["initial_model_seed"] == 64 and row["graph_scale"] == 50,
+            "Expected the PaviaU fixed released-point zero-update preflight")
+    opened, _, _ = open_bank(root, "paviaU", publication=row["prior_production"])
+    require(opened.pin == row["bank"] and row["source_initialization"] == opened.release.source,
+            "PaviaU preflight differs from its authenticated bank")
+    coverage = opened.release.coverage()
+    labeled = coverage["devtrain"]["published_labeled_blocks"]
+    planned_updates = len(PAVIA_COMPARISONS)*3*2*labeled
+    require(row["draft"]["planned_updates"] == planned_updates and row["trainable_block_count"] == labeled,
+            "PaviaU plan does not cover the original labeled training tiles")
+    metrics = row["initial_dev_metrics"]
+    expected = {f"{role}/{band}/{factor}/{arm}/{head}" for role in ("devtrain", "devval")
+                for band in VIEWS for factor, arm in PAVIA_COMPARISONS for head in HEADS}
+    require(set(metrics) == expected, "PaviaU zero-update metric roster differs")
+    for metric in metrics.values():
+        confusion = np.asarray(metric["confusion"])
+        require(confusion.shape == (9, 9) and confusion.dtype.kind in "iu"
+                and (confusion >= 0).all() and confusion.sum(axis=1).tolist() == [5]*9
+                and metric["support_per_class"] == [5]*9
+                and metric["oa"] == np.trace(confusion)/45
+                and metric["recall"] == (confusion.diagonal()/5).tolist()
+                and np.isfinite(metric["nll"]) and metric["nll"] >= 0,
+                "PaviaU per-class development metrics do not match the released point counts")
+    return {"receipt": pin, "bank": opened.pin, "status": "NOT_RUN", "planned_updates": planned_updates,
+            "minimum_exposure_updates": labeled, "training_authorized": False, "coverage": coverage,
+            "initial_dev_metrics": metrics, "initial_model_seed": 64, "actual_accuracy": None, "actual_cost": None,
+            "complete_purity": None, "scope": "released_dev_points_zero_updates"}
+
+
 def comparison_qualification(item, root):
     row = read(item, root)
     require(row.get("schema") == "wp07_native_released_comparison_audit_v1"
             and row.get("synthetic") is True, "Expected complete synthetic production-entry qualification")
     matrix = read(row["matrix"], root)
     authorization = read(row["release"], root)
+    design = matrix.get("design")
+    if design == PAVIA_DESIGN:
+        scope = expected_case_names("paviaU", PAVIA_DESIGN)
+        case_updates = 4
+    else:
+        require(design is None, "Expected the legacy or fixed PaviaU production fixture")
+        scope = [key for scene in ("xuzhou", "whu-honghu") for key in expected_case_names(scene)]
+        case_updates = 12
+    budget = len(scope) * case_updates
     require(authorization["matrix"] == row["matrix"] and authorization["synthetic"] is True
-            and authorization["optimizer_updates"] == 360 and authorization["query_authorized"] is False
+            and authorization["optimizer_updates"] == budget and authorization["query_authorized"] is False
             and row["schema"] == "wp07_native_released_comparison_audit_v1" and row["status"] == "passed"
             and row["synthetic"] is True and matrix["synthetic"] is True
             and row["producer"] == matrix["controller"]["commit"]
-            and row["optimizer_updates"] == matrix["optimizer_updates"] == 360
-            and row["audit_optimizer_updates"] == 0 and row["query_authorized"] is False and len(row["cases"]) == 30
-            and {item["case"] for item in row["cases"]} == {item["id"] for item in matrix["cases"]}
-            and all(item["completed_resume_updates"] == 0 and item["optimizer_updates"] == 12 for item in row["cases"]),
+            and row["optimizer_updates"] == matrix["optimizer_updates"] == budget
+            and row["audit_optimizer_updates"] == 0 and row["query_authorized"] is False
+            and [item["case"] for item in row["cases"]] == [item["id"] for item in matrix["cases"]] == scope
+            and all(item["completed_resume_updates"] == 0 and item["optimizer_updates"] == case_updates
+                    for item in row["cases"]),
             "Expected complete synthetic production-entry qualification")
     for case in row["cases"]:
+        require(len(case["stages"]) in (2, 3), "Synthetic qualification is missing released phase receipts")
         for pin in case["stages"]:
             stage = read(pin, root)
-            require(hash_file(stage["checkpoint"]["path"]) == stage["checkpoint"]["sha256"],
+            checkpoint = inside(stage["checkpoint"]["path"], root)
+            require(hash_file(checkpoint) == stage["checkpoint"]["sha256"],
                     "Synthetic entry qualification has a changed checkpoint")
+        if design == PAVIA_DESIGN:
+            registration = read(stage["registration"], root)
+            views = case["validation"]["rows"]
+            require(registration["synthetic"] is True and registration["registered_graph_scale"] == 50
+                    and len(views) == 4 and sum(view["released"]["points"] == 0 for view in views) == 2
+                    and all(case["head_metrics"][head][band]["count"] == 9 for head in HEADS for band in VIEWS),
+                    "PaviaU fixture did not preserve its complete sparse validation roster")
     return {"receipt": item, "scope": "synthetic_engineering", "cases": len(row["cases"]),
             "optimizer_updates": row["optimizer_updates"], "real_release": None, "real_metrics": None}
 
@@ -326,12 +387,16 @@ def write_migrated_case_metrics(path, combined):
 
 
 def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
-           p4_review=None, p4_release=None, comparison=None, native_duty=None, p4_migration=None):
+           p4_review=None, p4_release=None, comparison=None, native_duty=None, p4_migration=None,
+           paviau=None):
     from evaluation import wp12_native_duty_evidence as duty
 
     p4 = p4_prepared(resource, template, root, review_pin=p4_review, approval_pin=p4_release,
                      migration_pin=p4_migration)
     released = sparse_prepared(sparse, root)
+    if paviau is not None:
+        released["scenes"]["paviaU"] = paviau_prepared(paviau, root)
+        del released["blocked"]["paviaU"]
     if comparison is not None:
         released["comparison_qualification"] = comparison_qualification(comparison, root)
     engineering = p4_engineering(queue_receipt, root)
@@ -370,8 +435,18 @@ def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
         writer.writerow(("scene", "status", "planned_updates", "min_point_exposure_updates", "real_accuracy", "real_cost"))
         for scene, row in released["scenes"].items():
             writer.writerow((scene, row["status"], row["planned_updates"], row["minimum_exposure_updates"], "N/A", "N/A"))
-        writer.writerow(("paviaU", released["blocked"]["paviaU"], "", "", "N/A", "N/A"))
+        if "paviaU" in released["blocked"]:
+            writer.writerow(("paviaU", released["blocked"]["paviaU"], "", "", "N/A", "N/A"))
     names = ["p4-queue-progress.csv", "native-released-dev-status.csv"]
+    if paviau is not None:
+        name = "paviau-released-zero-update-per-class.csv"
+        with (out / name).open("x", encoding="utf-8", newline="") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(("role", "band", "factor", "arm", "head", "class_id", "support", "recall", "optimizer_updates"))
+            for key, row in sorted(released["scenes"]["paviaU"]["initial_dev_metrics"].items()):
+                for class_id, (support, recall) in enumerate(zip(row["support_per_class"], row["recall"], strict=True), 1):
+                    writer.writerow((*key.split("/"), class_id, support, recall, 0))
+        names.append(name)
     if p4_review is not None:
         write_case_metrics(out / "p4-real-case-metrics.csv", read(p4_review, root))
         names.append("p4-real-case-metrics.csv")

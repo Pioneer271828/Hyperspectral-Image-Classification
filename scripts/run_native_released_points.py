@@ -30,10 +30,12 @@ def arithmetic(root, gpu):
         yield execution
 
 
-def synthetic(root, out, producer, gpu):
+def synthetic(root, out, producer, gpu, *, paviau=False):
     results = {}
     coverage = tuple(product((9, 22), training.SEEDS, released.COMPARISONS))
-    if gpu:
+    if paviau:
+        coverage = tuple((9, 64, row) for row in ([(4, "joint")] if gpu else released.PAVIA_COMPARISONS))
+    elif gpu:
         coverage = tuple((classes, 64, (4, "joint")) for classes in (9, 22))
     with arithmetic(root, gpu) as exec:
         for classes, seed, (factor, arm) in coverage:
@@ -63,6 +65,16 @@ def synthetic(root, out, producer, gpu):
             if full["selected"]["step"] != best["step"]:
                 raise ValueError("Sparse native first-min selection differs")
             replay = training.Run(spec, producer, execution=exec, released=released)
+            initialization_update = {}
+            if paviau:
+                final = full["model"]
+                initial = replay.model.state_dict()
+                changes = [key for key in final if not torch.equal(final[key], initial[key].detach().cpu())]
+                trained_fresh = {key for event in full["history"] for key, evidence in event["fresh"].items()
+                                 if evidence["gradient_l1"] > 0 and evidence["changed"]}
+                if not changes or (arm in ("content", "metadata", "joint") and not trained_fresh):
+                    raise ValueError("PaviaU engineering arm did not update its expected parameters")
+                initialization_update = {"changed_state_tensors": len(changes), "updated_selectors": sorted(trained_fresh)}
             replay.model.load_state_dict(full["selected"]["state"])
             endpoint = replay.evaluate(best["step"], detailed=True)
             if endpoint["fused_nll"] != best["fused_nll"]:
@@ -70,7 +82,8 @@ def synthetic(root, out, producer, gpu):
             results[name] = {"stages": stages, "endpoint": endpoint, "numeric": exec.numeric,
                              "exposure": [row["released"] for row in full["history"]],
                              "validation_clock": [row["step"] for row in full["validation"]],
-                             "input_roster_hash": spec["labels_root"], "exact_full_split_complete": True}
+                             "input_roster_hash": spec["labels_root"], "exact_full_split_complete": True,
+                             **initialization_update}
             transport._json_new(folder / "audit.json", results[name])
     result = {"schema": "wp07_native_released_synthetic_acceptance_v1", "producer": producer,
               "status": "passed", "scope": "synthetic_engineering", "cases": results,
@@ -140,6 +153,8 @@ def main(argv=None, *, intake=None):
     parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage"), required=True)
     parser.add_argument("--preflight", nargs=2, metavar=("PATH", "SHA256"))
     parser.add_argument("--release", nargs=2, metavar=("PATH", "SHA256"))
+    parser.add_argument("--paviau-publication", nargs=2, metavar=("PATH", "SHA256"))
+    parser.add_argument("--paviau-engineering", action="store_true")
     parser.add_argument("--case")
     parser.add_argument("--phase", choices=("full", "prefix", "resume", "completed"))
     args = parser.parse_args(argv)
@@ -154,6 +169,8 @@ def main(argv=None, *, intake=None):
     real = args.mode == "real-stage"
     if real != bool(args.preflight and args.case and args.phase) or (not real and args.release is not None):
         raise ValueError("A real stage requires its own explicit preflight, case and phase")
+    if (args.paviau_publication and args.mode != "preflight") or (args.paviau_engineering and args.mode != "synthetic"):
+        parser.error("PaviaU publication is for preflight, and PaviaU engineering is synthetic only")
     torch.set_num_threads(1)
     if real:
         pinned = {"path": args.preflight[0], "sha256": args.preflight[1]}
@@ -161,7 +178,16 @@ def main(argv=None, *, intake=None):
         result = real_stage(root, out, pinned, release, args.case, args.phase, code, args.gpu, intake=intake)
     elif args.mode == "synthetic":
         out.mkdir()
-        result = synthetic(root, out, code["commit"], args.gpu)
+        result = synthetic(root, out, code["commit"], args.gpu, paviau=args.paviau_engineering)
+    elif args.paviau_publication:
+        publication = dict(zip(("path", "sha256"), args.paviau_publication, strict=True))
+        out.mkdir()
+        scene_pin = transport._json_new(out / "paviaU.json",
+            preflight_api.scan(root, "paviaU", code["commit"], publication=publication))
+        result = transport._json_new(out / "preflight.json", {
+            "schema": preflight_api.SCHEMA, "producer": code["commit"], "design": released.PAVIA_DESIGN,
+            "scenes": {"paviaU": scene_pin}, "status": "preflight_only", "blocked": {},
+            "optimization_updates": 0, "raw_gt_loaded": False, "query_accessed": False})
     else:
         out.mkdir()
         rows = {scene: transport._json_new(out / (scene+".json"), preflight_api.scan(root, scene, code["commit"]))

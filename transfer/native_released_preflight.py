@@ -1,5 +1,6 @@
 """Authenticate the available real banks and freeze a read-only sparse-point training proposal."""
 from collections import Counter, defaultdict
+from copy import deepcopy
 from itertools import product
 from time import perf_counter
 
@@ -11,9 +12,9 @@ from transfer import development_bank as bank, development_bank_custody as custo
 from transfer.development_block_probe import VIEWS
 from transfer.development_blocks import array_hash
 from transfer.g3_training import state_hash
-from transfer.native_released_points import HEADS, LOSS, MODE, bind
+from transfer.native_released_points import HEADS, LOSS, MODE, bind, scores
 from transfer.native_scale_supervision import loss
-from transfer.native_released_training import COMPARISONS
+from transfer.native_released_training import COMPARISONS, PAVIA_COMPARISONS, PAVIA_DESIGN
 from transfer.native_scale_observation import FACTORS, Lattice, _materialize, forward
 from transfer.native_scale_training import SEEDS
 from transfer.spatial_multiscale import initialize
@@ -26,7 +27,13 @@ BANK_ROOTS = {"xuzhou": "c877232e6cc38e3f8be37eb1b147d69a7253edbeb665f98e5b8cd6a
 EXPECTED = {"xuzhou": (9, 73, 5, 31), "whu-honghu": (22, 261, 10, 66)}
 
 
-def open_bank(root, scene):
+def open_bank(root, scene, *, publication=None):
+    if scene == "paviaU" and publication is not None:
+        from transfer.paviau_development_bank import open_publication
+
+        return open_publication(root, publication)
+    if publication is not None:
+        raise ValueError("An explicit completed publication is only expected for PaviaU")
     if scene not in SCENES:
         raise ValueError("DEVVAL_BOUNDED_ARRAY_NOT_PUBLISHED or unknown scene")
     prior = {"path": str(root / f"wp02-bank-review-fix01/{NICK[scene]}-replay06.json"), "sha256": REAL[scene]}
@@ -72,7 +79,7 @@ def independent_grid(orig, actual, released, row):
     return array_hash(counts)
 
 
-def draft(scene, admitted, rows, train_tiles):
+def draft(scene, admitted, rows, train_tiles, *, comparisons=COMPARISONS):
     classes = admitted.release.classes
     labels = {tile: [label for _, label in admitted.role_row("devtrain", tile)["samples"]] for tile in train_tiles}
     cases = []
@@ -84,7 +91,7 @@ def draft(scene, admitted, rows, train_tiles):
         total = Counter(label for event in schedule for label in labels[event["tile"]])
         if [total[c] for c in range(1, classes+1)] != [10]*classes:
             raise ValueError("Future matched plan did not expose each released point twice")
-        for factor, arm in COMPARISONS:
+        for factor, arm in comparisons:
             cases.append({"id": f"{scene}/{seed}/{factor}/{arm}", "model_seed": seed,
                           "factor": factor, "arm": arm, "planned_updates": len(schedule), "actual_updates": 0,
                           "selected_step": None, "actual_cost": None, "actual_accuracy": None,
@@ -102,11 +109,40 @@ def draft(scene, admitted, rows, train_tiles):
             "estimated_wall_seconds": None, "estimate_reason": "No real training throughput measured under this objective"}
 
 
+def target_head_baseline(source, scene, seed):
+    model = deepcopy(source)
+    with torch.random.fork_rng(devices=[]):
+        torch.manual_seed(seed)
+        for heads in (model.heads, model.hgnn_heads, model.cnn_heads):
+            heads[scene].reset_parameters()
+    return model
+
+
+def _add_scores(totals, key, output, released, classes):
+    for name, score in scores(output, released, detailed=True).items():
+        total = totals.setdefault((*key, name), [0., np.zeros((classes, classes), dtype=np.int64)])
+        total[0] += score["nll_sum"]
+        total[1] += score["point_confusion"]
+
+
+def _dev_metrics(totals, classes):
+    rows = {}
+    for key, (nll, confusion) in totals.items():
+        support = confusion.sum(axis=1)
+        if support.tolist() != [5]*classes:
+            raise ValueError("Zero-update scoring did not cover the entire original point release")
+        rows["/".join(map(str, key))] = {"support_per_class": support.tolist(), "nll": nll / int(support.sum()),
+            "oa": float(np.trace(confusion)/support.sum()), "recall": (confusion.diagonal()/support).tolist(),
+            "confusion": confusion.tolist()}
+    return rows
+
+
 @torch.no_grad()
-def scan(root, scene, producer):
+def scan(root, scene, producer, *, publication=None):
     started = perf_counter()
-    admitted, prior, intake = open_bank(root, scene)
-    classes, ntrain, nval, labeled = EXPECTED[scene]
+    admitted, prior, intake = open_bank(root, scene, publication=publication) if publication else open_bank(root, scene)
+    pavia = scene == "paviaU"
+    classes, ntrain, nval, labeled = (9, 127, 41, None) if pavia else EXPECTED[scene]
     release = admitted.release
     roles = {role: admitted.role_rows(role) for role in ("devtrain", "devval")}
     if (release.classes, *(len(roles[role]) for role in roles)) != (classes, ntrain, nval):
@@ -120,14 +156,18 @@ def scan(root, scene, producer):
     if {p[0] for p in role_sets["devtrain"]} & {p[0] for p in role_sets["devval"]}:
         raise ValueError("Train and devval share released pixels")
     train_tiles = [row["id"] for row in roles["devtrain"] if row["samples"]]
-    if len(train_tiles) != labeled:
+    if labeled is not None and len(train_tiles) != labeled:
         raise ValueError("Released train-block exposure bound changed")
 
-    base = intake.baseline
-    base_state = state_hash(base)
-    models = {arm: initialize(base, arm, 64 + 7321) for arm in ("off", "mean", "joint")}
+    source = intake.baseline
+    base_state = state_hash(source)
+    base = target_head_baseline(source, scene, 64) if pavia else source
+    design = PAVIA_COMPARISONS if pavia else COMPARISONS
+    model_arms = ("off", "fixed", "mean", "content", "metadata", "joint") if pavia else ("off", "mean", "joint")
+    models = {arm: initialize(base, arm, 64 + 7321) for arm in model_arms}
     guards = {arm: state_hash(m) for arm, m in models.items()}
     outputs, counts, timings = [], defaultdict(Counter), defaultdict(list)
+    zero_update_scores = {}
     roles_and_views = product(roles, VIEWS)
     for role, band in roles_and_views:
         for row in roles[role]:
@@ -145,13 +185,24 @@ def scan(root, scene, producer):
                 hist = independent_grid(orig, actual, released, row)
                 target = released.summary()
                 counts[role, band, factor].update(label for _, label in released.points)
-                arms = ("off",) if row["id"] != roles[role][0]["id"] else ("off", "mean", "joint")
+                if pavia:
+                    arms = tuple(arm for scale, arm in design if scale == factor) if released.points else ("off",)
+                else:
+                    arms = ("off",) if row["id"] != roles[role][0]["id"] else model_arms
                 graphs = {}
+                fallback = {}
                 losses_checked = 0
                 for arm in arms:
                     tick = perf_counter()
                     output, graph = forward(models[arm], actual, producer, role)
                     timings[role, band, factor].append(perf_counter() - tick)
+                    if pavia and released.points:
+                        _add_scores(zero_update_scores, (role, band, factor, arm), output, released, classes)
+                        if arm in ("mean", "content"):
+                            fallback[arm] = output[:3]
+                        if arm in ("metadata", "joint") and any(not torch.equal(a, b) for a, b in
+                            zip(output[:3], fallback["mean" if arm == "metadata" else "content"], strict=True)):
+                            raise ValueError("PaviaU missing physical metadata did not take the existing fallback")
                     if arm == "off" and released.points:
                         values, mask = released.weights(MODE)
                         computed = loss(output, values, mask)
@@ -180,10 +231,10 @@ def scan(root, scene, producer):
         raise ValueError("Frozen real point populations differ across bands or scales")
     admitted.verify_authority(admitted.pin)
     source_pins = custody.protect(intake)
-    if state_hash(base) != base_state or any(state_hash(value) != guards[arm] for arm, value in models.items()):
+    if state_hash(source) != base_state or any(state_hash(value) != guards[arm] for arm, value in models.items()):
         raise ValueError("Read-only native preflight changed source state")
     params = {arm: sum(p.numel() for p in model.parameters()) for arm, model in models.items()}
-    proposal = draft(scene, admitted, params, train_tiles)
+    proposal = draft(scene, admitted, params, train_tiles, comparisons=design)
     medians = {f"{role}/{band}/{factor}": float(np.median(values))
                for (role, band, factor), values in timings.items()}
     # An inference-only proxy records the expected number of forward calls.
@@ -194,13 +245,17 @@ def scan(root, scene, producer):
         proxy += sum(medians[f"devtrain/{event['band']}/{factor}"] for event in case["schedule"])
         proxy += len(case["events"]) * nval * sum(medians[f"devval/{band}/{factor}"] for band in VIEWS)
     proposal["cpu_forward_only_seconds_proxy"] = proxy
+    pavia_evidence = {"design": PAVIA_DESIGN, "initial_model_seed": 64, "graph_scale": 50,
+                      "initial_dev_metrics": _dev_metrics(zero_update_scores, classes),
+                      "source_initialization": release.source,
+                      "missing_metadata_fallback_verified": True} if pavia else {}
     return {"schema": SCHEMA, "status": "preflight_only", "scene": scene, "producer": producer,
             "bank": admitted.pin, "prior_production": prior, "protected_inputs": source_pins,
             "objective": LOSS, "support_train_seed": 512, "validation_seed": 3031,
             "point_set": {role: digest(rows) for role, rows in role_sets.items()},
             "counts": {f"{role}/{band}/{factor}": dict(sorted(row.items())) for (role,band,factor),row in counts.items()},
-            "trainable_block_count": labeled, "role_blocks": {role: len(rows) for role, rows in roles.items()},
+            "trainable_block_count": len(train_tiles), "role_blocks": {role: len(rows) for role, rows in roles.items()},
             "original_tiles_read": admitted.reads, "views": outputs, "complete_purity": None,
             "elapsed_seconds": perf_counter()-started, "draft": proposal, "forward_median_seconds": medians,
             "optimization_updates": 0, "raw_gt_loaded": False, "query_accessed": False, "labels_added": 0,
-            "shared_parent_class21": release.custody.get("class_21_shared_parent")}
+            "shared_parent_class21": release.custody.get("class_21_shared_parent"), **pavia_evidence}

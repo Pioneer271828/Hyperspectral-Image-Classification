@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-17",
-  "issue": 368,
+  "as_of": "2026-11-18",
+  "issue": 498,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "d00aeea1744a0e627ef3a1c24108ee02666ab100",
+  "main_snapshot": "26cdca02234e07df720b4253a6b22609b60f31b9",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -1607,11 +1607,18 @@
       "evidence": "78 个旧 PR 以替代方式关闭；另审查 68 个无 PR 分支头。#495 全仓 CPU 1499 通过、39 按条件跳过、0 失败，3 项 CUDA 短测通过；#496 测试树与实际合并树一致。",
       "remaining": "P4 双卡和 WP07 严格 CUDA 短测受资源门槛阻塞；P4 真实保留 10/20 例，WP07 两份真实预算均未放行，其他真实实验按原报告验收。专用 CI 运行器待注册。",
       "report": "research/reports/2026-11-17-repository-integration/review.md"
+    },
+    {
+      "id": "WP02/WP05/WP07/WP12 PaviaU 固定空间开发",
+      "state": "开发银行已发布；生产验证和恢复通过",
+      "evidence": "127训练、41开发验证块，各角色9类各5点。真实生产初态13配置各82视图含48空视图，两带各45点，三头逐点复算与预检一致。39例合成走生产全程和分段共312步，完成重入0；WP12接入合成审计并保有旧表。",
+      "remaining": "GPU3复查69%超资源门槛，CUDA未升级验收。PaviaU真实39例2340步未放行；真实校准、独立确认与完整研究待验，P4和Issue #249维持原进度。",
+      "report": "research/reports/WP02_WP05_WP07_WP12_PaviaU固定空间发布与原生接入_20261118.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "repository_integration_reviewed_merged_research_training_paused",
-  "long_training_policy": "当前研究训练暂停；本轮合并后的工作只同步审查结果与状态投影。历史工程回归、合成短测和既存证据的只读复核留档。",
+  "execution_state": "module_engineering_resumed_real_training_paused",
+  "long_training_policy": "工程开发与验收已恢复。真实长训练、P4/Issue #249 原队列和 query 仍暂停；PaviaU 固定空间只读预检和合成优化单列。",
   "main_merge_evidence": [
     {
       "tested_sha": "b985634b22ba77422bb8c91143bbc0a0337707ff",
