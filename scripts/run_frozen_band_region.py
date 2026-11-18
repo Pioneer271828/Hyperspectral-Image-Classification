@@ -43,7 +43,7 @@ PINS = {
     "pavia_bank": ("wp02-paviau-bank-nov18.json",
                    "54c87a5f5d4a84bc4d6e4055dbf8874f633874dce7a01d82d79a66488073c8a4"),
     "pavia_64": (f"{PAVIA_PRIOR}/paviaU-64-1-off.json",
-                 "7e3d2ea6deb421d0870305bb27048a8a1f53cc0734b902e31ff8fc2b91567e41c"),
+                 "7e3d2ea6deb421d0870305bb27048a8a1f53c0734b902e31ff8fc2b91567e41c"),
     "pavia_512": (f"{PAVIA_PRIOR}/paviaU-512-1-off.json",
                   "f59090454ae87b14692c4610f4e402c6064551be718af6ed1ff31871c260fe18"),
     "pavia_2048": (f"{PAVIA_PRIOR}/paviaU-2048-1-off.json",
