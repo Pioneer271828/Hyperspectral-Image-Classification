@@ -44,7 +44,7 @@ def accepted_catalog(root, source, old_scope):
         check(Path(audit_pin["path"]).is_relative_to(root), "Long audit outside authorized release")
         audit = _read(audit_pin)
         case = audit["case"]
-        check(audit["status"] == "passed" and audit["scope_sha256"] == LONG_SCOPE and audit["optimizer_updates"] == 60
+        check(audit["status"] == "passed" and audit["scope_sha256"] == LONG_SCOPE and audit["optimizer_updates"] == 120
               and audit["audit_optimizer_updates"] == audit["completed_resume_updates"] == 0
               and audit["raw_gt_loaded"] is audit["query_accessed"] is False and audit["validation_steps"] == [30, 60]
               and audit["populations"]["val"] == population and case == saved["case"] == by_id[name],
