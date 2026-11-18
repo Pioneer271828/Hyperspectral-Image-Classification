@@ -21,7 +21,7 @@ import torch
 
 from evaluation.classification_metrics import metrics_from_confusion
 from g4_position_fusion_target_runtime import prepare
-from g4_support_context import read
+from g4_support_context import prepare_contexts, read, validate_manifest
 from joint_training import _tree_fingerprint, run_training
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, tensor_hash, write_json
@@ -366,10 +366,24 @@ def run(args, code, reg, out):
 
 
 def probe(args, code, out):
-    catalog = verify({"path": str(Path(args.manifest[0]).resolve()), "sha256": args.manifest[1]})
+    published = verify({"path": str(Path(args.manifest[0]).resolve()), "sha256": args.manifest[1]})
     require(args.manifest[1] == REAL_CATALOG_SHA, "Expected the independently admitted Xuzhou context")
-    reg = plan(catalog, code, "real_zero_update_draft")
     out.mkdir(exist_ok=False)
+    original = read(published)
+    validate_manifest(original, published.parent)
+    checksum = original["input_spec_sha256"]
+    sources = [path for path, sha in original["protected_files"].items() if sha == checksum]
+    require(len(sources) == 1, "Missing original support-context input registration")
+    rebound = out / "rebound-contexts"
+    updated = prepare_contexts(sources[0], checksum, rebound, code)
+    require(updated["observations"] == original["observations"]
+            and updated["protected_files"] == original["protected_files"]
+            and [{k: v for k, v in row.items() if k != "sha256"} for row in updated["contexts"]]
+            == [{k: v for k, v in row.items() if k != "sha256"} for row in original["contexts"]],
+            "Rebound support roles, graph or observations changed")
+    static_proof = pinned(published)
+    catalog = rebound / "manifest.json"
+    reg = plan(catalog, code, "real_zero_update_draft")
     rows = []
     with physical_lease(args.gpu) if args.gpu else nullcontext():
         if args.gpu:
@@ -382,10 +396,13 @@ def probe(args, code, out):
     paired_initialization(rows)
     write_json(out / "registration-draft.json", {**reg, "candidate_updates_after_separate_release": 216,
                "phase_updates": {key: STEPS[key] for key in ("prefix", "resume", "completed")},
+               "published_catalog": static_proof,
                "execution_enabled": False, "approval": None})
     write_json(out / "evidence.json", {"schema": SCHEMA, "scope": reg["scope"], "code": identity(code),
                "cases": rows, "registration_draft": pinned(out / "registration-draft.json"),
+               "published_catalog": static_proof, "rebound_contexts_verified": 27,
                "real_updates": 0, "query_access": False, "fixed_graph": True, "device": args.gpu or "cpu"})
+    verify(static_proof)
 
 
 def main():

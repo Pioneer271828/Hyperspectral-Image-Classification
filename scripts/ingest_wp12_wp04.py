@@ -56,7 +56,12 @@ def intake(root, cpu, real, gpu=None):
     draft = load(released["registration_draft"], root)
     require(draft["approval"] is None and draft["execution_enabled"] is False
             and draft["candidate_updates_after_separate_release"] == 216
-            and draft["catalog"]["sha256"] == REAL_CATALOG_SHA, "WP04 draft is not admissible")
+            and draft["published_catalog"] == released["published_catalog"]
+            and draft["published_catalog"]["sha256"] == REAL_CATALOG_SHA
+            and released["rebound_contexts_verified"] == 27
+            and load(draft["catalog"], root)["code"]["commit"] == released["code"]["commit"],
+            "WP04 draft is not admissible")
+    load(draft["published_catalog"], root)
     return {"schema": "wp12_wp04_engineering_supplement_v1", "engineering": evidence,
             "real": {"evidence": real, "scope": "released_xuzhou_zero_update_only",
                      "registration_draft": released["registration_draft"], "real_updates": 0},
