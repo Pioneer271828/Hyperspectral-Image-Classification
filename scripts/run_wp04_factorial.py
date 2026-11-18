@@ -19,6 +19,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tests"))
 import numpy as np
 import torch
 
+import g4_edge_target as edge
+import g4_edge_target_runtime as edge_runtime
+import g4_interaction_target as interaction
+import g4_interaction_target_runtime as interaction_runtime
 from evaluation.classification_metrics import metrics_from_confusion
 from g4_position_fusion_target_runtime import prepare
 from g4_support_context import prepare_contexts, read, validate_manifest
@@ -56,6 +60,20 @@ CONTRASTS = {
 }
 SCHEMA = "wp04_fixed_graph_scratch_factorial_v1"
 REAL_CATALOG_SHA = "a2c23f9b60ccf094008e6ac4c7bcd4aa289dece6e8b3993e91431ee0a75c502e"
+CONTROLS = {
+    "directions": {"off": "none", "C2G": "cnn_to_graph", "G2C": "graph_to_cnn", "both": "gated"},
+    "edges": {"off": "none", "I": "gated", "Wg": "graph", "Wj": "joint", "I+Wg": "gated_graph",
+              "I7": "add_joint", "I8": "gated_joint", "I9": "global_joint"},
+}
+CONTROL_CONTRASTS = {
+    "directions": (("C2G", "off"), ("G2C", "off"), ("both", "off"), ("both", "C2G"), ("both", "G2C")),
+    "edges": (("I", "off"), ("Wg", "off"), ("Wj", "off"), ("Wj", "Wg"), ("I+Wg", "I"),
+              ("I8", "I"), ("I8", "I+Wg"), ("I7", "I8"), ("I9", "I8")),
+}
+ADAPTERS = {
+    "directions": (interaction_runtime.prepare, interaction, "interaction_binding"),
+    "edges": (edge_runtime.prepare, edge, "edge_binding"),
+}
 
 
 def require(ok, message):
@@ -77,21 +95,29 @@ def verify(pin):
     return path
 
 
-def roster():
+def roster(group="factorial"):
+    if group in CONTROLS:
+        return [{"seed": seed, "arm": arm, "condition": condition}
+                for seed in SEEDS for arm, condition in CONTROLS[group].items()]
+    require(group == "factorial", "Unknown WP04 group")
     return [{"seed": seed, "arm": arm, "mode": mode, "fusion": fusion}
             for seed in SEEDS for arm, (mode, fusion) in ARMS.items()]
 
 
-def plan(catalog, code, scope, *, arithmetic=None):
+def plan(catalog, code, scope, *, arithmetic=None, group="factorial"):
     require(arithmetic in (None, p4.CUDA_FP64_WEIGHT), "Unknown WP04 arithmetic")
     value = {"schema": SCHEMA, "scope": scope, "code": identity(code), "catalog": pinned(catalog),
-            "target": "xuzhou", "support_seed": 512, "per_class": 1, "cases": roster(),
+            "target": "xuzhou", "support_seed": 512, "per_class": 1, "cases": roster(group),
             "phase_updates": STEPS, "method": METHODS[0], "graph": "input_Q_and_A_fixed",
             "selection": "first_min_fused_validation_nll", "real_updates_authorized": 0,
             "query_access_authorized": False,
             "full_source_ft": "separate_nonfactorial_scope_different_pretrained_source_by_mode"}
     if arithmetic is not None:
         value["arithmetic"] = arithmetic
+    if group in CONTROLS:
+        value["group"] = group
+        if group == "edges":
+            value["graph"] = "fixed_Q_and_A_candidate_support_opt_in_learned_A_values"
     return value
 
 
@@ -99,17 +125,21 @@ def registration(args, code):
     path = verify({"path": str(Path(args.registration[0]).resolve()), "sha256": args.registration[1]})
     value = read(path)
     catalog = verify(value["catalog"])
-    require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"))
+    require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"),
+                          group=value.get("group", "factorial"))
             and catalog == path.parent / "contexts" / "manifest.json",
             "Only the generated synthetic fixture registration can run optimization")
     return value
 
 
 def bound(reg, case, out, device):
-    return prepare(reg["catalog"]["path"], reg["catalog"]["sha256"], out,
-                   target=reg["target"], support_seed=reg["support_seed"], per_class=reg["per_class"],
-                   method=reg["method"], model_seed=case["seed"], mode=case["mode"],
-                   condition=case["fusion"], device=device)
+    common = dict(target=reg["target"], support_seed=reg["support_seed"], per_class=reg["per_class"],
+                  method=reg["method"], model_seed=case["seed"], device=device)
+    paths = reg["catalog"]["path"], reg["catalog"]["sha256"], out
+    group = reg.get("group", "factorial")
+    if group in ADAPTERS:
+        return ADAPTERS[group][0](*paths, condition=case["condition"], **common)
+    return prepare(*paths, mode=case["mode"], condition=case["fusion"], **common)
 
 
 def attest(gpu):
@@ -130,8 +160,14 @@ def hardware(gpu, started):
     return {"wall_seconds": perf_counter()-started, "max_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*1024}
 
 
-def model_snapshot(model):
+def model_snapshot(model, group="factorial"):
     tensors = {k: tensor_hash(v) for k, v in model.state_dict().items()}
+    if group in CONTROLS:
+        prefixes = edge.PREFIXES if group == "edges" else (interaction.PREFIX,)
+        return {"shared": digest({k: v for k, v in tensors.items() if not k.startswith(prefixes)}),
+                "additional_tensors": {k: v for k, v in tensors.items() if k.startswith(prefixes)},
+                "parameters": sum(p.numel() for p in model.parameters()),
+                "learned_parameters": {k: p.numel() for k, p in model.named_parameters() if k.startswith(prefixes)}}
     return {"shared": digest({k: v for k, v in tensors.items() if not k.startswith(EXTRA)}),
             "residual": {k: v for k, v in tensors.items() if k.startswith(EXTRA[0])},
             "fusion": {k: v for k, v in tensors.items() if k.startswith(EXTRA[1])},
@@ -174,28 +210,87 @@ def terminal(path):
     return torch.load(terminal_path, map_location="cpu", weights_only=True)
 
 
+def control_diagnostics(group, case, model, item, runtime, probabilities):
+    if group == "directions":
+        return {"initial_head_sha256": {k: tensor_hash(v) for k, v in probabilities.items()},
+                "configuration": interaction.configuration(case["condition"])}
+    if group != "edges":
+        return {}
+    config = edge.configuration(case["condition"])
+    result = {"configuration": config}
+    if config["graph_update_mode"] == "none":
+        return result
+    with torch.no_grad():
+        info = edge.forward_observation(model, observation(model, item),
+            expected_binding=runtime.edge_binding, diagnostics=True)[-1]
+    initial = item["A"].to_sparse_coo().coalesce()
+    indices = initial.indices()[:, initial.values() > 0]
+    original = {tuple(pair) for pair in indices.T.tolist()}
+    occupied = {row for row, _ in original}
+    fallback = {(row, row) for row in range(initial.shape[0]) if row not in occupied}
+    observed = {tuple(pair) for pair in info["edge_indices"].T.tolist()}
+    require(observed == original | fallback, "Learned A changed candidate support")
+    before, after = info["edge_weights_before"], info["edge_weights_after"]
+    result.update(candidate_edges=len(original), isolated_fallback_edges=len(fallback), actual_edges=len(observed),
+                  updated_weight_elements=int(torch.count_nonzero(after-before)), maximum_change=float((after-before).abs().max()))
+    return result
+
+
+def component_activity(group, trace):
+    labels = {"directions": ("interaction", "directions"), "edges": ("edge_components", "components")}
+    if group not in labels:
+        return {}
+    key, members = labels[group]
+    values = {}
+    for name in trace[0][key][members]:
+        rows = [row[key][members][name] for row in trace]
+        if rows[0] is None:
+            require(all(row is None for row in rows), "Inactive mechanism acquired an optimizer step")
+            values[name] = None
+            continue
+        require(all(row is not None for row in rows) and max(row["gradient_norm"] for row in rows) > 0
+                and sum(row["changed_elements"] for row in rows) > 0, "Active mechanism did not learn")
+        values[name] = {"parameters": rows[0]["parameters"],
+                        "peak_gradient_norm": max(row["gradient_norm"] for row in rows),
+                        "changed_elements_across_steps": sum(row["changed_elements"] for row in rows)}
+    return values
+
+
 def audit_case(reg, case, out, gpu, *, real=False):
     device = "cuda:0" if gpu else "cpu"
     split = out / "split"
     opts, cpu_items, _, _, runtime, guard = bound(reg, case, split, device)
     target = reg["target"]
+    group = reg.get("group", "factorial")
     item = cpu_items[target]
     inputs = {k: tensor_hash(item[k]) for k in ("net_input", "Q", "A", "train_indices", "train_labels", "val_indices", "val_labels")}
     model = runtime.build_model(ResearchConfig.from_dict(opts["config"]), {target: item["class_num"]}).to(device)
-    init = model_snapshot(model)
+    init = model_snapshot(model, group)
     require("test_labels" not in item and opts["optimizer_steps"] == 12, "Foreign input role or budget")
     items = move_items(cpu_items, device)
 
     def calibrated(model):
-        return calibrate(model, observation(model, items[target]), expected_binding=runtime.position_binding,
-                         source_state_sha256=state_id(model))[0]
+        if group in ADAPTERS:
+            _, factory, binding_key = ADAPTERS[group]
+            calibrator, binding = factory.calibrate, getattr(runtime, binding_key)
+        else:
+            calibrator, binding = calibrate, runtime.position_binding
+        return calibrator(model, observation(model, items[target]), expected_binding=binding,
+                          source_state_sha256=state_id(model))[0]
+
+    diagnostic = {}
+    if real or group in CONTROLS:
+        before = state_id(model)
+        candidate = calibrated(model)
+        checked, probs = runtime.validation_snapshot(candidate, items)
+        diagnostic = control_diagnostics(group, case, candidate, items[target], runtime, probs[target]["val"])
+        require(state_id(model) == before, "Zero-update audit changed initial model")
+        del candidate
 
     if real:
-        before = state_id(model)
-        checked, probs = runtime.validation_snapshot(calibrated(model), items)
-        require(state_id(model) == before, "Zero-update audit changed initial model")
         guard()
         return {"case": case, "inputs": inputs, "init": init, "optimizer_updates": 0,
+                **({"diagnostics": diagnostic} if diagnostic else {}),
                 "step_zero": validation_evidence(probs[target]["val"], item, checked["metrics"][target]["val"])}
 
     first, last = terminal(out / "whole"), terminal(split)
@@ -235,16 +330,32 @@ def audit_case(reg, case, out, gpu, *, real=False):
             "endpoints": {"selected": selected, "last": final}, "head_updates": changes, "phases": costs,
             "exact_whole_split": True, "resume_completed_updates": 0, "audit_updates": 0,
             "trace_proof": digest(last["trace"]),
+            **({"diagnostics": diagnostic, "learned_components": component_activity(group, last["trace"])}
+               if group in CONTROLS else {}),
             **({"exact_independent_step_one": True} if reg.get("arithmetic") else {})}
 
 
-def paired_initialization(rows):
+def paired_initialization(rows, group="factorial"):
+    arms = CONTROLS.get(group, ARMS)
     for seed in SEEDS:
         cases = [row for row in rows if row["case"]["seed"] == seed]
-        require({row["case"]["arm"] for row in cases} == set(ARMS)
+        require({row["case"]["arm"] for row in cases} == set(arms)
                 and len({row["init"]["shared"] for row in cases}) == 1
                 and len({digest(row["inputs"]) for row in cases}) == 1, "Paired input or shared initialization differs")
+        control = {r["case"]["arm"]: r for r in cases}
         by_arm = {r["case"]["arm"]: r["init"] for r in cases}
+        if group == "directions":
+            def head(arm, name):
+                return control[arm]["diagnostics"]["initial_head_sha256"][name]
+            require(head("C2G", "cnn") == head("off", "cnn")
+                    and head("G2C", "graph") == head("off", "graph"),
+                    "A disabled message direction changed the non-receiving branch")
+            continue
+        if group == "edges":
+            require(by_arm["I8"]["additional_tensors"] == by_arm["I9"]["additional_tensors"]
+                    and by_arm["I8"]["learned_parameters"] == by_arm["I9"]["learned_parameters"],
+                    "Regional/global joint comparison lost exact capacity and initialization")
+            continue
         for base, treatment in (("B0", "F"), ("R", "R+F"), ("Bcap", "Bcap+F")):
             a, b = (by_arm[k] for k in (base, treatment))
             require(a["residual"] == b["residual"] and b["parameters"]-a["parameters"] == 129
@@ -252,11 +363,14 @@ def paired_initialization(rows):
         require(by_arm["R"]["parameters"] - by_arm["B0"]["parameters"] == 8256
                 and by_arm["Bcap"]["parameters"] - by_arm["B0"]["parameters"] == 8320, "Capacity control differs")
     require(len({digest(row["inputs"]) for row in rows}) == 1, "Comparison changed support across seeds")
+    require(len({row["init"]["shared"] for row in rows}) == len(SEEDS), "Missing independent model seeds")
 
 
-def make_tables(rows):
+def make_tables(rows, group="factorial"):
     endpoints, per_class, paired, paired_class, costs = [], [], [], [], []
     selected = {}
+    contrasts = CONTRASTS if group == "factorial" else {
+        f"{arm}-{base}": {arm: 1, base: -1} for arm, base in CONTROL_CONTRASTS[group]}
     for row in rows:
         case = row["case"]
         for endpoint, heads in row["endpoints"].items():
@@ -275,7 +389,7 @@ def make_tables(rows):
     for seed in SEEDS:
         for endpoint in ("selected", "last"):
             for head in HEADS:
-                for comparison, design in CONTRASTS.items():
+                for comparison, design in contrasts.items():
                     context = dict(seed=seed, endpoint=endpoint, head=head, comparison=comparison)
                     arms = [(selected[seed, endpoint, head, arm], v) for arm, v in design.items()]
                     deltas = []
@@ -374,8 +488,9 @@ def run(args, code, reg, out):
         if args.arm is not None:
             return
         rows = [read(out / f"{c['seed']}-{c['arm']}" / "audit.json") for c in reg["cases"]]
-        paired_initialization(rows)
-        products = make_tables(rows)
+        group = reg.get("group", "factorial")
+        paired_initialization(rows, group)
+        products = make_tables(rows, group)
         if (out / "evidence.json").exists():
             previous = read(out / "evidence.json")
             require(previous["case_pins"] == [pinned(out / f"{c['seed']}-{c['arm']}" / "audit.json") for c in reg["cases"]],
@@ -393,8 +508,9 @@ def run(args, code, reg, out):
                    "code": identity(code), "registration": dict(zip(("path", "sha256"), args.registration, strict=True)),
                    "tables": [pinned(out / f"{name}.csv") for name in products], "cases": len(rows),
                    "case_pins": [pinned(out / f"{c['seed']}-{c['arm']}" / "audit.json") for c in reg["cases"]],
-                   "counts": {name: len(data) for name, data in products.items()}, "synthetic_updates": 432,
+                   "counts": {name: len(data) for name, data in products.items()}, "synthetic_updates": len(rows)*24,
                    "reporting_scope": "engineering_fixture_only", "real_updates": 0, "query_access": False,
+                   **({"group": group} if group in CONTROLS else {}),
                    **({"arithmetic": reg["arithmetic"], "strict_qualification": True} if reg.get("arithmetic") else {})})
         print(json.dumps({"status": "passed", "evidence": pinned(out / "evidence.json")}))
 
@@ -419,7 +535,7 @@ def probe(args, code, out):
     catalog = rebound / "manifest.json"
     arithmetic = p4.CUDA_FP64_WEIGHT if args.strict_cuda else None
     require(arithmetic is None or args.gpu, "Strict real probe requires a registered physical GPU")
-    reg = plan(catalog, code, "real_zero_update_draft", arithmetic=arithmetic)
+    reg = plan(catalog, code, "real_zero_update_draft", arithmetic=arithmetic, group=args.group)
     rows = []
     leases = physical_lease(args.gpu) if args.gpu else nullcontext()
     calls = Counter()
@@ -433,15 +549,16 @@ def probe(args, code, out):
             start = perf_counter()
             row = audit_case(reg, case, out / f"{case['seed']}-{case['arm']}", args.gpu, real=True)
             rows.append({**row, **hardware(args.gpu, start)})
-    paired_initialization(rows)
-    write_json(out / "registration-draft.json", {**reg, "candidate_updates_after_separate_release": 216,
+    paired_initialization(rows, args.group)
+    write_json(out / "registration-draft.json", {**reg, "candidate_updates_after_separate_release": len(rows)*12,
                "phase_updates": {key: STEPS[key] for key in ("prefix", "resume", "completed")},
                "published_catalog": static_proof,
                "execution_enabled": False, "approval": None})
     write_json(out / "evidence.json", {"schema": SCHEMA, "scope": reg["scope"], "code": identity(code),
                "cases": rows, "registration_draft": pinned(out / "registration-draft.json"),
                "published_catalog": static_proof, "rebound_contexts_verified": 27,
-               "real_updates": 0, "query_access": False, "fixed_graph": True, "device": args.gpu or "cpu",
+               "real_updates": 0, "query_access": False, "fixed_graph": args.group != "edges", "device": args.gpu or "cpu",
+               **({"group": args.group} if args.group in CONTROLS else {}),
                **({"arithmetic": numeric, "kernel_calls": dict(calls)} if arithmetic else {})})
     verify(static_proof)
 
@@ -456,11 +573,13 @@ def main():
         if kind in ("run", "stage"):
             selector.add_argument("--registration", required=True, nargs=2)
             selector.add_argument("--seed", type=int, choices=SEEDS, required=kind == "stage")
-            selector.add_argument("--arm", choices=ARMS, required=kind == "stage")
+            selector.add_argument("--arm", choices=sorted(set(ARMS).union(*(set(arms) for arms in CONTROLS.values()))),
+                                  required=kind == "stage")
         if kind in ("run", "stage", "probe"):
             selector.add_argument("--gpu")
         if kind in ("prepare", "probe"):
             selector.add_argument("--strict-cuda", action="store_true")
+            selector.add_argument("--group", choices=("factorial", *CONTROLS), default="factorial")
         if kind == "run":
             selector.add_argument("--resource-wait-seconds", type=float, default=0)
         if kind == "stage":
@@ -479,9 +598,15 @@ def main():
         from test_g4_support_context import prepared
 
         out.mkdir()
-        _, _, directory, _ = prepared(out)
+        if args.group == "edges":
+            from test_g4_edge_target_runtime import fixture
+
+            catalog, _, _ = fixture(out)
+        else:
+            _, _, directory, _ = prepared(out)
+            catalog = directory / "manifest.json"
         path = out / "registration.json"
-        write_json(path, plan(directory / "manifest.json", code, "synthetic_only",
+        write_json(path, plan(catalog, code, "synthetic_only", group=args.group,
                               arithmetic=p4.CUDA_FP64_WEIGHT if args.strict_cuda else None))
         print(json.dumps(pinned(path)))
     elif args.action == "probe":

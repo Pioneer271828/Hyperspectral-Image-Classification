@@ -1,4 +1,4 @@
-"""Append hash-bound WP04 engineering and zero-update evidence to the WP12 intake."""
+"""Import pinned WP04 engineering and zero-update evidence into WP12."""
 import argparse
 import csv
 import json
@@ -8,11 +8,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
-from scripts.run_wp04_factorial import REAL_CATALOG_SHA, SCHEMA, identity, require, roster, verify
+from scripts.run_wp04_factorial import CONTROL_CONTRASTS, REAL_CATALOG_SHA, SCHEMA, identity, require, roster, verify
 from transfer.p4_runtime_device import CUDA_FP64_WEIGHT, UUID
-
-
-COUNTS = {"endpoints": 108, "per-class": 972, "paired": 126, "paired-per-class": 1134, "costs": 72}
 
 
 def load(pin, root):
@@ -21,61 +18,91 @@ def load(pin, root):
     return json.loads(verify(pin).read_text())
 
 
-def intake(root, cpu, real, gpu=None):
-    evidence = {}
-    for label, pin in (("cpu", cpu), ("gpu", gpu)):
-        if pin is None:
-            continue
-        data = load(pin, root)
-        require(data["schema"] == SCHEMA and data["scope"] == "synthetic_only"
-                and data["reporting_scope"] == "engineering_fixture_only"
-                and data["real_updates"] == 0 and data["query_access"] is False
-                and data["cases"] == 18 and data["synthetic_updates"] == 432 and data["counts"] == COUNTS,
-                "WP04 engineering scope or roster differs")
-        require((data["device"] == "cpu") == (label == "cpu"), "WP04 measured hardware differs")
-        reg = load(data["registration"], root)
-        require(reg["schema"] == SCHEMA and reg["scope"] == "synthetic_only" and reg["cases"] == roster(),
-                "WP04 registration is missing paired arms")
-        cases = [load(row, root) for row in data["case_pins"]]
-        require([row["case"] for row in cases] == roster()
-                and all(row["exact_whole_split"] is True and row["resume_completed_updates"] == row["audit_updates"] == 0
-                        for row in cases), "WP04 endpoint receipts are incomplete")
-        if label == "gpu":
-            require(UUID.fullmatch(data["device"]) and data.get("strict_qualification") is True
-                    and data.get("arithmetic") == reg.get("arithmetic") == CUDA_FP64_WEIGHT
-                    and all(case.get("exact_independent_step_one") is True
-                            and case["arithmetic"]["physical_uuid"] == data["device"]
-                            and case["arithmetic"]["deterministic_algorithms"] is True
-                            and all(phase["arithmetic"]["physical_uuid"] == data["device"]
-                                    for phase in case["phases"].values()) for case in cases),
-                    "Unqualified or mixed-device CUDA evidence cannot enter WP12")
-        for item in data["tables"]:
-            path = verify(item)
-            require(path.is_relative_to(root) and path.stem in COUNTS, "WP04 table outside intake")
-            with path.open(encoding="utf-8", newline="") as stream:
-                require(sum(1 for _ in csv.DictReader(stream)) == COUNTS[path.stem], "WP04 table count differs")
-        require({Path(item["path"]).stem for item in data["tables"]} == set(COUNTS), "WP04 tables are missing")
-        evidence[label] = {"evidence": pin, "device": data["device"], "tables": data["tables"],
-                           "scope": data["reporting_scope"], "code": data["code"]}
-    released = load(real, root)
-    require(released["schema"] == SCHEMA and released["scope"] == "real_zero_update_draft"
-            and released["real_updates"] == 0 and released["query_access"] is False
-            and released["fixed_graph"] is True
-            and [row["case"] for row in released["cases"]] == roster()
-            and all(row["optimizer_updates"] == 0 for row in released["cases"]), "Preattached real context differs")
-    draft = load(released["registration_draft"], root)
+def engineering(root, pin, group, *, cuda=False):
+    expected = roster(group)
+    n = len(expected)
+    pairs = 126 if group == "factorial" else 18*len(CONTROL_CONTRASTS[group])
+    counts = {"endpoints": n*6, "per-class": n*54, "paired": pairs, "paired-per-class": pairs*9, "costs": n*4}
+    data = load(pin, root)
+    require(data.get("schema") == SCHEMA and data["scope"] == "synthetic_only"
+            and data["reporting_scope"] == "engineering_fixture_only"
+            and data["real_updates"] == 0 and data["query_access"] is False
+            and data.get("group", "factorial") == group
+            and data["cases"] == n and data["synthetic_updates"] == n*24 and data["counts"] == counts,
+            "WP04 engineering scope or roster differs")
+    require((data["device"] == "cpu") == (not cuda), "WP04 measured hardware differs")
+    reg = load(data["registration"], root)
+    require(reg["schema"] == SCHEMA and reg["scope"] == "synthetic_only" and reg["cases"] == expected,
+            "WP04 registration is missing paired arms")
+    cases = [load(row, root) for row in data["case_pins"]]
+    require([row["case"] for row in cases] == expected
+            and all(row["exact_whole_split"] and row["resume_completed_updates"] == row["audit_updates"] == 0
+                    for row in cases), "WP04 endpoint receipts are incomplete")
+    if cuda:
+        require(UUID.fullmatch(data["device"]) and data.get("strict_qualification") is True
+                and data.get("arithmetic") == reg.get("arithmetic") == CUDA_FP64_WEIGHT
+                and all(case.get("exact_independent_step_one") is True
+                        and case["arithmetic"]["physical_uuid"] == data["device"]
+                        and case["arithmetic"]["deterministic_algorithms"] is True
+                        and all(phase["arithmetic"]["physical_uuid"] == data["device"]
+                                for phase in case["phases"].values()) for case in cases),
+                "Unqualified or mixed-device CUDA evidence cannot enter WP12")
+    for item in data["tables"]:
+        path = verify(item)
+        require(path.is_relative_to(root) and path.stem in counts, "WP04 table outside intake")
+        with path.open(encoding="utf-8", newline="") as stream:
+            require(sum(1 for _ in csv.DictReader(stream)) == counts[path.stem], "WP04 table count differs")
+    require({Path(item["path"]).stem for item in data["tables"]} == set(counts)
+            and len(data["tables"]) == len(counts), "WP04 tables are missing")
+    return {"evidence": pin, "device": data["device"], "tables": data["tables"],
+            "scope": data["reporting_scope"], "code": data["code"]}
+
+
+def real_intake(root, pin, group, *, strict=False):
+    data = load(pin, root)
+    expected = roster(group)
+    require(data["schema"] == SCHEMA and data["scope"] == "real_zero_update_draft"
+            and data["real_updates"] == 0 and data["query_access"] is False
+            and data["fixed_graph"] == (group != "edges")
+            and data.get("group", "factorial") == group
+            and [row["case"] for row in data["cases"]] == expected
+            and all(row["optimizer_updates"] == 0 for row in data["cases"]),
+            "Preattached real context differs")
+    if strict:
+        require(data["arithmetic"]["protocol"] == CUDA_FP64_WEIGHT
+                and data["arithmetic"]["physical_uuid"] == data["device"]
+                and data["kernel_calls"]["sparse_mm"] > 0, "Strict real replay did not use its arithmetic")
+    draft = load(data["registration_draft"], root)
     require(draft["approval"] is None and draft["execution_enabled"] is False
-            and draft["candidate_updates_after_separate_release"] == 216
-            and draft["published_catalog"] == released["published_catalog"]
+            and draft["candidate_updates_after_separate_release"] == 12*len(expected)
+            and draft["published_catalog"] == data["published_catalog"]
             and draft["published_catalog"]["sha256"] == REAL_CATALOG_SHA
-            and released["rebound_contexts_verified"] == 27
-            and load(draft["catalog"], root)["code"]["commit"] == released["code"]["commit"],
+            and data["rebound_contexts_verified"] == 27
+            and load(draft["catalog"], root)["code"]["commit"] == data["code"]["commit"],
             "WP04 draft is not admissible")
     load(draft["published_catalog"], root)
-    return {"schema": "wp12_wp04_engineering_supplement_v1", "engineering": evidence,
-            "real": {"evidence": real, "scope": "released_xuzhou_zero_update_only",
-                     "registration_draft": released["registration_draft"], "real_updates": 0},
-            "production_accuracy_qualified": False, "query_access": False}
+    return {"evidence": pin, "scope": "released_xuzhou_zero_update_only", "device": data["device"],
+            "registration_draft": data["registration_draft"], "real_updates": 0}
+
+
+def intake(root, cpu, real, gpu=None, *, strict_real=None, controls=None):
+    observed = {"cpu": engineering(root, cpu, "factorial")}
+    if gpu is not None:
+        observed["gpu"] = engineering(root, gpu, "factorial", cuda=True)
+    result = {"schema": "wp12_wp04_engineering_supplement_v1", "engineering": observed,
+              "real": real_intake(root, real, "factorial"), "production_accuracy_qualified": False,
+              "query_access": False}
+    if controls:
+        result["real_controls"] = {}
+        for group, (fixture, published) in controls.items():
+            observed[group] = engineering(root, fixture, group)
+            result["real_controls"][group] = real_intake(root, published, group)
+    if strict_real is not None:
+        replay = real_intake(root, strict_real, "factorial", strict=True)
+        require("gpu" in observed and replay["device"] == observed["gpu"]["device"],
+                "Strict real replay must use the qualified device")
+        result["strict_real"] = replay
+    return result
 
 
 def main():
@@ -83,17 +110,24 @@ def main():
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    for key in ("cpu", "gpu", "real"):
-        parser.add_argument("--" + key, nargs=2, required=key != "gpu")
+    for key in ("cpu", "gpu", "real", "strict-real"):
+        parser.add_argument("--" + key, nargs=2, required=key in ("cpu", "real"))
+    for key in CONTROL_CONTRASTS:
+        parser.add_argument("--" + key, nargs=4, metavar=("SYNTHETIC", "SHA256", "ZERO_UPDATE", "SHA256"))
     args = parser.parse_args()
     code = code_snapshot()
     require_frozen_code(code)
     require(args.expected_commit == code["commit"], "Wrong WP12 adapter revision")
     root, out = args.runs.resolve(strict=True), external_directory(args.out)
     require(root in out.parents, "Keep WP12 output in the authorized runs tree")
+
     def pair(value):
         return dict(zip(("path", "sha256"), value, strict=True)) if value else None
-    data = intake(root, pair(args.cpu), pair(args.real), pair(args.gpu))
+
+    controls = {key: (pair(value[:2]), pair(value[2:])) for key in CONTROL_CONTRASTS
+                if (value := getattr(args, key))}
+    data = intake(root, pair(args.cpu), pair(args.real), pair(args.gpu), strict_real=pair(args.strict_real),
+                  controls=controls)
     out.mkdir()
     write_json(out / "supplement.json", {**data, "adapter": identity(code)})
 
