@@ -284,7 +284,7 @@ def _infer_case(root, scope, docs, scene, case, hh_ctx, bank, intake):
     model.backbone.adapter.clear_attention_cache()
     spec = runtime.band_specs(bank.release.bands)
     scale = 50 if scene == "paviaU" else 100
-    options = dict(wavelength_unit=scene != "xuzhou")
+    options = dict(role="devval", wavelength_unit=scene != "xuzhou")
     classes, width = bank.release.classes, bank.release.shape[1]
     predictions, labels, positions, traces, groups, points = {}, [], {}, [], {}, []
     negative = None
@@ -297,7 +297,8 @@ def _infer_case(root, scope, docs, scene, case, hh_ctx, bank, intake):
         labels.extend(tile_labels)
         boxes = runtime.region_boxes(shape, offsets, tile_labels, FOCUS[scene])
         _, _, original, _ = bank.materialize(row, spec["full"])
-        trace = dict(tile=row["id"], region_area=(boxes["target"][1]-boxes["target"][0])**2,
+        trace = dict(tile=row["id"], role=row["role"], parent_partition=row["partition"],
+                     region_area=(boxes["target"][1]-boxes["target"][0])**2,
                      labels=len(offsets), views={})
         for band, recipe in spec.items():
             clean, record = sample(original.observation, original.bands, recipe)

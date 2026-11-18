@@ -100,9 +100,9 @@ def _capture_graph(model, traces):
 
 
 @torch.no_grad()
-def infer(model, dataset, view, offsets, classes, scale, *, wavelength_unit=True):
+def infer(model, dataset, view, offsets, classes, scale, *, role, wavelength_unit=True):
     obs, bands = view.observation, view.bands
-    if model.training or obs.partition != "val":
+    if model.training or role != "devval" or obs.partition not in ("val", "train"):
         raise ValueError("Frozen development validation only")
     traces, adapter_inputs = [], []
     adapter = model.backbone.adapter
@@ -143,7 +143,7 @@ def same_region_groups(offsets, box, shape, membership):
 
 
 def validate_observation_path(model, dataset, original, bands, stats, spec, offsets, classes, scale,
-                              *, wavelength_unit=True):
+                              *, role, wavelength_unit=True):
     """Poison only deleted channels and exercise a registered leaking negative."""
     view, record = sample(original, bands, spec)
     kept = record["selected_positions"]
@@ -161,10 +161,10 @@ def validate_observation_path(model, dataset, original, bands, stats, spec, offs
             values[idx] += 137.
         modified_stats[name] = values
     modified_stats["statistics_hash"] = digest({k: v for k, v in modified_stats.items() if k != "statistics_hash"})
-    if (new_record != record or subset_statistics(stats, bands, record)
-            != subset_statistics(modified_stats, bands, new_record)):
+    base_stats, new_stats = (subset_statistics(values, bands, record) for values in (stats, modified_stats))
+    if new_record != record or any(base_stats[key] != new_stats[key] for key in ("minimum", "maximum", "band_ids")):
         raise ValueError("Deleted-column extrema leaked into retained metadata/statistics")
-    kwargs = dict(wavelength_unit=wavelength_unit)
+    kwargs = dict(role=role, wavelength_unit=wavelength_unit)
     _, base, _ = infer(model, dataset, view, offsets, classes, scale, **kwargs)
     _, test, _ = infer(model, dataset, new, offsets, classes, scale, **kwargs)
     if base != test:
