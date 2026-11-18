@@ -34,7 +34,7 @@ SOURCES = {
     "short_independent": BAND_REGION_PINS["hh_audit"],
     "long_scope": ("wp05-v4-conditional-real-admission01/scope.json", honghu.LONG_SCOPE),
     "long_evidence": ("wp05-honghu-fit-existing-ten02/evidence.json",
-                      "27123c497344d74e2b214d78654d62499d8a0e75adbcb514412d46a89e3c37e22"),
+                      "27123c497344d74e2b214d78654d6249d8a0e75adbcb514412d46a89e3c37e22"),
     "long_erratum": ("wp05-honghu-fit-existing-ten-erratum01/erratum.json",
                      "c1bc393aadf9e80a89765a046d8ed79e834c68fdf8a56b445e2cf38f1d79ce50"),
     "long_preflight": ("wp05-three-arm-fit-real-preflight04/scope.json",
