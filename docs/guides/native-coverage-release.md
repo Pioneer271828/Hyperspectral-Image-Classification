@@ -2,6 +2,8 @@
 
 该入口面向授权 Linux 容器。工作树须干净，`--expected-commit` 使用实际的完整 SHA。Windows 用于编辑、Git 和传输。运行目录、真实 Bank、旧权重与检查点都在检出目录之外。安装和依赖参见[远程验收指南](remote-validation.md)。验收环境复用 Python 3.10、PyTorch、NumPy 和现有科学计算依赖。需要本机复核版本时，在容器执行 `python -c 'import torch, numpy; print(torch.__version__, numpy.__version__)'`。
 
+固定支持读出、中心光谱旁路、空间错位控制及真实四臂预检见[生产候选与准入指南](native-production-admission.md)。
+
 ## 从主开发血缘导入
 
 在已有 `9431fece685b0a729e4ffea065fbf7c2ab5b657d` 的项目克隆中执行以下命令。从单一检出启动脚本，无需添加其他检出到 Python 导入路径。
