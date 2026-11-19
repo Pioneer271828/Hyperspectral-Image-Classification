@@ -8,6 +8,7 @@ import subprocess
 
 import numpy as np
 
+from evaluation import wp12_attribution_exposure as gradients
 from evaluation.frozen_band_region import paired as transitions
 from evaluation.frozen_training_stages import HEADS, file_pin, json_pin, require
 from evaluation.wp12_linear_attribution import FOCUS, RIVALS
@@ -206,7 +207,8 @@ def honghu_summary(records):
                 for head in HEADS}
         groups[subgroup][r["case"]] = dict(stage=stage,populations=r["populations"],exposure=r["exposure"],
              same_protocol_support_and_development=contrast,holdout_independent=False,
-             archived_path_updates=r["archived_path_updates"],reviewed_combined_path_updates=r["reviewed_combined_path_updates"],
+             archived_path_updates=r.get("archived_path_updates",stage["last"]["cursor"]),
+             reviewed_combined_path_updates=r.get("reviewed_combined_path_updates"),
              tensor_gradient_record=r["tensor_gradient_record"],historic_event_margins=r["historic_event_margins"])
     require(all(len(values)==5 for values in groups.values()),"Historical subgroup omitted a preregistered coverage arm")
     return dict(groups=dict(groups),spatial_stratum="tile-relative periphery and native-head disagreement")
@@ -235,5 +237,8 @@ def review(root, out, code, directories, producers, floor_pin):
         attribution_producers=producers,receipts=receipts,historical_objects=archive,
         xuzhou=xz_summary(xz,previous["frozen_actual_retained_views"]),
         honghu_short=honghu_summary(cases["honghu_short"]),honghu_120=honghu_summary(cases["honghu_120"]),
+        recorded_gradient_exposure=dict(xuzhou=gradients.xuzhou(root),
+             honghu_short=gradients.honghu(root,cases["honghu_short"],True),
+             honghu_120=gradients.honghu(root,cases["honghu_120"],False)),
         provenance=check_sources(xz,cases["honghu_short"]+cases["honghu_120"]),formal_class_floor=floor_pin,
         independent_real_accuracy=None,raw_gt_loaded=False,query_accessed=False,optimizer_updates=0,wp04=False))
