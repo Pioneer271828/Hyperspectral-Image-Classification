@@ -186,6 +186,7 @@ def generate_scientific(out, campaign, code, devices):
 
     def release(branch, scene, history, *, layout, k=5, seed=512, columns=True,
                 matched=True, cost=False, accuracy=True, prospective=False):
+        branch.mkdir()
         bank,roles,truth = bank_at(branch/"bank",scene,layout,src["state"],k=k,support_seed=seed,
                                    matched=matched,columns=columns,observation_only=not accuracy)
         views = independent.COLUMN_VIEWS if columns else VIEWS

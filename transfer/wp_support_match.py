@@ -97,4 +97,3 @@ def validate_contrast(factor, left, right, left_group, right_group, left_entry, 
 def exposure(history, classes):
     """Count actual supervised points in every completed registered update."""
     return [sum(row["released"]["per_class"][i] for row in history) for i in range(classes)]
-

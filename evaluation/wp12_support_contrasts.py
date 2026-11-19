@@ -84,4 +84,3 @@ def summarize(plan, raw, reviewed, cases):
             same_point=same, within_release_method_effects=method_effects(a_score,b_score),
             interpretation="descriptive_fixed_design_no_independent_seed_or_pixel_interval")
     return output
-
