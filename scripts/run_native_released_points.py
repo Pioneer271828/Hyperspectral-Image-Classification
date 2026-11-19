@@ -1,5 +1,6 @@
 """Execute bounded sparse-point recovery and authorized zero-update preflights."""
 import argparse
+import json
 from contextlib import contextmanager
 from itertools import product
 from pathlib import Path
@@ -144,13 +145,46 @@ def real_stage(root, out, preflight_pin, release, case, phase, code, gpu, *, int
                                    {**actual, "registration": spec_pin, "checkpoint": transport._pin(path)})
 
 
+def coverage(args, root, out, code):
+    from transfer import native_coverage_queue as queue
+
+    if sys.platform != "linux" or not __debug__:
+        raise ValueError("Coverage commands require the authorized Linux environment and assertions")
+    if args.mode != "coverage-run" and (args.gpu or args.case or args.workers != 1):
+        raise ValueError("Device, case and workers apply only to a coverage queue run")
+    if args.mode != "coverage-replay" and args.archive:
+        raise ValueError("Historical pins apply only to frozen replay")
+    if args.mode == "coverage-register":
+        out.mkdir(exist_ok=True)
+        with queue.case_lock(out):
+            return queue.prepare(out, code)
+    if args.mode == "coverage-run":
+        plan = queue.load_queue(out, code)
+        names = list(plan["cases"]) if args.case in (None, "all") else [args.case]
+        if any(name not in plan["cases"] for name in names):
+            raise ValueError("Unknown registered coverage case")
+        if args.gpu is None:
+            return json.dumps(queue.run_queue(out, code, names, args.workers))
+        with arithmetic(root, args.gpu) as execution:
+            return json.dumps(queue.run_queue(out, code, names, args.workers, execution=execution))
+    if args.mode == "coverage-replay":
+        from transfer.native_coverage_replay import replay
+        return replay(root, out, code, args.archive)
+    from evaluation.wp12_native_coverage import publish
+
+    return publish(out, code)
+
+
 def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--gpu")
-    parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage"), required=True)
+    parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage", "coverage-register",
+                                            "coverage-run", "coverage-replay", "coverage-audit"), required=True)
+    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--archive", nargs=2, action="append", default=[], metavar=("PATH", "SHA256"))
     parser.add_argument("--preflight", nargs=2, metavar=("PATH", "SHA256"))
     parser.add_argument("--release", nargs=2, metavar=("PATH", "SHA256"))
     parser.add_argument("--paviau-publication", nargs=2, metavar=("PATH", "SHA256"))
@@ -167,12 +201,14 @@ def main(argv=None, *, intake=None):
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
     real = args.mode == "real-stage"
-    if real != bool(args.preflight and args.case and args.phase) or (not real and args.release is not None):
+    if real != bool(args.preflight and args.case and args.phase) or (not real and (args.release or args.preflight or args.phase)):
         raise ValueError("A real stage requires its own explicit preflight, case and phase")
     if (args.paviau_publication and args.mode != "preflight") or (args.paviau_engineering and args.mode != "synthetic"):
         parser.error("PaviaU publication is for preflight, and PaviaU engineering is synthetic only")
     torch.set_num_threads(1)
-    if real:
+    if args.mode.startswith("coverage-"):
+        result = coverage(args, root, out, code)
+    elif real:
         pinned = {"path": args.preflight[0], "sha256": args.preflight[1]}
         release = {"path": args.release[0], "sha256": args.release[1]} if args.release else None
         result = real_stage(root, out, pinned, release, args.case, args.phase, code, args.gpu, intake=intake)
