@@ -52,7 +52,7 @@ def spatial_stratum(tile, cells):
 
 
 @torch.inference_mode()
-def tile_rows(model, scene, tile, view, cells, truth, block, initial, *, layers=False):
+def tile_rows(model, scene, tile, view, cells, truth, block, initial, *, layers=False, fixed_rivals=None):
     captured = {}
     modules = heads(model,scene.dataset)
 
@@ -77,7 +77,8 @@ def tile_rows(model, scene, tile, view, cells, truth, block, initial, *, layers=
     predictions = {}
     components = {}
     second = {}
-    rivals = [RIVALS[scene.dataset].get(y,(2 if y==1 else 1,))[0] for y in truth]
+    fixed_rivals = {} if fixed_rivals is None else fixed_rivals
+    rivals = [fixed_rivals.get(y,RIVALS[scene.dataset].get(y,(2 if y==1 else 1,))[0]) for y in truth]
     second_rivals = [RIVALS[scene.dataset].get(y,(r,))[-1] for y,r in zip(truth,rivals,strict=True)]
     for head,out in zip(HEADS,probabilities,strict=True):
         x,z = captured[head]

@@ -73,7 +73,8 @@ def check_sources(xz, hh):
                 cross_release_compatible=False,physical_claim="original_delivered_column_ids_only")
 
 
-def scan_rows(body, scene):
+def scan_rows(body, scene, *, fixed=None):
+    fixed = {} if fixed is None else fixed
     classes = len(body["classes"])
     rows = body["rows"]
     keys = [(r["block"],r["ordinal"]) for r in rows]
@@ -88,7 +89,7 @@ def scan_rows(body, scene):
             parts = np.array([r["terms"][head] for r in points],dtype=float)
             rivals = {p["rival"] for p in points}
             require(np.isfinite(parts).all() and parts.shape==(len(points),6)
-                    and rivals=={RIVALS[scene].get(y,(2 if y==1 else 1,))[0]}
+                    and rivals=={fixed.get(y,RIVALS[scene].get(y,(2 if y==1 else 1,))[0])}
                     and np.allclose(parts[:,0],parts[:,1]+parts[:,2],rtol=2e-6,atol=2e-5),
                     "Fixed class pair or original linear reconstruction differs")
             m = declared["heads"][head]
@@ -214,7 +215,35 @@ def honghu_summary(records):
     return dict(groups=dict(groups),spatial_stratum="tile-relative periphery and native-head disagreement")
 
 
-def review(root, out, code, directories, producers, floor_pin):
+def locked_review(root, link, records):
+    result = json_pin(root,link)
+    require(result["schema"]=="wp12_honghu_archived_fixed_rival_v1" and result["real_updates"]==0
+            and result["raw_gt_loaded"] is result["query_accessed"] is False,"Foreign locked rival proof")
+    rivals = {int(y):r for y,r in result["rivals"].items()}
+    expected = {item["case"]:item for item in records if item["k"]==5 and item["method"]=="scratch"}
+    require(set(expected)==set(result["arms"]) and len(expected)==5,"Locked-rival comparison omitted a five-arm case")
+    for cls,rival in rivals.items():
+        votes = Counter(row["predicted"]["graph"] for item in expected.values()
+                        for row in item["fit"]["selected"]["roles"]["val"]["rows"]
+                        if row["truth"]==cls and row["predicted"]["graph"]!=cls)
+        require(rival==min(votes,key=lambda y:(-votes[y],y)),"Competitor was not frozen to the archived error mode")
+    groups = {}
+    for key,arm in result["arms"].items():
+        ref = expected[key]
+        require(arm["weights"]==ref["checkpoint"] and arm["selected"]==ref["fit"]["selected"]["cursor"],
+                "Locked rival changed selected checkpoint")
+        raw = ref["fit"]["selected"]["roles"]
+        for role,body in arm["roles"].items():
+            before = raw[role]
+            require(before["population"]==body["population"] and
+                    [(r["block"],r["ordinal"],r["truth"],r["predicted"]) for r in before["rows"]]==
+                    [(r["block"],r["ordinal"],r["truth"],r["predicted"]) for r in body["rows"]],
+                    "Locked rival changed underlying roles or predictions")
+        groups[key] = {role:scan_rows(body,"whu-honghu",fixed=rivals) for role,body in arm["roles"].items()}
+    return dict(raw=link,rivals=rivals,source=result["rival_rule"],cases=groups)
+
+
+def review(root, out, code, directories, producers, floor_pin, rival_pin):
     from scripts.run_frozen_band_region import _write
     from scripts.run_wp12_real_attribution import roster
 
@@ -237,6 +266,7 @@ def review(root, out, code, directories, producers, floor_pin):
         attribution_producers=producers,receipts=receipts,historical_objects=archive,
         xuzhou=xz_summary(xz,previous["frozen_actual_retained_views"]),
         honghu_short=honghu_summary(cases["honghu_short"]),honghu_120=honghu_summary(cases["honghu_120"]),
+        honghu_120_locked_rival=locked_review(root,rival_pin,cases["honghu_120"]),
         recorded_gradient_exposure=dict(xuzhou=gradients.xuzhou(root),
              honghu_short=gradients.honghu(root,cases["honghu_short"],True),
              honghu_120=gradients.honghu(root,cases["honghu_120"],False)),

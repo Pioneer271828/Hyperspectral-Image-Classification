@@ -100,6 +100,7 @@ def real_attribution(argv):
     parser.add_argument("--expected-commit",required=True)
     parser.add_argument("--source-shard",nargs=3,action="append",required=True,metavar=("GROUP","DIRECTORY","SHA"))
     parser.add_argument("--floor",nargs=2,required=True,metavar=("FILE","SHA"))
+    parser.add_argument("--locked-rivals",nargs=2,required=True,metavar=("FILE","SHA"))
     args = parser.parse_args(argv)
     root,out = args.runs.resolve(strict=True),external_directory(args.out)
     code = code_snapshot()
@@ -111,7 +112,8 @@ def real_attribution(argv):
     require(set(sources)==set(SHARD_GROUPS) and len(args.source_shard)==len(SHARD_GROUPS)
             and all(root in folder.parents for folder in sources.values()),"Each released group needs its exact pinned source")
     floor_pin = dict(zip(("path","sha256"),args.floor,strict=True))
-    result = review(root,out,code,sources,producers,floor_pin)
+    rival_pin = dict(zip(("path","sha256"),args.locked_rivals,strict=True))
+    result = review(root,out,code,sources,producers,floor_pin,rival_pin)
     require_frozen_code(code)
     print(json.dumps(result),flush=True)
 

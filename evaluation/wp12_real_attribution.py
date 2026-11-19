@@ -51,7 +51,7 @@ def prepared_roles(scene, allowed, release, case, *, long_fit):
             for role,budget in (("train",case["k"]),("val",5))}
 
 
-def hh_endpoint(model, scene, role_views, role_meta, reference, *, device):
+def hh_endpoint(model, scene, role_views, role_meta, reference, *, fixed_rivals=None):
     values = {}
     for role, views in role_views.items():
         _, labels, population = role_meta[role]
@@ -59,7 +59,8 @@ def hh_endpoint(model, scene, role_views, role_meta, reference, *, device):
         for block,(tile,cells,view) in enumerate(views,1):
             n = len(cells)
             if n:
-                derived,_ = linear.tile_rows(model,scene,tile,view,cells,labels[offset:offset+n].tolist(),block,reference)
+                derived,_ = linear.tile_rows(model,scene,tile,view,cells,labels[offset:offset+n].tolist(),block,reference,
+                                             fixed_rivals=fixed_rivals)
                 rows.extend(derived)
             offset += n
         require(offset==len(labels),"Role-native blocks differ from the authorized ordered point population")
@@ -97,7 +98,7 @@ def hh_fit(root, group, case, reg, scene, allowed, frozen, release, weights_pin,
             require(cursor==step,"Repeated physical weights at different cursors require explicit provenance")
             fit[name] = dict(reuse="selected",cursor=cursor)
             continue
-        roles = hh_endpoint(model,scene,role_views,role_meta,reference,device=device)
+        roles = hh_endpoint(model,scene,role_views,role_meta,reference)
         for role,body in roles.items():
             former_confusion(body["rows"],saved[name][role],22)
             if name!="initial":
@@ -105,7 +106,7 @@ def hh_fit(root, group, case, reg, scene, allowed, frozen, release, weights_pin,
         full = None
         if extra_full is not None and name=="selected":
             held = hh.fixed_views(scene,allowed,role_meta["val"][0],extra_full[0],"val")
-            full = hh_endpoint(model,scene,{"val":held},role_meta,reference,device=device)["val"]
+            full = hh_endpoint(model,scene,{"val":held},role_meta,reference)["val"]
             former_confusion(full["rows"],extra_full[1],22)
         fit[name] = dict(cursor=cursor,state=current,roles=roles,selected_full_development=full,
                          parameter_delta=linear.parameter_deltas(reference,linear.weights(model,scene.dataset)))
@@ -160,13 +161,18 @@ def short_cases(root, keys, device):
         yield row
 
 
-def long_cases(root, keys, device):
+def long_context(root):
     parent = stages.json_pin(root,proof(root,"p4"))
     scope = stages.json_pin(root,parent["scientific_scope"])
     reg = stages.json_pin(root,dict(path=scope["registration"],sha256=scope["protected_files"][scope["registration"]]))
     plan = stages.json_pin(root,dict(path=reg["plan"],sha256=reg["pins"][reg["plan"]]))
     exposure = stages.json_pin(root,dict(path=reg["exposure"]["plan"],sha256=reg["pins"][reg["exposure"]["plan"]]))
     geometry,allowed,scene,frozen = hh.prior.inputs(reg,plan,exposure)
+    return parent,reg,plan,geometry,allowed,scene,frozen
+
+
+def long_cases(root, keys, device):
+    parent,reg,plan,geometry,allowed,scene,frozen = long_context(root)
     for item in parent["cases"]:
         case = item["case"]
         if case["id"] not in keys:
@@ -191,6 +197,45 @@ def long_cases(root, keys, device):
         require(row["states"]==audit["state_sha256"] and row["fit"]["selected"]["cursor"]==audit["selected_step"],
                 "Reviewed 120-step endpoint differs from exact approved checkpoint")
         yield row
+
+
+def locked_honghu_rivals(root,device):
+    parent,reg,plan,geometry,allowed,scene,frozen = long_context(root)
+    cohort = [item for item in parent["cases"] if item["case"]["k"]==5 and item["case"]["method"]=="scratch"]
+    require(len(cohort)==5,"Expected all five reviewed K5 scratch arms")
+    rivals = {}
+    for cls in (15,21):
+        votes = np.sum([item["paired"]["heads"]["graph"]["confusion"][cls-1] for item in cohort],axis=0)
+        votes[cls-1] = 0
+        require(votes.max()>0,"No archived fixed confusing competitor")
+        rivals[cls] = int(votes.argmax())+1
+    output = {}
+    for item in cohort:
+        case = item["case"]
+        audit = stages.json_pin(root,item["audit"])
+        path, = [path for path in audit["artifact_pins"] if path.endswith("/split/state.pt")]
+        link = dict(path=path,sha256=audit["artifact_pins"][path])
+        state = checkpoint(root,link)
+        model,_ = long.initialize_case(reg,case)
+        reference = linear.weights(model,scene.dataset)
+        model.load_state_dict(state["best"]["model"],strict=True)
+        model.to(device).eval().requires_grad_(False)
+        state_before = state_hash(model)
+        require(state_before==audit["state_sha256"]["selected"] and state["best"]["step"]==30,
+                "Foreign selected HongHu weight")
+        release = hh.prior.released_roles(reg,plan,geometry,allowed,case)
+        roles = prepared_roles(scene,allowed,release,case,long_fit=True)
+        require({role:value[2] for role,value in roles.items()}==item["populations"],"Different paired roles")
+        source = {role:hh.fixed_views(scene,allowed,data[0],
+                   {"sampling":frozen["records"][role],"metadata":"nominal"},role) for role,data in roles.items()}
+        fit = hh_endpoint(model,scene,source,roles,reference,fixed_rivals=rivals)
+        for role,role_rows in fit.items():
+            former_confusion(role_rows["rows"],audit["fit"]["selected"][role]["heads"],22)
+        require(state_hash(model)==state_before,"Locked opponent probing changed the model")
+        output[case["id"]] = dict(weights=link,selected=30,roles=fit)
+    return dict(schema="wp12_honghu_archived_fixed_rival_v1",rivals=rivals,arms=output,real_updates=0,
+                raw_gt_loaded=False,query_accessed=False,
+                rival_rule="argmax_wrong_from_archived_graph_devval_confusion_same_five_arm_group")
 
 
 def xz_layout(scene,record):

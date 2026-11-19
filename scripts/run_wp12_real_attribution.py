@@ -65,6 +65,7 @@ def main(argv=None):
     parser.add_argument("--case",action="append")
     parser.add_argument("--shard",nargs=2,type=int,metavar=("INDEX","COUNT"),default=(0,1))
     parser.add_argument("--gpu")
+    parser.add_argument("--locked-honghu-rival",action="store_true")
     args = parser.parse_args(argv)
     root,out = args.runs.resolve(strict=True),external_directory(args.out)
     code = code_snapshot()
@@ -75,6 +76,15 @@ def main(argv=None):
     index,count = args.shard
     require(0<=index<count and (args.case is None or len(set(args.case))==len(args.case)
             and set(args.case)<=set(keys)),"Unknown authorized case or shard")
+    if args.locked_honghu_rival:
+        require(args.group=="honghu_120" and args.case is None and (index,count)==(0,1) and not out.exists(),
+                "Locked competitor probe consumes the exact reviewed K5 cohort")
+        with arithmetic(root,args.gpu) as execution:
+            result = study.locked_honghu_rivals(root,execution.device)
+        require_frozen_code(code)
+        out.parent.mkdir(parents=True,exist_ok=True)
+        print(json.dumps(archive._write(out,{**result,"producer":code["commit"]})),flush=True)
+        return
     selected = keys if args.case is None else [item for item in keys if item in args.case]
     run(root,out,code,args.group,selected[index::count],args.gpu)
 
