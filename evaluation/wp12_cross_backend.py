@@ -386,7 +386,13 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
                 h:raw_pair([truth[i] for i in indices], [pred_before[h][i] for i in indices],
                            [pred_after[h][i] for i in indices], classes, floor=FORMAL_FLOOR) for h in HEADS})
                 for name, indices in strata.items()}
-    return dict(accuracy=scores, qualification=qualifications, spatial=spatial, cost=costs, blocks=blocks)
+    result = dict(accuracy=scores, qualification=qualifications, spatial=spatial, cost=costs, blocks=blocks)
+    sample = first[(band,tiles[0])]["accuracy"]
+    if sample is not None and "causal" in sample["graph"].get("regional_support",{}):
+        from evaluation.wp12_causal_mechanism import summarize
+
+        result["causal"] = summarize(first,second,band,tiles,scene)
+    return result
 
 
 def compare_devices(reference, capture):
