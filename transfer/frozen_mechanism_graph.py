@@ -13,6 +13,7 @@ from model.graph_state import GraphState
 from model.research_config import digest
 from research_runtime import tensor_hash
 from transfer.development_blocks import array_hash
+from transfer.g3_training import state_hash
 from transfer.multiscale_region_graph import MultiRangeBackbone, _graph_forward
 
 
@@ -91,7 +92,7 @@ def _input(model, view, registered_units):
 
 @torch.no_grad()
 def execute(model, dataset, view, offsets, classes, scale, *, role, model_state,
-            registered_units=True, frozen=None, make_embeddings=False):
+            registered_units=True, frozen=None, make_embeddings=False, cache_only=False):
     backbone = model.backbone
     device = next(model.parameters()).device
     if model.training or backbone.graph_mode != "learned" or backbone.adapter.cache_attention:
@@ -101,6 +102,8 @@ def execute(model, dataset, view, offsets, classes, scale, *, role, model_state,
         raise ValueError("Only the registered fixed-mean multirange branch has legal graph exchange")
     owner = (dataset, model_state, str(device), scale, bool(registered_units))
     geo, observation = geometry_hash(view, role), view_hash(view)
+    if cache_only and (model_state != state_hash(model) or (frozen is not None and frozen.source_view != observation)):
+        raise ValueError("Frozen graph cache model or retained observation differs")
     graph, stages, predictions = [], [], []
     build, stage, predict = backbone.learnable_graph.build_graph, backbone.forward_stages, model.predict_features
 
@@ -114,6 +117,8 @@ def execute(model, dataset, view, offsets, classes, scale, *, role, model_state,
                                        current.weights if current else None, owner, geo, observation, features)
         else:
             chosen = frozen.validate(owner, geo, features)
+            if cache_only and chosen.source_feature != tensor_hash(features):
+                raise ValueError("Frozen graph cache source features differ")
             if current is not None:
                 current.wider_graph, current.weights = chosen.wider, chosen.weights
         graph.append((chosen, tensor_hash(features)))

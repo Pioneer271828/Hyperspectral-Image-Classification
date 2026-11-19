@@ -11,6 +11,7 @@ Primary Windows workspace: **`F:/E2E_VCA`**, branch **`codex/f-drive-primary`**.
 - [Current status](research/当前搭建状态与审查整改清单_20261102.md): the single human-readable status table, generated from [current-status.json](docs/architecture/current-status.json).
 - [Delivery and branch guide](docs/guides/current-baseline.md): exact branch roles, integration boundaries and remote validation.
 - [Module map](docs/architecture/module-map.json): code and test navigation; historical notes are evidence for their named versions.
+- [Native development Bank and coverage CLI](docs/guides/native-coverage-release.md)
 - [Research master plan](research/研究内容整合与详细搭建测试计划_2026-10-28.md), [implementation plan](research/模块化搭建与测试消融实施计划_2026-10-28.md), and [mandatory scope](research/全量研究模块必测清单_20261104.md): design and experiment requirements.
 - [Remaining scope and acceptance principles](research/研究内容整合与详细搭建测试计划_2026-10-28.md#remaining-scope-20261110) and [12 work packages](research/模块化搭建与测试消融实施计划_2026-10-28.md#remaining-plan-20261110): the 2026-11-10 planning revision. This documentation update does not resume implementation or training; execution state remains in the current status JSON.
 - [Contributing](CONTRIBUTING.md) and [execution rules](AGENTS.md).

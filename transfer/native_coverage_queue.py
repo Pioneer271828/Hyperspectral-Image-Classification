@@ -147,6 +147,10 @@ class CoverageFixture(SpatialReleasedFixture):
         expected, _ = generated(scene, support, k, split)
         bank = custody.Bank(queue["banks"][key], root/"inputs", expected)
         source = queue["sources"][scene]
+        weight_path = root/"inputs"/f"{scene}-static-source.pt"
+        check(Path(source["weights"]["path"]) == weight_path and
+              Path(source["sidecar"]["path"]) == Path(str(weight_path)+".json"),
+              "Source checkpoint escapes the queue's published inputs")
         self.bank, self.source_files, self.roster = bank, deepcopy(source), {}
         self.scene, self.classes = scene, SCENES[scene]
         self.source_seed, self.split, self.arm, self.producer = source_seed(scene), split, cfg["spectral_arm"], queue["producer"]
@@ -259,6 +263,15 @@ def validation_rows(evaluated):
     return result
 
 
+def prediction_capture(rows):
+    def capture(event, actual, output, targets):
+        rows.append(dict(band=event["band"], observation=actual.receipt["observation"],
+                         truth=[label for _, label in targets.points],
+                         probabilities={head: values.detach().cpu().numpy()[targets.cells].tolist()
+                                        for head, values in zip(HEADS, output[:3], strict=True)}))
+    return capture
+
+
 def run_case(root, code, name, *, execution=None):
     started = perf_counter()
     queue = load_queue(root, code)
@@ -271,12 +284,19 @@ def run_case(root, code, name, *, execution=None):
     place = group/name
     with case_lock(place):
         receipt = place/"receipt.json"
+        registration = place/"registration.json"
+        if registration.exists():
+            registration_pin = pin(registration)
+            check(_read(registration_pin) == spec, "Persisted training registration differs")
+        else:
+            registration_pin = _write(registration, spec)
         phases = {}
         for phase in PHASES:
             phases[phase] = _stage(place, spec, phase, provider, phases, execution)
         if receipt.exists():
             result = _read(pin(receipt))
-            check(result["registration"] == digest(spec) and result["stages"] == phases,
+            check(result["registration"] == digest(spec) and result["registration_file"] == registration_pin
+                  and result["stages"] == phases,
                   "Completed result does not match its registered execution")
             return dict(case=name, reused=True, new_updates=0, receipt=pin(receipt))
         packets = {phase: load(Path(row["checkpoint"]["path"])) for phase, row in phases.items()}
@@ -287,23 +307,74 @@ def run_case(root, code, name, *, execution=None):
         packet = full["selected"]
         runner = native.Run(spec, code["commit"], execution=execution, released=provider)
         runner.model.load_state_dict(packet["state"], strict=True)
-        evaluated = runner.evaluate(packet["step"], detailed=True)
+        predictions = []
+        evaluated = runner.evaluate(packet["step"], detailed=True, observe=prediction_capture(predictions))
         check(evaluated["fused_nll"] == packet["fused_nll"], "Selected frozen validation changed")
         changed = sorted({key for row in full["history"] for key, value in row["fresh"].items()
                           if value["changed"] and (value["gradient_l1"] or 0) > 0})
         check(provider.arm == "none" or changed, "Coverage arm made no effective update")
         require_frozen_code(code)
-        result = dict(**provider.config, registration=digest(spec), bank=provider.bank.pin["sha256"],
+        result = dict(**provider.config, registration=digest(spec), registration_file=registration_pin,
+                      bank=provider.bank.pin["sha256"],
                       fit_statistics=provider.bank.release.statistics["statistics_hash"],
                       inputs=digest(spec["inputs"]), source=spec["source"], parameters=spec["parameters"],
                       roster={role: counts(provider.bank.role_rows(role), provider.classes) for role in ("devtrain", "devval")},
                       selected_step=packet["step"], selection_nll=packet["fused_nll"],
-                      validation=validation_rows(evaluated), stages=phases,
+                      validation=validation_rows(evaluated), predictions=predictions, stages=phases, numeric=numeric,
                       resume_bitwise_equal=True, completed_bitwise_equal=True, changed_coverage=changed,
                       optimizer_updates=sum(stage["updates"] for stage in phases.values()),
                       endpoint_validation_seconds=runner.timing["validation_seconds"],
                       elapsed_seconds=perf_counter()-started, real_updates=0, query_accessed=False)
         return dict(case=name, reused=False, receipt=_write(receipt, result))
+
+
+def reload_selected(root, code, name, source_device, *, execution=None):
+    """Read an accepted selected state on a different device without restoring its optimizer."""
+    from transfer.p4_runtime_device import UUID
+
+    numeric = None if execution is None else execution.numeric
+    destination = "cpu" if numeric is None else numeric["physical_uuid"]
+    check(source_device != destination and (source_device == "cpu" or UUID.fullmatch(source_device)),
+          "Read-only evaluation requires a different registered device")
+    place = root/"cases"/source_device/name
+    prior = _read(pin(place/"receipt.json"))
+    registration = prior["registration_file"]
+    spec = _read(registration)
+    checkpoint = prior["stages"]["full"]["checkpoint"]
+    check(registration == pin(place/"registration.json") and prior["registration"] == digest(spec)
+          and spec["producer"] == code["commit"] and spec["case"] == design()[name]
+          and checkpoint == pin(place/"full.pt")
+          and (source_device == "cpu" if spec["numeric"] is None else spec["numeric"]["physical_uuid"] == source_device),
+          "Foreign frozen checkpoint, source device or registration")
+    packet = load(place/"full.pt")
+    check(packet["registration"] == digest(spec) and packet["cursor"] == spec["steps"],
+          "Read-only evaluation requires a complete published checkpoint")
+    selected = packet["selected"]
+    provider = CoverageFixture(root, load_queue(root, code), name)
+    target = provider.contract(spec["classes"], spec["seed"], "off", 1, code["commit"], numeric=numeric)
+    check({**target, "numeric": spec["numeric"]} == spec, "Cross-device readout changed the training scope")
+    runner = native.Run(target, code["commit"], execution=execution, released=provider)
+    runner.model.load_state_dict(selected["state"], strict=True)
+    model = state_hash(runner.model)
+    predictions = []
+    evaluated = runner.evaluate(selected["step"], observe=prediction_capture(predictions))
+    errors = {}
+    for expected, row in zip(prior["predictions"], predictions, strict=True):
+        check(expected["band"] == row["band"] and expected["observation"] == row["observation"]
+              and expected["truth"] == row["truth"], "Cross-device evaluation changed released data identity")
+        for head in HEADS:
+            a, b = (np.asarray(v["probabilities"][head]) for v in (expected, row))
+            difference = float(np.max(np.abs(a-b), initial=0))
+            errors[head] = max(errors.get(head, 0), difference)
+    check(max(errors.values()) <= 2e-4 and model == state_hash(runner.model),
+          "Frozen selected state drifted after cross-device evaluation")
+    folder = root/"device-reloads"
+    folder.mkdir(exist_ok=True)
+    require_frozen_code(code)
+    return _write(folder/f"{name}--{source_device}--{destination}.json", dict(
+        schema=SCHEMA, producer=code["commit"], case=name, source_device=source_device, target_device=destination,
+        checkpoint_sha256=checkpoint["sha256"], model=model, selected=selected["step"], probability_max_error=errors,
+        validation_nll=evaluated["fused_nll"], timing=runner.timing, optimizer_updates=0, real_updates=0))
 
 
 def _cpu_job(args):

@@ -215,11 +215,11 @@ class Run:
         self.timing["graph_seconds"] += sum(timed["graph_seconds"])
         return out,graph,condition
 
-    def evaluate(self, step, *, detailed=False):
+    def evaluate(self, step, *, detailed=False, observe=None):
         started = perf_counter()
         value = evaluate_validation(self.model, self._contract["validation"], step,
             lambda event: self._materialize(self._val, event), self._forward, released=self._released,
-            detailed=detailed)
+            detailed=detailed, observe=observe)
         self.timing["validation_seconds"] += perf_counter()-started
         return value
 

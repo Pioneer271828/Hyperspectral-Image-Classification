@@ -150,8 +150,11 @@ def coverage(args, root, out, code):
 
     if sys.platform != "linux" or not __debug__:
         raise ValueError("Coverage commands require the authorized Linux environment and assertions")
-    if args.mode != "coverage-run" and (args.gpu or args.case or args.workers != 1):
-        raise ValueError("Device, case and workers apply only to a coverage queue run")
+    queue_modes = ("coverage-run", "coverage-reload")
+    if args.mode not in queue_modes and (args.gpu or args.case or args.workers != 1):
+        raise ValueError("Device, case and workers apply only to coverage execution")
+    if (args.mode == "coverage-reload") != bool(args.from_device):
+        raise ValueError("Cross-device reload requires its explicit source device")
     if args.mode != "coverage-replay" and args.archive:
         raise ValueError("Historical pins apply only to frozen replay")
     if args.mode == "coverage-register":
@@ -167,6 +170,13 @@ def coverage(args, root, out, code):
             return json.dumps(queue.run_queue(out, code, names, args.workers))
         with arithmetic(root, args.gpu) as execution:
             return json.dumps(queue.run_queue(out, code, names, args.workers, execution=execution))
+    if args.mode == "coverage-reload":
+        if args.workers != 1 or args.case not in queue.design():
+            raise ValueError("Cross-device reload requires a single registered case")
+        if args.gpu is None:
+            return queue.reload_selected(out, code, args.case, args.from_device)
+        with arithmetic(root, args.gpu) as execution:
+            return queue.reload_selected(out, code, args.case, args.from_device, execution=execution)
     if args.mode == "coverage-replay":
         from transfer.native_coverage_replay import replay
         return replay(root, out, code, args.archive)
@@ -182,7 +192,9 @@ def main(argv=None, *, intake=None):
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--gpu")
     parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage", "coverage-register",
-                                            "coverage-run", "coverage-replay", "coverage-audit"), required=True)
+                                            "coverage-run", "coverage-replay", "coverage-reload",
+                                            "coverage-audit"), required=True)
+    parser.add_argument("--from-device")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--archive", nargs=2, action="append", default=[], metavar=("PATH", "SHA256"))
     parser.add_argument("--preflight", nargs=2, metavar=("PATH", "SHA256"))
