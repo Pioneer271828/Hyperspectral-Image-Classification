@@ -155,7 +155,7 @@ def xuzhou(root):
     started = perf_counter()
     registers = {family:provenance(root,family) for family in XZ}
     first, second = (registers[k][0] for k in XZ)
-    require(all(first[k] == second[k] for k in ("source_state","source_hash","prior","exposure_hash",
+    require(all(first[k] == second[k] for k in ("source_state","prior","exposure_hash",
                 "exposure_prefix","covered_support","minimum_visits","budget","recall_floor_delta"))
             and all(first[k]["sha256"] == second[k]["sha256"] for k in ("source","sidecar")),
             "Historic campaigns cannot share a matched training cohort")
