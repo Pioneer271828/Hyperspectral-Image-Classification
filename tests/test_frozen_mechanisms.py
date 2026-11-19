@@ -38,7 +38,7 @@ def test_graph_exchange_through_original_heads_and_negative(mode):
     torch.set_num_threads(1)
     torch.manual_seed(6)
     model = ConditionalMultiscaleVCASAHGCN({"xuzhou": 3}, graph_multiscale=mode, latent_channels=8,
-                                           adapter_embed_dim=8, norm_type="group_norm").eval()
+                                           adapter_embed_dim=8, norm_type="group_norm", graph_mode="learned").eval()
     model.backbone.adapter.cache_attention = False
     rng = np.random.default_rng(88)
     values = rng.random((9, 9, 16), dtype=np.float32)
