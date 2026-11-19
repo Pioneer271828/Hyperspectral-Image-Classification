@@ -131,7 +131,14 @@ class GraphProgram:
         timings = dict(anchor_graph_seconds=build if new else 0.,**search)
         return BoundSupport(entry,pairs,selector,proof,timings)
 
-    def _select(self, entry, box, tick):
+    def matching_probe(self, actual, producer, role):
+        require(self.policy=="strict_matched","Only the strict policy can preflight exact feasibility")
+        entry,_ = _cpu_capture(self.anchor,actual,producer,role)
+        _,_,proof,timings = self._select(entry,actual.receipt["box"],self.budget,require_match=False)
+        return dict(view=actual.receipt["observation"],match=proof["strict_match"],timing=timings,
+                    nnz=proof["original_counts"]["nnz"])
+
+    def _select(self, entry, box, tick, *, require_match=True):
         started = perf_counter()
         original = _edges(entry["adjacency"])
         degree = Counter(row for row,_ in original)
@@ -151,8 +158,10 @@ class GraphProgram:
             match = match_support(pairs,allowed,entry["mandatory"],points,entry["context"]["partitions"],
                                   entry["context"]["node_ids"],seed=self.seed,limit=4096)
             match_seconds = match.pop("seconds")
-            require(match["status"]=="MATCHED","Nontrivial exact degree/distance support unavailable")
-            pairs = list(map(tuple,match["pairs"]))
+            if match["status"]=="MATCHED":
+                pairs = list(map(tuple,match["pairs"]))
+            else:
+                require(not require_match,"Nontrivial exact degree/distance support unavailable")
         fixed = invariants(original,points)
         chosen = invariants(pairs,points)
         require(fixed["nnz"]==chosen["nnz"] and fixed["receive"]==chosen["receive"],
