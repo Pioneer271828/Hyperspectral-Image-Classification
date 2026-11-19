@@ -179,16 +179,24 @@ def forward(model, actual, producer, role, *, condition=None, timed=None, execut
     builder = model.backbone.learnable_graph
     graphs, timing = [], {} if timed is None else timed
     bands = actual.view.bands
-    kwargs = coverage_forward_kwargs(model,bands)
-    kwargs["wavelength_unit"] = bands.wavelength_unit
-    if bands.fwhm is not None:
-        kwargs["fwhm"] = np.asarray(bands.fwhm,dtype=np.float32)
-        kwargs["fwhm_unit"] = bands.fwhm_unit
+    source_mode = receipt["source"].get("spectral_metadata_mode", "declared")
+    if source_mode not in ("declared", "shuffled", "index", "missing"):
+        raise ValueError("Unknown native spectral metadata mode")
+    if source_mode in ("index", "missing") and bands.wavelength_quality != "index_only":
+        raise ValueError("Index-only observation identity required for this spectral mode")
+    effective = None if source_mode == "missing" else bands
+    wavelengths = None if effective is None else np.asarray(effective.wavelengths, dtype=np.float32)
+    kwargs = coverage_forward_kwargs(model, effective)
+    if effective is not None:
+        kwargs["wavelength_unit"] = effective.wavelength_unit
+        if effective.fwhm is not None:
+            kwargs["fwhm"] = np.asarray(effective.fwhm, dtype=np.float32)
+            kwargs["fwhm_unit"] = effective.fwhm_unit
     if graph_scale is None:
         graph_scale = 16 if condition is not None else (50 if actual.dataset == "paviaU" else 100)
     if type(graph_scale) is not int or graph_scale not in (16, 50, 100):
         raise ValueError("Unknown registered graph scale")
-    args = (model, actual.dataset, actual.view.observation, np.asarray(bands.wavelengths, dtype=np.float32),
+    args = (model, actual.dataset, actual.view.observation, wavelengths,
             graph_scale)
     started = perf_counter()
     partition = forward_partition if execution is None else execution.partition
@@ -198,7 +206,7 @@ def forward(model, actual, producer, role, *, condition=None, timed=None, execut
                 else execution.measure_graph(builder,timing,capture))
     with measured:
         if isinstance(model, ConditionalMultiscaleVCASAHGCN):
-            metadata, coverage, gsd = (bands, None, None) if condition is None else condition.values()
+            metadata, coverage, gsd = (effective, None, None) if condition is None else condition.values()
             with model.partition_bands(metadata), model.physical_conditions(coverage,gsd):
                 out = partition(*args, **kwargs)
         else:

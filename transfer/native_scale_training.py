@@ -122,7 +122,9 @@ class Run:
             from transfer import native_released_training
             from transfer.native_released_real import RealReleasedRun
             if released is not native_released_training and type(released) is not RealReleasedRun:
-                raise ValueError("Unknown released supervision provider")
+                from transfer.spatial_coverage_training import SpatialReleasedFixture
+                if type(released) is not SpatialReleasedFixture or not released.is_synthetic:
+                    raise ValueError("Unknown released supervision provider")
         self._capacity = None
         self._region_action = None
         if released is not None and released is native_released_training:

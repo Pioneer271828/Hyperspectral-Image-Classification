@@ -1,0 +1,150 @@
+"""Bind buffer-safe parent folds, released points and physical band views."""
+
+from dataclasses import replace
+from collections import defaultdict
+
+import numpy as np
+import torch
+
+from loadData.observation_sampling import BandMetadata, _apply
+from loadData.spatial_protocol import validate_statistics
+from model.research_config import digest
+from research_runtime import tensor_hash
+from transfer.development_bank import _gap
+from transfer.development_blocks import array_hash
+from transfer.frozen_band_region import _spatial_view
+from transfer.g3_training import state_hash
+from transfer.native_released_points import bind
+from transfer.native_scale_observation import Lattice, _materialize
+from transfer.p4_spatial import SHARED
+
+SEED = 114031
+VIEWS = {
+    "full": ("full", "declared"),
+    "continuous": ("continuous", "declared"),
+    "dispersed": ("dispersed", "declared"),
+    "nominal_index": ("dispersed", "index"),
+    "missing": ("dispersed", "missing"),
+    "shuffled": ("dispersed", "shuffled"),
+    "held_range": ("held_range", "declared"),
+}
+TRAIN_VIEWS = ("full", "continuous", "dispersed", "shuffled", "full", "continuous")
+
+
+def counts(rows, classes):
+    return np.bincount([label for row in rows for _, label in row["samples"]],
+                       minlength=classes+1)[1:].tolist()
+
+
+def parent_folds(rows, classes, gap):
+    index = defaultdict(list)
+    for row in rows:
+        if row["role"] != "devtrain" or row["blocked"] is not None:
+            raise ValueError("Spatial diagnostic requires only published training blocks")
+        index[row["parent_tile"]].append(row)
+    order = sorted(index, key=lambda key: digest([SEED, key]))
+    sets = [set(order[::2]), set(order[1::2])]
+    result = []
+    for held in sets:
+        val = [row for key in held for row in index[key]]
+        possible = [row for key in set(index)-held for row in index[key]]
+        train = [row for row in possible if all(_gap(row["box"], other["box"]) >= gap for other in val)]
+        actual_gap = min((_gap(a["box"], b["box"]) for a in train for b in val), default=None)
+        train_ids, val_ids = ({i for row in rows for i, _ in row["samples"]} for rows in (train, val))
+        if train_ids & val_ids or held & {r["parent_tile"] for r in train}:
+            raise ValueError("Fit and held roles have common sample IDs or parents")
+        result.append(dict(fit=sorted(r["id"] for r in train), held=sorted(r["id"] for r in val),
+                           fit_parents=len({row["parent_tile"] for row in train}), held_parents=len(held),
+                           min_gap=actual_gap, buffer_excluded=len(possible)-len(train),
+                           fit_counts=counts(train, classes), held_counts=counts(val, classes)))
+    return result
+
+
+def release_statistics(arrays, rows, plan):
+    training = [arrays[row["id"]] for row in rows if row["role"] == "devtrain"]
+    if not training or any(not np.isfinite(value).all() for value in training):
+        raise ValueError("Train-only finite raw observations required")
+    low = np.minimum.reduce([value.min(axis=(0, 1)) for value in training])
+    high = np.maximum.reduce([value.max(axis=(0, 1)) for value in training])
+    stats = dict(schema_version=1, plan_hash=plan, fit_partition="train",
+                 minimum=low.tolist(), maximum=high.tolist())
+    stats["statistics_hash"] = digest(stats)
+    validate_statistics(stats, {"plan_hash": plan})
+    return stats
+
+
+def retained_positions(bands, name):
+    if name not in VIEWS:
+        raise ValueError("Unregistered physical observation")
+    valid = np.flatnonzero(bands.valid)
+    if len(valid) < 4:
+        raise ValueError("Need four original retained-valid positions")
+    size = len(valid) // 2
+    shape, _ = VIEWS[name]
+    return tuple(int(x) for x in {
+        "full": valid,
+        "continuous": valid[:size],
+        "held_range": valid[-size:],
+        "dispersed": valid[np.linspace(0, len(valid)-1, size, dtype=int)],
+    }[shape])
+
+
+def apply_view(full, master, name, box=None):
+    if full.bands.fingerprint != master.fingerprint:
+        raise ValueError("Band view must start from the authorized original axis")
+    positions = retained_positions(master, name)
+    view = _apply(full.observation, master, positions)
+    _, mode = VIEWS[name]
+    effective = view.bands
+    if mode in ("index", "missing"):
+        coordinates = (tuple(i/(len(master.band_ids)-1) for i in positions) if mode == "index"
+                       else tuple(np.linspace(0., 1., len(positions))))
+        effective = BandMetadata(master.source_id, view.bands.band_ids, coordinates, "normalized",
+                                 "index_only", view.bands.valid)
+    if mode == "shuffled":
+        widths = effective.fwhm
+        effective = replace(effective, wavelengths=effective.wavelengths[::-1],
+                            fwhm=widths[::-1] if widths is not None else None)
+    return replace(view, observation=_spatial_view(view.observation, box), bands=effective), positions, mode
+
+
+def bank_view(bank, row, producer, band, box=None):
+    _, _, original, context = bank.materialize(row, {"mode": "none"})
+    release = bank.release
+    stats = release.statistics
+    if (stats["statistics_hash"] != context["statistics"]["parent_statistics_hash"]
+            or original.observation.plan_hash != release.plan_hash):
+        raise ValueError("Statistics or space differs from the bank release")
+    view, positions, mode = apply_view(original, release.bands, band, box)
+    source = {**context, "positions": list(positions), "band_ids": list(view.bands.band_ids),
+              "retained_statistics": digest(dict(plan=release.plan_hash, parent=stats["statistics_hash"],
+                                                minimum=[stats["minimum"][i] for i in positions],
+                                                maximum=[stats["maximum"][i] for i in positions],
+                                                band_ids=list(view.bands.band_ids))),
+              "normalized": array_hash(view.observation.spectral), "band_order": view.bands.fingerprint,
+              "band_view": band, "spectral_metadata_mode": mode, "registered_box": box}
+    lattice = Lattice.make(row["box"], release.shape[:2], 1)
+    actual = _materialize(release.scene, release.classes, view, lattice, source, row["role"], producer)
+    targets = bind(actual, row, producer, row["role"])
+    return actual, np.asarray(targets.points, dtype=np.int64).reshape((-1, 2)), targets
+
+
+def model_from_source(source, fresh, target):
+    """Copy the established P4 shared tensors; leave the target graph and heads fresh."""
+    if target in source.heads or source.backbone.graph_mode != "static" or fresh.backbone.graph_mode != "learned":
+        raise ValueError("Source tasks or graph role differ from the transfer contract")
+    before = fresh.backbone.state_dict()
+    origin = source.backbone.state_dict()
+    allowed = {key for key in before if key.startswith(SHARED) and ".norms." not in key}
+    actual = {key for key in origin if key.startswith(SHARED) and ".norms." not in key}
+    if allowed != actual or len(allowed) != 29:
+        raise ValueError("P4 shared tensor inventory differs")
+    for key in allowed:
+        if origin[key].shape != before[key].shape or origin[key].dtype != before[key].dtype or not torch.isfinite(origin[key]).all():
+            raise ValueError("Shared source shape, dtype or finiteness differs")
+    graph = {key: tensor_hash(value) for key,value in before.items() if key.startswith("learnable_graph.")}
+    fresh.backbone.load_state_dict({**before, **{key: origin[key] for key in allowed}}, strict=True)
+    initialized = fresh.backbone.state_dict()
+    if len(graph) != 6 or graph != {k: tensor_hash(initialized[k]) for k in graph}:
+        raise ValueError("New target graph reset was not preserved")
+    return dict(source=state_hash(source), copied=sorted(allowed), graph=graph, target=state_hash(fresh))
