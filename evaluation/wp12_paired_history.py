@@ -222,8 +222,16 @@ def index(root):
             "Foreign same-protocol HongHu recovery evidence")
     cursors = {step:{head:focus_from_confusion(row["confusion"],(15,21)) for head,row in heads.items()}
                for step,heads in hh["observations"].items()}
+    full_scene, hardware = (json_pin(root,proof(root,item)) for item in ("old_combined","independent"))
+    require(len(full_scene["combined"])==hardware["case_count"]==54 and hardware["new_query_reads"]==0
+            and full_scene["preregistered_benefit_conclusion"]==hardware["preregistered_benefit_conclusion"],
+            "Foreign full-scene WP12 evidence")
     return dict(schema=SCHEMA,pins=links,
                 frozen_actual_retained_views=frozen_views(root,links),
+                issue184_frozen54=dict(scope="historical_full_scene_full_spectrum",approved_cases=54,
+                    matched_to_guarded_K5=False,full_report=proof(root,"old_combined"),
+                    independent_hardware=proof(root,"independent"),
+                    conclusion=full_scene["preregistered_benefit_conclusion"]),
                 honghu_historical_short=honghu_short(root),honghu_reviewed_120=honghu_120(root),
                 honghu_exact_support_checkpoint_scope=dict(physical_cursors=hh["physical_saved_cursors"],views=cursors,
                     history_22_weight_materialized=hh["history_22_weight_materialized"],
