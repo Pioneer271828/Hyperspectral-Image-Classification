@@ -70,3 +70,27 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 ~~~
 
 发布可以附上 `--gpu`、`--historical-replay`、`--honghu-alternate` 和 `--synthetic-queue`，各自提供绝对路径和 SHA。旧执行产物只有通过父提交及生产运行代码核对后，才可通过 `--execution-commit` 复用。原生覆盖队列用 `coverage-stage-register` 选择完整的合成五臂，通过相同的 `coverage-run` 进入训练和恢复。阶段端点使用已登记的初始化、同序分段的中间检查点、首次最小验证 NLL 选中态和终态。历史固定预算入口保留原有行为。
+
+## 两景 1,500 步匹配训练与独立复盘
+
+在授权 LXC 的干净检出运行。下列一键入口只登记和训练隔离的合成发布。两景各三个模型种子，每个种子运行 `none` 与 `continuous`。候选会共同使用一套 K5 支持、原始物理带 ID、仅由支持块拟合的归一化和对齐的训练曝光。新登记预计双工作进程约 7–26 分钟，实际时间受设备准入和审计影响。
+
+~~~bash
+"$python_bin" -B scripts/run_native_long_coverage.py \
+  --runs "$runs" --campaign "$runs/native-matched-1500" --review "$runs/native-matched-1500-review"
+~~~
+
+需要 CUDA 时，附至多三个完整的 `--gpu "$gpu_uuid"`。同景同种子的两个臂默认在同一个物理设备，CPU 代表保留跨进程排空和连续参考。计算只通过物理卡租约和资源准入进入。要在独立检出仅重算已冻结的 12 例，可用 `--review-only --producer-checkout "$producer_checkout"` 指定完全匹配的生产检出。既有输出通过原始检查点固定清单复用。若重算使用另一提交，WP12 先核对 Git 祖先及未变化的生产源码。
+
+生产步骤对应 `scripts/run_native_released_points.py` 的 `coverage-long-register`、`coverage-long-run --case "$case"` 和 `coverage-long-freeze`，都使用 `--expected-commit "$sha" --runs "$runs" --out "$campaign"`。运行可用 `--drain-after "$absolute_step"` 或发送 SIGTERM。在当前更新完成后写下唯一可继续的检查点，后续进程按同设备和原始曝光继续。SIGKILL 后只复用最近已落盘的检查点。完成重入返回零更新。单独合成参考为 `coverage-long-reference --case xuzhou-m64-none`，额外 1,500 步、不计入 18,000。
+
+选模只读支持和校准角色，校准在 0／150／…／1,500 的全带点上执行，首次最低融合 NLL 为选中态。冻结十二条轨迹以后，WP12 读取独立确认块，针对同点的全带、中央连续缺带、等量分散缺带分别保留三头。图从各自实际保留的波段重建，历史全带固定图不能用于这个干预。每例审计和统一发布分别使用 `scripts/ingest_wp12_evidence.py --long-stage-case` 和 `--long-stage-publish`，需提供已封存清单的路径和 SHA-256。可附 `--historical-snapshot PATH SHA`复用既有洪湖无权重记录。
+
+### 真实发布方最小交接
+
+真实运行需另行授权。登记命令使用 `coverage-long-register --long-real --manifest REQUEST SHA --authority APPROVAL SHA`。申请与授权都必须在授权运行根目录，输出使用明确的独立运行路径。入口先核对授权和发布才创建训练路径。
+
+- 申请 `schema=wp05_native_matched_1500_v1`。提供 `inputs`，以 `xuzhou` 和 `whu-honghu` 为键，每景包括独立开发 `manifest`、`authority` 和 `source`。前两者各提供绝对路径和 SHA-256，`source` 提供相邻的 `.pt` 与 `.pt.json` 固定清单，其源状态绑定发布的 `shared_state`。
+- 提供经预先审核的 WP02 支持、校准、确认三角色，给出原场景父块、空间缓冲及历史祖先。支持种子固定 2048，每类 5 个有效训练点。校准、确认各有逐类支持，校准分数用于选步，确认封存在训练范围外。原波段坐标与物理单位已核验，归一化统计只来自支持数据。
+- 申请中的 `physical_devices` 绑定全部 12 个案例到实体 UUID。授权记录提供 `schema`、`decision=approved`、`scope=external_real_execution`、申请固定清单 `request`、精确 `source_commit` 和 `source_hash`、`destination`、`design_sha256`、`optimizer_updates=18000`、`raw_gt_authorized=false`、`query_authorized=false`。授权由负责发布方提供。在 LXC 可从 `research_runtime.code_snapshot()` 和 `digest(transfer.native_long_campaign.DESIGN)` 得到待审核指纹。
+- 未获授权、通过旧标签家族冒充独立确认、缺源状态或带轴、设备和目的地错配均拒绝。历史缺权重的案例继续留空。真实 18,000 步及五臂 45,000 步方案均未启动。
