@@ -261,6 +261,30 @@ def positive_control(root,out,code,args):
     print(json.dumps(result),flush=True)
 
 
+def production(root, out, code, args):
+    from transfer import native_production_campaign as campaign
+
+    if (sys.platform != "linux" or not __debug__ or args.long_real or args.manifest or args.authority
+            or args.release or args.preflight or args.phase or args.frozen_plan or args.archive or args.from_device
+            or args.drain_after is not None or args.workers != 1 or args.paviau_publication or args.paviau_engineering):
+        raise ValueError("Production verification accepts only the exact registered synthetic program")
+    if args.mode == "production-register":
+        if args.case or args.gpu:
+            raise ValueError("Registration takes no model case or GPU")
+        result = campaign.register(root, out, code)
+    else:
+        plan, _ = campaign.plan_for(root,out,code)
+        if args.case in plan["design"]:
+            cases = [args.case]
+        else:
+            cases = [case for case in plan["design"] if args.case and case.startswith(args.case+"-")]
+        if not cases:
+            raise ValueError("An exact production case or paired case group is required")
+        with arithmetic(root,args.gpu) as execution:
+            result = [campaign.execute_case(root,out,code,case,execution) for case in cases]
+    print(json.dumps(result),flush=True)
+
+
 def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
@@ -274,7 +298,7 @@ def main(argv=None, *, intake=None):
                                             "frozen-stage-run", "coverage-long-register", "coverage-long-run",
                                             "coverage-long-reference", "coverage-long-freeze",
                                             "positive-control-register", "positive-control-run",
-                                            "positive-control-freeze"), required=True)
+                                            "positive-control-freeze", "production-register", "production-run"), required=True)
     parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--authority", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--frozen-plan", nargs=2, metavar=("PATH", "SHA256"))
@@ -298,6 +322,8 @@ def main(argv=None, *, intake=None):
     out = external_directory(args.out)
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
+    if args.mode.startswith("production-"):
+        return production(root, out, code, args)
     if args.mode.startswith("positive-control-"):
         return positive_control(root,out,code,args)
     if args.mode.startswith("coverage-long-"):

@@ -61,15 +61,18 @@ class CenterResidual(MultiDatasetVCASAHGCN):
 class PixelModel(nn.Module):
     """Capacity-matched MLP sharing no context or coordinate input across pixels."""
 
-    def __init__(self, channel_pair):
+    def __init__(self, channel_pair, *, width=SHAPE[-1], classes=CLASSES):
         super().__init__()
         first,second = channel_pair
-        self.layers = nn.Sequential(nn.Linear(SHAPE[-1],first),nn.GELU(),
+        self.width = width
+        self.layers = nn.Sequential(nn.Linear(width,first),nn.GELU(),
                                     nn.Linear(first,second),nn.GELU())
-        self.heads = nn.ModuleList(nn.Linear(second,CLASSES) for _ in range(3))
+        self.heads = nn.ModuleList(nn.Linear(second,classes) for _ in range(3))
 
     def forward(self, spectra, slots):
-        hidden = self.layers(aligned_spectra(spectra,slots))
+        flat = spectra.reshape(-1,spectra.shape[-1])
+        aligned = flat.new_zeros((len(flat), self.width)).index_copy(1, slots, flat-.5)
+        hidden = self.layers(aligned)
         return tuple(head(hidden).softmax(-1) for head in self.heads)
 
 

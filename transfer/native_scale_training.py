@@ -130,7 +130,9 @@ class Run:
                 providers = (SpatialReleasedFixture, BandGraphFixture, BandScaleFixture, CoverageFixture)
                 from transfer.native_long_campaign import MatchedProvider
                 from transfer.native_positive_training import PositiveProvider
-                if type(released) is not MatchedProvider and (type(released) not in (*providers,PositiveProvider) or not released.is_synthetic):
+                from transfer.native_production_provider import ProductionProvider
+                if (type(released) not in (MatchedProvider, ProductionProvider)
+                        and (type(released) not in (*providers, PositiveProvider) or not released.is_synthetic)):
                     raise ValueError("Unknown released supervision provider")
         self._capacity = None
         self._region_action = None

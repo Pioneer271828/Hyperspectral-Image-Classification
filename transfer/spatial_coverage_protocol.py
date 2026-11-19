@@ -144,9 +144,11 @@ def bank_view(bank, row, producer, band, box=None, *, factor=1, profile=None, sy
     return actual, np.asarray(targets.points, dtype=np.int64).reshape((-1, 2)), targets
 
 
-def model_from_source(source, fresh, target):
+def model_from_source(source, fresh, target, *, native_source=False):
     """Copy the established P4 shared tensors; leave the target graph and heads fresh."""
-    if target in source.heads or source.backbone.graph_mode != "static" or fresh.backbone.graph_mode != "learned":
+    expected = "learned" if native_source else "static"
+    if ((not native_source and target in source.heads) or source.backbone.graph_mode != expected
+            or fresh.backbone.graph_mode != "learned"):
         raise ValueError("Source tasks or graph role differ from the transfer contract")
     before = fresh.backbone.state_dict()
     origin = source.backbone.state_dict()
