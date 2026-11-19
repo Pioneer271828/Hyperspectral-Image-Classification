@@ -30,6 +30,26 @@ class CoverageReleaseTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             observation_view("unapproved",intake)
 
+
+    def test_exposure_protocol_cost_consumes_only_observation_rows(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock, patch
+
+        from model.research_config import digest
+        from transfer.native_independent_release import materialize_reviewed, scope_identity
+
+        bank = SimpleNamespace(pin={"sha256":"bank","registration":"release"},
+                               release=SimpleNamespace(plan_hash="geometry"),
+                               observation_row=Mock(return_value={"id":8}), role_row=Mock())
+        roles={"support":[1],"calibration":[2],"evaluation":[8]}
+        report=dict(bank=scope_identity(bank),role_assignment=digest(roles),observation_views=self.views,
+                    observation_exposure=self.exposure,uses={"cost":{"eligible":True}})
+        with patch("transfer.native_independent_release.bank_observation",return_value="unlabelled") as read:
+            self.assertEqual(materialize_reviewed(bank,report,roles,"evaluation",8,"sha",
+                                                 "misaligned_gap",use="cost"),("unlabelled",None,None))
+        bank.role_row.assert_not_called()
+        self.assertEqual(read.call_args.kwargs,{"factor":1,"metadata":"rejected_axis","observation_only":True})
+
     def test_historical_counts_never_infer_integer_counts_from_rounded_scores(self):
         matrix = [[1 if i==j else 0 for j in range(9)] for i in range(9)]
         matrix[4][3] = 1

@@ -34,8 +34,8 @@ FIT_COVERAGE_VIEWS = COLUMN_VIEWS[:3]
 def validate_exposure(exposure, views, *, columns):
     allowed = COLUMN_VIEWS if columns else PHYSICAL_COVERAGE_VIEWS
     check(isinstance(exposure,dict) and set(exposure)==ROLES.keys()
-          and all(isinstance(row,list) and row and len(row)==len(set(row))
-                  and all(v in allowed for v in row) for row in exposure.values())
+          and all(isinstance(row,list) and row and all(isinstance(v,str) and v in allowed for v in row)
+                  and len(row)==len(set(row)) for row in exposure.values())
           and exposure["evaluation"]==views
           and set(exposure["calibration"])<=set(exposure["support"])<=set(FIT_COVERAGE_VIEWS)
           and set(exposure["support"])<set(views) and "full" in exposure["calibration"],
@@ -275,7 +275,7 @@ def materialize_reviewed(bank, report, assigned, role, tile, producer, band, *, 
             or ("observation_exposure" in report and band not in report["observation_exposure"][role])):
         raise ValueError("Independent consumption crosses role, publication or approved use")
     observed, metadata = observation_view(band, report)
-    if use=="cost" and "delivered_columns" in report:
+    if use=="cost" and ("delivered_columns" in report or "observation_exposure" in report):
         row = bank.observation_row(ROLES[role],tile)
         return bank_observation(bank,row,producer,observed,factor=factor,metadata=metadata,
                                 observation_only=True),None,None

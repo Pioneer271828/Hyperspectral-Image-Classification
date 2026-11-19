@@ -202,7 +202,9 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                         actual, labels, targets = independent.materialize_reviewed(
                             bank, intake, roles, "evaluation", tile, producer, band, use="cost",factor=factor)
                         materialized = perf_counter()
-                        require(labels is targets is None, "Cost materialized classification data")
+                        require(labels is targets is None and ("observation_exposure" not in intake
+                                or "samples" not in actual.receipt["source"]),
+                                "Cost materialized classification data")
                         output, graph, detail = model_io.run_block(model, actual, producer, "devval", execution)
                         sample = dict(total=perf_counter()-start, materialize=materialized-start,
                                       cuda_peak_bytes=torch.cuda.max_memory_allocated(execution.device)
@@ -302,8 +304,12 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
                 and record["observation"] == observations["independent_accuracy"][(band,tile)]
                 and record["spatial"] == spatial and set(record["heads"]) == set(HEADS)
                 and (cost is None or "delivered_columns" in intake
+                     or "coverage" in semantics
                      or (record["observation"] == cost["observation"] and record["graph"] == cost["graph"])),
                 "The points, observation, band axis or optional trusted geometry differ")
+        if "coverage" in semantics and cost is not None:
+            require(all(record["graph"][key]==cost["graph"][key] for key in ("q","a0")),
+                    "Coverage cost and classification observed different retained graphs")
         if program is not None:
             parent = bank.role_row("devval",tile)
             top,_,left,right = parent["box"]
