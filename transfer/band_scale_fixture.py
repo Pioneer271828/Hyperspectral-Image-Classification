@@ -13,6 +13,7 @@ from transfer.band_scale import BANDS, FACTORS, NAME, PROFILES, condition, evide
 from transfer.development_bank import Bank, BankRelease, publish
 from transfer.development_bank_training import _initial
 from transfer.development_blocks import array_hash
+from transfer.g3_training import state_hash
 from transfer.native_released_points import LOSS, MODE, scores
 from transfer.spatial_coverage_protocol import release_statistics
 from transfer.spatial_multiscale import initialize
@@ -72,7 +73,7 @@ def generated(task, layout, seed):
         witnesses[str(tile)] = dict(truth=array_hash(dense),centers=array_hash(centers),
                                     donor=array_hash(donor_values),classes=labels.tolist())
     plan = digest(dict(task=task,layout=layout,seed=seed,bands=bands.fingerprint,roles=roster))
-    source = dict(kind="native_band_scale_fixture",scope=NAME,seed=seed)
+    source = dict(kind="native_band_scale_fixture",scope=NAME,seed=seed,shared_state=state_hash(new_model(seed)))
     release = BankRelease("xuzhou","synthetic",scene,9,plan,bands,release_statistics(raw,roster,plan),
                           source,dict(minimum_buffer=2,task=task,layout=layout, source_has_fresh_head=True),tuple(roster))
     return release,raw,truth,profile,witnesses
