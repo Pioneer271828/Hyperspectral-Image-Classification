@@ -210,6 +210,36 @@ def independent_release(args, root, out, code):
     return independent.synthetic_demo(root,out,code)
 
 
+def long_coverage(root, out, code, args):
+    from transfer import native_long_run as run
+    from transfer.native_long_campaign import STEPS
+
+    if sys.platform != "linux" or not __debug__:
+        raise ValueError("Long native coverage requires the authorized Linux environment")
+    if args.archive or args.from_device or args.preflight or args.release or args.phase or args.workers != 1:
+        raise ValueError("Long coverage has an explicit campaign and case device")
+    if args.mode == "coverage-long-register":
+        if args.gpu or args.case or args.drain_after is not None:
+            raise ValueError("Registration does not create updates or device contexts")
+        request, approval = (dict(zip(("path", "sha256"), row, strict=True)) if row else None
+                             for row in (args.manifest,args.authority))
+        result = run.register(root, out, code, request=request, approval=approval, real=args.long_real)
+    elif args.long_real or args.manifest or args.authority:
+        raise ValueError("Execution authority is taken only from the registered campaign")
+    elif args.mode == "coverage-long-freeze":
+        if args.gpu or args.case or args.drain_after is not None:
+            raise ValueError("Freeze requires the entire completed campaign")
+        result = run.freeze(root, out, code)
+    else:
+        if not args.case:
+            raise ValueError("One registered case is required per worker")
+        with arithmetic(root, args.gpu) as execution:
+            result = run.execute(root, out, code, args.case, execution,
+                                 until=STEPS if args.drain_after is None else args.drain_after,
+                                 reference=args.mode == "coverage-long-reference")
+    print(json.dumps(result), flush=True)
+
+
 def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
@@ -220,10 +250,13 @@ def main(argv=None, *, intake=None):
                                             "coverage-run", "coverage-replay", "coverage-reload",
                                             "coverage-audit", "coverage-stage-register", "coverage-release-review","coverage-release-history",
                                             "coverage-release-demo", "frozen-stage-register",
-                                            "frozen-stage-run"), required=True)
+                                            "frozen-stage-run", "coverage-long-register", "coverage-long-run",
+                                            "coverage-long-reference", "coverage-long-freeze"), required=True)
     parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--authority", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--frozen-plan", nargs=2, metavar=("PATH", "SHA256"))
+    parser.add_argument("--long-real", action="store_true")
+    parser.add_argument("--drain-after", type=int)
     parser.add_argument("--from-device")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--archive", nargs=2, action="append", default=[], metavar=("PATH", "SHA256"))
@@ -242,6 +275,10 @@ def main(argv=None, *, intake=None):
     out = external_directory(args.out)
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
+    if args.mode.startswith("coverage-long-"):
+        return long_coverage(root, out, code, args)
+    if args.long_real or args.drain_after is not None:
+        parser.error("Long authority or drain cursor applies only to the long campaign")
     if args.mode.startswith("frozen-stage-"):
         from evaluation.frozen_stage_cli import replay_cli
 
