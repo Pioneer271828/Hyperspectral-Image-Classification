@@ -217,6 +217,18 @@ def publish(root, folder, code):
                 meta, arrays = read_bundle(pin(folder / case / "arrays.npz", entry["arrays"]))
                 check(meta == dict(case=case, scope=link["sha256"]), "Mixed experiment arrays")
                 result = entry["result"]
+                registry = reg["cases"][case]
+                if case.startswith("honghu"):
+                    check(result["scene"] == "whu-honghu" and result["windows"] == ["nominal"]
+                          and result["groups"] == ["all"] and result["k"] == registry["k"]
+                          and result["budget"] == registry["budget"]
+                          and result["support_seed"] == registry["support_seed"]
+                          and result["model"] == registry["endpoint_hashes"]["selected"],
+                          "HongHu case or support/budget scope differs")
+                else:
+                    check(result["scene"] == registry["scene"] and result["model"] == registry["checkpoint"]
+                          and result["windows"] == reg["windows"][registry["scene"]]
+                          and result["groups"] == reg["groups"], "Native window or checkpoint scope differs")
                 prev = parent_case(root, batch, case)
                 started += details(case, folder, result, arrays, prev, reg, previous, root,
                                    prediction, diagnostics, results)

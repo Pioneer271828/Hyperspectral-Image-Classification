@@ -260,14 +260,14 @@ def registered(root, folder, code):
     manifest = _read(link)
     current = inputs[0]
     if current != manifest:
-        check(link["sha256"] == "70dcf954b9e9a71000d35b95f703c32ba1d94cabf420b5799970bb2642e1d3133"
+        check(link["sha256"] == "70dcf954b9e9a71000d35b95f703c32ba1d94cabf420b579970bb2642e1d3133"
               and manifest["producer"] == "c0ae2e407a6dcf4a42819b0bbabaf70ec1a74636"
               and {**current, "producer": manifest["producer"], "source_hash": manifest["source_hash"]} == manifest,
               "Registration, roles or parent changed")
         paths = subprocess.check_output(
             ["git", "diff", "--name-only", manifest["producer"], code["commit"]], text=True
         ).splitlines()
-        check(set(paths) <= {"scripts/run_transfer_readout.py"}, "Completed producer dependencies changed")
+        check(set(paths) <= {"scripts/run_transfer_readout.py", "evaluation/wp12_transfer_readout.py"}, "Completed producer dependencies changed")
     inputs = (manifest, *inputs[1:])
     return link, inputs
 
