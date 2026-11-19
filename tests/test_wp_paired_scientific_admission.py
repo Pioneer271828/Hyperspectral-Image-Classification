@@ -61,6 +61,25 @@ class ScientificAdmissionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"approved actual column order"):
             self.intake(self.altered(entry,"order",lambda m,a:m["delivered_columns"]["axis"].reverse()))
 
+    def test_only_the_approved_column_protocol_can_admit_different_historical_metadata(self):
+        entry = self.request["releases"]["xz-anchor"]
+        physical = self.request["releases"]["xz-physical"]
+        physical_manifest = json_pin(self.root,physical["manifest"])
+        self.assertEqual(len(physical_manifest["history"]),1)
+        history = physical_manifest["history"][0]
+
+        def replace_history(manifest, approval):
+            manifest["history"] = [history]
+            approval["historical_bank_sha256"] = [history["pin"]["sha256"]]
+
+        approved = self.altered(entry,"mixed-history",replace_history)
+        bank,intake,roles = self.intake(approved)
+        self.assertTrue(intake["uses"]["independent_accuracy"]["eligible"])
+        old = independent.bank_from_entry(self.root,history)
+        with self.assertRaisesRegex(ValueError,"applicable metadata"):
+            independent.assess(bank,[old],roles,gap=4,
+                permitted=dict(independent_accuracy=True,cost=False,frozen_diagnostics=False))
+
     def test_cost_only_uses_observation_projection_and_never_enters_training(self):
         from evaluation.frozen_training_stages import file_pin
 

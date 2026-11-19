@@ -72,7 +72,7 @@ def scope_identity(bank):
     return dict(bank=bank.pin["sha256"],registration=bank.pin["registration"],role_geometry=bank.release.plan_hash)
 
 
-def assess(bank, history, assigned, *, gap, permitted):
+def assess(bank, history, assigned, *, gap, permitted, delivered_columns=False):
     """Return separate qualifications without promoting historical selection labels."""
     check(isinstance(bank,custody.Bank) and history and all(isinstance(p,custody.Bank) for p in history),
           "Published candidate and historical Banks are required")
@@ -87,8 +87,10 @@ def assess(bank, history, assigned, *, gap, permitted):
     for old in history:
         old.verify_authority(old.pin)
         prior=old.release
-        check(prior.scene==release.scene and prior.shape==release.shape and prior.bands==release.bands,
-              "Historical comparison requires the same scene coordinates, original band axis and metadata")
+        same_axis = (prior.bands.band_ids, prior.bands.valid) == (release.bands.band_ids, release.bands.valid)
+        check(prior.scene==release.scene and prior.shape==release.shape
+              and (same_axis if delivered_columns else prior.bands==release.bands),
+              "Historical comparison requires the same scene coordinates, original band axis and applicable metadata")
         key=old.pin["sha256"]
         check(key not in seen,"Repeated historical Bank")
         seen.add(key)
@@ -214,7 +216,8 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
         historical=[*archived.values(),*supplemental]
     check(authority["historical_bank_sha256"]==sorted(old.pin["sha256"] for old in historical),
           "The release owner must bind the history used to establish independence")
-    result=assess(bank,historical,manifest["roles"],gap=manifest["minimum_buffer"],permitted=authority["uses"])
+    result=assess(bank,historical,manifest["roles"],gap=manifest["minimum_buffer"],permitted=authority["uses"],
+                  delivered_columns=columns)
     if annotations and result["uses"]["independent_accuracy"]["eligible"]:
         from evaluation.wp12_spatial_release import read_annotations
 
