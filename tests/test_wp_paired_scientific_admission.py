@@ -1,9 +1,10 @@
 """Delivered-column and fixed-exposure permissions follow the ordinary registration path."""
 
+from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import torch
 
@@ -87,6 +88,14 @@ class ScientificAdmissionTests(unittest.TestCase):
             args = (factor,*banks,*(groups[k] for k in keys),*(releases[k] for k in keys))
             readout = support.validate_contrast(*args)
             self.assertEqual(readout["same_evaluation_points"],factor!="spatial_layout")
+            if factor=="support_k":
+                bank = banks[0][0]
+                foreign = deepcopy(banks[1][0].members)
+                foreign[next(iter(foreign))]["content"]["array_sha256"] = "0"*64
+                with patch.object(type(bank),"members",new_callable=PropertyMock,
+                                  side_effect=[bank.members, foreign]):
+                    with self.assertRaisesRegex(ValueError,"actual observations"):
+                        support.validate_contrast(*args)
             changed = {**groups[keys[1]],"seed":512}
             with self.assertRaisesRegex(ValueError,"identical model seed"):
                 support.validate_contrast(*args[:4],changed,*args[5:])

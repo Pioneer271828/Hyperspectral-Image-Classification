@@ -70,7 +70,10 @@ def validate_contrast(factor, left, right, left_group, right_group, left_entry, 
                     [br["support"].index(bi[c][0]) for c in bi],
                 "Spatial repeats must keep support parameters and use separated actual parent blocks")
     else:
+        a_members = {tile: row["content"]["array_sha256"] for tile,row in a.members.items()}
+        b_members = {tile: row["content"]["array_sha256"] for tile,row in b.members.items()}
         require(data_a.plan_hash == data_b.plan_hash and data_a.statistics == data_b.statistics
+                and a_members == b_members
                 and ar == br and rows_a["calibration"] == rows_b["calibration"]
                 and rows_a["evaluation"] == rows_b["evaluation"]
                 and [{k:v for k,v in row.items() if k!="samples"} for row in rows_a["support"]] ==

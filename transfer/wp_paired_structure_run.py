@@ -16,6 +16,7 @@ from transfer.development_bank import _atomic_new
 from transfer.g3_training import state_hash
 from transfer.native_coverage_queue import case_lock
 from transfer.wp_paired_structure import REAL, SCHEMA, StructuralProvider, open_plan
+from transfer.wp_support_match import exposure as count_exposure
 
 PUBLICATION = "wp05_wp08_paired_structure_publication_v1"
 
@@ -55,8 +56,8 @@ def receipt(root, place, group, arm, plan_pin, spec, rows):
         registration=file_pin(place/"contract.json"),checkpoint=last["pin"],budget=spec["steps"],
         selected=saved["selected"]["step"],calibration=[dict(step=v["step"],nll=v["fused_nll"]) for v in saved["validation"]],
         query_accessed=False,raw_gt_loaded=False,real_updates=spec["real_updates"],
-        device=spec["numeric"],exposure=dict(exposed),class_exposure=[
-            sum(event["released"]["per_class"][i] for event in saved["history"]) for i in range(spec["classes"])],
+        device=spec["numeric"],exposure=dict(exposed),
+        class_exposure=count_exposure(saved["history"],spec["classes"]),
         weights_changed=len(changed),groups=grouped,parameters=spec["initialization"]["parameters"],
         timings=[{k:v for k,v in row.items() if k not in ("registration","model_state","serialization_seconds")} for row in rows])
     if done.exists():
