@@ -225,6 +225,8 @@ class Run:
 
     def _record_validation(self, step):
         value = self.evaluate(step)
+        if self._contract.get("frozen_stage_protocol"):
+            value["state_sha256"] = state_hash(self.model)
         self._validation.append(value)
         if self._selected is None or value["fused_nll"]<self._selected["fused_nll"]:
             self._selected = dict(step=step,fused_nll=value["fused_nll"],state=_state(self.model))
@@ -309,6 +311,9 @@ class Run:
         if not adam or any(int(s["step"])!=cursor for s in adam.values()):
             raise ValueError("Native Adam cursor differs")
         self.model.load_state_dict(packet["model"],strict=True)
+        if self._contract.get("frozen_stage_protocol") and cursor in self._contract["events"]:
+            if packet["validation"][-1]["state_sha256"] != state_hash(self.model):
+                raise ValueError("Frozen development stage checkpoint differs")
         self.optimizer.load_state_dict(packet["optimizer"])
         self._history, self._validation, self._selected = packet["history"],packet["validation"],packet["selected"]
         _restore_rng(packet["rng"],self.device)

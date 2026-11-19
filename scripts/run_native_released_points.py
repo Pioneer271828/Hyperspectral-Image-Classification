@@ -162,10 +162,10 @@ def coverage(args, root, out, code):
         return independent_release(args, root, out, code)
     if args.manifest or args.authority:
         raise ValueError("Release and authority pins apply only to independent intake")
-    if args.mode == "coverage-register":
+    if args.mode in ("coverage-register", "coverage-stage-register"):
         out.mkdir(exist_ok=True)
         with queue.case_lock(out):
-            return queue.prepare(out, code)
+            return queue.prepare(out, code, frozen_stages=args.mode == "coverage-stage-register")
     if args.mode == "coverage-run":
         plan = queue.load_queue(out, code)
         names = list(plan["cases"]) if args.case in (None, "all") else [args.case]
@@ -218,7 +218,7 @@ def main(argv=None, *, intake=None):
     parser.add_argument("--gpu")
     parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage", "coverage-register",
                                             "coverage-run", "coverage-replay", "coverage-reload",
-                                            "coverage-audit","coverage-release-review","coverage-release-history",
+                                            "coverage-audit", "coverage-stage-register", "coverage-release-review","coverage-release-history",
                                             "coverage-release-demo", "frozen-stage-register",
                                             "frozen-stage-run"), required=True)
     parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
@@ -250,7 +250,7 @@ def main(argv=None, *, intake=None):
                 or (args.mode == "frozen-stage-register") != bool(args.manifest)):
             parser.error("Frozen stages accept a development release to register or a frozen plan to replay")
         torch.set_num_threads(1)
-        return replay_cli(argv, code, root, out, args.gpu, args.manifest, plan_pin=args.frozen_plan)
+        return replay_cli(code, root, out, args.gpu, args.manifest, plan_pin=args.frozen_plan)
     if args.frozen_plan:
         parser.error("A frozen plan applies only to frozen-stage replay")
     real = args.mode == "real-stage"

@@ -17,7 +17,7 @@ def pin(pair):
     return dict(zip(("path", "sha256"), pair, strict=True))
 
 
-def replay_cli(argv, code, root, out, gpu, release, *, plan_pin):
+def replay_cli(code, root, out, gpu, release, *, plan_pin):
     if sys.platform != "linux" or not __debug__:
         raise ValueError("Frozen comparisons require the verified Linux runtime")
     if release is not None:
@@ -50,8 +50,8 @@ def publish_cli(argv):
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     for key in ("plan", "cpu", "gpu", "launch", "independent", "freeze", "honghu-release",
-                "honghu-review", "honghu-status"):
-        parser.add_argument("--" + key, nargs=2, metavar=("PATH", "SHA256"), required=key != "gpu")
+                "honghu-review", "honghu-status", "honghu-alternate", "synthetic-queue"):
+        parser.add_argument("--" + key, nargs=2, metavar=("PATH", "SHA256"), required=key not in ("gpu", "honghu-alternate", "synthetic-queue"))
     args = parser.parse_args(argv)
     code = code_snapshot()
     require_frozen_code(code)
@@ -78,9 +78,15 @@ def publish_cli(argv):
         device_check = None
     archive_pins = {key: pin(getattr(args, key)) for key in ("launch", "independent", "freeze")}
     historical = archives.admission(root, archive_pins)
-    case_review = archives.honghu(root, pin(args.honghu_release), pin(args.honghu_review), pin(args.honghu_status))
+    case_review = archives.honghu(root, pin(args.honghu_release), pin(args.honghu_review), pin(args.honghu_status),
+                                  pin(args.honghu_alternate) if args.honghu_alternate else None)
     long_archive = archives.archive(root, historical)
-    result = dict(policy=stages.POLICY, producer=code["commit"], original_archive=long_archive,
+    synthetic = None
+    if args.synthetic_queue:
+        from evaluation.frozen_stage_synthetic import publish
+
+        synthetic = publish(root, pin(args.synthetic_queue), code)
+    result = dict(policy=stages.POLICY, producer=code["commit"], original_archive=long_archive, synthetic=synthetic,
                   native_summary=wp11_summary, device_check=device_check,
                   native_plan=pin(args.plan), native_cpu=pin(args.cpu), native_gpu=pin(args.gpu) if args.gpu else None,
                   honghu=case_review, optimizer_updates=0, raw_gt_loaded=False, query_accessed=False)

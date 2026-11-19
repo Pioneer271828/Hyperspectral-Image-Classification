@@ -1,11 +1,10 @@
 """Reconcile historical stage predictions using released train/val labels only."""
 
+import json
 from pathlib import Path
-
-import numpy as np
 import torch
 
-from evaluation.frozen_training_stages import HEADS, file_pin, json_pin, paired, pinned, require
+from evaluation.frozen_training_stages import HEADS, json_pin, paired, pinned, require
 from evaluation.g4_target import independent_trainval
 from g4_matched_target_audit import AUDIT_POLICY
 from g4_matched_target_study import grid
@@ -57,6 +56,20 @@ def admission(root, pins):
                 train_per_class=10, validation_per_class=5, budget=1500, cases=targets)
 
 
+def read_stage_probabilities(path, scene):
+    packet = torch.load(path, map_location="cpu", weights_only=True)
+    require(set(packet) == {scene} and set(packet[scene]) == {"train", "val"}
+            and all(set(row) == set(HEADS) for row in packet[scene].values()),
+            "Only original train/val three-head shards may be read")
+    return packet[scene]
+
+
+def point_rows(values, release):
+    arrays = {head: values[head].numpy().tolist() for head in HEADS}
+    return [dict(id=[index], truth=truth, probabilities={head: arrays[head][j] for head in HEADS})
+            for j, (index, truth) in enumerate(zip(release["indices"], release["labels"], strict=True))]
+
+
 def archive(root, plan):
     require(plan == admission(root, plan["pins"]), "Historical stage admission differs")
     launch, audit = (json_pin(root, plan["pins"][name]) for name in ("launch", "independent"))
@@ -101,27 +114,29 @@ def archive(root, plan):
         chosen = next(row for row in history if row["step"] == identity["selected_step"])
         stages = {}
         selected_rows = None
+        first = None
+        rivals = {"xuzhou": {5: 8, 6: 3}}.get(scene, {})
         for stage, event in (("first_update", history[0]), ("mid_751", history[25]),
                              ("selected", chosen), ("last", history[-1])):
             step = event["step"]
             path = artifact(f"raw-validation-{step:06d}.pt")
-            packet = torch.load(path, map_location="cpu", weights_only=True)
-            require(set(packet) == {scene} and set(packet[scene]) == {"train", "val"}
-                    and all(set(row) == set(HEADS) for row in packet[scene].values()),
-                    "Only original train/val three-head shards may be read")
+            packet = read_stage_probabilities(path, scene)
             metrics = event["metrics"][scene]
             if stage == "selected":
                 require(metrics == archived[name]["selected_validation"]["metrics"][scene],
                         "Selected event differs from accepted three-head summary")
-                selected_rows = packet[scene]
-            independent_trainval(packet[scene], dict(class_num=classes, train_labels=truth["train"],
+                selected_rows = packet
+            independent_trainval(packet, dict(class_num=classes, train_labels=truth["train"],
                                                       val_labels=truth["val"]), metrics)
-            stages[stage] = dict(step=step, metrics=metrics, probability_sha256=result["artifacts"][path.name])
-        stored = torch.load(artifact("selected-probabilities.pt"), map_location="cpu", weights_only=True)
-        require(set(stored) == {scene} and set(stored[scene]) == {"train", "val"}
-                and all(set(stored[scene][phase]) == set(HEADS)
-                        and all(torch.equal(stored[scene][phase][head], selected_rows[phase][head]) for head in HEADS)
-                        for phase in ("train", "val")), "Selected shard differs from the accepted checkpoint readout")
+            current = point_rows(packet["val"], view["validation"])
+            if first is None:
+                first = current
+            stages[stage] = dict(step=step, metrics=metrics, probability_sha256=result["artifacts"][path.name],
+                                 devval_from_first=paired(first, current, classes, rivals))
+        stored = read_stage_probabilities(artifact("selected-probabilities.pt"), scene)
+        require(all(torch.equal(stored[phase][head], selected_rows[phase][head])
+                    for phase in ("train", "val") for head in HEADS),
+                "Selected shard differs from the accepted checkpoint readout")
         output[name] = dict(identity=identity, stages=stages, retained_untouched_initial_head=False,
                             masked_replay_blocked="fixed graph fit on original full spectral scene")
     return dict(scope=plan["scope"], plan_sha256=digest(plan), checked_cases=len(output), cases=output,
@@ -129,7 +144,7 @@ def archive(root, plan):
                 raw_gt_loaded=False, query_accessed=False)
 
 
-def honghu(root, release_pin, review_pin, status_pin):
+def honghu(root, release_pin, review_pin, status_pin, alternate_pin=None):
     release = json_pin(root, release_pin)
     review = json_pin(root, review_pin)
     status = json_pin(root, status_pin)
@@ -142,13 +157,17 @@ def honghu(root, release_pin, review_pin, status_pin):
             and review["audit_optimizer_updates"] == 0
             and review["query_accessed"] is review["raw_gt_loaded"] is False,
             "Original Honghu scope/partial independent audit differs")
-    science = json_pin(root, release["science_scope"])
-    resource = json_pin(root, release["resource_scope"])
+    json_pin(root, release["science_scope"])
+    json_pin(root, release["resource_scope"])
     require(review["resource"] == release["resource_scope"] and review["scientific_scope"] == release["science_scope"],
             "Partial audit binds a different worker or scientific scope")
     planned = {name: device for device, value in release["slots"].items() for name in value["cases"]}
     require(len(planned) == 20 and all(Path(name).name == name for name in planned), "Expected exact twenty cases")
-    accepted = {row["case"]: row for row in review["cases"]} if isinstance(review["cases"], list) else review["cases"]
+    accepted = {row["case"]["id"]: row for row in review["cases"]}
+    for name, row in accepted.items():
+        require(row["audit_updates"] == 0 and row["optimizer_updates"] == 120
+                and row["case"]["physical_uuid"] == planned.get(name), "Invalid historical accepted case")
+        json_pin(root, row["audit"])
     require(set(accepted) <= set(planned) and len(accepted) == 10, "Historical accepted Honghu roster differs")
     missing = {}
     for name, device in planned.items():
@@ -162,7 +181,19 @@ def honghu(root, release_pin, review_pin, status_pin):
                 "New or incomplete historical case requires a separate authenticated original-protocol audit")
         missing[name] = dict(status="not_started", registered_physical_uuid=device, stage_files=0, case_files=0,
                              reason="original worker waited for resources; no checkpoint or completed stage exists")
+    alternate = None
+    if alternate_pin is not None:
+        migration = json_pin(root, alternate_pin)
+        destination = Path(migration["execution"])
+        require(migration["decision"] == "approved" and migration["parent_resource"] == release["resource_scope"]
+                and migration["raw_gt_authorized"] is migration["query_authorized"] is False
+                and {name for slot in migration["slots"].values() for name in slot["cases"]} == set(missing)
+                and destination.is_absolute() and destination == destination.resolve() and root in destination.parents,
+                "Alternative migration binds a different roster or science release")
+        require(not destination.exists(), "Migrated output exists and requires original-protocol audit")
+        alternate = dict(release_sha256=alternate_pin["sha256"], execution_directory_present=False,
+                         physical_uuids=sorted(migration["slots"]))
     return dict(scope_sha256=release["science_scope"]["sha256"], resource_sha256=release["resource_scope"]["sha256"],
                 release=release_pin["sha256"], audit=review_pin["sha256"], status_sha256=status_pin["sha256"],
-                accepted=sorted(accepted), missing=missing, added=0, optimizer_updates=0,
+                accepted=sorted(accepted), missing=missing, alternate=alternate, added=0, optimizer_updates=0,
                 query_accessed=False, raw_gt_loaded=False)

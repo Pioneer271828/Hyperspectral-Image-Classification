@@ -14,6 +14,7 @@ import numpy as np
 import torch
 
 from evaluation.frozen_band_region import HEADS
+from evaluation.frozen_training_stages import POLICY as STAGE_POLICY, VIEWS as STAGE_VIEWS, scores
 from loadData.observation_sampling import BandMetadata
 from model.checkpoint_io import load_model_checkpoint, save_model_checkpoint
 from model.research_config import digest
@@ -37,7 +38,11 @@ PHASES = ("full", "prefix", "resume", "completed")
 PREDECESSOR = {"resume": "prefix", "completed": "resume"}
 
 
-def design():
+def design(*, frozen_stages=False):
+    if frozen_stages:
+        return {f"{scene}-s2048-k5-a-m{seed}-{arm}": dict(scene=scene, support_seed=2048, k=5, split="a",
+                    spectral_arm=arm, model_seed=seed)
+                for scene, seed, arm in product(("xuzhou", "whu-honghu"), native.SEEDS, ARMS)}
     rows = {}
     for scene, support, k, split, arm in product(SCENES, SUPPORT, (1, 5), SPLITS, ARMS):
         model = native.SEEDS[(tuple(SCENES).index(scene) + SPLITS.index(split)) % 3]
@@ -107,11 +112,13 @@ def generated(scene, support_seed, k, split):
     return release, arrays
 
 
-def prepare(root, code):
+def prepare(root, code, *, frozen_stages=False):
     folder = root / "inputs"
     folder.mkdir(exist_ok=True)
     banks, sources = {}, {}
-    for scene, support, k, split in product(SCENES, SUPPORT, (1, 5), SPLITS):
+    cases = design(frozen_stages=frozen_stages)
+    bank_keys = dict.fromkeys((row["scene"], row["support_seed"], row["k"], row["split"]) for row in cases.values())
+    for scene, support, k, split in bank_keys:
         name = f"{scene}-s{support}-k{k}-{split}"
         release, arrays = generated(scene, support, k, split)
         path = folder / name
@@ -127,8 +134,10 @@ def prepare(root, code):
                 save_model_checkpoint(shared_source(scene, source_seed(scene)), weights)
             check(state_hash(load_model_checkpoint(weights)) == source_state(scene), "Historical source weights differ")
             sources[scene] = dict(weights=pin(weights), sidecar=pin(Path(str(weights)+".json")))
-    document = dict(schema=SCHEMA, producer=code["commit"], banks=banks, sources=sources, cases=design(),
+    document = dict(schema=SCHEMA, producer=code["commit"], banks=banks, sources=sources, cases=cases,
                     scope="synthetic_only", query_accessed=False, raw_gt_loaded=False, real_updates=0)
+    if frozen_stages:
+        document["frozen_stage_protocol"] = STAGE_POLICY
     path = root/"queue.json"
     if path.exists():
         check(_read(pin(path)) == document, "Existing queue does not have this producer or roster")
@@ -142,6 +151,9 @@ class CoverageFixture(SpatialReleasedFixture):
     def __init__(self, root, queue, name):
         cfg = queue["cases"][name]
         self.config = deepcopy(cfg)
+        self.frozen_stages = queue.get("frozen_stage_protocol") == STAGE_POLICY
+        self.validation_bands = STAGE_VIEWS if self.frozen_stages else VALIDATION_BANDS
+        self.training_bands = (*STAGE_VIEWS, "shuffled") if self.frozen_stages else TRAIN_BANDS
         scene, support, k, split = (cfg[key] for key in ("scene", "support_seed", "k", "split"))
         key = f"{scene}-s{support}-k{k}-{split}"
         expected, _ = generated(scene, support, k, split)
@@ -166,7 +178,7 @@ class CoverageFixture(SpatialReleasedFixture):
             return super().model_factory(source, arm, seed)
 
     def materialize(self, role, event, producer):
-        check(producer == self.producer and event["band"] in VALIDATION_BANDS and event["factor"] == 1,
+        check(producer == self.producer and event["band"] in (self.training_bands if role == "devtrain" else self.validation_bands) and event["factor"] == 1,
               "Unregistered producer, band or lattice")
         return bank_view(self.bank, self.bank.role_row(role, event["tile"]), producer, event["band"])
 
@@ -185,9 +197,9 @@ class CoverageFixture(SpatialReleasedFixture):
         check(len(chosen) == 6, "Registered budget requires six released training blocks")
         order = np.random.default_rng(seed).permutation(chosen).tolist()
         train = [dict(step=i, tile=tile, factor=1, band=band, profile=None, condition="missing")
-                 for i, (band, tile) in enumerate(product(TRAIN_BANDS, order), 1)]
+                 for i, (band, tile) in enumerate(product(self.training_bands, order), 1)]
         val = [dict(tile=row["id"], factor=1, band=band, profile=None, condition="missing")
-               for row, band in product(self.bank.role_rows("devval"), VALIDATION_BANDS)]
+               for row, band in product(self.bank.role_rows("devval"), self.validation_bands)]
         if not self.roster:
             for role, events in (("devtrain", train), ("devval", val)):
                 for event in events:
@@ -196,13 +208,16 @@ class CoverageFixture(SpatialReleasedFixture):
         source, witness = self.initialization(seed)
         model = self.model_factory(source, arm, seed+7321)
         baseline = model if self.arm == "none" else self._unconditioned(source, seed+7321)
-        return dict(format=SCHEMA, producer=producer, classes=classes, seed=seed, arm=arm, factor=factor,
+        result = dict(format=SCHEMA, producer=producer, classes=classes, seed=seed, arm=arm, factor=factor,
                     supervision=MODE, objective=LOSS, training=train, validation=val, inputs=deepcopy(self.roster),
                     steps=len(train), prefix=4, events=[0, 6, len(train)], learning_rate=.0001,
                     module_seed=seed+7321, rng_seed=seed+15000, registered_graph_scale=50 if self.scene=="paviaU" else 100,
                     initialization=_initial(model, baseline), parameters=sum(p.numel() for p in model.parameters()),
                     case=self.config, bank=self.bank.pin, source=witness, numeric=numeric,
                     selection="first_min_released_point_fused_nll", raw_gt_loaded=False, query_accessed=False, real_updates=0)
+        if self.frozen_stages:
+            result.update(frozen_stage_protocol=STAGE_POLICY, prefix=12, events=[0, 12, 24])
+        return result
 
     @staticmethod
     def _unconditioned(source, seed):
@@ -220,7 +235,9 @@ def case_lock(place):
 
 def load_queue(root, code):
     queue = _read(pin(root/"queue.json"))
-    check(queue["producer"] == code["commit"] and queue["schema"] == SCHEMA and queue["cases"] == design(),
+    protocol = queue.get("frozen_stage_protocol")
+    check(protocol in (None, STAGE_POLICY) and queue["producer"] == code["commit"] and queue["schema"] == SCHEMA
+          and queue["cases"] == design(frozen_stages=protocol == STAGE_POLICY),
           "Queue has foreign registration or producer")
     return queue
 
@@ -251,9 +268,9 @@ def _stage(place, spec, phase, provider, stages, execution):
     return report
 
 
-def validation_rows(evaluated):
+def validation_rows(evaluated, bands=VALIDATION_BANDS):
     result = {}
-    for band in VALIDATION_BANDS:
+    for band in bands:
         rows = [row for row in evaluated["rows"] if row["band"] == band]
         result[band] = dict(mode=rows[0]["mode"], band_ids=rows[0]["band_ids"],
                             graph=digest([row["graph"] for row in rows]),
@@ -270,6 +287,55 @@ def prediction_capture(rows):
                          probabilities={head: values.detach().cpu().numpy()[targets.cells].tolist()
                                         for head, values in zip(HEADS, output[:3], strict=True)}))
     return capture
+
+
+def stage_endpoints(runner, spec, full, prefix):
+    selected = full["selected"]
+    by_step = {row["step"]: row for row in full["validation"]}
+    initial, middle, last = spec["events"]
+    states = {
+        "initial": (initial, None),
+        "intermediate": (middle, prefix["model"]),
+        "selected": (selected["step"], selected["state"]),
+        "last": (last, full["model"]),
+    }
+    results = {}
+    for name, (step, state) in states.items():
+        if state is None:
+            from transfer.native_scale_training import Run
+
+            reader = Run(spec, runner.producer, execution=runner.execution, released=runner._released)
+        else:
+            reader = runner
+            reader.model.load_state_dict(state, strict=True)
+        witness = state_hash(reader.model)
+        check(witness == by_step[step]["state_sha256"], "Endpoint differs from the uninterrupted stage")
+        if name == "initial":
+            check(witness == spec["initialization"]["state"], "Registered initialization differs")
+        views = {band: [] for band in STAGE_VIEWS}
+
+        def capture(event, actual, output, targets):
+            values = {head: tensor.detach().cpu().numpy()[targets.cells].tolist()
+                      for head, tensor in zip(HEADS, output[:3], strict=True)}
+            for position, (index, truth) in enumerate(targets.points):
+                views[event["band"]].append(dict(id=[event["tile"], index], truth=truth,
+                        probabilities={head: values[head][position] for head in HEADS}))
+
+        started = perf_counter()
+        value = reader.evaluate(step, detailed=True, observe=capture)
+        recorded = by_step[step]
+        check(value["fused_nll"] == recorded["fused_nll"]
+              and all(all(a[key] == b[key] for key in ("heads", "observation", "graph", "band_ids"))
+                      for a, b in zip(value["rows"], recorded["rows"], strict=True))
+              and state_hash(reader.model) == witness, "Frozen recovered endpoint changed")
+        summary = validation_rows(value, STAGE_VIEWS)
+        for band, points in views.items():
+            result = scores(points, spec["classes"])
+            check(all(result[head]["confusion"] == summary[band]["heads"][head]["confusion"] for head in HEADS),
+                  "Independent point confusion differs from trainer readout")
+        results[name] = dict(step=step, state_sha256=witness, views=views, trainer=summary,
+                             validation_seconds=perf_counter()-started)
+    return results
 
 
 def run_case(root, code, name, *, execution=None):
@@ -320,11 +386,14 @@ def run_case(root, code, name, *, execution=None):
                       inputs=digest(spec["inputs"]), source=spec["source"], parameters=spec["parameters"],
                       roster={role: counts(provider.bank.role_rows(role), provider.classes) for role in ("devtrain", "devval")},
                       selected_step=packet["step"], selection_nll=packet["fused_nll"],
-                      validation=validation_rows(evaluated), predictions=predictions, stages=phases, numeric=numeric,
+                      validation=validation_rows(evaluated, provider.validation_bands), predictions=predictions,
+                      stages=phases, numeric=numeric,
                       resume_bitwise_equal=True, completed_bitwise_equal=True, changed_coverage=changed,
                       optimizer_updates=sum(stage["updates"] for stage in phases.values()),
                       endpoint_validation_seconds=runner.timing["validation_seconds"],
                       elapsed_seconds=perf_counter()-started, real_updates=0, query_accessed=False)
+        if provider.frozen_stages:
+            result["frozen_stages"] = stage_endpoints(runner, spec, full, prefix)
         return dict(case=name, reused=False, receipt=_write(receipt, result))
 
 
