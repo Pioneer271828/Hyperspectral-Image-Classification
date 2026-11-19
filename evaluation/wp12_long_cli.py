@@ -24,7 +24,9 @@ def production(source, commit, hash_value):
     subprocess.run(["git", "merge-base", "--is-ancestor", commit, source["commit"]], check=True)
     paths = subprocess.check_output(["git", "diff", "--name-only", "-z", commit, source["commit"]], text=True)
     allowed = {"evaluation/wp12_long_coverage.py", "evaluation/wp12_long_cli.py",
-               "scripts/ingest_wp12_evidence.py", "scripts/run_native_long_coverage.py"}
+               "scripts/ingest_wp12_evidence.py", "scripts/run_native_long_coverage.py",
+               "evaluation/wp12_long_cli.py", "evaluation/wp12_positive_cli.py",
+               "evaluation/wp12_positive_control.py", "scripts/run_native_positive_control.py"}
     require(all(path in allowed or path.startswith(("tests/", "docs/", "research/reports/", "research/当前搭建"))
                 for path in paths.split("\0") if path), "Independent consumer changed the production runtime")
     tree = subprocess.check_output(["git","ls-tree","-r","--name-only","-z", commit],text=True).split("\0")

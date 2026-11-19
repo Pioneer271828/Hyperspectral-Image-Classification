@@ -13,6 +13,10 @@ from scripts.summarize_unified_cohort import read_pinned
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if "--positive-control-case" in argv or "--positive-control-publish" in argv:
+        from evaluation.wp12_positive_cli import main as positive_control
+
+        return positive_control(argv)
     if "--v1-spectral-audit" in argv:
         return v1_spectral_audit(argv)
     if "--long-stage-case" in argv or "--long-stage-publish" in argv:
