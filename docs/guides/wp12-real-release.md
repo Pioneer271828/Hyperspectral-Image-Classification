@@ -120,3 +120,7 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 在授权 LXC 的干净检出运行 `scripts/run_wp12_native_pathways.py`。各动作均提供 `--runs`、`--out`、`--expected-commit`。用 `real --case` 复核已经批准的单个真实端点，`--drain-after` 对总块游标排空；原输出目录可按已落盘块继续。CUDA 通过 `--gpu` 绑定实体 UUID。用 `branches` 输出冻结融合头的 CNN 和图分支投影；`readouts` 复算存档线性读出；`controls` 与 `external` 运行无优化的原生合成对照和空间准入测试。
 
 用 `scripts/ingest_wp12_evidence.py --native-pathways-review` 提供 `--runs`、`--out`、`--expected-commit` 及 `--real-root`、`--branch-root`、`--controls-cpu`、`--controls-gpu`、`--gpu-real`、`--external`、`--readouts`。审核保留固定 Q/A 的 stem 后导数、合成重建 Q/A 的有限差、各真实角色与物理块分母、历史冻结读出及外部三角色权限。可选 E0 只按[独立空间发布](independent-attribution-package.md)的评价几何计算。
+
+## WP05 至 WP08 跨模型配对
+
+[冻结跨模型比较](wp12-cross-backend.md)使用同一授权评价 Bank 消费原生、条件多尺度和区域消息候选，并按旧协议独立复算徐州、PaviaU 的真实开发比较。WP12 验收选项为 `--cross-backend-review`，可匹配同权重 CPU/CUDA 捕获并保留成本与分类的独立资格。
