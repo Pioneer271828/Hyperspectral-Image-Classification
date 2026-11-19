@@ -17,7 +17,7 @@ def _points(ids, truths, vectors):
 
 
 def test_equal_deleted_physical_bands_preserve_historical_odd_view():
-    bands = BandMetadata("synthetic", tuple(str(i) for i in range(7)),
+    bands = BandMetadata("synthetic", tuple(range(7)),
                          tuple(range(401, 408)), "nm", "verified", (True,)*7)
     contiguous = retained_positions(bands, "central_gap")
     dispersed = retained_positions(bands, "matched_dispersed")

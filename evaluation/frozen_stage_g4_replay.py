@@ -38,6 +38,8 @@ def replay(root, plan, folder, device):
     picked = [row for row in launch["cases"] if (row["seed"], row["mode"], row["method"]) ==
               (64, "none", "target_scratch_full")]
     require(len(picked) == len({row["target"] for row in picked}) == 3, "One fixed scratch representative per scene")
+    if device.type == "cuda":
+        torch.cuda.set_device(device)
     folder.mkdir(exist_ok=True)
     result = {}
     for case in picked:
