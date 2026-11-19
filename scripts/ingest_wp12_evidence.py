@@ -12,6 +12,10 @@ from scripts.summarize_unified_cohort import read_pinned
 
 
 def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if "--native-real" in argv:
+        native_real(argv)
+        return
     parser = argparse.ArgumentParser(description=__doc__)
     for field in ("expected-commit", "registration", "registration-sha256", "out"):
         parser.add_argument("--" + field, required=True)
@@ -60,6 +64,24 @@ def main(argv=None):
     require_frozen_code(code)
     with out.open("x", encoding="utf-8") as stream:
         stream.write(serialized)
+
+
+def native_real(argv):
+    from evaluation.wp12_release_results import publish
+
+    parser = argparse.ArgumentParser(description="Publish admitted real native and frozen54 results")
+    parser.add_argument("--native-real", action="store_true", required=True)
+    parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--runs", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args(argv)
+    code = code_snapshot()
+    if sys.platform != "linux" or not __debug__ or code["dirty"] or code["commit"] != args.expected_commit:
+        raise ValueError("Clean expected Linux evidence checkout required")
+    root, out = external_directory(args.runs), external_directory(args.out)
+    if not root.is_dir() or root not in out.parents:
+        raise ValueError("Real evidence source and output must be in the authorized runs")
+    print(json.dumps(publish(root,out,code)),flush=True)
 
 
 if __name__ == "__main__":
