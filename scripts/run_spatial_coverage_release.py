@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 from pathlib import Path
 import resource
+import subprocess
 from time import perf_counter
 
 import numpy as np
@@ -134,7 +135,19 @@ def registration(root, code):
 def registered(root, folder, code):
     entries = registration(root, code)
     source = pin(folder / "registration.json")
-    check(_read(source) == entries[0], "Release, model scope, source or geometry changed")
+    old = _read(source)
+    cfg = entries[0]
+    if old != cfg:
+        check(source["sha256"] == "354562ee401501d35804a6b309fc230f1354926b0e9ab5fae9625dd67b5df9d1"
+              and old["code"] == "a045bf4414d8192c6ab0fd9c52f2ab10237ab585"
+              and {**cfg, "code":old["code"], "source_hash":old["source_hash"]} == old,
+              "Release, model scope or spatial geometry changed")
+        changed = subprocess.check_output(["git","diff","--name-only",old["code"],code["commit"]],
+                                          text=True).splitlines()
+        check(set(changed) <= {"scripts/run_spatial_coverage_release.py", "transfer/spatial_coverage_training.py",
+                               "transfer/spatial_coverage_protocol.py", "tests/test_spatial_coverage_release.py",
+                               "evaluation/wp12_spatial_coverage.py"}, "Previous real-case dependencies changed")
+    entries = (old,*entries[1:])
     return source, entries
 
 

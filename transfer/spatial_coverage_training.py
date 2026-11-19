@@ -4,6 +4,7 @@ from collections import Counter
 from copy import deepcopy
 from dataclasses import replace
 from itertools import product
+from pathlib import Path
 from time import perf_counter
 
 import numpy as np
@@ -11,6 +12,7 @@ import torch
 
 from evaluation.frozen_band_region import HEADS
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
+from model.checkpoint_io import load_model_checkpoint, save_model_checkpoint
 from model.research_config import digest
 from scripts.run_frozen_band_region import _write, check, pin
 from transfer import development_bank as custody, development_bank_training as fixture, native_scale_training as native
@@ -64,7 +66,7 @@ def shared_source(scene, seed):
     source = "paviaU" if scene != "paviaU" else "xuzhou"
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(seed)
-        return MultiDatasetVCASAHGCN({source: 9}, graph_mode="static", norm_type="group_norm",
+        return MultiDatasetVCASAHGCN({source: 9}, graph_mode="static", norm_type="domain_bn",
                                       latent_channels=128, adapter_embed_dim=64).eval()
 
 
@@ -73,13 +75,14 @@ class SpatialReleasedFixture:
 
     scores = staticmethod(scores)
 
-    def __init__(self, bank, source_seed, split, spectral_arm, producer):
+    def __init__(self, bank, source_seed, split, spectral_arm, producer, source_files):
         if (not isinstance(bank, custody.Bank) or bank.release.profile != "synthetic"
                 or spectral_arm not in ARMS or source_seed not in SOURCES or split not in SPLITS):
             raise ValueError("Only the registered spatial coverage fixture can update")
         self.bank = bank
         self.source_seed, self.split, self.arm, self.producer = source_seed, split, spectral_arm, producer
         self.scene, self.classes = bank.release.scene, bank.release.classes
+        self.source_files = deepcopy(source_files)
         self.roster = {}
 
     @property
@@ -91,7 +94,11 @@ class SpatialReleasedFixture:
 
     def initialization(self, seed):
         target = fixture._baseline(self.bank.release, seed)
-        audit = model_from_source(shared_source(self.scene, self.source_seed), target, self.scene)
+        check(all(pin(item["path"])["sha256"] == item["sha256"] for item in self.source_files.values()),
+              "Source checkpoint or sidecar identity changed")
+        original = load_model_checkpoint(self.source_files["weights"]["path"], device="cpu")
+        audit = model_from_source(original, target, self.scene)
+        audit["source_files"] = {name:item["sha256"] for name,item in self.source_files.items()}
         return target, audit
 
     def model_factory(self, source, arm, seed):
@@ -235,10 +242,15 @@ def run_synthetic(folder, code):
             banks[split] = custody.Bank(bank_pin, root, release)
         check(banks["a"].release.statistics["statistics_hash"] != banks["b"].release.statistics["statistics_hash"],
               "Geometry switch reused fit statistics")
+        source_files = {}
+        for seed in SOURCES:
+            weights = root / f"{classes}-{seed}-old-source.pt"
+            save_model_checkpoint(shared_source(banks["a"].release.scene, seed), weights)
+            source_files[seed] = dict(weights=pin(weights), sidecar=pin(Path(str(weights)+".json")))
         for s, split, arm in product(SOURCES, SPLITS, ARMS):
             place = root / f"{classes}-{s}-{split}-{arm}"
             place.mkdir()
-            provider = SpatialReleasedFixture(banks[split], s, split, arm, code["commit"])
+            provider = SpatialReleasedFixture(banks[split], s, split, arm, code["commit"], source_files[s])
             receipt, spec, prefix = run_case(place, provider)
             cases[place.name] = receipt
             if arm == "none":

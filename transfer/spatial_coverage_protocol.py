@@ -135,8 +135,11 @@ def model_from_source(source, fresh, target):
         raise ValueError("Source tasks or graph role differ from the transfer contract")
     before = fresh.backbone.state_dict()
     origin = source.backbone.state_dict()
-    allowed = {key for key in before if key.startswith(SHARED) and ".norms." not in key}
-    actual = {key for key in origin if key.startswith(SHARED) and ".norms." not in key}
+    def shared(keys):
+        return {key for key in keys if key.startswith(SHARED)
+                and not {"norm", "norms", "batch_normalzation2"}.intersection(key.split("."))}
+
+    allowed, actual = shared(before), shared(origin)
     if allowed != actual or len(allowed) != 29:
         raise ValueError("P4 shared tensor inventory differs")
     for key in allowed:
