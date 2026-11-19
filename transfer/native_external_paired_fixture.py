@@ -46,7 +46,7 @@ def definition(kind, k, draw, spatial, *, omit_support=False):
                 if omit_support and label==classes:
                     continue
                 count = k//4 + int((i-label)%4<k%4)
-                start = paired.SEEDS.index(draw)*3
+                start = (0, 1, 3)[paired.SEEDS.index(draw)]
             else:
                 count = 3
                 start = 0
