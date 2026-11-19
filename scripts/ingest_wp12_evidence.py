@@ -17,6 +17,8 @@ def main(argv=None):
         from evaluation.wp12_positive_cli import main as positive_control
 
         return positive_control(argv)
+    if "--external-paired-history" in argv:
+        return external_paired_history(argv)
     if "--v1-spectral-audit" in argv:
         return v1_spectral_audit(argv)
     if "--long-stage-case" in argv or "--long-stage-publish" in argv:
@@ -82,6 +84,40 @@ def main(argv=None):
     require_frozen_code(code)
     with out.open("x", encoding="utf-8") as stream:
         stream.write(serialized)
+
+
+def external_paired_history(argv):
+    from evaluation.frozen_training_stages import json_pin, require
+    from evaluation.wp12_external_paired import REVIEW
+    from evaluation.wp12_paired_history import index
+    from scripts.check_wp12_production import prior_runtime
+    from scripts.run_frozen_band_region import _write
+
+    parser = argparse.ArgumentParser(description="Index historical paired development evidence without inference")
+    parser.add_argument("--external-paired-history",action="store_true",required=True)
+    parser.add_argument("--runs",type=Path,required=True)
+    parser.add_argument("--out",type=Path,required=True)
+    parser.add_argument("--expected-commit",required=True)
+    parser.add_argument("--external-review",nargs=2,metavar=("PATH","SHA256"))
+    args = parser.parse_args(argv)
+    root, out = args.runs.resolve(strict=True), external_directory(args.out)
+    code = code_snapshot()
+    require(root in out.parents and args.expected_commit==code["commit"],
+            "Use the exact clean source checkout and authorized output root")
+    require_frozen_code(code)
+    row = index(root)
+    if args.external_review:
+        link = dict(zip(("path","sha256"),args.external_review,strict=True))
+        review = json_pin(root,link)
+        require(review["schema"]==REVIEW and review["raw_gt_loaded"] is review["query_accessed"] is False,
+                "Foreign independent paired evidence")
+        prior_runtime(review["runtime"],code["commit"])
+        row["external_paired_review"] = dict(pin=link,scope=review["scope"],groups=len(review["results"]),
+                                            real_accuracy_available=review["real_accuracy_available"])
+    row["producer"] = code["commit"]
+    require_frozen_code(code)
+    out.parent.mkdir(parents=True,exist_ok=True)
+    print(json.dumps(_write(out,row)),flush=True)
 
 
 def v1_spectral_audit(argv):
