@@ -196,8 +196,8 @@ def audit_existing(root, out, code):
                           query_accessed=False,new_real_labels=False,optimizer_updates=0))
 
 
-def synthetic_bank(root, name, shift):
-    release, arrays=generated("xuzhou",512,5,"a")
+def synthetic_bank(root, name, shift, *, scene="xuzhou", support_seed=512):
+    release, arrays=generated(scene,support_seed,5,"a")
     rows=deepcopy(release.rows)
     shape=(80,*release.shape[1:])
     for row in rows:

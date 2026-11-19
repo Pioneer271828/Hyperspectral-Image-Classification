@@ -113,7 +113,7 @@ def apply_view(full, master, name, box=None):
     return replace(view, observation=_spatial_view(view.observation, box), bands=effective), positions, mode
 
 
-def bank_view(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None):
+def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None):
     _, _, original, context = bank.materialize(row, {"mode": "none"})
     release = bank.release
     stats = release.statistics
@@ -133,7 +133,11 @@ def bank_view(bank, row, producer, band, box=None, *, factor=1, profile=None, sy
     if synthetic_labels is not None:
         source.update(labels=array_hash(synthetic_labels), master_band_count=len(release.bands.band_ids))
     lattice = Lattice.make(row["box"], release.shape[:2], factor)
-    actual = _materialize(release.scene, release.classes, view, lattice, source, row["role"], producer, profile=profile)
+    return _materialize(release.scene, release.classes, view, lattice, source, row["role"], producer, profile=profile)
+
+
+def bank_view(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None):
+    actual = bank_observation(bank, row, producer, band, box, factor=factor, profile=profile, synthetic_labels=synthetic_labels)
     targets = bind(actual, row, producer, row["role"], synthetic_labels=synthetic_labels)
     return actual, np.asarray(targets.points, dtype=np.int64).reshape((-1, 2)), targets
 
