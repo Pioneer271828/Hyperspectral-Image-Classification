@@ -15,4 +15,6 @@
 
 分类的三个状态分别输出。获得独立分类许可并有已发布点即可给描述性指标。所有类别至少 20 点时，按原保护门槛评价差值。通过事前保护与目标净改判，且由真实用途授权的正式比较才可标记合格。成本资格由成本许可独立确定，输入只走观测接口。冻结旧开发数据只能提供历史诊断。
 
+如发布可用于几何评价，在同一清单附上 `spatial_annotations` 路径和 SHA-256，在持有人批准附上相同的 `spatial_annotations_sha256`。附件使用 `wp02_released_spatial_annotations_v1`，绑定 Bank、角色登记哈希、来源 SHA-256 及 `evaluation` 块。每块提供有界类别网格、已知几何布尔掩膜和持有人窄结构掩膜。WP12 校对实际发布点标签，用已知几何计算 E0 一像素边界；认证内部需要四邻均有观测。缺附件或缺某块几何时相应分层无认证观测。各分层分别检查每类 20 点条件，成本入口只消费观测。
+
 原始来源见[徐州作者发布及图 7](https://s3.3sobs.cn/paper/2019/Wang%20et%20al_2019_Caps-TripleGAN.pdf)、[徐州 DOI](https://doi.org/10.21227/t3c9-h862)、[洪湖发布方类别表](https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm)及[本地版本和来源核查](../references/wp05-two-scene-attribution-sources-20261119.json)。

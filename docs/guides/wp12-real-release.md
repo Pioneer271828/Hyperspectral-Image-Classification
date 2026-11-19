@@ -114,3 +114,9 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 训练登记、单例运行和冻结可通过 `scripts/run_native_released_points.py` 的 `positive-control-register`、`positive-control-run --case "$case"`、`positive-control-freeze` 执行。均需精确 SHA 和授权运行根，且拒绝真实许可参数。可在独立检出使用 `--review-only --producer-checkout "$checkout"`，复用已冻结训练。WP12 的 `--positive-control-case` 与 `--positive-control-publish` 分别接收单例和全队列冻结。附上 `--v1 PATH SHA` 可接入旧谱观察审计；旧 v1 归档只读入口为 `--v1-spectral-audit --freeze PATH SHA --review PATH SHA`。这些 WP12 命令使用 `scripts/ingest_wp12_evidence.py`。
 
 实验先比较具有已知谱中心的加载器 oracle、仅支持点质心和带 L2 的线性读出。局部正控若未达到预登记下限，不能据此判定某条网络旁路。位置打乱仅用于确认，对原标签位置和谱轴做身份核对后，重排输入的坐标通道并重建图。真实默认模型和原验收协议继续由现有入口管理。
+
+## 原生分支与空间分层
+
+在授权 LXC 的干净检出运行 `scripts/run_wp12_native_pathways.py`。各动作均提供 `--runs`、`--out`、`--expected-commit`。用 `real --case` 复核已经批准的单个真实端点，`--drain-after` 对总块游标排空；原输出目录可按已落盘块继续。CUDA 通过 `--gpu` 绑定实体 UUID。用 `branches` 输出冻结融合头的 CNN 和图分支投影；`readouts` 复算存档线性读出；`controls` 与 `external` 运行无优化的原生合成对照和空间准入测试。
+
+用 `scripts/ingest_wp12_evidence.py --native-pathways-review` 提供 `--runs`、`--out`、`--expected-commit` 及 `--real-root`、`--branch-root`、`--controls-cpu`、`--controls-gpu`、`--gpu-real`、`--external`、`--readouts`。审核保留固定 Q/A 的 stem 后导数、合成重建 Q/A 的有限差、各真实角色与物理块分母、历史冻结读出及外部三角色权限。可选 E0 只按[独立空间发布](independent-attribution-package.md)的评价几何计算。
