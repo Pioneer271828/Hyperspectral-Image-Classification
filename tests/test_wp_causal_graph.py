@@ -74,6 +74,21 @@ class CausalGraphTests(unittest.TestCase):
         self.assertTrue(all(torch.equal(x,y) for x,y in zip(matched[None],matched["unrelated_swap"],strict=True)))
         self.assertTrue(all(torch.equal(x,y) for x,y in zip(baseline[None],matched["cut"],strict=True)))
 
+    def test_capture_keeps_three_heads_and_separate_graph_info(self):
+        from evaluation.wp12_cross_backend import interventions
+
+        tile=self.roles["evaluation"][0]
+        actual,_,targets=materialize_reviewed(self.bank,self.intake,self.roles,"evaluation",tile,
+                                                self.code["commit"],"full",use="independent_accuracy")
+        model=deepcopy(self.model)
+        model.graph_program=region.program_for(self.model,"causal_matched",19064,24,self.witness)
+        with arithmetic(self.root,None) as execution:
+            result=interventions(model,actual,self.code["commit"],execution,targets)
+        self.assertEqual(set(result),{"source_swap","unrelated_swap","cut"})
+        for row in result.values():
+            self.assertEqual(set(row["heads"]),{"graph","fused","cnn"})
+            self.assertEqual(len(row["heads"]["fused"]),len(targets.points))
+
     def test_evolution_has_one_registered_terminal_graph(self):
         self.assertEqual([design.phase("causal_evolving","devtrain",i,24) for i in (1,8,9,16,17,24)],
                          ["original","original","placebo","placebo","matched","matched"])

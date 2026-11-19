@@ -133,7 +133,7 @@ def interventions(model, actual, producer, execution, targets):
         output,graph,timing=regional.forward_region(model,actual,producer,"devval",execution,
                                                     model.graph_program,intervention=variant)
         p=graph["regional_support"]
-        rows[variant]=dict(heads=emitted_head_scores(output,targets,actual.classes),
+        rows[variant]=dict(heads=emitted_head_scores(output[:3],targets,actual.classes),
             q=graph["q_indices"],a0=graph["a0_indices"],a2=p["stage2_indices"],phase=p["causal"]["phase"],
             seconds=timing["forward_seconds"]+timing["regional"]["selection_seconds"])
     return rows
