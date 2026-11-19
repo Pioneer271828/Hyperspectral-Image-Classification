@@ -1,11 +1,10 @@
-import numpy as np
 import pytest
 import torch
 
 from evaluation.matched_edge_controls import freeze, verify
 from transfer.band_graph_campaign import admitted, compatibility, endpoint
 from transfer.band_graph_fixture import BandGraphFixture
-from transfer.band_graph_control import ViewControl
+from transfer.band_graph_control import ViewControl, row_coo
 from transfer import native_scale_training as native
 
 
@@ -47,3 +46,19 @@ def test_bound_control_rejects_other_split_or_tampered_view(tmp_path):
         alternative=core.variant("important")
         other=native.Run(alternative.contract(9,64,"important",1,"fixture"),"fixture",released=alternative)
         other.restore(run.pack(),1)
+
+def test_random_and_weak_are_distinguishable_when_the_support_has_choices():
+    torch.set_num_threads(1)
+    edges = [(i,i) for i in range(8)]
+    weights = [1.] * 8
+    for node in range(4):
+        for offset in range(4):
+            edges.append((node,4+(node+offset)%4))
+            weights.append((2.,.1,.6,.7)[offset])
+    adjacency=row_coo(edges,weights,8)
+    xy=torch.tensor([[float(i%4),float(i//4)*25.] for i in range(8)])
+    result=freeze(adjacency,xy,per_row=1,distance_bins=[12,36],seeds=list(range(6)))
+    verify(result,adjacency,xy,expected_hash=result["plan_hash"])
+    controls=result["controls"]
+    assert all(value["status"]=="optimal" for value in controls.values())
+    assert any(controls[f"random:{i}"]["removed"] != controls["low_weight"]["removed"] for i in range(6))

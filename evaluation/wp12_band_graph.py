@@ -2,12 +2,10 @@
 
 from collections import Counter
 import csv
-import hashlib
 import json
 import os
 from itertools import product
 from pathlib import Path
-from statistics import fmean
 from tempfile import TemporaryDirectory
 
 import numpy as np
