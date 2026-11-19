@@ -124,3 +124,7 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 ## WP05 至 WP08 跨模型配对
 
 [冻结跨模型比较](wp12-cross-backend.md)使用同一授权评价 Bank 消费原生、条件多尺度和区域消息候选，并按旧协议独立复算徐州、PaviaU 的真实开发比较。WP12 验收选项为 `--cross-backend-review`，可匹配同权重 CPU/CUDA 捕获并保留成本与分类的独立资格。
+
+## 缺带与小类保护的配对生产
+
+[原生训练、冻结和确认](wp12-paired-structure.md)在同一释放点优化器接入多尺度、对齐和定向消息。WP12 使用 `--paired-structure-review` 消费完整训练和冻结发布。
