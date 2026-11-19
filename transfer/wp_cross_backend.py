@@ -27,6 +27,7 @@ def make_model(architecture, backend):
     multiscale = {"cnn_multiscale", "cnn_dilation", "graph_multiscale", "graph_radius"} & kwargs.keys()
     require(("region_attention" in kwargs) == (backend == "region_message")
             and bool(multiscale) == (backend == "multiscale")
+            and (backend != "region_message" or isinstance(kwargs["region_attention"], dict))
             and (not multiscale or {"cnn_multiscale", "cnn_dilation"} <= multiscale),
             "Architecture disagrees with the declared backend")
     factory = {"native": MultiDatasetVCASAHGCN, "aligned": MultiDatasetVCASAHGCN,
@@ -68,8 +69,11 @@ def load_export(root, export, *, device="cpu"):
 
 def semantic_identity(model, backend):
     bone = model.backbone
+    first = bone.CNN_Branch[0]
     return dict(backend=backend, assignment=bone.graph_assignment_mode, adjacency=bone.graph_adjacency_mode,
-                range_mode=getattr(model, "graph_multiscale", "off"), interaction=bone.interaction_config.interaction_mode,
+                cnn_scales=dict(mode=first.mode, dilation=first.dilation) if backend=="multiscale" else None,
+                range_mode=getattr(model, "graph_multiscale", "off"), graph_radius=getattr(model, "graph_radius", 1),
+                interaction=bone.interaction_config.interaction_mode,
                 direction=bone.interaction_config.interaction_direction if bone.interaction is not None else None,
                 attention=getattr(model, "region_attention", None))
 

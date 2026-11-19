@@ -45,7 +45,7 @@ ARCHIVES = {
     "pavia_frozen_device": ("wp06-wp08-paviau-frozen-diagnosis-20261118/summary-final01/summary.json",
                             "be1265f379a0e124cf4130cbee1bd917246be2ed965dfc139282876eb1b56116"),
     "xz_hh_spectral": ("wp06-native-pathways-20261120-qa/review6/pathways.json",
-                       "d5682b35f4f6e78397dc13cfe725fcbdda77f363a5d7ae583357a4866c99dd126"),
+                       "d5682b35f4f6e78397dc13cfe725fcbdda77f363a5d7ae58357a4866c99dd126"),
 }
 
 
@@ -283,10 +283,11 @@ def paviau(root, archive):
             and len(old["cases"])==len(new["cases"])==21 and old["optimizer_updates"]==new["optimizer_updates"]==1260
             and all(not row["raw_gt_loaded"] and not row["query_authorized"] and not row["audit_optimizer_updates"]
                     for row in (old,new)), "An archived PaviaU publication changes its released cohort")
-    for link in wp07["files"].values():
+    for link in wp07["files"]:
         pinned(root,link)
-    for link in pair["tables"].values():
-        pinned(root,link)
+    paired_base = (root/ARCHIVES["pavia_training_reproduction"][0]).parent
+    for name, sha in pair["tables"].items():
+        pinned(root, {"path":str(paired_base/name), "sha256":sha})
     require(pair["all_same_selected_step"] and pair["endpoint_confusion_matches"]==252
             and pair["matched_nonempty_tile_heads"]==2142 and frozen["cpu_reference_disagreements"]==[],
             "Independent training and same-weight audit lost their original equivalence evidence")

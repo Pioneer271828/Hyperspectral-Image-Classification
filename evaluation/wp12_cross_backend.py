@@ -71,6 +71,7 @@ def open_case(root, request, *, test_history=None):
         require(set(protocol) == PROTOCOL and type(protocol["budget"]) is int and protocol["budget"] >= 0
                 and protocol["selection"] == SELECTION
                 and protocol["class_axis"] == list(range(1, bank.release.classes+1))
+                and all(type(label) is int for label in protocol["class_axis"])
                 and protocol["band_axis"] == bank.release.bands.fingerprint
                 and all(fingerprint(protocol[k]) for k in ("data", "exposure", "initialization", "arithmetic")),
                 "Budget, original band identity, taxonomy or selection rule differs")
@@ -177,27 +178,28 @@ def raw_pair(truth, before, after, classes, *, floor, delta=-.02):
                 protected=all(row["recall_delta"] >= delta for row in changes.values()) if enough else None)
 
 
-def checked_blocks(bank, roles, intake, geometry, arm, body, pin):
+def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, semantics):
     classes = bank.release.classes
     expected = list(product(intake.get("observation_views", ["full"]), roles["evaluation"]))
     seen = [(row["view"], row["tile"]) for row in arm["rows"]]
     require(seen == expected and arm["endpoint"] == pin and arm["state"] == body["checkpoint"]["state"]
             and arm["phase"] == body["phase"] and arm["step"] == body["step"]
-            and arm["semantics"]["backend"] == body["checkpoint"]["backend"],
+            and digest(arm["semantics"]) == digest(semantics),
             "Raw evidence changes the registered endpoint, model arm, or ordered view/role")
     checked = {}
     for row in arm["rows"]:
         band, tile = row["view"], row["tile"]
-        block = bank.role_row("devval", tile)
         class_allowed = intake["uses"]["independent_accuracy"]["eligible"]
+        points = bank.role_row("devval", tile)["samples"] if class_allowed else []
         require(set(row) == {"tile", "view", "role", "cost", "accuracy"} and row["role"] == "evaluation"
                 and (row["cost"] is not None) == intake["uses"]["cost"]["eligible"]
-                and (row["accuracy"] is not None) == bool(class_allowed and block["samples"]),
+                and (row["accuracy"] is not None) == bool(points),
                 "A capture crosses a role or admitted use")
         bands = [bank.release.bands.band_ids[k] for k in retained_positions(bank.release.bands, band)]
         cost = row["cost"]
         if cost is not None:
             require(cost["label_blind"] is True and len(cost["samples"]) == 2 and cost["bands"] == bands
+                    and cost["observation"] == observations[(band,tile)]
                     and cost["outputs"] == [[cost["graph"]["q_shape"][0], classes]]*len(HEADS)
                     and all(math.isfinite(item["total"]) and 0 <= item["materialize"] <= item["total"]
                             and 0 <= item["graph_seconds"] <= item["elapsed"] <= item["total"]
@@ -206,11 +208,12 @@ def checked_blocks(bank, roles, intake, geometry, arm, body, pin):
         if record is None:
             checked[(band, tile)] = row
             continue
-        points = [tuple(pair) for pair in block["samples"]]
+        points = [tuple(pair) for pair in points]
         truth = [y for _, y in points]
         spatial = None if geometry is None else classify(bank, roles, geometry, "evaluation", tile, points)
         require(record["truth"] == truth and all(type(y) is int and 1 <= y <= classes for y in truth)
                 and record["order"] == digest([i for i, _ in points]) and record["bands"] == bands
+                and record["observation"] == observations[(band,tile)]
                 and record["spatial"] == spatial and set(record["heads"]) == set(HEADS)
                 and (cost is None or (record["observation"] == cost["observation"] and record["graph"] == cost["graph"])),
                 "The points, observation, band axis or optional trusted geometry differ")
@@ -278,14 +281,30 @@ def review_case(root, capture, out, code, *, test_history=None):
             "Invalid capture scope, provenance or authority")
     pin = intake.get("spatial_annotations")
     geometry = read_annotations(root, bank, roles, pin) if pin else None
+    observations = {}
+    use = "cost" if intake["uses"]["cost"]["eligible"] else "independent_accuracy"
+    for band, tile in product(raw["views"], roles["evaluation"]):
+        actual, _, _ = independent.materialize_reviewed(bank, intake, roles, "evaluation", tile,
+                                                         code["commit"], band, use=use)
+        observations[band,tile] = actual.receipt["observation"]
     summary = {}
     for key, group in groups.items():
         ready = raw["cohorts"][key]
         require(ready["budget"] == group["protocol"]["budget"] and ready["seed"] == group["seed"]
                 and ready["pairs"] == group["pairs"] and set(ready["arms"]) == set(group["arms"]),
                 "Capture changes the paired training budget, model seed, or roster")
-        checked = {name: checked_blocks(bank, roles, intake, geometry, arm, group["models"][name],
-                   group["arms"][name]) for name, arm in ready["arms"].items()}
+        checked = {}
+        for name, arm in ready["arms"].items():
+            body = group["models"][name]
+            export = body["checkpoint"]
+            model = model_io.load_export(root, export)
+            require(arm["parameters"] == sum(p.numel() for p in model.parameters())
+                    and bank.release.scene in model.heads
+                    and model.heads[bank.release.scene].out_features == bank.release.classes,
+                    "Consumption checkpoint has another model or class inventory")
+            semantics = model_io.semantic_identity(model, export["backend"])
+            checked[name] = checked_blocks(bank, roles, intake, geometry, observations,
+                                           arm, body, group["arms"][name], semantics)
         scored = {}
         for base, candidate in group["pairs"]:
             scored[f"{base}/{candidate}"] = {band: matched_view(checked[base], checked[candidate], band,

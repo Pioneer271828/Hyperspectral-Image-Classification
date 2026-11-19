@@ -17,6 +17,8 @@ def main(argv=None):
         from evaluation.wp12_positive_cli import main as positive_control
 
         return positive_control(argv)
+    if "--cross-backend-review" in argv:
+        return cross_backend_review(argv)
     if "--native-pathways-review" in argv:
         return native_pathways(argv)
     if "--real-attribution-review" in argv:
@@ -88,6 +90,28 @@ def main(argv=None):
     require_frozen_code(code)
     with out.open("x", encoding="utf-8") as stream:
         stream.write(serialized)
+
+
+def cross_backend_review(argv):
+    from evaluation.frozen_training_stages import require
+    from evaluation.wp12_cross_backend import review_case
+
+    parser = argparse.ArgumentParser(description="Independently review paired native, scale and message models")
+    parser.add_argument("--cross-backend-review", action="store_true", required=True)
+    parser.add_argument("--runs", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--capture", nargs=2, metavar=("PATH", "SHA256"), required=True)
+    parser.add_argument("--synthetic", action="store_true")
+    args = parser.parse_args(argv)
+    root, out = args.runs.resolve(strict=True), external_directory(args.out)
+    code = code_snapshot()
+    require(root in out.parents and code["commit"] == args.expected_commit and not out.exists(),
+            "Expected clean review checkout and fresh authorized result path")
+    require_frozen_code(code)
+    result = review_case(root, dict(path=args.capture[0], sha256=args.capture[1]), out, code,
+                         test_history=[] if args.synthetic else None)
+    print(json.dumps(result), flush=True)
 
 
 def native_pathways(argv):
