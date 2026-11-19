@@ -25,6 +25,17 @@ class ReleasedPoints:
     targets: Targets
     source: str
 
+    def select(self, positions):
+        positions = tuple(positions)
+        if (not positions or any(type(i) is not int or i < 0 or i >= len(self.points) for i in positions)
+                or positions != tuple(sorted(set(positions)))):
+            raise ValueError("Released point subset must preserve its authorized order")
+        points = tuple(self.points[i] for i in positions)
+        cells = _immutable(self.cells[list(positions)])
+        hist = np.zeros_like(self.histogram)
+        np.add.at(hist, (cells, [label-1 for _, label in points]), 1)
+        return ReleasedPoints(points, cells, Targets(hist, self.area, False), self.source)
+
     def weights(self, mode):
         if mode != MODE:
             raise ValueError("Released points require the registered loss mode")

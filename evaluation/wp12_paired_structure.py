@@ -5,6 +5,7 @@ from collections import defaultdict
 import numpy as np
 
 from evaluation import wp12_cross_backend as comparator, wp12_scientific_claim as claims
+from evaluation.wp12_support_contrasts import summarize as support_summary
 from evaluation.frozen_training_stages import file_pin, json_pin, require
 from model.research_config import digest
 from research_runtime import require_frozen_code
@@ -58,10 +59,11 @@ def review(root,campaign,out,code,captures,execution,*,test):
             and set(publication["releases"])==set(plan["releases"])==set(captures)
             and set(publication["cases"])==set(plan["groups"]),"Need complete frozen publication and captures")
     out.mkdir(parents=True)
-    reviews,readouts = {},{}
+    reviews,readouts,raw_captures = {},{},{}
     for release,claim in captures.items():
         raw = json_pin(root,claim)
         require(raw["request"]==publication["releases"][release],"Capture refers to another trained publication")
+        raw_captures[release] = raw
         reviews[release] = comparator.review_case(root,claim,out/(release+".json"),code,
                                                   test_history=[] if test else None)
         readouts[release] = json_pin(root,reviews[release])
@@ -70,7 +72,7 @@ def review(root,campaign,out,code,captures,execution,*,test):
     coverage = set()
     for name,group in plan["groups"].items():
         release = group["release"]
-        raw = json_pin(root,captures[release])["cohorts"][name]
+        raw = raw_captures[release]["cohorts"][name]
         result = readouts[release]["cohorts"][name]
         proofs = {}
         require(set(publication["cases"][name])==set(raw["arms"])==set(group["arms"]),"Frozen arm inventory differs")
@@ -87,7 +89,7 @@ def review(root,campaign,out,code,captures,execution,*,test):
                 coverage.add((descriptor["backend"],group["factor"]))
                 parity[f"{name}/{arm}"] = observed_parity(root,campaign,plan,code,name,arm,spec,packet,frozen_raw,
                                                           execution,test=test)
-            if test and name=="xz-recovery" and arm=="combined":
+            if test and name in ("xz-recovery","xz-column-recovery") and arm=="combined":
                 other = completed(root,campaign,name,arm,reg,group,reference=True)
                 require(_exact(packet,other[3]) and len(record["timings"])>0,"Full state differed after process recovery")
                 recovery[f"{name}/{arm}"] = dict(reference=other[0],recovered=link,
@@ -133,7 +135,8 @@ def review(root,campaign,out,code,captures,execution,*,test):
     require_frozen_code(code)
     return _write(out/"review.json",dict(schema=SCHEMA,producer=code["commit"],registration=reg,publication=marker,
         scope=plan["scope"],classification=reviews,arms=all_cases,parity=parity,recovery=recovery,closed=closed,
-        criteria=decisions,controls=controls,planned_updates=plan["optimizer_updates"],science_updates=science_steps,
+        criteria=decisions,controls=controls,support_contrasts=support_summary(plan,raw_captures,readouts,all_cases),
+        planned_updates=plan["optimizer_updates"],science_updates=science_steps,
         qualification_updates=plan["optimizer_updates"]-science_steps,
         real_optimizer_updates=0 if test else plan["optimizer_updates"],
         query_accessed=False,raw_gt_loaded=False,wp04_executed=False))

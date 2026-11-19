@@ -14,6 +14,7 @@ from evaluation.wp12_locked_support import transitions
 from evaluation.wp12_paired_head_review import pair_scores
 from evaluation.wp12_release_qualification import classification_status
 from evaluation.wp12_spatial_release import STRATA, classify, read_annotations, score_stratum
+from evaluation.wp12_scientific_claim import COLUMNS
 from model.research_config import digest
 from research_runtime import require_frozen_code
 from scripts.run_frozen_band_region import _write
@@ -21,7 +22,6 @@ from transfer import native_independent_release as independent
 from transfer import wp_cross_backend as model_io
 from transfer.g3_training import state_hash
 from transfer.native_paired_head_campaign import GATES
-from transfer.spatial_coverage_protocol import retained_positions
 
 DESIGN = "wp05_wp08_frozen_comparison_v1"
 ENDPOINT = "wp05_wp08_frozen_endpoint_v1"
@@ -70,7 +70,11 @@ def open_case(root, request, *, test_history=None):
                 and type(group["seed"]) is int and 0 <= group["seed"] < 2**32, "Invalid comparison roster")
         protocol, seed = group["protocol"], group["seed"]
         factor = protocol.get("factor",1)
-        require(set(protocol) in (PROTOCOL,PROTOCOL|{"factor"})
+        fields = set(protocol)
+        columns = "delivered_columns" in intake
+        require(PROTOCOL <= fields <= PROTOCOL|{"factor", "observation_protocol"}
+                and (protocol.get("observation_protocol") == COLUMNS if columns
+                     else "observation_protocol" not in protocol)
                 and type(factor) is int and factor in intake.get("observation_factors",[1])
                 and type(protocol["budget"]) is int and protocol["budget"] >= 0
                 and protocol["selection"] == SELECTION
@@ -201,11 +205,11 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
                 and (row["cost"] is not None) == intake["uses"]["cost"]["eligible"]
                 and (row["accuracy"] is not None) == bool(points),
                 "A capture crosses a role or admitted use")
-        bands = [bank.release.bands.band_ids[k] for k in retained_positions(bank.release.bands, band)]
+        bands = independent.observation_bands(bank.release.bands, band, intake)
         cost = row["cost"]
         if cost is not None:
             require(cost["label_blind"] is True and len(cost["samples"]) == 2 and cost["bands"] == bands
-                    and cost["observation"] == observations[(band,tile)]
+                    and cost["observation"] == observations["cost"][(band,tile)]
                     and cost["outputs"] == [[cost["graph"]["q_shape"][0], classes]]*len(HEADS)
                     and all(math.isfinite(item["total"]) and 0 <= item["materialize"] <= item["total"]
                             and 0 <= item["graph_seconds"] <= item["elapsed"] <= item["total"]
@@ -219,9 +223,10 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
         spatial = None if geometry is None else classify(bank, roles, geometry, "evaluation", tile, points)
         require(record["truth"] == truth and all(type(y) is int and 1 <= y <= classes for y in truth)
                 and record["order"] == digest([i for i, _ in points]) and record["bands"] == bands
-                and record["observation"] == observations[(band,tile)]
+                and record["observation"] == observations["independent_accuracy"][(band,tile)]
                 and record["spatial"] == spatial and set(record["heads"]) == set(HEADS)
-                and (cost is None or (record["observation"] == cost["observation"] and record["graph"] == cost["graph"])),
+                and (cost is None or "delivered_columns" in intake
+                     or (record["observation"] == cost["observation"] and record["graph"] == cost["graph"])),
                 "The points, observation, band axis or optional trusted geometry differ")
         for head in HEADS:
             probabilities(record["heads"][head], len(truth), classes)
@@ -233,7 +238,7 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
     truth, pred_before, pred_after = [], {h: [] for h in HEADS}, {h: [] for h in HEADS}
     strata = {name: [] for name in STRATA}
     sampled_geometry = False
-    costs = []
+    costs, blocks = [], {}
     for tile in tiles:
         left, right = first[(band,tile)], second[(band,tile)]
         ca, cb = left["cost"], right["cost"]
@@ -252,9 +257,14 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
             for name in STRATA:
                 strata[name].extend(len(truth)+i for i, use in enumerate(a["spatial"]["strata"][name]) if use)
         truth.extend(a["truth"])
+        block = {}
         for h in HEADS:
-            pred_before[h].extend((probabilities(a["heads"][h], len(a["truth"]), classes).argmax(1)+1).tolist())
-            pred_after[h].extend((probabilities(b["heads"][h], len(b["truth"]), classes).argmax(1)+1).tolist())
+            before, after = ((probabilities(side["heads"][h], len(a["truth"]), classes).argmax(1)+1).tolist()
+                             for side in (a, b))
+            pred_before[h].extend(before)
+            pred_after[h].extend(after)
+            block[h] = raw_pair(a["truth"], before, after, classes, floor=FORMAL_FLOOR)
+        blocks[str(tile)] = dict(points=len(a["truth"]), heads=block)
     scores, qualifications, spatial = None, None, None
     if truth:
         scores = {head:raw_pair(truth, pred_before[head], pred_after[head], classes, floor=FORMAL_FLOOR)
@@ -274,7 +284,7 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
                 h:raw_pair([truth[i] for i in indices], [pred_before[h][i] for i in indices],
                            [pred_after[h][i] for i in indices], classes, floor=FORMAL_FLOOR) for h in HEADS})
                 for name, indices in strata.items()}
-    return dict(accuracy=scores, qualification=qualifications, spatial=spatial, cost=costs)
+    return dict(accuracy=scores, qualification=qualifications, spatial=spatial, cost=costs, blocks=blocks)
 
 
 def compare_devices(reference, capture):
@@ -335,11 +345,13 @@ def review_case(root, capture, out, code, *, test_history=None, reference=None):
     pin = intake.get("spatial_annotations")
     geometry = read_annotations(root, bank, roles, pin) if pin else None
     observations = {}
-    use = "cost" if intake["uses"]["cost"]["eligible"] else "independent_accuracy"
+    uses = [use for use in ("independent_accuracy", "cost") if intake["uses"][use]["eligible"]]
     for factor, band, tile in product(sorted({g["factor"] for g in groups.values()}),raw["views"],roles["evaluation"]):
-        actual, _, _ = independent.materialize_reviewed(bank,intake,roles,"evaluation",tile,
-                                                         code["commit"],band,use=use,factor=factor)
-        observations.setdefault(factor,{})[band,tile] = actual.receipt["observation"]
+        proofs = observations.setdefault(factor, {})
+        for use in uses:
+            actual, _, _ = independent.materialize_reviewed(bank,intake,roles,"evaluation",tile,
+                                                             code["commit"],band,use=use,factor=factor)
+            proofs.setdefault(use, {})[band,tile] = actual.receipt["observation"]
     summary = {}
     for key, group in groups.items():
         ready = raw["cohorts"][key]

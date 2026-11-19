@@ -20,12 +20,31 @@ from transfer.development_blocks import read_pin
 from transfer.native_coverage_queue import generated
 from transfer.native_released_points import scores
 from transfer.native_scale_observation import forward
-from transfer.spatial_coverage_protocol import bank_observation, bank_view, counts, release_statistics
+from transfer.spatial_coverage_protocol import bank_observation, bank_view, counts, release_statistics, retained_positions
 
 MANIFEST = "wp02_independent_development_intake_v1"
 AUTHORITY = "wp02_independent_development_approval_v1"
 ROLES = {"support": "devtrain", "calibration": "devval", "evaluation": "devval"}
 USES = ("independent_accuracy", "cost", "frozen_diagnostics")
+COLUMN_VIEWS = ("full", "central_gap", "matched_dispersed", "metadata_missing")
+
+
+def column_inventory(bands):
+    retained = {view: [bands.band_ids[i] for i in retained_positions(
+        bands, "full" if view == "metadata_missing" else view)] for view in COLUMN_VIEWS}
+    return dict(axis=list(bands.band_ids), retained=retained)
+
+
+def observation_view(band, intake):
+    if "delivered_columns" not in intake:
+        return band, None
+    check(band in intake["observation_views"], "Delivered-column view was not approved")
+    return ("full", "missing") if band == "metadata_missing" else (band, "ordinal")
+
+
+def observation_bands(bands, band, intake):
+    original, _ = observation_view(band, intake)
+    return [bands.band_ids[i] for i in retained_positions(bands, original)]
 
 
 def check(condition, reason):
@@ -148,12 +167,13 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     manifest = authorized_document(root,manifest_pin)
     authority = authorized_document(root,authority_pin)
     base_fields={"schema","candidate","roles","minimum_buffer","history"}
-    check(base_fields <= manifest.keys() <= base_fields | {"spatial_annotations", "observation_views", "observation_factors"},
+    check(base_fields <= manifest.keys() <= base_fields | {"spatial_annotations", "observation_views", "observation_factors", "delivered_columns"},
           "Exact independent manifest fields required")
     views = manifest.get("observation_views")
+    columns = "delivered_columns" in manifest
     if "observation_views" in manifest:
         check(isinstance(views, list) and views and all(
-            view in ("full", "central_gap", "matched_dispersed") for view in views)
+            view in (COLUMN_VIEWS if columns else COLUMN_VIEWS[:3]) for view in views)
             and len(set(views)) == len(views), "Explicit unique approved retained-band views required")
     factors = manifest.get("observation_factors")
     if "observation_factors" in manifest:
@@ -169,6 +189,18 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     check(manifest["schema"]==MANIFEST and set(authority)==approved_fields and authority["schema"]==AUTHORITY
           and authority["approved_manifest_sha256"]==manifest_pin["sha256"],"Independent manifest is not authorized")
     bank=bank_from_entry(root,manifest["candidate"])
+    if columns:
+        inventory = column_inventory(bank.release.bands)
+        check(views == list(COLUMN_VIEWS)
+              and digest(manifest["delivered_columns"]) == digest(inventory)
+              and len(inventory["retained"]["full"]) > len(inventory["retained"]["central_gap"])
+                  == len(inventory["retained"]["matched_dispersed"]),
+              "Delivered-column protocol requires the approved actual column order and exact matched deletions")
+        if authority["uses"].get("cost") and not authority["uses"].get("independent_accuracy"):
+            check(set(authority["uses"]) == set(USES) and not authority["uses"]["frozen_diagnostics"]
+                  and "spatial_annotations" not in manifest
+                  and all(not row["samples"] for row in bank.release.rows),
+                  "Cost-only delivered columns require an observation-only Bank without labels or annotations")
     supplemental = [bank_from_entry(root,row) for row in manifest["history"]]
     if bank.release.profile=="synthetic":
         check(authority["source_mode"]=="synthetic" and test_history is not None and
@@ -192,6 +224,8 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
         result["observation_views"] = views
     if factors is not None:
         result["observation_factors"] = factors
+    if columns:
+        result["delivered_columns"] = inventory
     return bank,result,manifest["roles"]
 
 
@@ -203,10 +237,15 @@ def materialize_reviewed(bank, report, assigned, role, tile, producer, band, *, 
             or not report["uses"][use]["eligible"] or tile not in assigned[role]
             or (use!="independent_accuracy" and role!="evaluation")):
         raise ValueError("Independent consumption crosses role, publication or approved use")
+    observed, metadata = observation_view(band, report)
+    if use=="cost" and "delivered_columns" in report:
+        row = bank.observation_row(ROLES[role],tile)
+        return bank_observation(bank,row,producer,observed,factor=factor,metadata=metadata,
+                                observation_only=True),None,None
     row = bank.role_row(ROLES[role],tile)
     if use=="cost":
-        return bank_observation(bank,row,producer,band,factor=factor),None,None
-    return bank_view(bank,row,producer,band,factor=factor)
+        return bank_observation(bank,row,producer,observed,factor=factor),None,None
+    return bank_view(bank,row,producer,observed,factor=factor,metadata=metadata)
 
 
 def audit_existing(root, out, code):

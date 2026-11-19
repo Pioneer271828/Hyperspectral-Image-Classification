@@ -10,6 +10,8 @@ from evaluation.frozen_training_stages import file_pin, json_pin, require
 from evaluation.wp12_paired_head_review import pair_scores
 from evaluation.wp12_release_qualification import classification_status
 from evaluation.wp12_spatial_release import SCHEMA as GEOMETRY
+from evaluation.wp12_scientific_claim import COLUMNS, PAVIA
+from transfer.wp_support_match import MODE as MATCHED_EXPOSURE
 from loadData.observation_sampling import BandMetadata
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.checkpoint_io import save_model_checkpoint
@@ -65,13 +67,17 @@ def designs(devices):
     return science
 
 
-def bank_at(out, scene, layout, shared_state):
+def bank_at(out, scene, layout, shared_state, *, k=5, support_seed=512, matched=False,
+            columns=False, observation_only=False):
     classes = SCENES[scene][1]
     scene_index = tuple(SCENES_BY_KEY.values()).index(scene)
     width = 24
     shape = (224,126,width)
     bands = BandMetadata(f"{FIXTURE}:{scene}",tuple(11+7*i for i in range(width)),
              tuple(430.+13*i+2*scene_index for i in range(width)),"nm","verified",(True,)*width)
+    if columns:
+        bands = BandMetadata(bands.source_id,bands.band_ids,tuple(np.linspace(0.,1.,width)),
+                             "normalized","index_only",(True,)*width)
     retained = set(retained_positions(bands,"central_gap"))
     all_bands = set(range(width))
     rng = np.random.default_rng(5820+scene_index)
@@ -96,7 +102,16 @@ def bank_at(out, scene, layout, shared_state):
             spots = np.argwhere(truth==label)
             count = 1+int((label+i)%4==0) if role=="support" else (
                 5 if role=="calibration" else 7 if scene=="whu-honghu" else 3)
-            for a,b in spots[rng.permutation(len(spots))[:count]]:
+            selection = rng
+            if matched:
+                if role == "support":
+                    count = k if (label-1) % 4 == i else 0
+                    selection = np.random.default_rng([support_seed,offset,scene_index,label])
+                elif role == "evaluation":
+                    count = 7
+            if observation_only:
+                count = 0
+            for a,b in spots[selection.permutation(len(spots))[:count]]:
                 samples.append([(y+int(a))*shape[1]+x+int(b),label])
         box = [y,y+h,x,x+w]
         arrays[key],truth_by_tile[key] = data,truth
@@ -108,8 +123,8 @@ def bank_at(out, scene, layout, shared_state):
     plan = digest([FIXTURE,scene,layout,roles,[r["box"] for r in rows]])
     values = release_statistics(arrays,rows,plan)
     release = custody.BankRelease(scene,"synthetic",shape,classes,plan,bands,values,
-                dict(shared_state=shared_state,kind=FIXTURE),dict(k=5,minimum_buffer=4,layout=layout,
-                roles=digest(roles),support_seed=512),tuple(rows))
+                dict(shared_state=shared_state,kind=FIXTURE),dict(k=k,minimum_buffer=4,layout=layout,
+                roles=digest(roles),support_seed=support_seed),tuple(rows))
     saved = custody.publish(out,out.parent,release,lambda row:arrays[row["id"]])
     return dict(pin={k:saved[k] for k in ("root","sha256","registration")},release=asdict(release)),roles,truth_by_tile
 
@@ -160,14 +175,97 @@ def generate(out,campaign,code,devices,*,qualification=False):
     return dict(request=request,approval=approval)
 
 
+def generate_scientific(out, campaign, code, devices):
+    """An anchor-star per scene that changes K, label draw or layout one at a time."""
+    out.mkdir(parents=True)
+    src = source(out)
+    releases, groups, contrasts = {},{},{}
+    variations = {"anchor":(5,512,"a",None),"k1":(1,512,"a","support_k"),
+                  "k10":(10,512,"a","support_k"),"draw64":(5,64,"a","support_seed"),
+                  "draw2048":(5,2048,"a","support_seed"),"layout-b":(5,512,"b","spatial_layout")}
+
+    def release(branch, scene, history, *, layout, k=5, seed=512, columns=True,
+                matched=True, cost=False, accuracy=True, prospective=False):
+        bank,roles,truth = bank_at(branch/"bank",scene,layout,src["state"],k=k,support_seed=seed,
+                                   matched=matched,columns=columns,observation_only=not accuracy)
+        views = independent.COLUMN_VIEWS if columns else VIEWS
+        manifest = dict(schema=independent.MANIFEST,candidate=bank,roles=roles,minimum_buffer=4,
+                        history=[history],observation_views=list(views),observation_factors=[1,2])
+        options, approval = {},{}
+        if columns:
+            manifest["delivered_columns"] = independent.column_inventory(
+                BandMetadata(**bank["release"]["bands"]))
+            options["observation_protocol"] = COLUMNS
+        if accuracy:
+            annotation = _write(branch/"geometry.json",dict(schema=GEOMETRY,bank=bank["pin"]["sha256"],
+                roles=digest(roles),scope="synthetic",source=digest([FIXTURE,scene,layout,"geometry"]),
+                tiles={str(tile):dict(labels=truth[tile].tolist(),geometry=(truth[tile]>0).tolist(),
+                                      narrow=np.isin(truth[tile],[15,21] if scene=="whu-honghu" else [5,6]).tolist())
+                       for tile in roles["evaluation"]}))
+            manifest["spatial_annotations"] = annotation
+            approval["spatial_annotations_sha256"] = annotation["sha256"]
+        pin = _write(branch/"intake.json",manifest)
+        authority = _write(branch/"owner-test-only.json",dict(schema=independent.AUTHORITY,
+            approved_manifest_sha256=pin["sha256"],historical_bank_sha256=[history["pin"]["sha256"]],
+            uses=dict(independent_accuracy=accuracy,cost=cost,frozen_diagnostics=False),source_mode="synthetic",
+            **approval))
+        if matched:
+            options["matched_exposure"] = MATCHED_EXPOSURE
+        if prospective:
+            options["claim_policy"] = PAVIA
+        return dict(manifest=pin,authority=authority,source=src,k=k,**options)
+
+    for i,(alias,scene) in enumerate(SCENES_BY_KEY.items()):
+        device = devices[i % len(devices)] if devices else "cpu"
+        if len(devices)==1 and alias=="hh":
+            device = "cpu"
+        history,_,_ = bank_at(out/(alias+"-history-columns"),scene,"h",src["state"],columns=True)
+        for variation,(k,draw,layout,factor) in variations.items():
+            key = f"{alias}-{variation}"
+            releases[key] = release(out/key,scene,history,layout=layout,k=k,seed=draw)
+            groups[key] = dict(release=key,seed=64,factor=1,steps=40,clock=[0,10,20,30,40],
+                arms=dict(off=OFF,scale=SCALES),pairs=[pair("off","scale")],device=device,purpose="science")
+            if factor:
+                contrasts[key] = dict(baseline=alias+"-anchor",comparison=key,factor=factor)
+        for seed in (512,2048):
+            groups[f"{alias}-model-{seed}"] = {**groups[alias+"-anchor"],"seed":seed}
+
+    for alias in ("xz","pavia"):
+        scene = SCENES_BY_KEY[alias]
+        history,_,_ = bank_at(out/(alias+"-history-physical"),scene,"h",src["state"])
+        key = alias+"-physical"
+        releases[key] = release(out/key,scene,history,layout="a",columns=False,matched=False,cost=True,
+                                prospective=alias=="pavia")
+    groups["xz-recovery"] = dict(release="xz-physical",seed=2048,factor=1,device="cpu",
+        arms=dict(local=message("local","graph_to_cnn"),combined=message("combined","graph_to_cnn")),
+        pairs=[pair("local","combined",equal=True)],steps=12,clock=[0,4,8,12],purpose="recovery")
+    groups["xz-column-recovery"] = {**groups["xz-recovery"],"release":"xz-anchor","steps":40,
+                                    "clock":[0,10,20,30,40]}
+    groups["xz-physical"] = dict(release="xz-physical",seed=64,factor=1,device=devices[0] if devices else "cpu",
+        arms={"off":OFF,"aligned":{"backend":"aligned"}},pairs=[pair("off","aligned")],
+        steps=12,clock=[0,4,8,12],purpose="science")
+    for seed in (64,512,2048):
+        groups[f"pavia-physical-s{seed}"] = dict(
+            release="pavia-physical",seed=seed,factor=2,device=devices[0] if devices else "cpu",
+            arms=dict(off=OFF,scale=SCALES),pairs=[pair("off","scale")],steps=12,clock=[0,4,8,12],purpose="science")
+    history,_,_ = bank_at(out/"cost-history",SCENES_BY_KEY["xz"],"h",src["state"],columns=True)
+    cost_only = release(out/"xz-cost-only",SCENES_BY_KEY["xz"],history,layout="b",cost=True,accuracy=False)
+    _write(out/"cost-only-entry.json",cost_only)
+    data = dict(schema=SCHEMA,scope=SYNTHETIC,releases=releases,groups=groups,support_contrasts=contrasts)
+    request = _write(out/"request.json",data)
+    approval = _write(out/"engineering-only.json",expected_approval(data,request,campaign,code,test=True))
+    return dict(request=request,approval=approval)
+
+
 def controls(root, entry, producer):
     from transfer.spatial_coverage_protocol import bank_observation
 
     bank,report,roles = independent.open_independent(root,entry["manifest"],entry["authority"],test_history=[])
     retained_checks = {}
-    for tile,band in product(roles["evaluation"],VIEWS):
+    for tile,band in product(roles["evaluation"],report["observation_views"]):
         row = bank.role_row("devval",tile)
-        actual = bank_observation(bank,row,producer,band)
+        observed, metadata = independent.observation_view(band, report)
+        actual = bank_observation(bank,row,producer,observed,metadata=metadata)
         raw = actual.view.observation.spectral
         varies = bool(np.ptp(raw,axis=(0,1)).max()>1e-7)
         kind = row["origin"]["pattern"]

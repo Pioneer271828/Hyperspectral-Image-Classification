@@ -22,7 +22,8 @@ FORMAT = "wp05_wp06_production_native_training_v1"
 class ProductionProvider:
     scores = staticmethod(scores)
 
-    def __init__(self, root, bank, roles, *, axis, config, source, seed, budget, producer, approval=None):
+    def __init__(self, root, bank, roles, *, axis, config, source, seed, budget, producer, approval=None,
+                 delivered_axis=False):
         bank.verify_authority(bank.pin)
         self.root, self.bank, self.roles = root, bank, deepcopy(roles)
         require(set(roles) == {"support", "calibration", "evaluation"} and roles["support"] and roles["calibration"],
@@ -34,8 +35,9 @@ class ProductionProvider:
         self.approval = approval
         require(self.is_synthetic == (approval is None),
                 "A real production provider needs separate signed case approval")
-        require(self.axis == tuple(sorted(set(self.axis)))
-                and set(bank.release.bands.band_ids).issubset(self.axis), "Registered axis omits an available original band")
+        require((self.axis == bank.release.bands.band_ids if delivered_axis else
+                 self.axis == tuple(sorted(set(self.axis))) and set(bank.release.bands.band_ids).issubset(self.axis)),
+                "Registered axis omits an available original band or changes delivered order")
         self._cache, self._roster = {}, None
 
     def baseline(self, seed):

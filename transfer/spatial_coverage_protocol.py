@@ -139,8 +139,9 @@ def metadata_view(view, master, positions, original_mode, policy):
 
 
 def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None,
-                     metadata=None):
-    _, _, original, context = bank.materialize(row, {"mode": "none"})
+                     metadata=None, observation_only=False):
+    read = bank.observe if observation_only else bank.materialize
+    _, _, original, context = read(row, {"mode": "none"})
     release = bank.release
     stats = release.statistics
     if (stats["statistics_hash"] != context["statistics"]["parent_statistics_hash"]

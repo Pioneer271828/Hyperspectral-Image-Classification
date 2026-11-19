@@ -185,6 +185,10 @@ def export_selected(root, out, plan, link, name, group, arm, data):
               exposure=digest(spec["training"]),initialization=context["initialization"],
               class_axis=list(range(1,spec["classes"]+1)),band_axis=spec["band_axis"],
               arithmetic=digest(spec["numeric"]),selection=comparison.SELECTION)
+    if "delivered_columns" in bank["authority"]:
+        from evaluation.wp12_scientific_claim import COLUMNS
+
+        protocol["observation_protocol"] = COLUMNS
     endpoint = write_once(root,path.with_suffix(".json"),dict(schema=comparison.ENDPOINT,protocol=protocol,
         seed=group["seed"],phase="selected",step=selected["step"],calibration=record["calibration"],checkpoint=export))
     return protocol,endpoint,context

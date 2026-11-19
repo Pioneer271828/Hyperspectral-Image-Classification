@@ -9,11 +9,12 @@ import torch
 
 from evaluation.frozen_training_stages import file_pin, json_pin, pinned, require
 from evaluation.wp12_cross_backend import SELECTION
+from evaluation.wp12_scientific_claim import COLUMNS, PAVIA, PHYSICAL
 from model.checkpoint_io import load_model_checkpoint
 from model.research_config import digest
 from research_runtime import require_frozen_code, tensor_hash
 from scripts.run_frozen_band_region import _write
-from transfer import native_independent_release as independent, wp_cross_backend as backend
+from transfer import native_independent_release as independent, wp_cross_backend as backend, wp_support_match as support_match
 from transfer.development_bank_training import _baseline
 from transfer.g3_training import state_hash
 from transfer.native_production_model import Switches
@@ -21,7 +22,7 @@ from transfer.native_production_provider import ProductionProvider
 from transfer.native_released_points import LOSS, MODE
 from transfer.native_scale_observation import forward
 from transfer.p4_runtime_device import UUID
-from transfer.spatial_coverage_protocol import model_from_source, retained_positions
+from transfer.spatial_coverage_protocol import bank_view, model_from_source, retained_positions
 
 SCHEMA = "wp05_wp08_paired_structure_training_v1"
 SYNTHETIC = "test_external_format_only"
@@ -62,13 +63,19 @@ def validate_group(group, releases, *, test):
 
 def request_spec(root, request_pin, *, test):
     request = json_pin(root,request_pin)
-    require(set(request)=={"schema","scope","releases","groups"} and request["schema"]==SCHEMA
+    required = {"schema","scope","releases","groups"}
+    require(required <= request.keys() <= required|{"support_contrasts"} and request["schema"]==SCHEMA
             and request["scope"]==(SYNTHETIC if test else REAL)
             and request["releases"] and request["groups"]
             and all(named(key) for key in (*request["releases"],*request["groups"])),
             "Explicit registered paired training request required")
     for release in request["releases"].values():
-        require(set(release)=={"manifest","authority","source","k"} and type(release["k"]) is int and release["k"]>0,
+        needed = {"manifest","authority","source","k"}
+        require(needed <= release.keys() <= needed|{"observation_protocol","claim_policy","matched_exposure"}
+                and release.get("observation_protocol", PHYSICAL) in (PHYSICAL, COLUMNS)
+                and release.get("claim_policy") in (None, PAVIA)
+                and release.get("matched_exposure") in (None, support_match.MODE)
+                and type(release["k"]) is int and release["k"]>0,
                 "Release must bind observed Bank roles and support budget")
         require(release["source"] is None or set(release["source"])=={"weights","metadata","state"},
                 "Source must use a frozen checkpoint with its original sidecar")
@@ -76,6 +83,15 @@ def request_spec(root, request_pin, *, test):
         validate_group(group,request["releases"],test=test)
     require({g["release"] for g in request["groups"].values()}==request["releases"].keys(),
             "Request contains a release with no registered experiment")
+    if "support_contrasts" in request:
+        contrasts = request["support_contrasts"]
+        require(isinstance(contrasts, dict) and contrasts and all(
+            named(name) and isinstance(c, dict) and set(c) == {"baseline", "comparison", "factor"}
+            and c["baseline"] != c["comparison"] and c["factor"] in support_match.FACTORS
+            and all(g in request["groups"] and
+                    request["releases"][request["groups"][g]["release"]].get("matched_exposure") == support_match.MODE
+                    for g in (c["baseline"], c["comparison"]))
+            for name, c in contrasts.items()), "Invalid preregistered support contrasts")
     return request
 
 
@@ -93,16 +109,24 @@ def admit(root, out, record, *, test):
                                                      test_history=[] if test else None)
     require(bank.root!=out and bank.root not in out.parents and out not in bank.root.parents,
             "Training destination overlaps a published Bank")
-    require(intake["uses"]["independent_accuracy"]["eligible"] and intake["uses"]["cost"]["eligible"]
-            and tuple(intake.get("observation_views",[]))==VIEWS
+    columns = record.get("observation_protocol", PHYSICAL)==COLUMNS
+    require(columns == ("delivered_columns" in intake),
+            "The approved columns and physical protocols are separate registrations")
+    views = independent.COLUMN_VIEWS if columns else VIEWS
+    require(intake["uses"]["independent_accuracy"]["eligible"]
+            and (columns or intake["uses"]["cost"]["eligible"])
+            and tuple(intake.get("observation_views",[]))==views
             and intake["role_reports"]["support"]["per_class"]==[record["k"]]*bank.release.classes
             and roles["support"] and roles["calibration"] and roles["evaluation"],
             "Paired training needs eligible three-role custody, agreed bands and covered support budget")
     removed = [len(bank.release.bands.band_ids)-len(retained_positions(bank.release.bands,v)) for v in VIEWS]
     require(removed[0]==0 and removed[1]==removed[2]>0,"Observed drop views must remove the same number of physical bands")
     if not test:
-        require(bank.release.profile!="synthetic" and intake["physical_wavelengths_verified"],
+        require(bank.release.profile!="synthetic" and (columns or intake["physical_wavelengths_verified"]),
                 "Real matched spectral training needs verified physical band metadata")
+    require(record.get("claim_policy") is None or
+            (bank.release.scene == "paviaU" and not columns),
+            "The prospective Pavia claim is specific to the physical registered views")
     return bank,intake,roles
 
 
@@ -171,17 +195,24 @@ def register(root, out, code, request_pin, approval_pin, *, test):
     approval = json_pin(root,approval_pin)
     require(approval==expected_approval(request,request_pin,out,code,test=test),
             "Separate training approval does not bind scope, budget, devices, code and destination")
-    inputs, started = {},{}
+    inputs, started, matched = {},{},{}
     for key,entry in request["releases"].items():
         bank,intake,roles = admit(root,out,entry,test=test)
         source = open_source(root,bank,entry["source"])
         inputs[key] = dict(bank=bank.pin,role_assignment=digest(roles),authority=intake,scene=bank.release.scene)
+        if entry.get("matched_exposure"):
+            matched[key] = (bank, roles, support_match.inventory(bank, roles, entry["k"]))
+            inputs[key]["matched_support"] = digest(matched[key][2])
         require(bank.reads==0,"Registration opened observation data")
         for name,group in request["groups"].items():
             if group["release"]==key:
                 require(group["factor"] in intake.get("observation_factors",[1])
-                        and group["steps"]>=len(roles["support"])*len(VIEWS),
+                        and group["steps"]>=len(roles["support"])*len(intake["observation_views"]),
                         "Lattice not approved or budget cannot expose each support block to all registered views")
+                if key in matched:
+                    blocks = len(roles["support"])
+                    require(group["steps"] % blocks == 0 and group["steps"] // blocks >= entry["k"],
+                            "Matched support requires equal complete visits and coverage of every released point")
                 started[name] = start_arms(bank,group,source)
     require(len({i["bank"]["sha256"] for i in inputs.values()})==len(inputs),"Duplicate release identity")
     require_frozen_code(code)
@@ -190,6 +221,14 @@ def register(root, out, code, request_pin, approval_pin, *, test):
     record = dict(schema=SCHEMA,producer=code["commit"],source_hash=code["source_hash"],scope=request["scope"],
                   request=request_pin,approval=approval_pin,inputs=inputs,initializations=started,
                   groups=request["groups"],releases=request["releases"],optimizer_updates=approval["optimizer_updates"])
+    if "support_contrasts" in request:
+        record["support_contrasts"] = {}
+        for name, contrast in request["support_contrasts"].items():
+            a,b = (request["groups"][contrast[key]] for key in ("baseline", "comparison"))
+            ra,rb = a["release"],b["release"]
+            proof = support_match.validate_contrast(contrast["factor"], matched[ra], matched[rb],
+                a, b, request["releases"][ra], request["releases"][rb])
+            record["support_contrasts"][name] = {**contrast, **proof}
     if path.exists():
         require(json_pin(root,file_pin(path))==record,"Existing registration differs")
         return file_pin(path)
@@ -205,6 +244,9 @@ def open_plan(root, out, code, *, test):
             and json_pin(root,plan["approval"])==expected_approval(request,plan["request"],out,code,test=test)
             and plan["optimizer_updates"]==expected_approval(request,plan["request"],out,code,test=test)["optimizer_updates"],
             "A different code checkout, roster, scope or physical assignment cannot continue this campaign")
+    require({k:{field:v[field] for field in ("baseline","comparison","factor")}
+             for k,v in plan.get("support_contrasts", {}).items()} == request.get("support_contrasts", {}),
+            "Registered support contrasts differ from the request")
     return plan,link
 
 
@@ -221,8 +263,15 @@ class StructuralProvider(ProductionProvider):
         config = Switches(graph_scale=50 if bank.release.scene=="paviaU" else 100)
         super().__init__(root,bank,roles,axis=bank.release.bands.band_ids,config=config,source=entry["source"],
                          seed=spec["seed"],budget=spec["steps"],producer=code["commit"],
-                         approval=None if test else plan["approval"]["sha256"])
+                         approval=None if test else plan["approval"]["sha256"],
+                         delivered_axis="delivered_columns" in intake)
         self.spec,self.arm,self.test = spec,arm,test
+        self.intake = intake
+        self.views = tuple(intake["observation_views"])
+        self.matched_exposure = entry.get("matched_exposure")
+        if self.matched_exposure:
+            require(digest(support_match.inventory(bank, roles, entry["k"])) == original["matched_support"],
+                    "Actual support inventory changed after registration")
         self.init = plan["initializations"][group][arm]
         self.release = open_source(root,bank,self.source)
         self._digest = None
@@ -236,15 +285,34 @@ class StructuralProvider(ProductionProvider):
         require(state_hash(model)==self.init["state"],"Initialized variant differs from the approved shared start")
         return model
 
+    def make_observation(self, role, event):
+        row = self.bank.role_row(role, event["tile"])
+        view, metadata = independent.observation_view(event["band"], self.intake)
+        actual, labels, targets = bank_view(self.bank, row, self.producer, view, factor=event["factor"],
+                                            metadata=metadata)
+        require(actual.receipt["source"]["band_ids"] ==
+                independent.observation_bands(self.bank.release.bands, event["band"], self.intake),
+                "Materialized spectral stream differs from the approved deletions")
+        return actual, labels, targets
+
+    @staticmethod
+    def key(role, event):
+        key = ProductionProvider.key(role, event)
+        return f'{key}/{event["visit"]}' if "visit" in event else key
+
     def materialize(self, role, event, producer):
         purpose = {"devtrain":"support","devval":"calibration"}[role]
         require(producer==self.producer and event["tile"] in self.roles[purpose]
-                and event["factor"]==self.spec["factor"] and event["band"] in VIEWS,
+                and event["factor"]==self.spec["factor"] and event["band"] in self.views,
                 "Optimization or selection used an unauthorized role, factor or band")
-        key = self.key(role,event)
+        key = ProductionProvider.key(role, event)
         if key not in self._cache:
             self._cache[key] = self.make_observation(role,event)
-        return self._cache[key]
+        actual, labels, targets = self._cache[key]
+        if self.matched_exposure and role == "devtrain":
+            targets = targets.select(support_match.choose(targets.points, event["visit"]))
+            labels = np.asarray(targets.points, dtype=np.int64)
+        return actual, labels, targets
 
     def registered_forward(self, model, actual, role, execution):
         timing = {}
@@ -265,12 +333,15 @@ class StructuralProvider(ProductionProvider):
         epoch = 0
         while len(schedule)<self.budget:
             for tile in rng.permutation(support).tolist():
-                schedule.append(dict(step=len(schedule)+1,tile=tile,factor=factor,
-                    band=VIEWS[(epoch+support.index(tile))%len(VIEWS)],condition="registered"))
+                event = dict(step=len(schedule)+1,tile=tile,factor=factor,
+                    band=self.views[(epoch+support.index(tile))%len(self.views)],condition="registered")
+                if self.matched_exposure:
+                    event["visit"] = epoch
+                schedule.append(event)
             epoch += 1
         schedule = schedule[:self.budget]
         val = [dict(tile=tile,factor=factor,band=band,condition="registered")
-               for tile,band in product(self.roles["calibration"],VIEWS)]
+               for tile,band in product(self.roles["calibration"],self.views)]
         roster = {}
         for role,events in (("devtrain",schedule),("devval",val)):
             for event in events:

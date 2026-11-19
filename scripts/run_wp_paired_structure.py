@@ -72,7 +72,9 @@ def main(argv=None):
     p.add_argument("--request",nargs=2)
     p.add_argument("--approval",nargs=2)
     p.add_argument("--synthetic",action="store_true")
-    p.add_argument("--qualification",action="store_true")
+    suite = p.add_mutually_exclusive_group()
+    suite.add_argument("--qualification",action="store_true")
+    suite.add_argument("--scientific",action="store_true")
     p.add_argument("--devices",nargs="+",default=[])
     p.add_argument("--gpu")
     p.add_argument("--group")
@@ -90,17 +92,18 @@ def main(argv=None):
     require(code["commit"]==a.expected_commit and root in campaign.parents
             and (out is None or root in out.parents),"Use the exact clean checkout and authorized output root")
     require_frozen_code(code)
-    require(1<=a.workers<=8 and (a.action=="fixture" or not (a.qualification or a.devices))
+    require(1<=a.workers<=8 and (a.action=="fixture" or not (a.qualification or a.scientific or a.devices))
             and (a.action in ("arm","group","capture") or a.gpu is None),"Unexpected execution or device flags")
     torch.set_num_threads(1)
     if a.action=="fixture":
-        from transfer.wp_paired_structure_fixture import generate
+        from transfer.wp_paired_structure_fixture import generate, generate_scientific
 
         require(a.synthetic and out is not None and not out.exists() and out!=campaign
                 and not a.request and not a.approval
                 and 0<=len(a.devices)<=3 and len(set(a.devices))==len(a.devices)
                 and all(UUID.fullmatch(v) for v in a.devices),"Explicit engineering fixture and admitted device identities required")
-        value = generate(out,campaign,code,a.devices,qualification=a.qualification)
+        value = (generate_scientific(out,campaign,code,a.devices) if a.scientific
+                 else generate(out,campaign,code,a.devices,qualification=a.qualification))
     elif a.action=="register":
         value = structure.register(root,campaign,code,pin(a.request),pin(a.approval),test=a.synthetic)
     elif a.action in ("arm","group"):
