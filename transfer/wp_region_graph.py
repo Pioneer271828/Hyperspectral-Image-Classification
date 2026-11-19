@@ -15,9 +15,10 @@ from transfer.g3_training import state_hash
 from transfer.native_scale_observation import forward
 from transfer.native_support import NativeSupportModel, _active, make_selector
 from transfer.regional_support_evolution import development_context
+from transfer.wp_causal_graph_design import POLICIES as CAUSAL_POLICIES
 
 BACKEND = "region_support"
-POLICIES = ("original", "random_fixed", "spectral_fixed", "spectral_bounded", "strict_matched")
+POLICIES = ("original", "random_fixed", "spectral_fixed", "spectral_bounded", "strict_matched",*CAUSAL_POLICIES)
 SCALE = 16
 VERSION = "released_native_stage_two_support_v1"
 
@@ -31,6 +32,8 @@ class RegionSupportModel(NativeSupportModel):
                 and x.device == next(self.parameters()).device and not args
                 and all(kwargs.get(key) is None for key in ("Q", "A", "graph_state")),
                 "Native stage-two support needs one bound FP32 observation")
+        if "input_transform" in frame:
+            x = frame["input_transform"](x)
         if frame["capture"]:
             spectral, _ = self.backbone._split_spectral_extra(x, kwargs.get("wavelengths"))
             frame["spectral"] = spectral.flatten(0, 1)
@@ -38,9 +41,10 @@ class RegionSupportModel(NativeSupportModel):
 
 
 @contextmanager
-def bind(model, selector=None):
+def bind(model, selector=None, **bindings):
     require(_active.get() is None, "Regional support frame already active")
-    frame = dict(backbone=model.backbone, selector=selector, capture=selector is None, detail=True, timing={})
+    frame = dict(backbone=model.backbone, selector=selector, capture=selector is None, detail=True, timing={},
+                 **bindings)
     token = _active.set(frame)
     try:
         yield frame
@@ -99,6 +103,16 @@ def _replace_one_per_row(base, proposed):
             result.remove((row,remove))
             result.add((row,cols[0]))
     return sorted(result)
+
+
+def program_for(anchor, policy, seed, budget, causal=None):
+    if policy in CAUSAL_POLICIES:
+        from transfer.wp_causal_graph import CausalProgram
+
+        require(causal is not None,"A causal policy must bind a preflight-complete graph witness")
+        return CausalProgram(anchor,policy,seed,budget,causal)
+    require(causal is None,"A controlled graph witness cannot silently enter the native route")
+    return GraphProgram(anchor,policy,seed,budget)
 
 
 class GraphProgram:
@@ -208,11 +222,13 @@ class BoundSupport:
         return result
 
 
-def forward_region(model, actual, producer, role, execution, program, *, step=0):
-    selected = program.choose(actual,producer,role,step)
+def forward_region(model, actual, producer, role, execution, program, *, step=0, intervention=None):
+    arguments = {} if intervention is None else {"intervention":intervention}
+    selected = program.choose(actual,producer,role,step,**arguments)
     timing = {}
-    with bind(model,selected) as frame:
-        out, trace = forward(model,actual,producer,role,execution=execution,timed=timing,graph_scale=SCALE)
+    with bind(model,selected,**getattr(selected,"bindings",{})) as frame:
+        out, trace = forward(model,actual,producer,role,execution=execution,timed=timing,graph_scale=SCALE,
+                             graph_override=getattr(selected,"override",None))
     actual_support = frame["stage2"].coalesce()
     require(_edges(actual_support)==selected.pairs and bool((actual_support.values()>0).all()),
             "Native propagation changed the selected support or lost positive edges")
@@ -220,6 +236,9 @@ def forward_region(model, actual, producer, role, execution, program, *, step=0)
                "first_indices":trace["a0_indices"],"stage2_indices":tensor_hash(actual_support.indices()),
                "positive_nnz":actual_support._nnz(),
                "stage2_values":tensor_hash(actual_support)}
+    if "causal" in receipt:
+        require(all(bool((frame[key].values()>0).all()) for key in ("Q","A0")),
+                "Controlled support must count actual positive assignments and first-stage edges")
     receipt["assignment_support"] = frame["Q"].indices().T.cpu().tolist()
     receipt["assignment_indices"] = trace["q_indices"]
     # Wall timings never enter the exact recovery journal or graph match.

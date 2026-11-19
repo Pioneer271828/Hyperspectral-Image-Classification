@@ -22,7 +22,8 @@ from transfer import native_independent_release as independent
 from transfer import wp_cross_backend as model_io
 from transfer.g3_training import state_hash
 from transfer.native_paired_head_campaign import GATES
-from transfer import wp_region_graph as regional
+from transfer import wp_region_graph as regional, wp_causal_graph_design as causal_design
+from transfer import wp_causal_graph as causal_runtime
 
 DESIGN = "wp05_wp08_frozen_comparison_v1"
 ENDPOINT = "wp05_wp08_frozen_endpoint_v1"
@@ -90,7 +91,15 @@ def open_case(root, request, *, test_history=None):
         schedules = [validate_endpoint(body, protocol, seed) for body in models.values()]
         regional_models = [body["checkpoint"]["graph_program"] for body in models.values()
                            if body["checkpoint"]["backend"]==regional.BACKEND]
+        controlled = None
         if regional_models:
+            witness_pins = [r.get("causal_design") for r in regional_models]
+            require(all(pin==witness_pins[0] for pin in witness_pins),"Exact witness must be common to all arms")
+            if witness_pins[0] is not None:
+                require(test_history is not None and intake["source_mode"]=="synthetic",
+                        "Controlled paths require independent synthetic custody")
+                controlled = causal_design.verify(json_pin(root,witness_pins[0]),bank=bank.pin["sha256"],
+                    scene=bank.release.scene,roles=roles,bands=bank.release.bands)
             require(test_history is not None and factor==1 and len(regional_models)==len(models)
                     and len({r["policy"] for r in regional_models})==len(models)
                     and all(row["budget"]==protocol["budget"] and row["seed"]==seed+19000
@@ -105,7 +114,7 @@ def open_case(root, request, *, test_history=None):
                     and all(isinstance(arm, str) and arm in models for arm in pair) and pair[0] != pair[1]
                     for pair in pairs) and len(set(map(tuple, pairs))) == len(pairs),
                 "Invalid explicit model comparisons")
-        groups[name] = {**group, "models": models, "factor": factor}
+        groups[name] = {**group, "models": models, "factor": factor,"causal_design":controlled}
     return bank, intake, roles, groups
 
 
@@ -115,6 +124,19 @@ def emitted_head_scores(output, targets, classes):
     require(n > 0, "Scored evaluation block has no approved points")
     return {head: probabilities(value.detach().cpu().numpy()[cells].tolist(), n, classes).tolist()
             for head, value in zip(HEADS, output, strict=True)}
+
+
+@torch.no_grad()
+def interventions(model, actual, producer, execution, targets):
+    rows={}
+    for variant in causal_runtime.INTERVENTIONS:
+        output,graph,timing=regional.forward_region(model,actual,producer,"devval",execution,
+                                                    model.graph_program,intervention=variant)
+        p=graph["regional_support"]
+        rows[variant]=dict(heads=emitted_head_scores(output,targets,actual.classes),
+            q=graph["q_indices"],a0=graph["a0_indices"],a2=p["stage2_indices"],phase=p["causal"]["phase"],
+            seconds=timing["forward_seconds"]+timing["regional"]["selection_seconds"])
+    return rows
 
 
 def run_case(root, request, out, code, execution, *, test_history=None):
@@ -148,6 +170,8 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                         bands=actual.receipt["source"]["band_ids"], graph=graph,
                         heads=emitted_head_scores(output, targets, bank.release.classes),
                         spatial=None if geometry is None else classify(bank, roles, geometry, "evaluation", tile, targets.points))
+                    if group["causal_design"] is not None and band in ("full","central_gap"):
+                        row["accuracy"]["interventions"] = interventions(model,actual,producer,execution,targets)
                     if "regional_support" in graph:
                         origin = bank.role_row("devval",tile)["origin"]
                         row["accuracy"]["signal"] = regional.signal_visibility(origin.get("regional_signal"),
@@ -208,7 +232,7 @@ def raw_pair(truth, before, after, classes, *, floor, delta=-.02):
                 protected=all(row["recall_delta"] >= delta for row in changes.values()) if enough else None)
 
 
-def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, semantics):
+def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, semantics, *, controlled=None):
     classes = bank.release.classes
     expected = list(product(intake.get("observation_views", ["full"]), roles["evaluation"]))
     seen = [(row["view"], row["tile"]) for row in arm["rows"]]
@@ -233,6 +257,8 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
                 graph = record["graph"]
                 proof = regional.verify_trace(graph["regional_support"],record["observation"],
                                               require_policy=program["policy"])
+                if controlled is not None:
+                    causal_runtime.verify_trace(proof,controlled,tile,"devval",program["budget"])
                 require(proof["first_indices"]==graph["a0_indices"] and proof["assignment_indices"]==graph["q_indices"]
                         and proof["original_counts"]["nnz"]==graph["a0_nnz"],
                         "Fixed regional support changed the learned first-stage graph")
@@ -265,10 +291,35 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
             signal = regional.signal_visibility(parent["origin"].get("regional_signal"),
                 record["graph"]["regional_support"],bands,cells,truth)
             require(record["signal"]==signal,"Synthetic reachability differs from the emitted Q/A support")
+        if controlled is not None:
+            check_interventions(record,controlled,tile,band,classes)
         for head in HEADS:
             probabilities(record["heads"][head], len(truth), classes)
         checked[(band, tile)] = row
     return checked
+
+
+def check_interventions(record, controlled, tile, band, classes):
+    expected=band in ("full","central_gap")
+    require(("interventions" in record)==expected,"Activation separation changed the registered intervention roster")
+    if not expected:
+        return
+    from research_runtime import tensor_hash
+
+    graph=record["graph"]
+    regional_proof=graph["regional_support"]
+    body=record["interventions"]
+    pairs=causal_design.support(controlled["layout"],controlled["tiles"][str(tile)]["regime"])
+    require(set(body)==set(causal_runtime.INTERVENTIONS),"Missing fixed-weight control")
+    for label,row in body.items():
+        phase="original" if label=="cut" else regional_proof["causal"]["phase"]
+        indices=torch.tensor(pairs[phase],dtype=torch.long).T.contiguous()
+        require(row["q"]==graph["q_indices"] and row["a0"]==graph["a0_indices"]
+                and row["a2"]==tensor_hash(indices) and row["phase"]==phase and row["seconds"]>=0,
+                "Fixed-weight control changed the frozen assignment or wrong propagation stage")
+        require(set(row["heads"])==set(HEADS),"Fixed-weight control lost a classification head")
+        for head in HEADS:
+            probabilities(row["heads"][head],len(record["truth"]),classes)
 
 
 def matched_view(first, second, band, tiles, scene, classes, *, scope):
@@ -425,7 +476,8 @@ def review_case(root, capture, out, code, *, test_history=None, reference=None):
                     "Consumption checkpoint has another model or class inventory")
             semantics = model_io.semantic_identity(model, export["backend"])
             checked[name] = checked_blocks(bank, roles, intake, geometry, observations[group["factor"]],
-                                           arm, body, group["arms"][name], semantics)
+                                           arm, body, group["arms"][name], semantics,
+                                           controlled=group["causal_design"])
         scored = {}
         for base, candidate in group["pairs"]:
             scored[f"{base}/{candidate}"] = {band: matched_view(checked[base], checked[candidate], band,

@@ -91,7 +91,7 @@ def review(root,campaign,out,code,captures,execution,*,test):
                 parity[f"{name}/{arm}"] = observed_parity(root,campaign,plan,code,name,arm,spec,packet,frozen_raw,
                                                           execution,test=test)
             reference_arm = {"xz-recovery":"combined","xz-column-recovery":"combined",
-                             "region-recovery":"spectral_bounded"}.get(name)
+                             "region-recovery":"spectral_bounded","causal-recovery":"evolving"}.get(name)
             if test and arm==reference_arm:
                 other = completed(root,campaign,name,arm,reg,group,reference=True)
                 require(_exact(packet,other[3]) and len(record["timings"])>0,"Full state differed after process recovery")

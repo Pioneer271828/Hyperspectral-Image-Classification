@@ -15,7 +15,7 @@ from model.research_config import digest
 from research_runtime import require_frozen_code, tensor_hash
 from scripts.run_frozen_band_region import _write
 from transfer import native_independent_release as independent, wp_cross_backend as backend, wp_support_match as support_match
-from transfer import wp_region_graph as regional
+from transfer import wp_region_graph as regional, wp_causal_graph_design as causal
 from transfer.development_bank_training import _baseline
 from transfer.g3_training import state_hash
 from transfer.native_production_model import Switches
@@ -66,6 +66,10 @@ def validate_group(group, releases, *, test):
                 and releases[group["release"]].get("matched_exposure")==support_match.MODE
                 and 8<=group["steps"]<=200,
                 "Regional structural comparison requires same-capacity engineering arms and matched exposure")
+    controlled = [s for s in region if s["policy"] in causal.POLICIES]
+    has_witness = "causal_graph" in releases[group["release"]]
+    require(bool(controlled)==has_witness and (not controlled or len(controlled)==len(arms)),
+            "Controlled and native graph policies require distinct released cohorts")
     links = [(p["baseline"],p["candidate"]) for p in pairs]
     require(len(set(links))==len(links) and {name for pair in links for name in pair}==arms.keys(),
             "The pair plan repeats a comparison or omits a trained arm")
@@ -81,7 +85,7 @@ def request_spec(root, request_pin, *, test):
             "Explicit registered paired training request required")
     for release in request["releases"].values():
         needed = {"manifest","authority","source","k"}
-        require(needed <= release.keys() <= needed|{"observation_protocol","claim_policy","matched_exposure"}
+        require(needed <= release.keys() <= needed|{"observation_protocol","claim_policy","matched_exposure","causal_graph"}
                 and release.get("observation_protocol", PHYSICAL) in (PHYSICAL, COLUMNS)
                 and release.get("claim_policy") in (None, PAVIA)
                 and release.get("matched_exposure") in (None, support_match.MODE)
@@ -134,6 +138,10 @@ def admit(root, out, record, *, test):
     if not test:
         require(bank.release.profile!="synthetic" and (columns or intake["physical_wavelengths_verified"]),
                 "Real matched spectral training needs verified physical band metadata")
+    if "causal_graph" in record:
+        require(test and columns,"Synthetic controlled geometry cannot authorize native real inference")
+        causal.verify(json_pin(root,record["causal_graph"]),bank=bank.pin["sha256"],
+                      scene=bank.release.scene,roles=roles,bands=bank.release.bands)
     require(record.get("claim_policy") is None or
             (bank.release.scene == "paviaU" and not columns),
             "The prospective Pavia claim is specific to the physical registered views")
@@ -219,6 +227,12 @@ def register(root, out, code, request_pin, approval_pin, *, test):
         if entry.get("matched_exposure"):
             matched[key] = (bank, roles, support_match.inventory(bank, roles, entry["k"]))
             inputs[key]["matched_support"] = digest(matched[key][2])
+        if "causal_graph" in entry:
+            controlled = json_pin(root,entry["causal_graph"])
+            probe = causal.search_controls(controlled["layout"])
+            inputs[key]["causal_preflight"] = dict(witness=digest(controlled["witness"]),
+                status=controlled["witness"]["status"],
+                negatives={k:{f:v for f,v in item.items() if f!="seconds"} for k,item in probe.items()})
         require(bank.reads==0,"Registration opened observation data")
         for name,group in request["groups"].items():
             if group["release"]==key:
@@ -285,6 +299,13 @@ class StructuralProvider(ProductionProvider):
         self.spec,self.arm,self.test = spec,arm,test
         self.intake = intake
         self.views = tuple(intake["observation_views"])
+        self.causal = json_pin(root,entry["causal_graph"]) if "causal_graph" in entry else None
+        if self.causal is not None:
+            preflight = original["causal_preflight"]
+            require(preflight["status"]=="MATCHED" and preflight["witness"]==digest(self.causal["witness"])
+                    and preflight["negatives"]["exhaustive"]["status"]=="INFEASIBLE"
+                    and preflight["negatives"]["limited"]["status"]=="NOT_FOUND_WITHIN_BUDGET",
+                    "Queue cannot consume an unresolved or changed graph preflight")
         self.matched_exposure = entry.get("matched_exposure")
         if self.matched_exposure:
             require(digest(support_match.inventory(bank, roles, entry["k"])) == original["matched_support"],
@@ -304,7 +325,7 @@ class StructuralProvider(ProductionProvider):
         if isinstance(model,regional.RegionSupportModel):
             anchor = deepcopy(model).eval().requires_grad_(False)
             config = self.spec["arms"][arm]
-            model.graph_program = regional.GraphProgram(anchor,config["policy"],self.seed+19000,self.budget)
+            model.graph_program = regional.program_for(anchor,config["policy"],self.seed+19000,self.budget,self.causal)
         return model
 
     def make_observation(self, role, event):
@@ -349,8 +370,12 @@ class StructuralProvider(ProductionProvider):
         super().validate_history(spec,packet)
         if spec["architecture"]["backend"]==regional.BACKEND:
             for row in [*packet["history"],*(r for v in packet["validation"] for r in v["rows"])]:
-                regional.verify_trace(row["graph"]["regional_support"],row["observation"],
-                                      require_policy=spec["architecture"]["policy"])
+                proof = regional.verify_trace(row["graph"]["regional_support"],row["observation"],
+                                              require_policy=spec["architecture"]["policy"])
+                if self.causal is not None:
+                    from transfer.wp_causal_graph import verify_trace
+
+                    verify_trace(proof,self.causal,row["tile"],"devtrain" if row.get("step") else "devval",spec["steps"])
 
     def contract(self, classes,seed,arm,factor,producer,*,numeric=None):
         require((classes,seed,arm,factor,producer)==(self.classes,self.seed,self.arm,self.spec["factor"],self.producer)

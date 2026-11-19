@@ -190,6 +190,8 @@ def export_selected(root, out, plan, link, name, group, arm, data):
                 _atomic_new(anchor_path,stream.getvalue())
         export["graph_program"] = dict(weights=file_pin(anchor_path),state=spec["initialization"]["state"],
             policy=group["arms"][arm]["policy"],seed=group["seed"]+19000,budget=group["steps"])
+        if "causal_graph" in entry:
+            export["graph_program"]["causal_design"] = entry["causal_graph"]
     backend.load_export(root,export)
     context = {k:spec[k] for k in ("seed","factor","steps","numeric","roles","bank","graph_scale","band_axis",
                                    "learning_rate","optimizer_group","objective","training","validation","events","inputs","selection")}

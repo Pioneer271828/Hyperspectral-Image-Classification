@@ -87,10 +87,14 @@ def load_export(root, export, *, device="cpu"):
     model = restore(architecture,export["backend"],state,export["state"],device=device)
     if region:
         graph = export["graph_program"]
-        require(set(graph)=={"policy","seed","budget","weights","state"}, "Regional export lacks its frozen source")
+        fields = {"policy","seed","budget","weights","state"}
+        controlled = graph["policy"] in regional.CAUSAL_POLICIES
+        require(set(graph)==(fields|{"causal_design"} if controlled else fields),
+                "Regional export lacks its frozen source or graph witness")
         anchor = torch.load(pinned(root,graph["weights"]),map_location="cpu",weights_only=True)
         source = restore(architecture,regional.BACKEND,anchor,graph["state"])
-        model.graph_program = regional.GraphProgram(source,graph["policy"],graph["seed"],graph["budget"])
+        causal = json_pin(root,graph["causal_design"]) if controlled else None
+        model.graph_program = regional.program_for(source,graph["policy"],graph["seed"],graph["budget"],causal)
     return model
 
 

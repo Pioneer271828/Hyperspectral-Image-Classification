@@ -58,6 +58,10 @@ class NativeSupportBackbone(VCASAHGCNBackbone):
         if frame is None or frame["backbone"] is not self:
             raise ValueError("Native support requires an admitted block binding")
         timing = frame["timing"]
+        if "region_transform" in frame:
+            region_input = frame["region_transform"](region_input,Q)
+        if frame.get("audit_native"):
+            frame["local_features"] = cnn_input.detach()
         pixels = _elapsed(timing, "cnn_stage1", self.cnn_stage1, cnn_input, dataset_name)
         regions = _elapsed(timing, "graph_stage1", self.graph_stage1, region_input, A, dataset_name)
         if frame["capture"]:
