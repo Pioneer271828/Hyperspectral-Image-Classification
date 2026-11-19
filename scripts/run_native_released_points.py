@@ -157,6 +157,11 @@ def coverage(args, root, out, code):
         raise ValueError("Cross-device reload requires its explicit source device")
     if args.mode != "coverage-replay" and args.archive:
         raise ValueError("Historical pins apply only to frozen replay")
+    release_modes = ("coverage-release-review","coverage-release-history","coverage-release-demo")
+    if args.mode in release_modes:
+        return independent_release(args, root, out, code)
+    if args.manifest or args.authority:
+        raise ValueError("Release and authority pins apply only to independent intake")
     if args.mode == "coverage-register":
         out.mkdir(exist_ok=True)
         with queue.case_lock(out):
@@ -185,6 +190,26 @@ def coverage(args, root, out, code):
     return publish(out, code)
 
 
+def independent_release(args, root, out, code):
+    from transfer import native_independent_release as independent
+
+    if args.mode == "coverage-release-review":
+        if not (args.manifest and args.authority):
+            raise ValueError("Independent release review requires manifest and authority pins")
+        manifest, authority = (dict(zip(("path", "sha256"), item, strict=True))
+                               for item in (args.manifest,args.authority))
+        _, result, _ = independent.open_independent(root,manifest,authority)
+        require_frozen_code(code)
+        out.mkdir()
+        return independent.archive._write(out/"admission.json",dict(producer=code["commit"],report=result,
+                                         manifest=manifest["sha256"],authority=authority["sha256"]))
+    if args.manifest or args.authority:
+        raise ValueError("Independent manifest pins apply only to external review")
+    if args.mode == "coverage-release-history":
+        return independent.audit_existing(root,out,code)
+    return independent.synthetic_demo(root,out,code)
+
+
 def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
@@ -193,7 +218,10 @@ def main(argv=None, *, intake=None):
     parser.add_argument("--gpu")
     parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage", "coverage-register",
                                             "coverage-run", "coverage-replay", "coverage-reload",
-                                            "coverage-audit"), required=True)
+                                            "coverage-audit","coverage-release-review","coverage-release-history",
+                                            "coverage-release-demo"), required=True)
+    parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
+    parser.add_argument("--authority", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--from-device")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--archive", nargs=2, action="append", default=[], metavar=("PATH", "SHA256"))

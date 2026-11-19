@@ -28,7 +28,7 @@ HEADS = ("fused", "graph", "cnn")
 FROZEN = "wp12-cost-frozen54-campaign02"
 NATIVE = "wp07-paviau-real-results-20261118.TC3eXtC5/aggregate/results"
 BAND = "wp05-wp06-wp07-band-scale-20261119"
-P4_REVIEW = "wp05-independent-queue-real-authority01/partial-audit02/review.json"
+P4_REVIEW = "wp05-independent-queue-real-authority01"
 PROOFS = {
     "registration": (FROZEN+"/registration.json", "8bcd2c0b29f96b45d1883eab654881b271804bede86ce7e5b8d15e903c6ff0c8"),
     "amendment": (FROZEN+"/registration-amendment.json", "15b2d36a449248af00b8b3b2819f74e43572c73b3d635fc2a06551cd1e80b3ee"),
@@ -39,7 +39,8 @@ PROOFS = {
     "independent": ("wp12-cost-frozen54-independent01/receipt.json", "efa741072cfeed09e69345181cac9a8ec39b3e042bc12aac8ad8e9a3bd216e35"),
     "pavia": (NATIVE+"/comparison-audit.json", "728076ffe4751662cea2580e66c3b915d3fc5b30cecc1308ff1d761a3b8cc1bb"),
     "p4_supplement": ("wp12-p4-real-intake02/published/supplement.json", "c73fcb8dce2d9880b20bafd4c7a5f6cd22e7b148a497c6ff934352ab31bae678"),
-    "p4": (P4_REVIEW, "a60134e6447550ce1d0455199a9b70f1f42648b860c61e87c72fe9ec0b8fa0fb"),
+    "p4_earlier": (P4_REVIEW+"/partial-audit02/review.json", "a60134e6447550ce1d0455199a9b70f1f42648b860c61e87c72fe9ec0b8fa0fb"),
+    "p4": (P4_REVIEW+"/partial-audit03/review.json", "30bafc44496bff71174a789e1b15b53f7cdcd581637396933a115be6e4c67e2a"),
     "band_registration": (BAND+"/registration.json", "70b1c645051e55d6df7e0b6e44d99640238b167b3b5cdf8cb708d07f416a10b7"),
 }
 BAND_PINS = {**EXPECTED_ARCHIVES,
@@ -267,10 +268,17 @@ def p4_partial(root):
     link=proof(root,"p4")
     reviewed=document(root,link)
     supplement=document(root,proof(root,"p4_supplement"))
-    require(supplement["p4"]["review"]==link and reviewed["status"]=="partial"
+    earlier_link=proof(root,"p4_earlier")
+    earlier=document(root,earlier_link)
+    require(supplement["p4"]["review"]==earlier_link and reviewed["status"]=="partial"
+            and reviewed["release"]==earlier["release"]
             and reviewed["raw_gt_loaded"] is reviewed["query_accessed"] is False
-            and reviewed["audit_optimizer_updates"]==0 and len(reviewed["cases"])==4,
+            and reviewed["audit_optimizer_updates"]==0
+            and len(reviewed["cases"])==reviewed["observed_cases"]==10 and reviewed["planned_cases"]==20,
             "Foreign five-arm partial development evidence")
+    old={row["case"]["id"]:row["paired"] for row in earlier["cases"]}
+    require(all(old.get(row["case"]["id"],row["paired"])==row["paired"] for row in reviewed["cases"]),
+            "Later WP05 partial audit changed older accepted classification")
     rows=[]
     for item in reviewed["cases"]:
         cfg=item["case"]
@@ -283,16 +291,28 @@ def p4_partial(root):
                     "Partial WP05 released recalls differ from confusion")
             heads[h]=built
         cost=cost_missing("Only case-audit time was recorded here. No comparable inference benchmark for this arm and cohort.")
+        case_audit=document(root,item["audit"])
+        require(case_audit["query_accessed"] is case_audit["raw_gt_loaded"] is False
+                and case_audit["audit_optimizer_updates"]==0 and case_audit["selected_step"]==paired["selected_step"],
+                "Foreign WP05 cost audit")
         cost["audit_seconds"]=item["audit_wall_seconds"]
+        cost["recorded_training_paths"]={name:{key:record[key] for key in (
+            "optimizer_updates","recorded_training_call_seconds","startup_seconds","checkpoint_recovery_seconds",
+            "completed_resume_seconds","sum_synchronized_step_phases")} for name,record in item["paths"].items()}
         rows.append(dict(source="wp05_five_arm_partial",protocol=digest([reviewed["release"],cfg["pair_sha256"]]),
                          scene="whu-honghu",seed=cfg["model_seed"],support=cfg["support_seed"],
                          method=cfg["method"],arm=cfg["arm"],role="devval_selected_development_protocol",
                          band="archived_registered_observation",factor=None,endpoint="selected",device=cfg["physical_uuid"],
                          workload=cfg["observation_sha256"],measurement_scope=None,model=paired["state"],
                          receipt=link["sha256"],cost=cost,heads=heads))
-    return rows, {"registered_arms":["none","anchor_only","binary","continuous","shuffled"],
-                  "observed_arms":sorted({r["arm"] for r in rows}),"missing_arms":{"shuffled":"No accepted same-contract historical case"},
-                  "historical_training_spans":reviewed["timing"],"complete_true_comparison":False}
+    all_arms={"none","anchor_only","binary","continuous","shuffled"}
+    groups=defaultdict(set)
+    for row in rows:
+        groups[(row["protocol"],row["device"],row["seed"],row["support"],row["method"])].add(row["arm"])
+    require(len(groups)==2 and all(v==all_arms for v in groups.values()),"Incomplete reviewed five-arm pair")
+    return rows, {"complete_five_arm_groups":len(groups),"observed_cases":10,"planned_cases":20,
+                  "historical_training_spans":reviewed["timing"],"complete_true_comparison":False,
+                  "unmeasured_reason":"Ten registered cases remain outside accepted review; one model and support seed per observed group."}
 
 
 def select(rows, **criteria):
@@ -300,6 +320,12 @@ def select(rows, **criteria):
     if rows and criteria.keys()-rows[0].keys():
         raise ValueError("Unknown result-index filter")
     return [row for row in rows if all(row[field]==value for field,value in criteria.items())]
+
+
+def describe(values):
+    present=all(value is not None for value in values)
+    return dict(mean=fmean(values) if present else None,
+                sample_sd=stdev(values) if present and len(values)>1 else None)
 
 
 def cohorts(rows):
@@ -319,10 +345,16 @@ def cohorts(rows):
             matrices=[item["heads"][h]["per_class"] for item in items]
             require(all([x["support"] for x in matrix]==[x["support"] for x in matrices[0]] for matrix in matrices),
                     "Paired seed cohort changed the class denominators")
+            classes=[]
+            for entries in zip(*matrices,strict=True):
+                classes.append(dict(class_id=entries[0]["class_id"], n=entries[0]["support"],
+                                    recall=describe([row["recall"] for row in entries]),
+                                    f1=describe([row["f1"] for row in entries])))
+            cost_fields=("p50_ms","p95_ms","peak_allocated_bytes")
             output.append(dict(**{field:first[field] for field in fields},head=h,model_seeds=seeds,
-                               **{name:dict(mean=fmean(v) if all(x is not None for x in v) else None,
-                                            sample_sd=stdev(v) if len(v)>1 and all(x is not None for x in v) else None)
-                                  for name,v in values.items()}))
+                               per_class=classes,
+                               cost={field:describe([item["cost"].get(field) for item in items]) for field in cost_fields},
+                               **{name:describe(v) for name,v in values.items()}))
     return output
 
 
@@ -350,7 +382,8 @@ def publish(root, out, code):
                         w.writerow((*[row[k] for k in ("source","protocol","scene","seed","support","method","arm","role","band",
                                                       "factor","endpoint","device")],
                                     c["class_id"],head,c["support"],c["recall"],c["f1"]))
-        for name,items in (("real-results.csv",cases),("real-seed-summary.csv",summary)):
+        for name,items in (("real-results.csv",cases),("real-seed-summary.csv",summary),
+                           ("real-class-seed-summary.csv",summary)):
             with (stage/name).open("x",encoding="utf-8",newline="") as file:
                 write_csv(file,name,items)
         files={path.name:hash_file(path) for path in stage.iterdir()}
@@ -376,6 +409,13 @@ def write_csv(file, name, items):
                 w.writerow((*[row[k] for k in identity],row["seed"],row["support"],row["model"],head,
                             *[values[k] for k in metrics_fields],
                             *[cost.get(k) for k in ("status","p50_ms","p95_ms","peak_allocated_bytes","graph_seconds","end_to_end_ms","reason")]))
+    elif name=="real-class-seed-summary.csv":
+        w.writerow((*identity,"head","seeds","class","support_n","recall_mean","recall_sd","f1_mean","f1_sd"))
+        for row in items:
+            for entry in row["per_class"]:
+                w.writerow((*[row[k] for k in identity],row["head"]," ".join(map(str,row["model_seeds"])),
+                            entry["class_id"],entry["n"],entry["recall"]["mean"],entry["recall"]["sample_sd"],
+                            entry["f1"]["mean"],entry["f1"]["sample_sd"]))
     else:
         w.writerow((*identity,"head","seeds",*(f"{m}_{stat}" for m in metrics_fields for stat in ("mean","sample_sd"))))
         for row in items:
