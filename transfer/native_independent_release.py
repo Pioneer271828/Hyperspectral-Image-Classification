@@ -148,8 +148,13 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     manifest = authorized_document(root,manifest_pin)
     authority = authorized_document(root,authority_pin)
     base_fields={"schema","candidate","roles","minimum_buffer","history"}
-    check(set(manifest) in (base_fields,base_fields|{"spatial_annotations"}),
+    check(base_fields <= manifest.keys() <= base_fields | {"spatial_annotations", "observation_views"},
           "Exact independent manifest fields required")
+    views = manifest.get("observation_views")
+    if "observation_views" in manifest:
+        check(isinstance(views, list) and views and all(
+            view in ("full", "central_gap", "matched_dispersed") for view in views)
+            and len(set(views)) == len(views), "Explicit unique approved retained-band views required")
     annotations=manifest.get("spatial_annotations")
     approved_fields={"schema","approved_manifest_sha256","historical_bank_sha256","uses","source_mode"}
     if "spatial_annotations" in manifest:
@@ -179,6 +184,8 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
 
         read_annotations(root,bank,manifest["roles"],annotations)
         result["spatial_annotations"]=annotations
+    if views is not None:
+        result["observation_views"] = views
     return bank,result,manifest["roles"]
 
 
