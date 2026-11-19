@@ -9,9 +9,8 @@ import numpy as np
 import torch
 
 from evaluation.classification_metrics import metrics_from_confusion
-from evaluation.frozen_training_stages import HEADS, json_pin, pinned, require
+from evaluation.frozen_training_stages import HEADS, json_pin, pinned, probabilities, require
 from evaluation.wp12_cross_backend import raw_pair
-from loadData.spatial_tiles import observe_tile
 from model.research_config import digest
 from research_runtime import require_frozen_code, tensor_hash
 from scripts.run_frozen_band_region import _write
@@ -34,6 +33,12 @@ XZ = {
 ARCHIVES = {
     "xz_directional": ("wp08-directional-gpu4-20261118/collected01/matrix-audit.json",
                        "88fdf89e327fe5ddc60fe3f67d22c98bf3520be58216584c0a5e3f784e6d185d"),
+    "xz_directional_cpu": ("wp08-directional-matrix-20261118/collected03/matrix-audit.json",
+                           "696b823117ac492772ffbd51cdcceeabe07aa2dc864941aa4fcdfa8f2fcf5f79"),
+    "xz_scale_gap": ("wp05-wp06-wp07-band-scale-20261119/xuzhou.json",
+                     "9501787b0e27fad18291059531c06c0d201f04c4af1a94ec0967ef0e923fa8f6"),
+    "hh_scale_gap": ("wp05-wp06-wp07-band-scale-20261119/whu-honghu.json",
+                     "c135dc35688627762d40cf16b32ec44669a6d2d9e9f83537854f4119d7775c1b"),
     "pavia_wp07": ("wp07-paviau-real-results-20261118.TC3eXtC5/aggregate/results/comparison-audit.json",
                    "728076ffe4751662cea2580e66c3b915d3fc5b30cecc1308ff1d761a3b8cc1bb"),
     "pavia_original": ("wp08-paviau-original-closeout-20261118/physical-audit.cSukhQLQ/per-case-comparison-audit.json",
@@ -111,20 +116,18 @@ def dev_roster(scene, record):
 
 
 @torch.no_grad()
-def frozen_endpoints(scene, roster, packet, kind, audit, *, device="cpu", sync=lambda: None):
+def frozen_endpoints(scene, roster, packet, kind, audit):
     spec, history = packet["spec"], packet["history"]
     results = {}
     for phase, step, state in (("selected",packet["selected_step"],packet["selected_state"]),
                                ("last",len(history),packet["state"])):
         start = perf_counter()
-        model = backend.restore(spec["architecture"], kind, state, history[step-1]["state_hash"], device=device)
-        sync()
+        model = backend.restore(spec["architecture"], kind, state, history[step-1]["state_hash"])
         loaded = perf_counter()
         hashes, targets, prediction, cost, graph_sizes = [], [], {key:[] for key in HEADS}, [], []
         for tile, cells, truth in roster:
             block_start = perf_counter()
             outputs = _forward(model, scene, tile, multiscale_condition_only=True)
-            sync()
             cost.append(perf_counter()-block_start)
             hashes.append([tensor_hash(value) for value in outputs[:3]])
             targets.extend(truth)
@@ -202,53 +205,25 @@ def xuzhou(root):
                 seed=64, full_band=True, off_controls_equal=True, arms=cases, comparisons=results,
                 wall_seconds=perf_counter()-started, added_optimizer_updates=0)
 
-def directions(root, doc, *, execution=None):
-    require(doc["status"] == "passed" and doc["optimizer_updates"] == 4608
-            and doc["independent_audit_updates"] == doc["completed_reentry_updates"] == 0
-            and doc["query"] == doc["raw_gt"] == 0, "Directional GPU campaign did not complete")
+def directions(root, gpu, cpu):
+    require(gpu["status"] == "passed" and gpu["optimizer_updates"] == 864
+            and gpu["independent_audit_updates"] == gpu["completed_reentry_updates"] == 0
+            and gpu["query"] is gpu["raw_gt"] is False, "Directional GPU engineering campaign did not complete")
+    matrix = json_pin(root,gpu["matrix"])
+    require(matrix["inputs"] is None, "Directional scope differs from its engineering registration")
     wanted = {f"s{seed}--{direction}--{arm}" for seed in (64,512,2048)
               for direction in ("both","cnn_to_graph","graph_to_cnn") for arm in ("local","combined")}
-    cases = doc["cases"]
-    require(set(cases) == wanted and len(doc["per_seed_pairs"]) == 9
+    cases = gpu["cases"]
+    require(set(cases) == wanted and len(gpu["per_seed_pairs"]) == 9
+            and set(cpu["cases"]) == wanted and cpu["query"] is cpu["raw_gt"] is False
             and all(cases[key]["physical_uuid"] == cases[key.replace("--combined","--local")]["physical_uuid"]
-                    for key in doc["per_seed_pairs"]), "The directional contrasts do not share their device")
-    effects = None
-    if execution is not None:
-        prior = json_pin(root, named_pin(root, "wp06-xuzhou-real-route-campaign01/campaign.json",
-                          "2dd3eff9c32300e1df6c330daaa7c79539301a699030c37dc2a4ae6ab8cfb6a4"))
-        pinned(root, prior["development"])
-        scene, roles, _ = load_development(prior["development"])
-        roster, _ = dev_roster(scene,roles)
-        outputs = {}
-        for name, case in cases.items():
-            require(case["physical_uuid"] == execution.numeric["physical_uuid"],
-                    "Directional probability replay must use the original numerical device")
-            entry = json_pin(root, case["receipts"]["resume"])
-            packet = torch.load(pinned(root, entry["checkpoint"]), map_location="cpu", weights_only=True)
-            require(digest(packet["spec"]) == packet["contract_hash"] == entry["contract"]
-                    and packet["progress"]["completed_updates"] == 256
-                    and len(packet["history"]) == 256
-                    and packet["selected_step"] == min(packet["history"],
-                        key=lambda row:row["validation"]["nll"])["step"],
-                    "Directional checkpoint, progress or original first minimum disagree")
-            outputs[name] = frozen_endpoints(scene, roster, packet, "region_message", case,
-                                             device=execution.device,sync=execution.sync)
-        effects = {}
-        for name in doc["per_seed_pairs"]:
-            effect = {}
-            for phase in ("selected","last"):
-                left,right = outputs[name.replace("--combined","--local")][phase],outputs[name][phase]
-                require(left["truth"] == right["truth"], "Original direction reference changed point order")
-                effect[phase] = {head:raw_pair(left["truth"],left["predictions"][head],
-                    right["predictions"][head],9,floor=5) for head in HEADS}
-                require(all(isclose(entry["delta_oa"],doc["per_seed_pairs"][name][phase][head]["delta"]["oa"],
-                                    rel_tol=0,abs_tol=1e-12) for head,entry in effect[phase].items()),
-                        "Replay cohort differs from original directional effects")
-            effects[name] = effect
-    return dict(pairs=doc["per_seed_pairs"],point_transitions=effects,interpretation="full_band_direction_only",
-                budgets=dict(cases=18,steps=256,selected="first_min_V5"),
-                original_costs={case:row["timings"] for case,row in cases.items()},
-                independent_audit=doc["audits"], replay_device=None if execution is None else execution.numeric)
+                    for key in gpu["per_seed_pairs"]), "The directional contrasts do not share their registered scope")
+    return dict(synthetic=dict(cases=18,devices={"cpu":cpu["protocol"],"cuda":gpu["protocol"]},
+                               updates={"cpu":cpu["optimizer_updates"],"cuda":gpu["optimizer_updates"]},
+                               pairs={"cpu":cpu["per_seed_pairs"],"cuda":gpu["per_seed_pairs"]}),
+                real_notice="Legacy bidirectional Xuzhou local and combined are in the matched full-band cohort.",
+                real_single_direction=None,
+                exclusion="The archived device qualification matrix uses synthetic data; no released real single-direction matrix.")
 
 
 def pavia_points(root, scope_file):
@@ -292,6 +267,22 @@ def paviau(root, archive):
             and pair["matched_nonempty_tile_heads"]==2142 and frozen["cpu_reference_disagreements"]==[],
             "Independent training and same-weight audit lost their original equivalence evidence")
     old_cases, new_cases = ({row["case"]:row for row in doc["cases"]} for doc in (old,new))
+    anchors = {}
+    for link in wp07["case_replays"]:
+        case = json_pin(root,link)
+        if not case["case"].endswith("/1/off"):
+            continue
+        paired = old_cases[case["case"]]
+        archived = { (row["band"],row["tile"]): row["heads"] for row in paired["validation"]["rows"] }
+        current = { (row["band"],row["tile"]): row["heads"] for row in case["validation_views"]["selected"] }
+        keys = ("source_state","initialization","released_train_exposures","selected_step","optimizer_updates")
+        require(all(case[k]==paired[k] for k in keys) and current.keys()==archived.keys(),
+                "Common PaviaU factor-one off does not bind the same source or released tiles")
+        anchors[str(case["case"].split("/")[1])] = dict(shared_source=True, step=case["selected_step"],
+             exact_tile_heads=sum(a[h]==archived[k][h] for k,a in current.items() for h in HEADS),
+             compared_tile_heads=len(current)*len(HEADS), multiscale_device=case["actual_cuda_uuid"],
+             message_device=old["per_case_devices"][case["case"]])
+    require(set(anchors)=={"64","512","2048"}, "Missing PaviaU factor-one anchor")
     require(old_cases.keys()==new_cases.keys(), "PaviaU independent training rerun used another roster")
     case_metrics = {}
     for case,row in new_cases.items():
@@ -319,20 +310,44 @@ def paviau(root, archive):
                 messages=dict(cases=case_metrics,recorded_pairs=new["comparisons"],
                               source_same_device_seeds=old["same_device_seeds"],mixed_source_seed=old["mixed_device_seed"],
                               independent_frozen_weight_replay=same_weights, independent_training=training),
-                multiscale_vs_messages=None,
-                exclusion="separate registries, optimizer exposure and scale/support construction; matching step budgets do not establish a matched architecture pair")
+                shared_factor_one_off=anchors,multiscale_vs_messages=None,
+                exclusion="Only factor-one off is shared; trained WP07 candidates used factor 2 or 4 and WP08 trained only factor 1.")
 
 
-def review_history(root,out,code,*,directions_receipt=None):
+def existing_scale_views(doc, *, scene, classes, focus):
+    require(doc["scene"] == scene and doc["role"] == "devval" and doc["real_updates"] == 0
+            and doc["query_accessed"] is doc["raw_gt_loaded"] is False,
+            "Stored band comparison escapes its authorized development scope")
+    groups = {}
+    for row in doc["rows"]:
+        event = row["event"]
+        key = (event["factor"],event["band"],event["policy"])
+        points = groups.setdefault(key, {})
+        for i,(point,label) in enumerate(zip(row["points"],row["labels"],strict=True)):
+            require(point not in points and doc["labels"][point] == label and label in focus,
+                    "Historical scale views changed released point order or identity")
+            points[point] = (label,{head:probabilities(row["probabilities"][head],len(row["points"]),classes)
+                                    .argmax(1)[i].item()+1 for head in HEADS})
+    results = {}
+    for key, after in groups.items():
+        factor,band,policy = key
+        before = groups[(factor,"full","native")]
+        require(after.keys() == before.keys() and sorted(after) == list(range(len(doc["labels"])))
+                and all(before[i][0]==r[0] for i,r in after.items()), "Historical comparison is not same-point")
+        index = sorted(before)
+        effects = {}
+        for h in HEADS:
+            result = raw_pair([before[i][0] for i in index],[before[i][1][h] for i in index],
+                              [after[i][1][h] for i in index],classes,floor=5)
+            effects[h] = {str(label):result["transitions"][str(label)] for label in focus}
+        results[f"factor{factor}/{band}/{policy}"] = effects
+    return dict(cursor=doc["selected_step"], roles=doc["role"], policies=doc["supported_policies"],
+                no_cross_reason=doc["no_cross_reason"], comparison_to_same_factor_full_native=results)
+
+
+def review_history(root,out,code):
     pins = {key:named_pin(root,*value) for key,value in ARCHIVES.items()}
     archive = {key:json_pin(root,pin) for key,pin in pins.items()}
-    directional = directions(root,archive["xz_directional"])
-    if directions_receipt is not None:
-        extra = json_pin(root,directions_receipt)
-        require(extra["source"] == pins["xz_directional"] and extra["producer"] == code["commit"]
-                and extra["direction"]["pairs"] == directional["pairs"] and extra["optimizer_updates"] == 0,
-                "Directional transitions are not from the same accepted study")
-        directional = {**extra["direction"],"replay_receipt":directions_receipt}
     historic = archive["xz_hh_spectral"]
     require(historic["new_real_optimizer_updates"] == historic["authorized_real_interventions"] == 0
             and historic["query_accessed"] is historic["raw_gt_loaded"] is False,
@@ -341,19 +356,19 @@ def review_history(root,out,code,*,directions_receipt=None):
                 for key,value in historic["native"].items() if key.startswith("hh-")}
     require_frozen_code(code)
     findings = dict(scope="protocol_bound_real_development",sources=pins,producer=code["commit"],
-        xuzhou_full=xuzhou(root),xuzhou_directions=directional,paviau=paviau(root,archive),
-        xuzhou_central_gap=dict(receipt=pins["xz_hh_spectral"],scope="original_WP05_native_frozen_view",
-                               structural_pairs=None,reason="the original WP07 and WP08 short tests authorized full-band V5"),
+        xuzhou_full=xuzhou(root),xuzhou_directions=directions(root,archive["xz_directional"],archive["xz_directional_cpu"]),
+        paviau=paviau(root,archive),
+        xuzhou_central_gap=dict(native_receipt=pins["xz_hh_spectral"],
+                               same_weight_scale_receipt=pins["xz_scale_gap"],
+                               same_weight_scale=existing_scale_views(archive["xz_scale_gap"],
+                                                                    scene="xuzhou",classes=9,focus=(5,6)),
+                               matched_trained_structure_pairs=None,
+                               reason="The original WP07 and WP08 matched short tests authorized full-band V5 only."),
         honghu=dict(native_endpoints=coverage,focus_classes=[15,21],multiscale=None,region_message=None,
-                    scope="single compatible original topology; no matching trained structural arm",
+                    scope="Single compatible original topology; no matching trained structural arm.",
+                    same_weight_views=existing_scale_views(archive["hh_scale_gap"],
+                                                           scene="whu-honghu",classes=22,focus=(15,21)),
                     receipt=pins["xz_hh_spectral"]),
         independent_real=None,new_real_optimizer_updates=0,query_accessed=False,raw_gt_loaded=False,wp04_executed=False)
     require_frozen_code(code)
     return _write(out,findings)
-
-
-def replay_directions(root,out,code,execution):
-    link = named_pin(root,*ARCHIVES["xz_directional"])
-    result = directions(root,json_pin(root,link),execution=execution)
-    require_frozen_code(code)
-    return _write(out,dict(source=link,producer=code["commit"],direction=result,optimizer_updates=0))

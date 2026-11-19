@@ -6,6 +6,8 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+import torch
+
 from evaluation import wp12_cross_backend as comparison, wp12_cross_backend_fixture as fixtures
 from evaluation.frozen_training_stages import json_pin
 from scripts.run_frozen_band_region import _write
@@ -17,6 +19,8 @@ from transfer.g3_training import state_hash
 class CrossBackendComparisonTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.addClassCleanup(torch.set_num_threads,torch.get_num_threads())
+        torch.set_num_threads(1)
         cls.tmp = TemporaryDirectory()
         cls.addClassCleanup(cls.tmp.cleanup)
         cls.root = Path(cls.tmp.name)

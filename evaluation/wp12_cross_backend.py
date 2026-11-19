@@ -5,6 +5,7 @@ import math
 import re
 from time import perf_counter
 
+import numpy as np
 import torch
 
 from evaluation.classification_metrics import classification_metrics
@@ -271,7 +272,53 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
     return dict(accuracy=scores, qualification=qualifications, spatial=spatial, cost=costs)
 
 
-def review_case(root, capture, out, code, *, test_history=None):
+def compare_devices(reference, capture):
+    """Check CPU/CUDA captures of the same frozen exports and ordered Bank observations."""
+    reference_numeric, candidate_numeric = reference["numeric"], capture["numeric"]
+    require(reference_numeric["device"] == "cpu" and candidate_numeric["device"] == "cuda:0",
+            "Device review requires a CPU reference and an admitted CUDA capture")
+    require(all(reference[k] == capture[k] for k in
+                ("request","producer","bank","roles","uses","views","scope"))
+            and reference["cohorts"].keys() == capture["cohorts"].keys(), "Device captures use different releases")
+    count = flips = graph_changes = 0
+    delta = 0.
+    per_backend = {}
+    for name, group in capture["cohorts"].items():
+        old = reference["cohorts"][name]
+        require(set(old["arms"]) == set(group["arms"]), "Device capture changed the registered roster")
+        for arm, row in group["arms"].items():
+            earlier = old["arms"][arm]
+            require(all(earlier[k] == row[k] for k in ("endpoint","state","phase","step","semantics")),
+                    "Same-weight device comparison received another model")
+            backend = row["semantics"]["backend"]
+            local = per_backend.setdefault(backend,dict(point_head=0,prediction_changes=0,max_abs_probability=0.))
+            for a,b in zip(earlier["rows"],row["rows"],strict=True):
+                require(all(a[k]==b[k] for k in ("role","view","tile")), "Device capture changed roles or row order")
+                if a["accuracy"] is None:
+                    require(b["accuracy"] is None, "A device acquired a previously absent classification")
+                    continue
+                y,z = a["accuracy"],b["accuracy"]
+                require(z is not None and all(y[k] == z[k] for k in ("truth","order","observation","bands")),
+                        "Device capture changed true classes, points or actual bands")
+                graph_changes += any(y["graph"][k] != z["graph"][k] for k in ("q_indices","a0_indices"))
+                for h in HEADS:
+                    p,q = np.asarray(y["heads"][h]),np.asarray(z["heads"][h])
+                    require(p.shape == q.shape, "Device head shape differs")
+                    maximum = float(np.max(np.abs(p-q)))
+                    changed = int((p.argmax(1)!=q.argmax(1)).sum())
+                    count += len(p)
+                    flips += changed
+                    delta = max(delta,maximum)
+                    local["point_head"] += len(p)
+                    local["prediction_changes"] += changed
+                    local["max_abs_probability"] = max(local["max_abs_probability"],maximum)
+    require(count > 0, "Same-weight device parity needs approved classification on both captures")
+    return dict(point_head=count,prediction_changes=flips,max_abs_probability=delta,
+                different_graph_index_rows=graph_changes,backend=per_backend,
+                cpu=reference_numeric["protocol"],gpu=candidate_numeric["physical_uuid"])
+
+
+def review_case(root, capture, out, code, *, test_history=None, reference=None):
     raw = json_pin(root, capture)
     bank, intake, roles, groups = open_case(root, raw["request"], test_history=test_history)
     require(raw["schema"] == CAPTURE and raw["producer"] == code["commit"] and raw["scope"] == intake["source_mode"]
@@ -312,7 +359,9 @@ def review_case(root, capture, out, code, *, test_history=None):
         summary[key] = dict(seed=ready["seed"], budget=ready["budget"], pairs=scored,
                             arms={name: {k:v for k,v in arm.items() if k!="rows"} for name, arm in ready["arms"].items()})
     require_frozen_code(code)
-    return _write(out, dict(schema=REVIEW, capture=capture, producer=code["commit"], scope=raw["scope"],
+    parity = None if reference is None else compare_devices(json_pin(root,reference),raw)
+    return _write(out, dict(schema=REVIEW, capture=capture, baseline_capture=reference, device_parity=parity,
+                            producer=code["commit"], scope=raw["scope"],
                             scene=bank.release.scene, effect_scope="frozen_members_of_explicit_matched_cohort",
                             uses=intake["uses"], roles=intake["role_reports"], cohorts=summary,
                             numeric=raw["numeric"], query_accessed=False, raw_gt_loaded=False, optimizer_updates=0))

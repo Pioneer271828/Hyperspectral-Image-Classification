@@ -95,6 +95,7 @@ def main(argv=None):
 def cross_backend_review(argv):
     from evaluation.frozen_training_stages import require
     from evaluation.wp12_cross_backend import review_case
+    from scripts.run_native_released_points import arithmetic
 
     parser = argparse.ArgumentParser(description="Independently review paired native, scale and message models")
     parser.add_argument("--cross-backend-review", action="store_true", required=True)
@@ -102,6 +103,7 @@ def cross_backend_review(argv):
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--capture", nargs=2, metavar=("PATH", "SHA256"), required=True)
+    parser.add_argument("--reference-capture", nargs=2, metavar=("PATH", "SHA256"))
     parser.add_argument("--synthetic", action="store_true")
     args = parser.parse_args(argv)
     root, out = args.runs.resolve(strict=True), external_directory(args.out)
@@ -109,8 +111,10 @@ def cross_backend_review(argv):
     require(root in out.parents and code["commit"] == args.expected_commit and not out.exists(),
             "Expected clean review checkout and fresh authorized result path")
     require_frozen_code(code)
-    result = review_case(root, dict(path=args.capture[0], sha256=args.capture[1]), out, code,
-                         test_history=[] if args.synthetic else None)
+    reference = dict(zip(("path","sha256"),args.reference_capture)) if args.reference_capture else None
+    with arithmetic(root,None):
+        result = review_case(root, dict(path=args.capture[0], sha256=args.capture[1]), out, code,
+                             test_history=[] if args.synthetic else None, reference=reference)
     print(json.dumps(result), flush=True)
 
 
