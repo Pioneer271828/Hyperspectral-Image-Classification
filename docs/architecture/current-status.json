@@ -18,7 +18,8 @@
     "m4_source_handoff": "0de46ee00946166a84c9ad50fd027bba2c56d679",
     "tool_integration": "1c40f249e2277a4356d63c8e8db35d6aa9282791",
     "native_coverage_release_candidate": "7f319f2146185575fc96287a44bdbbde091f0c16",
-    "wp12_unified_real_candidate": "11a95837a1dbcbe01218a7847553503f231afeaf"
+    "wp12_unified_real_candidate": "11a95837a1dbcbe01218a7847553503f231afeaf",
+    "wp11_deployment_cost_candidate": "e5020e3ef1665802472f60f4875ca4622df44e51"
   },
   "frozen_runtime_reference": "8289e227275eabbafbb1eaea75cf4d6b0c1e8580",
   "frozen_runtime_paths": [
@@ -45,6 +46,14 @@
     "evaluation/g4_target_verification.py"
   ],
   "modules": [
+    {
+      "id": "WP11/WP12 冻结部署和四范围成本候选",
+      "state": "固定真实路径在 CPU 和独立 CUDA 设备量测，合成动态闭环验收，候选待审",
+      "evidence": "三景原生完整和徐州已认证轻重共五路径，每设备四范围。CPU exact 395caef57fba8ab6a09223538f748179dab552f2，严格 CUDA 和全仓测试 e5020e3ef1665802472f60f4875ca4622df44e51",
+      "remaining": "真实独立校准与确认仍缺授权发布。动态真实收益保留空，完整 FP32 默认继续。",
+      "report": "research/reports/WP11_WP12_固定路径与动态回退端到端成本验收_20261119.md",
+      "chat_report": "2026-11-19 WP11/WP12 四范围固定路径测量、动态工程与独立导出"
+    },
     {
       "id": "WP12 真实分类、成本与独立发布统一候选",
       "state": "已统一真实历史汇总、成本分层和独立发布入口，候选待审",
@@ -1512,7 +1521,7 @@
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp12_unified_real_evidence_candidate_pending_review_wp05_long_training_paused",
+  "execution_state": "wp11_deployment_cost_candidate_pending_review_wp05_long_training_paused",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
