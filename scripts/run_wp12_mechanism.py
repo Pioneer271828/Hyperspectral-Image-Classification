@@ -64,14 +64,47 @@ def frozen_factorial(root,out,code,args):
     print(f"accepted {suffix} {mode}",flush=True)
 
 
+def edge_campaign(root,out,code,args):
+    from scripts.run_native_released_points import arithmetic
+    from transfer import native_mechanism_campaign as campaign
+
+    if args.action=="edge-register":
+        require(args.case is args.gpu is args.capture is args.producer is None,
+                "Only synthetic geometry is opened during registration")
+        print(json.dumps(campaign.register(root,out,code)),flush=True)
+        return
+    require(args.case in campaign.GROUPS and (args.gpu is None or args.gpu==os.environ.get("CUDA_VISIBLE_DEVICES")),
+            "Use an exact synthetic edge case and isolated device")
+    with arithmetic(root,args.gpu) as execution:
+        if args.action=="edge-run":
+            require(args.capture is args.producer is None,"Edge optimization uses only its original registered source")
+            print(json.dumps(campaign.fit(root,out,code,args.case,execution)),flush=True)
+            return
+        require(args.capture is not None,"Confirm into a separate authorized directory")
+        report=external_directory(args.capture)
+        require(root in report.parents and out!=report, "Independent points must be saved outside training")
+        report.mkdir(parents=True,exist_ok=True)
+        destination=report/(args.case+".json")
+        if destination.exists():
+            old=json_pin(root,file_pin(destination))
+            require(old["consumer"]==code["commit"] and old["producer"]==(args.producer or code["commit"])
+                    and old["device"]==execution.numeric,"An existing independent edge receipt differs")
+            return
+        result=campaign.confirm(root,out,args.producer or code["commit"],code,args.case,execution)
+        write_json(destination,result)
+        print(f"accepted {args.case} {execution.device}",flush=True)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action",choices=("register","real","factorial","coverage"))
+    parser.add_argument("action",choices=("register","real","factorial","coverage","edge-register","edge-run","edge-confirm"))
     parser.add_argument("--runs",type=Path,required=True)
     parser.add_argument("--out",type=Path,required=True)
     parser.add_argument("--expected-commit",required=True)
     parser.add_argument("--case")
     parser.add_argument("--gpu")
+    parser.add_argument("--producer")
+    parser.add_argument("--capture",type=Path)
     args=parser.parse_args()
     root=args.runs.resolve(strict=True)
     out=external_directory(args.out)
@@ -79,6 +112,8 @@ def main():
     code=code_snapshot()
     require(code["commit"] == args.expected_commit, "Expected exact source commit")
     require_frozen_code(code)
+    if args.action.startswith("edge-"):
+        return edge_campaign(root,out,code,args)
     if args.action in ("factorial","coverage"):
         return frozen_factorial(root,out,code,args)
     scope=register(root,out,code)

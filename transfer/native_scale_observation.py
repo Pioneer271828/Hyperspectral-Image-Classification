@@ -202,10 +202,17 @@ def forward(model, actual, producer, role, *, condition=None, timed=None, execut
     partition = forward_partition if execution is None else execution.partition
     capture = (lambda state: graphs.append(dict(**_graph_trace(state), q_shape=list(state.Q.shape)))
                if execution is None else graphs.append(state))
-    if graph_override is not None and execution is not None:
-        raise ValueError("Fixed graph and alternate arithmetic must be registered separately")
-    measured = (_measure(builder,"build_graph",timing,"graph_seconds",capture, operation=graph_override) if execution is None
-                else execution.measure_graph(builder,timing,capture))
+    if execution is None:
+        measured = _measure(builder,"build_graph",timing,"graph_seconds",capture,operation=graph_override)
+    elif graph_override is None:
+        measured = execution.measure_graph(builder,timing,capture)
+    else:
+        from transfer.band_graph_control import FixedNativeGraph
+
+        if not isinstance(graph_override, FixedNativeGraph):
+            raise ValueError("Fixed support with alternative arithmetic requires a sealed native graph")
+        graph_override.verify(actual)
+        measured = execution.measure_graph(builder,timing,capture,operation=graph_override)
     with measured:
         if isinstance(model, ConditionalMultiscaleVCASAHGCN):
             metadata, coverage, gsd = (effective, None, None) if condition is None else condition.values()

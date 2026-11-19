@@ -64,10 +64,10 @@ class Execution:
         return output
 
     @contextmanager
-    def measure_graph(self, builder, timing, capture):
+    def measure_graph(self, builder, timing, capture, *, operation=None):
         if "build_graph" in vars(builder):
             raise ValueError("Native graph recorder already attached")
-        original = builder.build_graph
+        original = builder.build_graph if operation is None else operation
 
         def build(*args,**kwargs):
             self.sync()

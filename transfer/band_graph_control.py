@@ -114,15 +114,25 @@ class ViewControl:
         return result
 
 
+@dataclass(frozen=True)
+class FixedNativeGraph:
+    view_hash: str
+    state: GraphState
+
+    def verify(self, observation):
+        if self.view_hash != observation_id(observation):
+            raise ValueError("Fixed native support escapes its admitted retained observation")
+
+    def __call__(self, features, *args, **kwargs):
+        state = self.state
+        graph = GraphState(state.Q.to(features.device), state.A0.to(features.device),
+                           state.region_positions.to(features.device), state.image_shape,state.grid_shape)
+        return graph.validate(features)
+
+
 def fixed_graph(observation, control, arm):
     """Supply the current observation's sealed GraphState to the native timer."""
     if arm == "native":
         return None
     state = control.actual(observation,arm)
-
-    def provide(features, *args, **kwargs):
-        graph = GraphState(state.Q.to(features.device), state.A0.to(features.device),
-                           state.region_positions.to(features.device), state.image_shape,state.grid_shape)
-        return graph.validate(features)
-
-    return provide
+    return FixedNativeGraph(observation_id(observation), state)
