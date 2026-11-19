@@ -5,7 +5,7 @@ from evaluation.wp12_release_results import HEADS, cohorts, cost_missing, metric
 
 def sample(seed, device, workload, matrix):
     return dict(source="fixture",protocol="released",scene="xuzhou",seed=seed,support=512,
-                method="native",arm="none",role="devval",band="full",factor=1,endpoint="selected",
+                method="native",arm="none",role="devval",band="full",factor=1,k=5,endpoint="selected",
                 model=str(seed),device=device,workload=workload,measurement_scope=None,
                 cost=cost_missing("not timed"),heads={head:metrics(matrix,2) for head in HEADS})
 

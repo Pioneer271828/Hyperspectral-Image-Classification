@@ -42,6 +42,7 @@ PROOFS = {
     "p4_earlier": (P4_REVIEW+"/partial-audit02/review.json", "a60134e6447550ce1d0455199a9b70f1f42648b860c61e87c72fe9ec0b8fa0fb"),
     "p4": (P4_REVIEW+"/partial-audit03/review.json", "30bafc44496bff71174a789e1b15b53f7cdcd581637396933a115be6e4c67e2a"),
     "band_registration": (BAND+"/registration.json", "70b1c645051e55d6df7e0b6e44d99640238b167b3b5cdf8cb708d07f416a10b7"),
+    "layer_replay": ("wp02-wp05-wp06-native-release-20261119.v2/replay.json", "4a441b7f920775ff79686a465673b6b8258e375426a4a87b1b1a3b97d6f79fb2"),
 }
 BAND_PINS = {**EXPECTED_ARCHIVES,
              "paviaU-512": "5f660c26de4fe5554dffa35dac23aa863fa2ff02123a665eea480d09d8fa0662",
@@ -81,7 +82,7 @@ def cost_missing(reason):
 
 
 def case_key(row):
-    return tuple(row[field] for field in ("source","protocol","scene","seed","support","method","arm","role","band",
+    return tuple(row[field] for field in ("source","protocol","scene","seed","support","k","method","arm","role","band",
                                          "factor","endpoint","device","workload","measurement_scope"))
 
 
@@ -139,7 +140,7 @@ def frozen54(root):
         scene, seed, arm = (item[k] for k in ("scene","seed","arm"))
         method, mode = arm.split("/")
         cost, workload = cost_by_key[scene,seed,arm]
-        rows.append(dict(source="frozen54",protocol=item["evaluation_sha256"],scene=scene,seed=seed,support=None,
+        rows.append(dict(source="frozen54",protocol=item["evaluation_sha256"],scene=scene,seed=seed,support=None,k=None,
                          method=method,arm=mode,role="historical_frozen_authorized_aggregate",
                          band="ordered_registered_full_observation",factor=None,endpoint="frozen_primary",
                          device=audit["hardware"]["uuid"],workload=workload,measurement_scope=cost["scope"],
@@ -220,7 +221,7 @@ def native_pavia(root):
             cost["training_phase_totals"]={key:math.fsum(r[key] for r in stages[name]) for key in stages[name][0]}
             role="devval_selected_development_protocol"
             rows.append(dict(source="native_pavia",protocol=digest([audit["bank"],audit["point_set"]["devval"]]),
-                             scene="paviaU",seed=int(seed),support=512,method="native_released",arm=arm,
+                             scene="paviaU",seed=int(seed),support=512,k=5,method="native_released",arm=arm,
                              role=role,band=band,factor=int(factor),endpoint=endpoint,device=item["actual_cuda_uuid"],
                              workload=digest([role,int(factor),band,"representative_host_block"]),
                              measurement_scope=scope, step=step, model=item["selected_model_sha256"] if endpoint=="selected" else None,
@@ -232,6 +233,10 @@ def band_diagnostics(root):
     plan = document(root,proof(root,"band_registration"))
     require(set(plan["real"])==BAND_PINS.keys() and plan["query_accessed"] is plan["raw_gt_loaded"] is False
             and plan["real_updates"] == 0, "Unexpected frozen band diagnostic plan")
+    probe_link=proof(root,"layer_replay")
+    probe=document(root,probe_link)
+    require(probe["query_accessed"] is probe["raw_gt_loaded"] is False and probe["real_updates"]==0
+            and set(probe["scenes"])==SCENES.keys(),"Foreign WP06 layer replay")
     rows = []
     for case in plan["real"]:
         link = dict(path=str(root/BAND/(case+".json")),sha256=BAND_PINS[case])
@@ -255,12 +260,24 @@ def band_diagnostics(root):
                         materialize_seconds=math.fsum(r["timings"]["materialize_seconds"] for r in slots),
                         p50_ms=None,p95_ms=None,peak_allocated_bytes=None,end_to_end_ms=None,
                         warmups=None,repeats=None,reason="Single observations on distinct blocks do not form timing repetitions.")
+            trace=None
+            reference=probe["scenes"][scene]
+            if reference["model"]==result["model"] and factor==1:
+                tagged,=[x for x in reference["rows"] if x["band"]==band]
+                same,=[x for x in slots if x["tile"]==tagged["tile_ordinal"]]
+                require(same["labels"]==tagged["labels"] and same["probabilities"]==tagged["probabilities"]
+                        and same["computation"]["graph"]==tagged["graph"] and tagged["untouched_by_probes"],
+                        "WP06 layer replay differs from the historical observation")
+                trace=dict(source=probe_link["sha256"],n=len(tagged["labels"]),layers=sorted(tagged["probes"]),
+                           probe_forward_seconds=tagged["probed_forward_seconds"],
+                           scope="prior_release_single_observation_probe_trace",paired_efficiency_allowed=False)
             rows.append(dict(source="wp06_frozen_band_diagnostics",protocol=digest([result["preflight_population"],plan["focus"][scene]]),
-                             scene=scene,seed=result["model_seed"],support=512,method="frozen_native",
+                             scene=scene,seed=result["model_seed"],support=512,k=5,method="frozen_native",
                              arm=result["architecture"], role="devval_released_focus_only",band=band,
                              factor=factor,endpoint="frozen_selected",device="cpu_archived_diagnostics",
                              workload=digest([result["preflight_population"],band,factor,[r["tile"] for r in slots]]),
-                             measurement_scope=cost["scope"],model=result["model"],receipt=link["sha256"],cost=cost,heads=heads))
+                             measurement_scope=cost["scope"],model=result["model"],receipt=link["sha256"],cost=cost,
+                             layers=trace,heads=heads))
     return rows
 
 
@@ -300,7 +317,7 @@ def p4_partial(root):
             "optimizer_updates","recorded_training_call_seconds","startup_seconds","checkpoint_recovery_seconds",
             "completed_resume_seconds","sum_synchronized_step_phases")} for name,record in item["paths"].items()}
         rows.append(dict(source="wp05_five_arm_partial",protocol=digest([reviewed["release"],cfg["pair_sha256"]]),
-                         scene="whu-honghu",seed=cfg["model_seed"],support=cfg["support_seed"],
+                         scene="whu-honghu",seed=cfg["model_seed"],support=cfg["support_seed"],k=cfg["k"],
                          method=cfg["method"],arm=cfg["arm"],role="devval_selected_development_protocol",
                          band="archived_registered_observation",factor=None,endpoint="selected",device=cfg["physical_uuid"],
                          workload=cfg["observation_sha256"],measurement_scope=None,model=paired["state"],
@@ -339,7 +356,7 @@ def cohorts(rows):
         seeds=sorted(row["seed"] for row in items)
         require(len(seeds)==len(set(seeds)),"Cohort duplicates the same model seed")
         first=items[0]
-        fields=("source","protocol","scene","role","band","factor","method","arm","support","device","endpoint","measurement_scope")
+        fields=("source","protocol","scene","role","band","factor","method","arm","support","k","device","endpoint","measurement_scope")
         for h in HEADS:
             values={field:[item["heads"][h][field] for item in items] for field in ("oa","aa","kappa","macro_f1","count")}
             matrices=[item["heads"][h]["per_class"] for item in items]
@@ -374,12 +391,12 @@ def publish(root, out, code):
         _write(stage/"cohorts.json",summary)
         with (stage/"real-per-class.csv").open("x",encoding="utf-8",newline="") as file:
             w=csv.writer(file)
-            w.writerow(("source","protocol","scene","seed","support","method","arm","role","band","factor",
+            w.writerow(("source","protocol","scene","seed","support","k","method","arm","role","band","factor",
                         "endpoint","device","class","head","support_n","recall","f1"))
             for row in cases:
                 for head,values in row["heads"].items():
                     for c in values["per_class"]:
-                        w.writerow((*[row[k] for k in ("source","protocol","scene","seed","support","method","arm","role","band",
+                        w.writerow((*[row[k] for k in ("source","protocol","scene","seed","support","k","method","arm","role","band",
                                                       "factor","endpoint","device")],
                                     c["class_id"],head,c["support"],c["recall"],c["f1"]))
         for name,items in (("real-results.csv",cases),("real-seed-summary.csv",summary),
@@ -390,14 +407,15 @@ def publish(root, out, code):
         require_frozen_code(code)
         receipt=_write(stage/"receipt.json",dict(schema=SCHEMA,status="published",producer=code["commit"],
             files=files,qualified_historical_joint_cases=len(frozen),native_development_rows=len(sparse),
-            bounded_diagnostic_rows=len(diagnostics),partial_five_arm_rows=len(partial),coverage=gaps,
+            bounded_diagnostic_rows=len(diagnostics),layer_replay_rows=sum(bool(r["layers"]) for r in diagnostics),
+            partial_five_arm_rows=len(partial),coverage=gaps,
             cost_lifecycle=lifecycle,formal_independent_accuracy_rows=0,new_query_reads=0,new_optimizer_updates=0))
         os.rename(stage,out)
     return dict(path=str(out/"receipt.json"),sha256=receipt["sha256"])
 
 
 def write_csv(file, name, items):
-    identity=("source","protocol","scene","method","arm","role","band","factor","endpoint","device","measurement_scope")
+    identity=("source","protocol","scene","method","k","arm","role","band","factor","endpoint","device","measurement_scope")
     metrics_fields=("oa","aa","kappa","macro_f1","count")
     w=csv.writer(file)
     if name=="real-results.csv":
