@@ -2,12 +2,16 @@
 
 from collections import defaultdict
 from pathlib import Path
+import re
+import subprocess
 
 from evaluation.frozen_training_stages import HEADS, json_pin, pinned, require
+from evaluation.wp12_external_paired import CAPTURE, REVIEW
 from evaluation.wp12_paired_head_review import pair_scores
 from evaluation.wp12_release_results import P4_REVIEW, csv_rows, p4_partial, proof
 from model.research_config import digest
 from scripts import run_frozen_band_region as archive
+from transfer import native_external_paired as external
 
 SCHEMA = "wp12_paired_cross_protocol_history_v1"
 MECHANISM = "wp05-wp06-mechanism-20261119-qa/accepted"
@@ -209,6 +213,29 @@ def xuzhou_protection(root, links):
               for field in ("n","old","new","corrected","introduced")} for c in range(1,10)}
     return dict(scope="historical_synthetic_central_gap_retained_signal",pairs=profiles,totals=totals,
                 rejected=sum(not row["accepted"] for row in profiles.values()),retuning=False)
+
+
+def review_attachment(root,link,consumer):
+    review = json_pin(root,link)
+    require(review["schema"]==REVIEW and review["raw_gt_loaded"] is review["query_accessed"] is False,
+            "Foreign independent paired review")
+    raw = json_pin(root,review["raw"])
+    selected = json_pin(root,raw["selected"])
+    registration = json_pin(root,selected["registration"])
+    require(raw["schema"]==CAPTURE and selected["schema"]==external.PUBLISH
+            and registration["schema"]==external.SCHEMA
+            and review["scope"]==raw["scope"]==selected["scope"]==registration["scope"]
+            and review["scope"] in (external.TEST,external.REAL)
+            and review["runtime"]==raw["producer"]==selected["producer"]==registration["producer"]
+            and set(raw["arms"])==set(selected["members"])
+            and set(review["results"])==set(registration["releases"]),"Independent publication chain differs")
+    for ancestor,descendant in ((review["runtime"],review["consumer"]),(review["consumer"],consumer)):
+        require(re.fullmatch("[0-9a-f]{40}",ancestor),"Expected a full historical source commit")
+        subprocess.run(["git","merge-base","--is-ancestor",ancestor,descendant],check=True)
+    require(review["scope"]!=external.TEST or review["real_accuracy_available"] is False
+            and review["external_real_updates"]==0,"Test fixture was promoted as real evidence")
+    return dict(pin=link,scope=review["scope"],groups=len(review["results"]),
+                real_accuracy_available=review["real_accuracy_available"])
 
 
 def index(root):

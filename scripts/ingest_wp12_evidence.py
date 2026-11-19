@@ -87,10 +87,8 @@ def main(argv=None):
 
 
 def external_paired_history(argv):
-    from evaluation.frozen_training_stages import json_pin, require
-    from evaluation.wp12_external_paired import REVIEW
-    from evaluation.wp12_paired_history import index
-    from scripts.check_wp12_production import prior_runtime
+    from evaluation.frozen_training_stages import require
+    from evaluation.wp12_paired_history import index, review_attachment
     from scripts.run_frozen_band_region import _write
 
     parser = argparse.ArgumentParser(description="Index historical paired development evidence without inference")
@@ -108,12 +106,7 @@ def external_paired_history(argv):
     row = index(root)
     if args.external_review:
         link = dict(zip(("path","sha256"),args.external_review,strict=True))
-        review = json_pin(root,link)
-        require(review["schema"]==REVIEW and review["raw_gt_loaded"] is review["query_accessed"] is False,
-                "Foreign independent paired evidence")
-        prior_runtime(review["runtime"],code["commit"])
-        row["external_paired_review"] = dict(pin=link,scope=review["scope"],groups=len(review["results"]),
-                                            real_accuracy_available=review["real_accuracy_available"])
+        row["external_paired_review"] = review_attachment(root,link,code["commit"])
     row["producer"] = code["commit"]
     require_frozen_code(code)
     out.parent.mkdir(parents=True,exist_ok=True)
