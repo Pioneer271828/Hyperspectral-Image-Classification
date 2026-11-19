@@ -14,7 +14,7 @@ from evaluation.frozen_band_region import HEADS
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.checkpoint_io import load_model_checkpoint, save_model_checkpoint
 from model.research_config import digest
-from scripts.run_frozen_band_region import _write, check, pin
+from scripts.run_frozen_band_region import _read, _write, check, pin
 from transfer import development_bank as custody, development_bank_training as fixture, native_scale_training as native
 from transfer.development_bank_training import _initial
 from transfer.g3_training import state_hash
@@ -44,9 +44,10 @@ def generated(classes, split):
                 split == "a" and row["role"] == "devtrain" and y == 22)]
             # The fixture deliberately has exactly one class-21 point in each role.
             if key in ((3, 81) if split == "a" else (10, 3)):
-                a, _, c, d = row["box"]
+                a, b, c, d = row["box"]
                 ids = {i for i, _ in row["samples"]}
-                point = next(a * original.shape[1] + x for x in range(c, d) if a * original.shape[1] + x not in ids)
+                point = next(y * original.shape[1] + x for y in range(a, b) for x in range(c, d)
+                             if y * original.shape[1] + x not in ids)
                 row["samples"].append([point, 21])
             row["samples"].sort()
         row["origin"] = {**row["origin"], "array_sha256": custody.array_hash(arrays[key])}
@@ -230,28 +231,48 @@ def reject_recovery(candidate, packet, producer):
 
 def run_synthetic(folder, code):
     root = folder / "synthetic"
-    root.mkdir()
+    root.mkdir(exist_ok=True)
     cases, checks, chronology = {}, {}, {}
     for classes in (9, 22):
         banks = {}
         for split in SPLITS:
             release, arrays = generated(classes, split)
             out = root / f"{classes}-{split}-bank"
-            binding = custody.publish(out, root, release, lambda row: arrays[row["id"]])
-            bank_pin = {key: binding[key] for key in ("root", "sha256", "registration")}
+            if (out/"bank.json").exists():
+                bank_pin = dict(root=str(out),sha256=pin(out/"bank.json")["sha256"],
+                                registration=pin(out/"registration.json")["sha256"])
+            else:
+                binding = custody.publish(out, root, release, lambda row: arrays[row["id"]], resume=out.exists())
+                bank_pin = {key:binding[key] for key in ("root","sha256","registration")}
             banks[split] = custody.Bank(bank_pin, root, release)
         check(banks["a"].release.statistics["statistics_hash"] != banks["b"].release.statistics["statistics_hash"],
               "Geometry switch reused fit statistics")
         source_files = {}
         for seed in SOURCES:
             weights = root / f"{classes}-{seed}-old-source.pt"
-            save_model_checkpoint(shared_source(banks["a"].release.scene, seed), weights)
+            original = shared_source(banks["a"].release.scene, seed)
+            if weights.exists():
+                check(state_hash(load_model_checkpoint(weights)) == state_hash(original), "Historical source packet differs")
+            else:
+                save_model_checkpoint(original, weights)
             source_files[seed] = dict(weights=pin(weights), sidecar=pin(Path(str(weights)+".json")))
         for s, split, arm in product(SOURCES, SPLITS, ARMS):
             place = root / f"{classes}-{s}-{split}-{arm}"
-            place.mkdir()
-            provider = SpatialReleasedFixture(banks[split], s, split, arm, code["commit"], source_files[s])
-            receipt, spec, prefix = run_case(place, provider)
+            if (place/"receipt.json").exists():
+                check(classes == 9, "Unexpected preexisting synthetic endpoint")
+                original = "1147f4af81b28266dfaebbd4b8e3b42b8cfe333e"
+                provider = SpatialReleasedFixture(banks[split],s,split,arm,original,source_files[s])
+                spec = provider.contract(classes,64,"off",1,original)
+                receipt = pin(place/"receipt.json")
+                record = _read(receipt)
+                prefix = load(place/"prefix.pt")
+                check(prefix["registration"] == digest(spec) and all(
+                    pin(place/f"{phase}.pt")["sha256"] == sha for phase,sha in record["packet_sha"].items()),
+                    "Prior completed case is not bound to the original scope")
+            else:
+                place.mkdir()
+                provider = SpatialReleasedFixture(banks[split],s,split,arm,code["commit"],source_files[s])
+                receipt, _, prefix = run_case(place, provider)
             cases[place.name] = receipt
             if arm == "none":
                 chronology[classes, s, split] = (provider, prefix)
@@ -259,8 +280,8 @@ def run_synthetic(folder, code):
         provider, _ = chronology[classes, SOURCES[0], "a"]
         _, other_source = chronology[classes, SOURCES[1], "a"]
         _, other_split = chronology[classes, SOURCES[0], "b"]
-        checks[str(classes)] = dict(wrong_source=reject_recovery(provider, other_source, code["commit"]),
-                                    wrong_split=reject_recovery(provider, other_split, code["commit"]),
+        checks[str(classes)] = dict(wrong_source=reject_recovery(provider, other_source, provider.producer),
+                                    wrong_split=reject_recovery(provider, other_split, provider.producer),
                                     train_statistics_poison_equal=True)
     return _write(root / "receipt.json", dict(status="passed", schema=SCHEMA, producer=code["commit"],
                    cases=cases, checks=checks, synthetic_updates=12*len(cases), real_updates=0,

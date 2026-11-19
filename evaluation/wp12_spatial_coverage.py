@@ -94,6 +94,14 @@ def run_comparisons(value, arrays, space, reg, writer, name):
     check(value["band_ids"] == {name:space["bands"][name] for name in BASES}, "Original band IDs changed")
     scope_tiles = set().union(*(set(g["held"]) for g in space["folds"]))
     check(set(value["tiles"]) <= scope_tiles, "Prediction role escaped released training geometry")
+    traces = value["traces"]
+    trace_ids = {(row["tile"],row["band"],row["spatial"]) for row in traces}
+    check(len(trace_ids) == len(traces) == value["forwards"] == 9 * len(set(value["tiles"]))
+          and all(row["normalized_source"] == "historical_training_statistics" and
+                  row["retained"] == len(space["bands"][row["band"]])
+                  and row["graph"]["q_nnz"] >= row["pixels"]
+                  and all(re.fullmatch("[0-9a-f]{64}", row["graph"][key]) for key in ("q","a"))
+                  for row in traces), "Incomplete graph and statistics provenance")
     released = {f"{b}__{mode}__{h}" for b,mode,h in product(BASES,SPATIAL,HEADS)}
     embeds = {f"{b}__embedding__{h}" for b,h in product(BASES,HEADS)} if scene == "whu-honghu" else set()
     check(set(arrays) == released | embeds, "Unexpected readout or trace inventory")
