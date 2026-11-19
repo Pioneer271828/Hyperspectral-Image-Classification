@@ -285,6 +285,25 @@ def production(root, out, code, args):
     print(json.dumps(result),flush=True)
 
 
+def paired_heads(root,out,code,args):
+    from transfer import native_paired_head_campaign as campaign
+
+    if (sys.platform!="linux" or not __debug__ or args.long_real or args.manifest or args.authority
+            or args.preflight or args.release or args.phase or args.drain_after is not None or args.frozen_plan
+            or args.archive or args.from_device or args.workers!=1 or args.paviau_publication or args.paviau_engineering):
+        raise ValueError("Paired optimizer admission requires the exact synthetic registration")
+    if args.mode=="paired-head-register":
+        if args.case or args.gpu:
+            raise ValueError("Paired registration has no model case or GPU")
+        result=campaign.register(root,out,code)
+    else:
+        if not args.case:
+            raise ValueError("Choose a registered paired model/scene/support case")
+        with arithmetic(root,args.gpu) as execution:
+            result=campaign.fit(root,out,code,args.case,execution)
+    print(json.dumps(result),flush=True)
+
+
 def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
@@ -298,7 +317,8 @@ def main(argv=None, *, intake=None):
                                             "frozen-stage-run", "coverage-long-register", "coverage-long-run",
                                             "coverage-long-reference", "coverage-long-freeze",
                                             "positive-control-register", "positive-control-run",
-                                            "positive-control-freeze", "production-register", "production-run"), required=True)
+                                            "positive-control-freeze", "production-register", "production-run",
+                                            "paired-head-register", "paired-head-run"), required=True)
     parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--authority", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--frozen-plan", nargs=2, metavar=("PATH", "SHA256"))
@@ -322,6 +342,8 @@ def main(argv=None, *, intake=None):
     out = external_directory(args.out)
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
+    if args.mode.startswith("paired-head-"):
+        return paired_heads(root,out,code,args)
     if args.mode.startswith("production-"):
         return production(root, out, code, args)
     if args.mode.startswith("positive-control-"):

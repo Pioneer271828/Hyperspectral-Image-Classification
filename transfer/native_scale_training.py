@@ -132,8 +132,9 @@ class Run:
                 from transfer.native_positive_training import PositiveProvider
                 from transfer.native_production_provider import ProductionProvider
                 from transfer.native_mechanism_edges import EdgeProvider
+                from transfer.native_paired_head import PairedHeadProvider
                 if (type(released) not in (MatchedProvider, ProductionProvider)
-                        and (type(released) not in (*providers, PositiveProvider, EdgeProvider) or not released.is_synthetic)):
+                        and (type(released) not in (*providers, PositiveProvider, EdgeProvider, PairedHeadProvider) or not released.is_synthetic)):
                     raise ValueError("Unknown released supervision provider")
         self._capacity = None
         self._region_action = None
