@@ -164,7 +164,9 @@ def audit_case(root,place,review,out,code,producer,freeze_pin,name,execution):
     condition = profiles()[family]
     dataset = review/"confirmation"
     dataset.mkdir(exist_ok=True)
-    with case_lock(dataset/family):
+    locks = review/"confirmation-locks"
+    locks.mkdir(exist_ok=True)
+    with case_lock(locks/family):
         bank,roles,spatial_ratio = publish_bank(dataset/family,condition,confirm=True)
         fit_stats,final_stats = provider.bank.release.statistics,bank.release.statistics
         require(all(fit_stats[key] == final_stats[key] for key in ("minimum","maximum"))
