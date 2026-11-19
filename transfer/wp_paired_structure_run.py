@@ -17,6 +17,7 @@ from transfer.g3_training import state_hash
 from transfer.native_coverage_queue import case_lock
 from transfer.wp_paired_structure import REAL, SCHEMA, StructuralProvider, open_plan
 from transfer.wp_support_match import exposure as count_exposure
+from transfer import wp_region_graph as regional
 
 PUBLICATION = "wp05_wp08_paired_structure_publication_v1"
 
@@ -166,6 +167,9 @@ def export_selected(root, out, plan, link, name, group, arm, data):
     require(state_hash(model)==spec["initialization"]["state"],"Cannot reconstruct the registered model")
     architecture = {**model.export_config(),"training_config":{}}
     selected = packet["selected"]
+    anchor = None
+    if backend_name==regional.BACKEND:
+        anchor = {name:value.detach().cpu().clone() for name,value in model.state_dict().items()}
     model.load_state_dict(selected["state"],strict=True)
     identity = state_hash(model)
     require(identity==next(v["state_sha256"] for v in packet["validation"] if v["step"]==selected["step"]),
@@ -178,6 +182,14 @@ def export_selected(root, out, plan, link, name, group, arm, data):
             torch.save(selected["state"],stream)
             _atomic_new(path,stream.getvalue())
     export = dict(backend=backend_name,weights=file_pin(path),metadata=meta,state=identity)
+    if anchor is not None:
+        anchor_path = path.parent/"stage-two-initial.pt"
+        if not anchor_path.exists():
+            with io.BytesIO() as stream:
+                torch.save(anchor,stream)
+                _atomic_new(anchor_path,stream.getvalue())
+        export["graph_program"] = dict(weights=file_pin(anchor_path),state=spec["initialization"]["state"],
+            policy=group["arms"][arm]["policy"],seed=group["seed"]+19000,budget=group["steps"])
     backend.load_export(root,export)
     context = {k:spec[k] for k in ("seed","factor","steps","numeric","roles","bank","graph_scale","band_axis",
                                    "learning_rate","optimizer_group","objective","training","validation","events","inputs","selection")}

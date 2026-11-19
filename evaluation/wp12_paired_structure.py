@@ -85,8 +85,9 @@ def review(root,campaign,out,code,captures,execution,*,test):
                     and frozen["checkpoint"]["state"]==next(v["state_sha256"] for v in packet["validation"]
                                                             if v["step"]==record["selected"]),
                     "WP12 did not consume the selected state from this training budget")
-            if (descriptor["backend"],group["factor"]) not in coverage and group["purpose"]=="science":
-                coverage.add((descriptor["backend"],group["factor"]))
+            identity = (descriptor["backend"],group["factor"],descriptor.get("policy"))
+            if identity not in coverage and group["purpose"]=="science":
+                coverage.add(identity)
                 parity[f"{name}/{arm}"] = observed_parity(root,campaign,plan,code,name,arm,spec,packet,frozen_raw,
                                                           execution,test=test)
             if test and name in ("xz-recovery","xz-column-recovery") and arm=="combined":

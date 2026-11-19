@@ -22,6 +22,7 @@ from transfer import native_independent_release as independent
 from transfer import wp_cross_backend as model_io
 from transfer.g3_training import state_hash
 from transfer.native_paired_head_campaign import GATES
+from transfer import wp_region_graph as regional
 
 DESIGN = "wp05_wp08_frozen_comparison_v1"
 ENDPOINT = "wp05_wp08_frozen_endpoint_v1"
@@ -138,8 +139,13 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                         bands=actual.receipt["source"]["band_ids"], graph=graph,
                         heads=emitted_head_scores(output, targets, bank.release.classes),
                         spatial=None if geometry is None else classify(bank, roles, geometry, "evaluation", tile, targets.points))
+                    if "regional_support" in graph:
+                        origin = bank.role_row("devval",tile)["origin"]
+                        row["accuracy"]["signal"] = regional.signal_visibility(origin.get("regional_signal"),
+                            graph["regional_support"],row["accuracy"]["bands"],
+                            targets.cells.tolist(),row["accuracy"]["truth"])
                 if cost:
-                    timings = []
+                    timings, first_run = [],None
                     for rep in range(3):
                         execution.sync()
                         if execution.device.type == "cuda":
@@ -150,13 +156,18 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                         materialized = perf_counter()
                         require(labels is targets is None, "Cost materialized classification data")
                         output, graph, detail = model_io.run_block(model, actual, producer, "devval", execution)
+                        sample = dict(total=perf_counter()-start, materialize=materialized-start,
+                                      cuda_peak_bytes=torch.cuda.max_memory_allocated(execution.device)
+                                      if execution.device.type == "cuda" else None, **detail)
                         if rep:
-                            timings.append(dict(total=perf_counter()-start, materialize=materialized-start,
-                                                cuda_peak_bytes=torch.cuda.max_memory_allocated(execution.device)
-                                                if execution.device.type == "cuda" else None, **detail))
+                            timings.append(sample)
+                        elif "regional_support" in graph:
+                            first_run = sample
                     row["cost"] = dict(label_blind=True, samples=timings, graph=graph,
                                        observation=actual.receipt["observation"], bands=actual.receipt["source"]["band_ids"],
                                        outputs=[list(x.shape) for x in output])
+                    if first_run is not None:
+                        row["cost"]["first_measurement"] = first_run
                 rows.append(row)
             require(state_hash(model) == spec["state"], "Frozen inference modified the recovered checkpoint")
             arms[name] = dict(endpoint=group["arms"][name], state=spec["state"], phase=body["phase"],
@@ -207,6 +218,15 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
                 "A capture crosses a role or admitted use")
         bands = independent.observation_bands(bank.release.bands, band, intake)
         cost = row["cost"]
+        program = semantics.get("regional_support")
+        for record in (row["accuracy"],cost):
+            if program is not None and record is not None:
+                graph = record["graph"]
+                proof = regional.verify_trace(graph["regional_support"],record["observation"],
+                                              require_policy=program["policy"])
+                require(proof["first_indices"]==graph["a0_indices"] and proof["assignment_indices"]==graph["q_indices"]
+                        and proof["original_counts"]["nnz"]==graph["a0_nnz"],
+                        "Fixed regional support changed the learned first-stage graph")
         if cost is not None:
             require(cost["label_blind"] is True and len(cost["samples"]) == 2 and cost["bands"] == bands
                     and cost["observation"] == observations["cost"][(band,tile)]
@@ -228,6 +248,14 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
                 and (cost is None or "delivered_columns" in intake
                      or (record["observation"] == cost["observation"] and record["graph"] == cost["graph"])),
                 "The points, observation, band axis or optional trusted geometry differ")
+        if program is not None:
+            parent = bank.role_row("devval",tile)
+            top,_,left,right = parent["box"]
+            width = bank.release.shape[1]
+            cells = [(pixel//width-top)*(right-left)+pixel%width-left for pixel,_ in points]
+            signal = regional.signal_visibility(parent["origin"].get("regional_signal"),
+                record["graph"]["regional_support"],bands,cells,truth)
+            require(record["signal"]==signal,"Synthetic reachability differs from the emitted Q/A support")
         for head in HEADS:
             probabilities(record["heads"][head], len(truth), classes)
         checked[(band, tile)] = row
@@ -257,6 +285,18 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
             for name in STRATA:
                 strata[name].extend(len(truth)+i for i, use in enumerate(a["spatial"]["strata"][name]) if use)
         truth.extend(a["truth"])
+        left_support = a["graph"].get("regional_support")
+        right_support = b["graph"].get("regional_support")
+        structural = None
+        if left_support is not None or right_support is not None:
+            require(left_support is not None and right_support is not None
+                    and all(left_support[k]==right_support[k] for k in ("original","points","view")),
+                    "Regional comparison lacks the same first-stage support, observation or coordinates")
+            structural = {role:{k:s[k] for k in ("policy","cursor","counts","positive_nnz","newly_added",
+                                                  "same_sender_degree","same_distance_counts","stage2_indices")}
+                          for role,s in (("baseline",left_support),("candidate",right_support))}
+            structural["same_effective_edges"] = left_support["stage2_indices"]==right_support["stage2_indices"]
+            structural["signal"] = dict(baseline=a["signal"],candidate=b["signal"])
         block = {}
         for h in HEADS:
             before, after = ((probabilities(side["heads"][h], len(a["truth"]), classes).argmax(1)+1).tolist()
@@ -265,6 +305,8 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
             pred_after[h].extend(after)
             block[h] = raw_pair(a["truth"], before, after, classes, floor=FORMAL_FLOOR)
         blocks[str(tile)] = dict(points=len(a["truth"]), heads=block)
+        if structural is not None:
+            blocks[str(tile)]["regional_support"] = structural
     scores, qualifications, spatial = None, None, None
     if truth:
         scores = {head:raw_pair(truth, pred_before[head], pred_after[head], classes, floor=FORMAL_FLOOR)
@@ -316,7 +358,11 @@ def compare_devices(reference, capture):
                 y,z = a["accuracy"],b["accuracy"]
                 require(z is not None and all(y[k] == z[k] for k in ("truth","order","observation","bands")),
                         "Device capture changed true classes, points or actual bands")
-                graph_changes += any(y["graph"][k] != z["graph"][k] for k in ("q_indices","a0_indices"))
+                graph_diff = any(y["graph"][k] != z["graph"][k] for k in ("q_indices","a0_indices"))
+                if "regional_support" in y["graph"]:
+                    graph_diff |= (y["graph"]["regional_support"]["stage2_indices"]
+                                   != z["graph"]["regional_support"]["stage2_indices"])
+                graph_changes += graph_diff
                 for h in HEADS:
                     p,q = np.asarray(y["heads"][h]),np.asarray(z["heads"][h])
                     require(p.shape == q.shape, "Device head shape differs")

@@ -13,10 +13,27 @@ from transfer.g3_training import state_hash
 from transfer.native_scale_observation import forward
 from transfer.region_message_attention import RegionMessageVCASAHGCN, profile_region_messages
 
+from transfer import wp_region_graph as regional
+
+
 BACKENDS = ("native", "multiscale", "aligned", "region_message")
+TRAIN_BACKENDS = (*BACKENDS,regional.BACKEND)
 
 
 def make_model(architecture, backend):
+    if backend == regional.BACKEND:
+        require(set(architecture) in ({"format_version","class_counts","backbone_kwargs","regional_support"},
+                                      {"format_version","class_counts","backbone_kwargs","regional_support","training_config"})
+                and architecture["format_version"]==2,
+                "Exact native regional archive architecture required")
+        support = architecture["regional_support"]
+        require(set(support)=={"version","scorer_seed","device"} and support["version"]==2
+                and support["device"]=="cpu_fp32","The frozen native scorer architecture differs")
+        model = regional.RegionSupportModel(architecture["class_counts"],scorer_seed=support["scorer_seed"],
+                                             **architecture["backbone_kwargs"]).eval()
+        model.training_config = architecture.get("training_config",{})
+        model.backbone.adapter.cache_attention = False
+        return model
     require(set(architecture) in ({"format_version", "class_counts", "backbone_kwargs"},
                                  {"format_version", "class_counts", "backbone_kwargs", "training_config"})
             and architecture["format_version"] == 1 and backend in BACKENDS,
@@ -59,23 +76,38 @@ def restore(architecture, backend, state, expected_state, *, device="cpu"):
 
 
 def load_export(root, export, *, device="cpu"):
-    require(set(export) == {"backend", "weights", "metadata", "state"}, "Exact checkpoint export pins required")
+    fields = {"backend", "weights", "metadata", "state"}
+    region = export["backend"]==regional.BACKEND
+    require(set(export)==(fields|{"graph_program"} if region else fields), "Exact checkpoint export pins required")
     weights = pinned(root, export["weights"])
     metadata = pinned(root, export["metadata"])
     require(metadata == weights.with_suffix(weights.suffix + ".json"), "Weights and architecture are not sidecars")
     state = torch.load(weights, map_location="cpu", weights_only=True)
-    return restore(json_pin(root, export["metadata"]), export["backend"], state, export["state"], device=device)
+    architecture = json_pin(root, export["metadata"])
+    model = restore(architecture,export["backend"],state,export["state"],device=device)
+    if region:
+        graph = export["graph_program"]
+        require(set(graph)=={"policy","seed","budget","weights","state"}, "Regional export lacks its frozen source")
+        anchor = torch.load(pinned(root,graph["weights"]),map_location="cpu",weights_only=True)
+        source = restore(architecture,regional.BACKEND,anchor,graph["state"])
+        model.graph_program = regional.GraphProgram(source,graph["policy"],graph["seed"],graph["budget"])
+    return model
 
 
 def semantic_identity(model, backend):
     bone = model.backbone
     first = bone.CNN_Branch[0]
-    return dict(backend=backend, assignment=bone.graph_assignment_mode, adjacency=bone.graph_adjacency_mode,
+    identity = dict(backend=backend, assignment=bone.graph_assignment_mode, adjacency=bone.graph_adjacency_mode,
                 cnn_scales=dict(mode=first.mode, dilation=first.dilation) if backend=="multiscale" else None,
                 range_mode=getattr(model, "graph_multiscale", "off"), graph_radius=getattr(model, "graph_radius", 1),
                 interaction=bone.interaction_config.interaction_mode,
                 direction=bone.interaction_config.interaction_direction if bone.interaction is not None else None,
                 attention=getattr(model, "region_attention", None))
+    if backend==regional.BACKEND:
+        program = model.graph_program
+        identity["regional_support"] = dict(version=regional.VERSION,policy=program.policy,seed=program.seed,
+                                             budget=program.budget,anchor=state_hash(program.anchor),scale=regional.SCALE)
+    return identity
 
 
 DIRECTIONS = ("both", "cnn_to_graph", "graph_to_cnn")
@@ -87,6 +119,10 @@ ATTENTION = dict(width=32, landmark_grid=(2,2), top_k=3, query_chunk=16)
 def train_variant(base, spec, seed):
     """Map an identical shared start to each registered scale or directional architecture."""
     backend = spec["backend"]
+    if backend == regional.BACKEND:
+        require(set(spec)=={"backend","policy"} and spec["policy"] in regional.POLICIES,
+                "Explicit and bounded regional stage-two policy required")
+        return regional.RegionSupportModel.initialize(base,seed)
     if backend == "native":
         require(set(spec) == {"backend"}, "Unexpected native baseline switches")
         return base
@@ -144,11 +180,16 @@ def run_block(model, actual, producer, role, execution):
     execution.sync()
     start = perf_counter()
     with manager:
-        output, graph = forward(model, actual, producer, role, execution=execution, timed=timing)
+        if isinstance(model,regional.RegionSupportModel):
+            output, graph, timing = regional.forward_region(model,actual,producer,role,execution,model.graph_program)
+        else:
+            output, graph = forward(model, actual, producer, role, execution=execution, timed=timing)
     execution.sync()
     stats = dict(elapsed=perf_counter()-start, graph_seconds=sum(timing.get("graph_seconds", [])),
                  message_seconds={name: sum(values) for name, values in message.items()},
                  message_trace=output[3].get("interaction", {}).get("region_message", {}))
     require(len(output) >= 4 and all(value.shape[0] == actual.receipt["pixels"] for value in output[:3]),
             "Backend did not emit the original three point heads")
+    if "regional" in timing:
+        stats["regional_seconds"] = timing["regional"]
     return output[:3], graph, stats

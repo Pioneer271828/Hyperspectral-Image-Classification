@@ -181,6 +181,9 @@ class Run:
         self._history, self._validation, self._selected = [], [], None
         self.timing = dict(train_update_seconds=0.,validation_seconds=0.,transform_seconds=0.,
                            forward_seconds=0.,graph_seconds=0.)
+        if clean.get("architecture",{}).get("backend")=="region_support":
+            self.timing.update({key:0. for key in ("region_anchor_seconds","region_selection_seconds",
+                "region_strict_search_seconds","region_cpu_sparse_seconds","region_render_seconds")})
         self._fresh = tuple(clean["initialization"]["fresh"])
 
     @property
@@ -207,6 +210,13 @@ class Run:
             out, graph, timing = self._released.registered_forward(self.model,actual,role,self.execution)
             self.timing["forward_seconds"] += timing["forward_seconds"]
             self.timing["graph_seconds"] += sum(timing["graph_seconds"])
+            if "regional" in timing:
+                details = timing["regional"]
+                self.timing["region_anchor_seconds"] += details["anchor_graph_seconds"]
+                self.timing["region_selection_seconds"] += details["selection_seconds"]
+                self.timing["region_strict_search_seconds"] += details["strict_search_seconds"]
+                self.timing["region_cpu_sparse_seconds"] += details["sparse_build_seconds"]
+                self.timing["region_render_seconds"] += details["render_seconds"]
             return out, graph, None
         if hasattr(self._released, "selection_condition"):
             condition = self._released.selection_condition(actual, self._contract)

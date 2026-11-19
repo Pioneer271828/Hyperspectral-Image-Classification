@@ -68,7 +68,7 @@ def designs(devices):
 
 
 def bank_at(out, scene, layout, shared_state, *, k=5, support_seed=512, matched=False,
-            columns=False, observation_only=False):
+            columns=False, observation_only=False, regional_signals=False):
     classes = SCENES[scene][1]
     scene_index = tuple(SCENES_BY_KEY.values()).index(scene)
     width = 24
@@ -97,6 +97,9 @@ def bank_at(out, scene, layout, shared_state, *, k=5, support_seed=512, matched=
         data[:,:,active] += template[truth-1][:,:,active]
         if kind=="retained":
             data[:,:,active] += rng.normal(0,.025,(h,w,len(active))).astype(np.float32)
+        if regional_signals:
+            kind = "retained"
+            data,truth,signal = planted_region_tile(h,w,classes,i,width,retained,bands,template,rng)
         samples = []
         for label in range(1,classes+1):
             spots = np.argwhere(truth==label)
@@ -118,7 +121,8 @@ def bank_at(out, scene, layout, shared_state, *, k=5, support_seed=512, matched=
         roles[role].append(key)
         rows.append(dict(id=key,role=independent.ROLES[role],partition="train" if role=="support" else "val",
             box=box,parent_tile=key,parent_box=box,samples=sorted(samples),representation="raw_fp32",
-            origin=dict(array_sha256=custody.array_hash(data),pattern=kind),blocked=None))
+            origin=dict(array_sha256=custody.array_hash(data),pattern=kind,
+                        **({"regional_signal":signal} if regional_signals else {})),blocked=None))
     rows.sort(key=custody._row_key)
     plan = digest([FIXTURE,scene,layout,roles,[r["box"] for r in rows]])
     values = release_statistics(arrays,rows,plan)
@@ -127,6 +131,37 @@ def bank_at(out, scene, layout, shared_state, *, k=5, support_seed=512, matched=
                 roles=digest(roles),support_seed=support_seed),tuple(rows))
     saved = custody.publish(out,out.parent,release,lambda row:arrays[row["id"]])
     return dict(pin={k:saved[k] for k in ("root","sha256","registration")},release=asdict(release)),roles,truth_by_tile
+
+
+def planted_region_tile(h,w,classes,index,width,retained,bands,template,rng):
+    """Insert the only distinctive class-specific feature into a known emitting area."""
+    rare = (15,21) if classes==22 else (5,6)
+    truth = np.zeros((h,w),dtype=np.int64)
+    target_rows = [(0,5),(h-5,h)]
+    if index%2:
+        target_rows.reverse()
+    for label,(start,end) in zip(rare,target_rows,strict=True):
+        truth[start:end,:3] = label
+    ordinary = [label for label in range(1,classes+1) if label not in rare]
+    truth[truth==0] = rng.permutation(np.resize(ordinary,int((truth==0).sum())))
+    reference = truth.copy()
+    reference[np.isin(reference,rare)] = rare[0]
+    data = np.full((h,w,width),.42,np.float32)
+    base = sorted(retained)
+    data[:,:,base] += template[reference-1][:,:,base]
+    data[:,:,base] += rng.normal(0,.025,(h,w,len(base))).astype(np.float32)
+    cue = sorted(set(range(width))-retained)
+    regime = ("local","across_region","deleted")[index%3]
+    sources = {}
+    for sign,label,(start,end) in zip((-1,1),rare,target_rows,strict=True):
+        visible = np.zeros((h,w),dtype=bool)
+        if regime=="local":
+            visible = truth==label
+        elif regime=="across_region":
+            visible[start:end,-3:] = True
+        data[visible] += np.asarray([sign*1.8 if b in cue else 0. for b in range(width)],dtype=np.float32)
+        sources[str(label)] = np.flatnonzero(visible).tolist()
+    return data,truth,dict(case=regime,cue_bands=[bands.band_ids[b] for b in cue],sources=sources)
 
 
 def source(out):
@@ -256,6 +291,47 @@ def generate_scientific(out, campaign, code, devices):
     request = _write(out/"request.json",data)
     approval = _write(out/"engineering-only.json",expected_approval(data,request,campaign,code,test=True))
     return dict(request=request,approval=approval)
+
+
+def generate_regions(out, campaign, code, devices):
+    from transfer import wp_region_graph as regional
+
+    out.mkdir(parents=True)
+    src = source(out)
+    releases, groups = {},{}
+    matrix = (("xz-k1","xuzhou",1,64,"a",64),("xz-k5","xuzhou",5,512,"a",512),
+              ("hh-k10","whu-honghu",10,2048,"b",2048))
+    for i,(name,scene,k,support_seed,layout,seed) in enumerate(matrix):
+        branch = out/name
+        branch.mkdir()
+        old,_,_ = bank_at(branch/"history",scene,"h",src["state"],columns=True,regional_signals=True)
+        bank,roles,truth = bank_at(branch/"release",scene,layout,src["state"],k=k,support_seed=support_seed,
+                                   matched=True,columns=True,regional_signals=True)
+        annotation = _write(branch/"geometry.json",dict(schema=GEOMETRY,bank=bank["pin"]["sha256"],
+            roles=digest(roles),scope="synthetic",source=digest([FIXTURE,scene,layout,"regional_cues"]),
+            tiles={str(tile):dict(labels=truth[tile].tolist(),geometry=(truth[tile]>0).tolist(),
+                    narrow=np.isin(truth[tile],[15,21] if scene=="whu-honghu" else [5,6]).tolist())
+                   for tile in roles["evaluation"]}))
+        manifest = _write(branch/"intake.json",dict(schema=independent.MANIFEST,candidate=bank,roles=roles,
+            minimum_buffer=4,history=[old],observation_views=list(independent.COLUMN_VIEWS),observation_factors=[1],
+            delivered_columns=independent.column_inventory(BandMetadata(**bank["release"]["bands"])),
+            spatial_annotations=annotation))
+        owner = _write(branch/"owner-test-only.json",dict(schema=independent.AUTHORITY,
+            approved_manifest_sha256=manifest["sha256"],historical_bank_sha256=[old["pin"]["sha256"]],
+            uses=dict(independent_accuracy=True,cost=True,frozen_diagnostics=False),source_mode="synthetic",
+            spatial_annotations_sha256=annotation["sha256"]))
+        releases[name] = dict(manifest=manifest,authority=owner,source=None if scene=="whu-honghu" else src,
+                              k=k,observation_protocol=COLUMNS,matched_exposure=MATCHED_EXPOSURE)
+        policies = regional.POLICIES[:4]
+        groups[f"region-{name}"] = dict(release=name,seed=seed,factor=1,steps=40,clock=[0,10,20,30,40],
+            arms={policy:dict(backend=regional.BACKEND,policy=policy) for policy in policies},
+            pairs=[pair("original",p,equal=True) for p in policies[1:]]+[
+                pair("random_fixed","spectral_fixed",equal=True),pair("spectral_fixed","spectral_bounded",equal=True)],
+            device=devices[i%len(devices)] if devices else "cpu",purpose="science")
+    request = dict(schema=SCHEMA,scope=SYNTHETIC,releases=releases,groups=groups)
+    pin = _write(out/"request.json",request)
+    approval = _write(out/"engineering-only.json",expected_approval(request,pin,campaign,code,test=True))
+    return dict(request=pin,approval=approval)
 
 
 def controls(root, entry, producer):

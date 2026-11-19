@@ -15,6 +15,7 @@ from model.research_config import digest
 from research_runtime import require_frozen_code, tensor_hash
 from scripts.run_frozen_band_region import _write
 from transfer import native_independent_release as independent, wp_cross_backend as backend, wp_support_match as support_match
+from transfer import wp_region_graph as regional
 from transfer.development_bank_training import _baseline
 from transfer.g3_training import state_hash
 from transfer.native_production_model import Switches
@@ -50,12 +51,21 @@ def validate_group(group, releases, *, test):
             "Shared calibration clock must start at zero and finish at the full budget")
     arms,pairs = group["arms"],group["pairs"]
     require(isinstance(arms,dict) and len(arms)>=2 and all(named(k) and isinstance(v,dict)
-            and v.get("backend") in backend.BACKENDS for k,v in arms.items()), "Unknown paired model inventory")
+            and v.get("backend") in backend.TRAIN_BACKENDS for k,v in arms.items()), "Unknown paired model inventory")
     require(isinstance(pairs,list) and len(pairs)>0 and all(
         isinstance(p,dict) and set(p)=={"baseline","candidate","comparison"}
         and p["baseline"]!=p["candidate"] and p["comparison"] in MATCHES
         and p["baseline"] in arms and p["candidate"] in arms for p in pairs),
         "Explicit baseline, candidate and capacity relation required")
+    region = [spec for spec in arms.values() if spec["backend"]==regional.BACKEND]
+    if region:
+        require(test and group["factor"]==1 and len(region)==len(arms)
+                and all(p["comparison"]=="equal_parameters" for p in pairs)
+                and all(set(s)=={"backend","policy"} and s["policy"] in regional.POLICIES for s in region)
+                and len({s["policy"] for s in region})==len(region)
+                and releases[group["release"]].get("matched_exposure")==support_match.MODE
+                and 8<=group["steps"]<=200,
+                "Regional structural comparison requires same-capacity engineering arms and matched exposure")
     links = [(p["baseline"],p["candidate"]) for p in pairs]
     require(len(set(links))==len(links) and {name for pair in links for name in pair}==arms.keys(),
             "The pair plan repeats a comparison or omits a trained arm")
@@ -149,8 +159,12 @@ def initialization(model, base, source):
     require(original.keys() <= state.keys() and all(state[k].shape==v.shape and state[k].dtype==v.dtype
             and tensor_hash(state[k])==tensor_hash(v) for k,v in original.items()), "Variant changed a shared starting tensor")
     extra = {"alignment":[],"messages":[],"selectors":[]}
+    if isinstance(model,regional.RegionSupportModel):
+        extra["regional_scoring"] = []
     for name in sorted(params.keys()-original.keys()):
-        if name.startswith("backbone.interaction."):
+        if name in {"backbone.spectrum_score.weight","backbone.graph_score.weight"} and "regional_scoring" in extra:
+            slot = "regional_scoring"
+        elif name.startswith("backbone.interaction."):
             slot = "messages" if name.startswith(("backbone.interaction.to_pixels.","backbone.interaction.to_regions.")) else "alignment"
         else:
             require("selector" in name or "range_" in name or "condition_" in name,"Unknown fresh variant parameter")
@@ -184,6 +198,8 @@ def start_arms(bank, group, source):
         equal = first["parameters"]==last["parameters"]
         require(equal==(route["comparison"]=="equal_parameters"), "Claimed capacity relation differs from initialized model")
         a,b = (group["arms"][route[key]] for key in ("baseline","candidate"))
+        if a["backend"]==b["backend"]==regional.BACKEND:
+            require(first["inventory"]==last["inventory"], "Regional policies must share every initial parameter")
         if equal and a["backend"]==b["backend"]=="region_message":
             require(a["direction"]==b["direction"] and first["inventory"]==last["inventory"],
                     "Equal-capacity directional comparison changed projection initialization or direction")
@@ -260,7 +276,8 @@ class StructuralProvider(ProductionProvider):
         original = plan["inputs"][spec["release"]]
         require(bank.pin==original["bank"] and digest(roles)==original["role_assignment"] and intake==original["authority"],
                 "Bank, authority or ordered roles differ from registration")
-        config = Switches(graph_scale=50 if bank.release.scene=="paviaU" else 100)
+        region = spec["arms"][arm]["backend"]==regional.BACKEND
+        config = Switches(graph_scale=regional.SCALE if region else 50 if bank.release.scene=="paviaU" else 100)
         super().__init__(root,bank,roles,axis=bank.release.bands.band_ids,config=config,source=entry["source"],
                          seed=spec["seed"],budget=spec["steps"],producer=code["commit"],
                          approval=None if test else plan["approval"]["sha256"],
@@ -275,6 +292,7 @@ class StructuralProvider(ProductionProvider):
         self.init = plan["initializations"][group][arm]
         self.release = open_source(root,bank,self.source)
         self._digest = None
+        self.event_step = 0
 
     def baseline(self, seed):
         return base_model(self.bank,seed,self.release)[0]
@@ -283,6 +301,10 @@ class StructuralProvider(ProductionProvider):
         require(arm==self.arm and seed==self.seed+7321,"A different architecture or initialization was requested")
         model = backend.train_variant(source,self.spec["arms"][arm],seed)
         require(state_hash(model)==self.init["state"],"Initialized variant differs from the approved shared start")
+        if isinstance(model,regional.RegionSupportModel):
+            anchor = deepcopy(model).eval().requires_grad_(False)
+            config = self.spec["arms"][arm]
+            model.graph_program = regional.GraphProgram(anchor,config["policy"],self.seed+19000,self.budget)
         return model
 
     def make_observation(self, role, event):
@@ -305,6 +327,7 @@ class StructuralProvider(ProductionProvider):
         require(producer==self.producer and event["tile"] in self.roles[purpose]
                 and event["factor"]==self.spec["factor"] and event["band"] in self.views,
                 "Optimization or selection used an unauthorized role, factor or band")
+        self.event_step = event.get("step",0)
         key = ProductionProvider.key(role, event)
         if key not in self._cache:
             self._cache[key] = self.make_observation(role,event)
@@ -315,10 +338,19 @@ class StructuralProvider(ProductionProvider):
         return actual, labels, targets
 
     def registered_forward(self, model, actual, role, execution):
+        if isinstance(model,regional.RegionSupportModel):
+            return regional.forward_region(model,actual,self.producer,role,execution,model.graph_program,step=self.event_step)
         timing = {}
         result,graph = forward(model,actual,self.producer,role,execution=execution,timed=timing,
                                graph_scale=self.config.graph_scale)
         return result,graph,timing
+
+    def validate_history(self, spec, packet):
+        super().validate_history(spec,packet)
+        if spec["architecture"]["backend"]==regional.BACKEND:
+            for row in [*packet["history"],*(r for v in packet["validation"] for r in v["rows"])]:
+                regional.verify_trace(row["graph"]["regional_support"],row["observation"],
+                                      require_policy=spec["architecture"]["policy"])
 
     def contract(self, classes,seed,arm,factor,producer,*,numeric=None):
         require((classes,seed,arm,factor,producer)==(self.classes,self.seed,self.arm,self.spec["factor"],self.producer)
