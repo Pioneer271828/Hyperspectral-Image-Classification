@@ -20,6 +20,8 @@ NATIVE_CONTRASTS = {
 FULL_INFORMATION_CONTRASTS = {
     "full_graph_counterfactual_clean": ("clean_full_graph", "clean"),
     "full_graph_counterfactual_target": ("target_full_graph", "target_clean_graph"),
+    "spectral_features_changed_under_full_graph": ("clean_full_graph", "full"),
+    "graph_rebuilt_under_retained_features": ("clean", "clean_full_graph"),
 }
 
 
