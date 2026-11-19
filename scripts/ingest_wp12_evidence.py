@@ -27,6 +27,8 @@ def main(argv=None):
         return native_pathways(argv)
     if "--real-attribution-review" in argv:
         return real_attribution(argv)
+    if "--m1-e1-history" in argv:
+        return m1_e1_history(argv)
     if "--external-paired-history" in argv:
         return external_paired_history(argv)
     if "--v1-spectral-audit" in argv:
@@ -176,6 +178,27 @@ def real_attribution(argv):
     result = review(root,out,code,sources,producers,floor_pin,rival_pin)
     require_frozen_code(code)
     print(json.dumps(result),flush=True)
+
+
+def m1_e1_history(argv):
+    from evaluation.frozen_training_stages import require
+    from evaluation.wp12_m1_e1_history import index
+    from scripts.run_frozen_band_region import _write
+
+    parser = argparse.ArgumentParser(description="Read frozen M1/E1 integer counts, budgets and protocol provenance")
+    parser.add_argument("--m1-e1-history",action="store_true",required=True)
+    parser.add_argument("--runs",type=Path,required=True)
+    parser.add_argument("--out",type=Path,required=True)
+    parser.add_argument("--expected-commit",required=True)
+    args = parser.parse_args(argv)
+    root, out = args.runs.resolve(strict=True), external_directory(args.out)
+    code = code_snapshot()
+    require(sys.platform=="linux" and code["commit"]==args.expected_commit and root in out.parents
+            and not out.exists(),"Historical intake needs the expected Linux checkout and a fresh authorized output")
+    require_frozen_code(code)
+    result = index(root)
+    require_frozen_code(code)
+    print(json.dumps(_write(out,dict(**result,producer=code["commit"]))),flush=True)
 
 
 def external_paired_history(argv):
