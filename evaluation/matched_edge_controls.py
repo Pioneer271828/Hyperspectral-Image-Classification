@@ -46,7 +46,8 @@ def _baseline(adjacency, *, per_row, seeds, symmetric):
     return base
 
 
-def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=30., symmetric=False):
+def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=30., symmetric=False,
+           separate_weak=False):
     started=time.perf_counter(); before=tensor_hash(adjacency)
     ix, weights, _=_matrix(adjacency,'A'); n=adjacency.shape[0]
     if n>2048 or adjacency._nnz()>65536: raise ValueError('Bounded local graph required')
@@ -59,7 +60,8 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
         raise ValueError('Increasing finite positive distance boundaries required')
     if type(time_limit) not in (int,float) or not math.isfinite(time_limit) or not 0<time_limit<=60:
         raise ValueError('Explicit bounded solver time required')
-    if type(symmetric) is not bool: raise ValueError('Explicit reciprocal control flag required')
+    if type(symmetric) is not bool or type(separate_weak) is not bool:
+        raise ValueError('Explicit reciprocal and weak-separation flags required')
     base=_baseline(adjacency,per_row=per_row,seeds=seeds,symmetric=symmetric)
     nonself=ix[0]!=ix[1]; edges=ix[:,nonself]; weight=weights[nonself].astype(np.float64)
     ids=(edges[0]*n+edges[1]).tolist(); m=len(ids)
@@ -75,6 +77,8 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
     controls={}; k=int(target.sum())
     objectives={'low_weight':weight}
     objectives.update({f'random:{s}':np.random.default_rng(s).random(m) for s in seeds})
+    if separate_weak:
+        objectives.update({f'conditional_random:{s}':objectives[f'random:{s}'] for s in seeds})
     for name,cost in objectives.items():
         if k==0 or k==m:
             controls[name]={'status':'no_distinct_control','removed':None,'reason':'empty or all removable edges'}
@@ -91,6 +95,16 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
                 equations = csc_matrix((np.r_[np.ones(len(row)), -np.ones(len(row))],
                                         (np.r_[row,row],columns)),shape=(len(row),m))
                 constraints.append(LinearConstraint(equations,0,0))
+        weak_target = None
+        if name.startswith('conditional_random:'):
+            weak = controls['low_weight']
+            if weak['status'] != 'optimal':
+                controls[name] = {'status':weak['status'],'removed':None,
+                                  'reason':'no certified weak reference for separation'}
+                continue
+            weak_edges = set(weak['removed'])
+            weak_target = np.array([int(e in weak_edges) for e in ids])
+            constraints.append(LinearConstraint(weak_target.reshape(1,-1),-np.inf,k-1))
         result=milp(cost,integrality=np.ones(m),bounds=Bounds(0,1),constraints=constraints,
                     options={'time_limit':float(time_limit),'mip_rel_gap':0.})
         if result.status==2:
@@ -102,7 +116,7 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
         bits=np.rint(result.x).astype(np.int64)
         if (not np.isfinite(result.x).all() or np.max(np.abs(result.x-bits))>1e-7
                 or not np.isin(bits,[0,1]).all() or not np.array_equal(matrix@bits,counts)
-                or bits.sum()!=k or bits@target>=k):
+                or bits.sum()!=k or bits@target>=k or (weak_target is not None and bits@weak_target>=k)):
             raise ValueError('Solver candidate violates exact discrete controls')
         controls[name]={'status':'optimal','removed':[e for e,v in zip(ids,bits) if v],
             'objective':float(cost@bits),'deleted_weight_sum':float(weight@bits),
@@ -116,6 +130,9 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
         'elapsed_seconds':time.perf_counter()-started,'input_unchanged':True,'optimizer_updates':0,'query':0,
         'limits':'Exact deleted row/column degree and global distance-bin counts only; distances, weight mass and connectivity may differ. Random objective is not uniform sampling.'}
     if symmetric: value['symmetric']=True
+    if separate_weak:
+        value['separate_weak']=True
+        value['conditional_random_policy']='same seeded objective with important and weak masks excluded'
     value['plan_hash']=digest(value)
     return value
 
@@ -143,10 +160,18 @@ def verify(value, adjacency, coordinates, *, expected_hash):
                                np.bincount(bins,minlength=len(value['distance_bins'])+1))).tolist()
     expected=counts(value['baseline']['removed'])
     if expected!=value['baseline']['counts']: raise ValueError('Baseline counts differ')
-    for control in value['controls'].values():
+    controls = value['controls']
+    if value.get('separate_weak'):
+        names = {'low_weight', *(f'{kind}:{s}' for s in value['seeds'] for kind in ('random','conditional_random'))}
+        if set(controls)!=names:
+            raise ValueError('Conditional matching roster differs')
+    for name,control in controls.items():
         if control['status']=='optimal':
             if (counts(control['removed'])!=expected or control['counts']!=expected
                     or control['removed']==value['baseline']['removed']): raise ValueError('Matched control differs')
+            if name.startswith('conditional_random:') and (not value.get('separate_weak')
+                    or controls['low_weight']['status']!='optimal' or control['removed']==controls['low_weight']['removed']):
+                raise ValueError('Conditional random control is not independent of the weak mask')
         elif control['status'] not in ('no_distinct_control','unresolved') or control['removed'] is not None:
             raise ValueError('Uncertified control must not supply a mask')
     return {'discrete_constraints_verified':True,'optimality_independently_verified':False,

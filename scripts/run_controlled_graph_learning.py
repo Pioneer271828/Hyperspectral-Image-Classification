@@ -18,6 +18,12 @@ def main():
     commands=p.add_subparsers(dest="action",required=True)
     r=commands.add_parser("register")
     r.add_argument("--out",required=True)
+    donor = commands.add_parser("donor-register")
+    donor.add_argument("--out",required=True,type=Path)
+    execute = commands.add_parser("donor-run")
+    execute.add_argument("--directory",required=True,type=Path)
+    execute.add_argument("--registration-sha",required=True)
+    execute.add_argument("--case",default="all")
     for key in ("stage","freeze","audit"):
         c=commands.add_parser(key)
         c.add_argument("--registration",nargs=2,required=True,metavar=("PATH","SHA256"))
@@ -30,6 +36,14 @@ def main():
     a=p.parse_args()
     torch.set_num_threads(1)
     code=_code(a.expected_commit)
+    if a.action in ("donor-register","donor-run"):
+        from scripts.run_frozen_band_region import external_directory
+        from transfer.donor_retrieval_campaign import register as register_donor, run as run_donor
+        if a.action=="donor-register":
+            print(json.dumps(register_donor(external_directory(a.out),code),sort_keys=True))
+        else:
+            run_donor(external_directory(a.directory),code,a.registration_sha,a.case)
+        return
     pin=lambda field:dict(zip(("path","sha256"),getattr(a,field),strict=True))
     if a.action=="register":
         out=register(a.out,code)

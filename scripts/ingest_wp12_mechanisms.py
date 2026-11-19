@@ -21,7 +21,21 @@ def main():
     for key in extension:
         parser.add_argument("--" + key, nargs=2)
     parser.add_argument("--band-graph", nargs=2, metavar=("DIRECTORY", "REGISTRATION_SHA256"))
+    parser.add_argument("--donor-retrieval", nargs=2, metavar=("DIRECTORY", "REGISTRATION_SHA256"))
     args = parser.parse_args()
+    if args.donor_retrieval:
+        if args.band_graph or any(getattr(args,key.replace("-", "_")) for key in (*kinds,"authorities",*extension)):
+            parser.error("Donor retrieval cannot be mixed with other pinned evidence")
+        from evaluation.wp12_donor_retrieval import publish
+        code = code_snapshot()
+        require_frozen_code(code)
+        root = args.runs.resolve(strict=True)
+        folder = Path(args.donor_retrieval[0]).resolve(strict=True)
+        out = external_directory(args.out)
+        evidence.require(code["commit"] == args.expected_commit and root in out.parents and root in folder.parents,
+                         "Donor evidence must stay within the authorized run directory")
+        print(publish(folder,out,code,args.donor_retrieval[1]),flush=True)
+        return
     if args.band_graph:
         if any(getattr(args, key.replace("-", "_")) for key in (*kinds, "authorities", *extension)):
             parser.error("Band-graph registration cannot be mixed with legacy receipts")
