@@ -13,6 +13,8 @@ from scripts.summarize_unified_cohort import read_pinned
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if "--v1-spectral-audit" in argv:
+        return v1_spectral_audit(argv)
     if "--long-stage-case" in argv or "--long-stage-publish" in argv:
         from evaluation.wp12_long_cli import main as long_coverage
 
@@ -76,6 +78,31 @@ def main(argv=None):
     require_frozen_code(code)
     with out.open("x", encoding="utf-8") as stream:
         stream.write(serialized)
+
+
+def v1_spectral_audit(argv):
+    import torch
+
+    from evaluation.wp06_observation_audit import run
+
+    parser = argparse.ArgumentParser(description="Read only the fixed v1 synthetic trajectory archive")
+    parser.add_argument("--v1-spectral-audit",action="store_true",required=True)
+    parser.add_argument("--expected-commit",required=True)
+    for key in ("runs","out"):
+        parser.add_argument("--"+key,type=Path,required=True)
+    for key in ("freeze","review"):
+        parser.add_argument("--"+key,nargs=2,required=True,metavar=("PATH","SHA256"))
+    args = parser.parse_args(argv)
+    source = code_snapshot()
+    require_frozen_code(source)
+    root,out = args.runs.resolve(strict=True),external_directory(args.out)
+    if sys.platform != "linux" or not __debug__ or source["commit"] != args.expected_commit or root not in out.parents:
+        raise ValueError("Clean expected LXC checkout and external output required")
+    if out.exists():
+        raise ValueError("Use a new retrospective receipt path")
+    torch.set_num_threads(1)
+    pins = [dict(zip(("path","sha256"),row,strict=True)) for row in (args.freeze,args.review)]
+    print(json.dumps(run(root,out,source,*pins)),flush=True)
 
 
 def native_real(argv):
