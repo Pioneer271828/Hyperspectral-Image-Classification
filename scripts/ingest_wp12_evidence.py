@@ -13,6 +13,10 @@ from scripts.summarize_unified_cohort import read_pinned
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if "--historical-stage-run" in argv:
+        from evaluation.frozen_stage_cli import historical_cli
+
+        return historical_cli(argv)
     if "--frozen-stages" in argv:
         from evaluation.frozen_stage_cli import publish_cli
 

@@ -2,9 +2,10 @@
 
 import json
 from pathlib import Path
+import numpy as np
 import torch
 
-from evaluation.frozen_training_stages import HEADS, json_pin, paired, pinned, require
+from evaluation.frozen_training_stages import HEADS, json_pin, pinned, require
 from evaluation.g4_target import independent_trainval
 from g4_matched_target_audit import AUDIT_POLICY
 from g4_matched_target_study import grid
@@ -64,10 +65,20 @@ def read_stage_probabilities(path, scene):
     return packet[scene]
 
 
-def point_rows(values, release):
-    arrays = {head: values[head].numpy().tolist() for head in HEADS}
-    return [dict(id=[index], truth=truth, probabilities={head: arrays[head][j] for head in HEADS})
-            for j, (index, truth) in enumerate(zip(release["indices"], release["labels"], strict=True))]
+def aggregate_metrics(metrics, classes):
+    require(set(metrics) == {"train", "val"}, "Unexpected historical metric role")
+    for phase, per_class in (("train", 10), ("val", 5)):
+        require(set(metrics[phase]) == set(HEADS), "Unexpected historical metric head")
+        for head in HEADS:
+            row = metrics[phase][head]
+            matrix = np.asarray(row["confusion"])
+            require(matrix.shape == (classes, classes) and matrix.dtype.kind in "iu" and (matrix >= 0).all()
+                    and (matrix.sum(1) == per_class).all() and np.isfinite(row["nll"]) and row["nll"] >= 0,
+                    "Historical confusion or released class denominator differs")
+            recall = matrix.diagonal()/per_class
+            np.testing.assert_allclose(row["recall"], recall, rtol=0, atol=1e-12)
+            np.testing.assert_allclose([row["oa"], row["aa"]], [matrix.trace()/matrix.sum(), recall.mean()],
+                                       rtol=0, atol=1e-12)
 
 
 def archive(root, plan):
@@ -113,34 +124,24 @@ def archive(root, plan):
         classes = len(view["validation"]["labels"]) // 5
         chosen = next(row for row in history if row["step"] == identity["selected_step"])
         stages = {}
-        selected_rows = None
-        first = None
-        rivals = {"xuzhou": {5: 8, 6: 3}}.get(scene, {})
         for stage, event in (("first_update", history[0]), ("mid_751", history[25]),
                              ("selected", chosen), ("last", history[-1])):
             step = event["step"]
             path = artifact(f"raw-validation-{step:06d}.pt")
-            packet = read_stage_probabilities(path, scene)
             metrics = event["metrics"][scene]
+            aggregate_metrics(metrics, classes)
             if stage == "selected":
                 require(metrics == archived[name]["selected_validation"]["metrics"][scene],
                         "Selected event differs from accepted three-head summary")
-                selected_rows = packet
-            independent_trainval(packet, dict(class_num=classes, train_labels=truth["train"],
-                                                      val_labels=truth["val"]), metrics)
-            current = point_rows(packet["val"], view["validation"])
-            if first is None:
-                first = current
-            stages[stage] = dict(step=step, metrics=metrics, probability_sha256=result["artifacts"][path.name],
-                                 devval_from_first=paired(first, current, classes, rivals))
+            stages[stage] = dict(step=step, metrics=metrics, raw_state_sha256=result["artifacts"][path.name])
         stored = read_stage_probabilities(artifact("selected-probabilities.pt"), scene)
-        require(all(torch.equal(stored[phase][head], selected_rows[phase][head])
-                    for phase in ("train", "val") for head in HEADS),
-                "Selected shard differs from the accepted checkpoint readout")
+        independent_trainval(stored, dict(class_num=classes, train_labels=truth["train"],
+                                         val_labels=truth["val"]), chosen["metrics"][scene])
         output[name] = dict(identity=identity, stages=stages, retained_untouched_initial_head=False,
                             masked_replay_blocked="fixed graph fit on original full spectral scene")
     return dict(scope=plan["scope"], plan_sha256=digest(plan), checked_cases=len(output), cases=output,
-                independent_metric_rows=len(output)*4*2*3, optimizer_updates=0, model_forwards=0,
+                checked_confusion_rows=len(output)*4*2*3, independently_rescored_probability_rows=len(output)*2*3,
+                optimizer_updates=0, model_forwards=0,
                 raw_gt_loaded=False, query_accessed=False)
 
 
