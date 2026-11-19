@@ -44,3 +44,29 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 ```
 
 工程演示用两组互斥的合成地块。它在现有原生构图和三头消费路径检验三个已批角色、成本无标签输出和冻结诊断。当前真实历史 Bank 仍是开发/选择材料，其重叠和缺失角色要在准入表逐项保留。
+
+## 跨训练阶段的冻结开发比较
+
+先使用已批准的开发发布登记一个冻结计划。计划固定源和模型、训练预算、支持和验证样本、空间、原带 ID、统计和构图规则。开发发布沿用过去的角色，独立性由原档案决定。中央和分散视图删去相同数量的合法带，保留物理中心和原训练归一化。三头使用同一批开发点。
+
+~~~bash
+"$python_bin" -B scripts/run_native_released_points.py \
+  --expected-commit "$sha" --runs "$runs" --out "$runs/stage-plan.json" \
+  --mode frozen-stage-register --manifest "$release" "$release_sha"
+"$python_bin" -B scripts/run_native_released_points.py \
+  --expected-commit "$sha" --runs "$runs" --out "$runs/stage-cpu.json" \
+  --mode frozen-stage-run --frozen-plan "$plan" "$plan_sha"
+~~~
+
+同一计划可指定唯一物理 GPU UUID 复放，设置 `CUDA_VISIBLE_DEVICES` 和 `CUBLAS_WORKSPACE_CONFIG=:4096:8`。严格资源准入和物理卡锁沿用 GPU 入口。跨设备保留实际概率差和改判计数。历史全54的固定原图使用 `--historical-stage-run`，提供固定的 `--launch`、`--independent`、`--freeze` 路径及 SHA。每景固定种子 64 的无残差 scratch 代表，沿用原图和原 DomainBN 验证。已完成的代表阶段允许重新进入。
+
+~~~bash
+"$python_bin" -B scripts/ingest_wp12_evidence.py --frozen-stages \
+  --expected-commit "$sha" --runs "$runs" --out "$runs/wp12-stages.json" \
+  --plan "$plan" "$plan_sha" --cpu "$cpu_receipt" "$cpu_sha" \
+  --launch "$launch" "$launch_sha" --independent "$audit" "$audit_sha" \
+  --freeze "$freeze" "$freeze_sha" --honghu-release "$release_hh" "$release_hh_sha" \
+  --honghu-review "$review_hh" "$review_hh_sha" --honghu-status "$status_hh" "$status_hh_sha"
+~~~
+
+发布可以附上 `--gpu`、`--historical-replay`、`--honghu-alternate` 和 `--synthetic-queue`，各自提供绝对路径和 SHA。旧执行产物只有通过父提交及生产运行代码核对后，才可通过 `--execution-commit` 复用。原生覆盖队列用 `coverage-stage-register` 选择完整的合成五臂，通过相同的 `coverage-run` 进入训练和恢复。阶段端点使用已登记的初始化、同序分段的中间检查点、首次最小验证 NLL 选中态和终态。历史固定预算入口保留原有行为。
