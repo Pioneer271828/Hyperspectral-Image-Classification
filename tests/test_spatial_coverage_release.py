@@ -76,3 +76,16 @@ def test_deleted_column_and_foreign_split_q_are_isolated(tmp_path):
         b.materialize(row,{"mode":"none"})
     with pytest.raises(ValueError,match="Band view"):
         apply_view(raw, replace(a.release.bands, band_ids=tuple(reversed(a.release.bands.band_ids))),"continuous")
+
+def test_invalid_original_centers_keep_original_band_ids(tmp_path):
+    from loadData.observation_sampling import sample
+
+    bank = make_bank(tmp_path,9,"a")
+    row = bank.role_rows("devtrain")[0]
+    original = bank.materialize(row,{"mode":"none"})[2]
+    master = replace(original.bands,valid=(True,False,True,True,True,False,True,True))
+    full,_ = sample(original.observation,master,{"mode":"none"})
+    subset,positions,mode = apply_view(full,master,"continuous")
+    assert positions == (0,2,3) and mode == "declared"
+    assert subset.bands.band_ids == tuple(master.band_ids[i] for i in positions)
+    np.testing.assert_array_equal(subset.observation.spectral,original.observation.spectral[...,list(positions)])

@@ -90,10 +90,12 @@ def retained_positions(bands, name):
 
 
 def apply_view(full, master, name, box=None):
-    if full.bands.fingerprint != master.fingerprint:
+    valid = tuple(int(i) for i in np.flatnonzero(master.valid))
+    if full.bands.fingerprint != master.subset(valid).fingerprint:
         raise ValueError("Band view must start from the authorized original axis")
     positions = retained_positions(master, name)
-    view = _apply(full.observation, master, positions)
+    local = {source: column for column,source in enumerate(valid)}
+    view = _apply(full.observation, full.bands, tuple(local[i] for i in positions))
     _, mode = VIEWS[name]
     effective = view.bands
     if mode in ("index", "missing"):
