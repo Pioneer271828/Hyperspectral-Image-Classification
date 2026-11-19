@@ -145,7 +145,11 @@ def register(root,out,code):
         registered = {}
         for family,profile in profiles().items():
             bank, roles, correlation = publish_bank(folder/family,profile)
-            registered[family] = dict(bank=bank.pin, roles=roles, same_neighbor_ratio=correlation)
+            from evaluation.native_positive_oracle import oracle
+
+            _, evidence = oracle(bank,roles,code["commit"],"calibration",profile)
+            require(all(evidence["gates"].values()),"Calibration fixture failed a predeclared identifiable-control gate")
+            registered[family] = dict(bank=bank.pin,roles=roles,same_neighbor_ratio=correlation,fit_oracle=evidence)
         plan = dict(schema=SCHEMA,scope="synthetic_only",producer=code["commit"],source_hash=code["source_hash"],
                     fit=registered,cases=cases(),scientific=SCIENTIFIC,optimizer_updates=len(cases())*STEPS,
                     confirmation_created=False,query_accessed=False,real_updates=0,
@@ -161,7 +165,8 @@ def register(root,out,code):
 def load_plan(root,out,code):
     pin = file_pin(out/"plan.json")
     plan = json_pin(root,pin)
-    require(plan["scope"] == "synthetic_only" and plan["schema"] == SCHEMA
+    require(set(plan["fit"]) == set(profiles()) and all(all(p["fit_oracle"]["gates"].values()) for p in plan["fit"].values())
+            and plan["scope"] == "synthetic_only" and plan["schema"] == SCHEMA
             and plan["producer"] == code["commit"] and plan["source_hash"] == code["source_hash"]
             and plan["cases"] == cases() and plan["scientific"] == SCIENTIFIC
             and plan["optimizer_updates"] == len(cases())*STEPS and plan["real_updates"] == 0
