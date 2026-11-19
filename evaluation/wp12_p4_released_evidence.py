@@ -311,6 +311,41 @@ def paviau_prepared(pin, root):
             "complete_purity": None, "scope": "released_dev_points_zero_updates"}
 
 
+def paviau_trained(pin, root, prepared):
+    """Admit only the completed released-dev comparison alongside its preflight."""
+    row = read(pin, root)
+    counts = {"endpoints": 468, "per-class": 4212, "paired-endpoints": 936,
+              "paired-per-class": 8424, "stage-costs": 117, "mechanism": 78}
+    require(row["schema"] == "wp07_paviau_released_devval_results_v1" and row["status"] == "passed"
+            and row["scope"] == "released_development_only" and row["synthetic"] is False
+            and row["preflight"] == prepared["receipt"] and row["bank"] == prepared["bank"]
+            and row["case_count"] == len(row["case_replays"]) == 39 and row["phases"] == 117
+            and row["optimizer_updates"] == prepared["planned_updates"] == 2340 and row["audit_optimizer_updates"] == 0
+            and row["endpoints"] == ["selected", "last"] and set(row["bands"]) == set(VIEWS)
+            and set(row["heads"]) == set(HEADS) and row["denominators"] == [5]*9
+            and row["within_seed_same_physical_device"] is True
+            and row["query_accessed"] is row["raw_gt_loaded"] is row["query_authorized"] is False
+            and row["physical_metadata_verified"] is row["held_out_sensor_qualification"] is False,
+            "Expected a complete PaviaU released development audit for this bank")
+    files = {Path(item["path"]).stem: item for item in row["files"]}
+    cost_rows = row["table_counts"]["resident-inference"]
+    require(cost_rows in (0, 78) and row["table_counts"] == {**counts, "resident-inference": cost_rows}
+            and set(files) == (counts.keys() | ({"resident-inference"} if cost_rows else set()))
+            and len(files) == len(row["files"]), "PaviaU tables or coverage are incomplete")
+    require(len({item["path"] for item in row["case_replays"]}) == 39, "Duplicated PaviaU replay receipt")
+    for item in row["files"]:
+        read_pin(item, root)
+    replays = [read(case, root) for case in row["case_replays"]]
+    require([case["case"] for case in replays] == expected_case_names("paviaU", PAVIA_DESIGN)
+            and all(case["bank"] == row["bank"] and case["point_set"] == row["point_set"]
+                    and case["audit_optimizer_updates"] == 0 for case in replays),
+            "The case replays do not cover the trained roster")
+    return {"receipt": pin, "scope": row["scope"], "cases": 39, "optimizer_updates": 2340,
+            "phase_receipts": 117, "physical_metadata_verified": False, "query_accessed": False,
+            "same_device_by_seed": row["seed_gpus"], "tables": files, "stage_missing": row["stage_missing"],
+            "resident_inference_scope": row["inference_scope"] if cost_rows else None}
+
+
 def comparison_qualification(item, root):
     row = read(item, root)
     require(row.get("schema") == "wp07_native_released_comparison_audit_v1"
@@ -388,7 +423,7 @@ def write_migrated_case_metrics(path, combined):
 
 def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
            p4_review=None, p4_release=None, comparison=None, native_duty=None, p4_migration=None,
-           paviau=None):
+           paviau=None, paviau_results=None):
     from evaluation import wp12_native_duty_evidence as duty
 
     p4 = p4_prepared(resource, template, root, review_pin=p4_review, approval_pin=p4_release,
@@ -397,6 +432,12 @@ def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
     if paviau is not None:
         released["scenes"]["paviaU"] = paviau_prepared(paviau, root)
         del released["blocked"]["paviaU"]
+    if paviau_results is not None:
+        require(paviau is not None, "PaviaU trained results require the matching preflight")
+        scene = released["scenes"]["paviaU"]
+        trained = paviau_trained(paviau_results, root, scene)
+        scene["trained_devval"] = trained
+        scene["status"] = "RELEASED_DEVVAL_AUDITED"
     if comparison is not None:
         released["comparison_qualification"] = comparison_qualification(comparison, root)
     engineering = p4_engineering(queue_receipt, root)
@@ -434,7 +475,10 @@ def append(out, root, resource, template, sparse, queue_receipt, adapter, *,
         writer = csv.writer(stream)
         writer.writerow(("scene", "status", "planned_updates", "min_point_exposure_updates", "real_accuracy", "real_cost"))
         for scene, row in released["scenes"].items():
-            writer.writerow((scene, row["status"], row["planned_updates"], row["minimum_exposure_updates"], "N/A", "N/A"))
+            trained = row.get("trained_devval")
+            accuracy = "released_devval" if trained else "N/A"
+            cost = "released_stage_costs" if trained else "N/A"
+            writer.writerow((scene, row["status"], row["planned_updates"], row["minimum_exposure_updates"], accuracy, cost))
         if "paviaU" in released["blocked"]:
             writer.writerow(("paviaU", released["blocked"]["paviaU"], "", "", "N/A", "N/A"))
     names = ["p4-queue-progress.csv", "native-released-dev-status.csv"]

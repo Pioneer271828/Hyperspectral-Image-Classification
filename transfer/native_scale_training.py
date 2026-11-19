@@ -125,7 +125,8 @@ class Run:
             if released is not native_released_training and type(released) is not RealReleasedRun:
                 from transfer.spatial_coverage_training import SpatialReleasedFixture
                 from transfer.band_graph_fixture import BandGraphFixture
-                if type(released) not in (SpatialReleasedFixture, BandGraphFixture) or not released.is_synthetic:
+                from transfer.band_scale_fixture import BandScaleFixture
+                if type(released) not in (SpatialReleasedFixture, BandGraphFixture, BandScaleFixture) or not released.is_synthetic:
                     raise ValueError("Unknown released supervision provider")
         self._capacity = None
         self._region_action = None

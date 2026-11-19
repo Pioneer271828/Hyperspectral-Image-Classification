@@ -22,7 +22,21 @@ def main():
         parser.add_argument("--" + key, nargs=2)
     parser.add_argument("--band-graph", nargs=2, metavar=("DIRECTORY", "REGISTRATION_SHA256"))
     parser.add_argument("--donor-retrieval", nargs=2, metavar=("DIRECTORY", "REGISTRATION_SHA256"))
+    parser.add_argument("--band-scale", nargs=2, metavar=("DIRECTORY", "REGISTRATION_SHA256"))
     args = parser.parse_args()
+    if args.band_scale:
+        if args.band_graph or args.donor_retrieval or any(getattr(args,key.replace("-", "_")) for key in (*kinds,"authorities",*extension)):
+            parser.error("Band-scale intake requires its own pinned registration")
+        from evaluation.wp12_band_scale import publish
+        code = code_snapshot()
+        require_frozen_code(code)
+        root = args.runs.resolve(strict=True)
+        folder = Path(args.band_scale[0]).resolve(strict=True)
+        out = external_directory(args.out)
+        evidence.require(code["commit"]==args.expected_commit and root in out.parents and root in folder.parents,
+                         "Band-scale intake must stay under the approved run directory")
+        print(publish(root,folder,out,code,args.band_scale[1]),flush=True)
+        return
     if args.donor_retrieval:
         if args.band_graph or any(getattr(args,key.replace("-", "_")) for key in (*kinds,"authorities",*extension)):
             parser.error("Donor retrieval cannot be mixed with other pinned evidence")

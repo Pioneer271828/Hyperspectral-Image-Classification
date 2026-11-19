@@ -15,7 +15,7 @@ def main():
     parser.add_argument("--expected-commit", required=True)
     for name in ("runs", "p4-scope", "fit-template", "sparse", "queue-receipt", "out"):
         parser.add_argument("--" + name, type=Path, required=True)
-    for name in ("p4-review", "p4-release", "comparison", "p4-migration", "paviau-preflight"):
+    for name in ("p4-review", "p4-release", "comparison", "p4-migration", "paviau-preflight", "paviau-results"):
         parser.add_argument("--" + name, nargs=2, metavar=("PATH", "SHA256"))
     extension = ("duties-prepare", "duties-audit", "dual-qual", "intervention", "fit-diagnostic")
     for name in extension:
@@ -38,7 +38,8 @@ def main():
                           dev._pin(args.sparse), dev._pin(args.queue_receipt), code["commit"],
                           p4_review=pinned(args.p4_review), p4_release=pinned(args.p4_release),
                           comparison=pinned(args.comparison), native_duty=pins if any(pins) else None,
-                          p4_migration=pinned(args.p4_migration), paviau=pinned(args.paviau_preflight)), flush=True)
+                          p4_migration=pinned(args.p4_migration), paviau=pinned(args.paviau_preflight),
+                          paviau_results=pinned(args.paviau_results)), flush=True)
     require_frozen_code(code)
 
 

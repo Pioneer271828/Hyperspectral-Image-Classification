@@ -74,12 +74,15 @@ def release_statistics(arrays, rows, plan):
 
 
 def retained_positions(bands, name):
-    if name not in VIEWS:
+    if name not in VIEWS and name != "central_gap":
         raise ValueError("Unregistered physical observation")
     valid = np.flatnonzero(bands.valid)
     if len(valid) < 4:
         raise ValueError("Need four original retained-valid positions")
     size = len(valid) // 2
+    if name == "central_gap":
+        start = (len(valid)-size)//2
+        return tuple(map(int,np.r_[valid[:start],valid[start+size:]]))
     shape, _ = VIEWS[name]
     return tuple(int(x) for x in {
         "full": valid,
@@ -96,7 +99,7 @@ def apply_view(full, master, name, box=None):
     positions = retained_positions(master, name)
     local = {source: column for column,source in enumerate(valid)}
     view = _apply(full.observation, full.bands, tuple(local[i] for i in positions))
-    _, mode = VIEWS[name]
+    _, mode = VIEWS.get(name,("central_gap","declared"))
     effective = view.bands
     if mode in ("index", "missing"):
         coordinates = (tuple(i/(len(master.band_ids)-1) for i in positions) if mode == "index"
@@ -110,7 +113,7 @@ def apply_view(full, master, name, box=None):
     return replace(view, observation=_spatial_view(view.observation, box), bands=effective), positions, mode
 
 
-def bank_view(bank, row, producer, band, box=None):
+def bank_view(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None):
     _, _, original, context = bank.materialize(row, {"mode": "none"})
     release = bank.release
     stats = release.statistics
@@ -125,9 +128,13 @@ def bank_view(bank, row, producer, band, box=None):
                                                 band_ids=list(view.bands.band_ids))),
               "normalized": array_hash(view.observation.spectral), "band_order": view.bands.fingerprint,
               "band_view": band, "spectral_metadata_mode": mode, "registered_box": box}
-    lattice = Lattice.make(row["box"], release.shape[:2], 1)
-    actual = _materialize(release.scene, release.classes, view, lattice, source, row["role"], producer)
-    targets = bind(actual, row, producer, row["role"])
+    if (profile is None)!=(synthetic_labels is None) or (profile is not None and release.profile!="synthetic"):
+        raise ValueError("Physical profile and dense truth are restricted to an authenticated synthetic view")
+    if synthetic_labels is not None:
+        source.update(labels=array_hash(synthetic_labels), master_band_count=len(release.bands.band_ids))
+    lattice = Lattice.make(row["box"], release.shape[:2], factor)
+    actual = _materialize(release.scene, release.classes, view, lattice, source, row["role"], producer, profile=profile)
+    targets = bind(actual, row, producer, row["role"], synthetic_labels=synthetic_labels)
     return actual, np.asarray(targets.points, dtype=np.int64).reshape((-1, 2)), targets
 
 
