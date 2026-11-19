@@ -53,6 +53,10 @@ def _sum_cost(value):
 
 
 def _cpu_capture(anchor, actual, producer, role):
+    height,width = actual.lattice.shape
+    grid = anchor.backbone.learnable_graph._grid_shape(height,width,SCALE)
+    require(height*width<=4096 and 4<=grid[0]*grid[1]<=256,
+            "Regional fixture exceeds the registered pixel or region bound")
     start = perf_counter()
     with torch.no_grad(), bind(anchor) as frame:
         _, trace = forward(anchor,actual,producer,role,graph_scale=SCALE)
@@ -231,12 +235,18 @@ def verify_trace(proof, observation, *, require_policy=None):
             "Actual Q support differs from the held regional coordinates")
     a,b = (invariants(s,points) for s in (original,selected))
     require((a,b)==(proof["original_counts"],proof["counts"]) and a["receive"]==b["receive"]
+            and proof["first_indices"]==tensor_hash(torch.tensor(original,dtype=torch.long).T.contiguous())
             and b["nnz"]==proof["positive_nnz"] and a["nnz"]==b["nnz"]
             and proof["stage2_indices"]==tensor_hash(torch.tensor(selected,dtype=torch.long).T.contiguous())
             and proof["newly_added"]==len(set(selected)-set(original))
             and proof["same_sender_degree"]==(a["send"]==b["send"])
             and proof["same_distance_counts"]==(a["squared_distances"]==b["squared_distances"]),
             "Recounted actual stage-two graph support differs")
+    if proof["policy"]=="strict_matched":
+        match = proof["strict_match"]
+        require(match["status"]=="MATCHED" and match["constraints"]==b
+                and match["support_sha256"]==digest(selected) and match["changed_edges"]>0,
+                "Strict alternate no longer has exact sender, receiver and distance matching")
     return proof
 
 

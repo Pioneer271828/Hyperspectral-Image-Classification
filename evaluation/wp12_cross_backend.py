@@ -88,6 +88,15 @@ def open_case(root, request, *, test_history=None):
         require(all(re.fullmatch("[a-z0-9_-]+", arm) for arm in models) and len(models) >= 2,
                 "Comparison needs separately pinned model arms")
         schedules = [validate_endpoint(body, protocol, seed) for body in models.values()]
+        regional_models = [body["checkpoint"]["graph_program"] for body in models.values()
+                           if body["checkpoint"]["backend"]==regional.BACKEND]
+        if regional_models:
+            require(test_history is not None and factor==1 and len(regional_models)==len(models)
+                    and len({r["policy"] for r in regional_models})==len(models)
+                    and all(row["budget"]==protocol["budget"] and row["seed"]==seed+19000
+                            and row["weights"]==regional_models[0]["weights"]
+                            and row["state"]==regional_models[0]["state"] for row in regional_models),
+                    "Regional endpoints must use one pinned initial source, calibration clock and search seed")
         require(all(schedule == schedules[0] for schedule in schedules)
                 and len({model["phase"] for model in models.values()}) == 1,
                 "Matched arms use different calibration event schedules or endpoint phases")

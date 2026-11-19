@@ -328,6 +328,10 @@ def generate_regions(out, campaign, code, devices):
             pairs=[pair("original",p,equal=True) for p in policies[1:]]+[
                 pair("random_fixed","spectral_fixed",equal=True),pair("spectral_fixed","spectral_bounded",equal=True)],
             device=devices[i%len(devices)] if devices else "cpu",purpose="science")
+    recovery = groups["region-xz-k1"]
+    groups["region-recovery"] = {**recovery,"seed":2048,"steps":16,"clock":[0,4,8,12,16],
+        "arms":{p:recovery["arms"][p] for p in ("original","spectral_bounded")},
+        "pairs":[pair("original","spectral_bounded",equal=True)],"purpose":"recovery","device":"cpu"}
     request = dict(schema=SCHEMA,scope=SYNTHETIC,releases=releases,groups=groups)
     pin = _write(out/"request.json",request)
     approval = _write(out/"engineering-only.json",expected_approval(request,pin,campaign,code,test=True))
