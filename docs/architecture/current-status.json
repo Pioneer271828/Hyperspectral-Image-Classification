@@ -9,6 +9,7 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp05_wp06_causal_region_candidate": "dcd1001d3a8204513358ef92b44979f7d4a895f2",
     "wp05_wp06_scientific_candidate": "8d7feca196b4df16cfd5704778406c1dd30e1359",
     "wp05_wp06_regional_graph_candidate": "b4ae7d8172170e92df6e4804eed108dd7cc0ac96",
     "accepted_g4i": "a0787ca6e3613909a9c7e61636b7b7ed1c0a618b",
@@ -48,6 +49,14 @@
     "evaluation/g4_target_verification.py"
   ],
   "modules": [
+    {
+      "id": "WP05/WP06/WP08/WP12 可控区域源首次可达与固定权重盲确认",
+      "state": "合成机制与远程 WP12 已验收，融合与完整小类保护未达到采用门槛",
+      "evidence": "源码 dcd1001d3a8204513358ef92b44979f7d4a895f2。两景两布局，34 臂 816 合成步。同 GPU3 恢复与连续参照精确，重入 0。图头首次可达并依赖真源恢复 143 点次；融合新增正确 25、错误 28。GPU3 与 CPU 对照的 98,400 个逐点头零改判。CPU 1,234 通过、9 跳过，pytest 42 通过。",
+      "remaining": "四个原生探针块中软 Q 原图已可达，固定空间 GroupNorm 统计才消除 CNN 远距响应。真实独立三角色、合法源干预与无旁路条件待核；新真实更新、原 GT、封存 query、WP04 为 0。",
+      "report": "research/reports/WP05_WP06_区域源首次可达与盲确认结项_20261120.md",
+      "chat_report": "2026-11-20 第十一包区域源机制与盲确认"
+    },
     {
       "id": "WP05/WP06/WP08/WP12 同少样本缺带协议的区域图结构比较",
       "state": "原生区域边工程、同设备恢复和独立 WP12 已通过，候选待主审",
