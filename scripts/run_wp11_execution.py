@@ -68,8 +68,6 @@ def deployment(args,code):
     from evaluation import wp11_deployment_cost as cost
     from evaluation.wp12_deployment_report import publish
     from evaluation.wp11_deployment_synthetic import exercise
-    from transfer.p4_runtime_device import gate
-    from transfer.shared_gpu_lease import physical_lease
 
     torch.set_num_threads(1)
     if not training_container_kind() or not __debug__ or code["dirty"] or code["commit"]!=args.expected_commit:
@@ -87,14 +85,14 @@ def deployment(args,code):
     elif action=="worker":
         if args.sync_folder is not None and out not in args.sync_folder.resolve().parents:
             raise ValueError("Worker barrier must be within its registered deployment run")
-        result=cost.internal(root,out,code,args.case,args.scope,args.device,plan_sha=args.plan_sha,
-                             sync_folder=args.sync_folder)
+        with cost.inherited_arithmetic(args.device):
+            result=cost.internal(root,out,code,args.case,args.scope,args.device,plan_sha=args.plan_sha,
+                                 sync_folder=args.sync_folder)
     elif action=="synthetic":
         if args.gpu is None:
             result=exercise(root,out,code)
         else:
-            with physical_lease(args.gpu):
-                admit=gate(args.gpu)
+            with cost.gpu_scope(args.gpu) as (admit,_,__):
                 result=exercise(root,out,code,"cuda:0",physical_admission=admit)
     else:
         result=publish(root,out,code,args.plan_sha,args.synthetic)

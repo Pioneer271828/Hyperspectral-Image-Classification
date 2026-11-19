@@ -33,6 +33,10 @@ def test_native_request_rejects_wrong_identity_and_temperature_hooks(tmp_path):
     assert fast["counts"]["graph_builds"]==0 and fast["counts"]["full_calls"]==0
     with pytest.raises(ValueError,match="registered pair"):
         Runtime(device="cpu",full=full,identity={"full":"foreign"})
+    another,_=models(512,"xuzhou")
+    unrelated=Runtime(device="cpu",full=another,light=light)
+    with pytest.raises(ValueError,match="one frozen source"):
+        unrelated.run([req],"adaptive",threshold=0.)
 
 
 def test_accepted_stage_resumes_after_failed_attempt_without_repeating(tmp_path, monkeypatch):

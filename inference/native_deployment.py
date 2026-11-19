@@ -116,6 +116,8 @@ class Runtime:
         self.identity={k:state_hash(m) for k,m in (("full",full),("light",light)) if m is not None}
         if identity is not None and self.identity!=identity:
             raise ValueError("Deployment model identity differs from the registered pair")
+        self.routable=(full is not None and light is not None and
+                       getattr(light,"source_state",None)==self.identity["full"])
         self.graph_policy=graph_policy
         if graph_policy=="reuse_frozen" and (full is None or type(full.backbone.learnable_graph) is not LearnableSuperpixelGraph
                                               or isinstance(full,ConditionalMultiscaleVCASAHGCN)):
@@ -192,6 +194,8 @@ class Runtime:
     def run(self, requests, mode, *, threshold=None, min_coverage=0., random_fast=None, faults=None):
         if mode not in (*STATIC,*ROUTED) or not requests or len({r.key for r in requests})!=len(requests):
             raise ValueError("Explicit deployment path and unique native requests required")
+        if mode in ROUTED and not self.routable:
+            raise ValueError("Native routing requires light and full from one frozen source")
         if mode=="adaptive" and (threshold is None or not 0<=threshold<=1):
             raise ValueError("Only the pinned margin threshold may route")
         if mode=="random" and (random_fast is None or not set(random_fast)<={r.key for r in requests}):

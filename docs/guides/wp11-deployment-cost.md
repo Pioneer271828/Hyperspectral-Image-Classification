@@ -33,7 +33,7 @@ plan_sha=$(sha256sum "$out/measurement-plan.json" | cut -d' ' -f1)
 
 “冷”指新进程。OS 页缓存不人为清理和控制。分位数由原始重复样本计算。每条数据保留批量、总像素、同步、预热、模型/图调用和各自设备。并发的 RSS/显存峰值按单工作进程取最大。CUDA 另用事件记录同步 GPU 工作，和进程端到端计时分别汇报。轻路完成时图构建为零，完整路按实际请求构图。图缓存只用于经验证模型、完全相同原生请求与生成特征的冻结测试，不作为真实计时默认路径。
 
-CUDA 用同一物理 UUID 映射和资源锁。样本准入需至少 12,288 MiB 空闲且利用率至多 60%，确定 UUID 后可给 `deployment-measure` 和 `deployment-synthetic` 加 `--gpu "$gpu_uuid"`。设置 `CUDA_VISIBLE_DEVICES` 为该 UUID。设备各自发布，切换物理卡产生独立证据。若阶段失败，保留 attempt 日志并再次运行同一计划。已接受的阶段复用，未发布的阶段重新测量。并发采集到预定的阶段锁后，禁止覆盖已有记录。
+CUDA 用同一物理 UUID 映射和资源锁。样本准入需至少 12,288 MiB 空闲且利用率至多 60%，确定 UUID 后可给 `deployment-measure` 和 `deployment-synthetic` 加 `--gpu "$gpu_uuid"`。设置 `CUDA_VISIBLE_DEVICES` 为该 UUID。CUDA 前向使用已登记的确定性稀疏计算协议。新进程继承同一租约和算术合同。设备各自发布，切换物理卡产生独立证据。若阶段失败，保留 attempt 日志并再次运行同一计划。已接受的阶段复用，未发布的阶段重新测量。并发采集到预定的阶段锁后，禁止覆盖已有记录。
 
 ## 校准和确认边界
 

@@ -1,6 +1,6 @@
 """Registered cold, warm, resident and concurrent deployment measurements."""
 
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 import io
 import json
 import os
@@ -20,7 +20,9 @@ from inference.route_controls import request_hash
 from model.research_config import digest
 from research_runtime import hash_file, require_frozen_code, tensor_hash
 from scripts import run_frozen_band_region as archive
+from transfer import p4_runtime_device as p4
 from transfer.development_blocks import read_pin
+from transfer.shared_gpu_lease import physical_lease
 from transfer.native_coverage_queue import case_lock
 from transfer.native_coverage_replay import EXPECTED_ARCHIVES, frozen_model
 from transfer.spatial_coverage_protocol import bank_observation
@@ -152,7 +154,7 @@ def register(root,out,code):
               repeats=dict(zip(SCOPES,REPEATS,strict=True)),warmups=WARMUPS,concurrent_workers=WORKERS,
               os_cache="normal_os_page_cache_uncontrolled_no_flush",graph_policy="rebuild",
               workload_rule="middle-area native block full/gap or exact archived WP11 matched input packet",
-              resolution="native_or_original_wp11_request",device_limits=dict(min_cuda_free_mib=12288,max_cuda_utilization=60),
+              resolution="native_or_original_wp11_request",cuda_arithmetic=p4.CUDA_FP64_WEIGHT,device_limits=dict(min_cuda_free_mib=12288,max_cuda_utilization=60),
               estimated_seconds=dict(cpu=140,gpu=150),timeout_per_worker_seconds=TIMEOUT,
               real_measurement=True,labels_emitted=False,optimizer_updates=0,query_accessed=False)
     require_frozen_code(code)
@@ -165,7 +167,8 @@ def read_plan(root,out,code,expected=None):
     plan=document(root,pin)
     need(plan["schema"]==SCHEMA and plan["producer"]==code["commit"] and plan["cases"].keys()==set(CASES)
          and plan["repeats"]==dict(zip(SCOPES,REPEATS,strict=True)) and plan["warmups"]==WARMUPS
-         and plan["concurrent_workers"]==WORKERS and plan["graph_policy"]=="rebuild",
+         and plan["concurrent_workers"]==WORKERS and plan["graph_policy"]=="rebuild"
+         and plan["cuda_arithmetic"]==p4.CUDA_FP64_WEIGHT,
          "Foreign deployment measurement plan or clock")
     return pin,plan
 
@@ -253,6 +256,28 @@ class Worker:
                     cuda_peak_bytes=torch.cuda.max_memory_allocated(self.runtime.device) if self.runtime.device.type=="cuda" else None)
 
 
+@contextmanager
+def gpu_scope(gpu):
+    with physical_lease(gpu) as lock:
+        admission=p4.gate(gpu)
+        with p4.arithmetic(p4.CUDA_FP64_WEIGHT,gpu,resource_admission=admission) as numeric:
+            env={**os.environ,"WP11_DEPLOYMENT_LEASE_FD":str(lock.fileno()),
+                 "WP11_DEPLOYMENT_ADMISSION":json.dumps(admission)}
+            yield admission,numeric,dict(env=env,pass_fds=(lock.fileno(),))
+
+
+@contextmanager
+def inherited_arithmetic(device):
+    if device=="cpu":
+        yield
+        return
+    gpu=os.environ.get("CUDA_VISIBLE_DEVICES")
+    fd=int(os.environ["WP11_DEPLOYMENT_LEASE_FD"])
+    admission=json.loads(os.environ["WP11_DEPLOYMENT_ADMISSION"])
+    with physical_lease(gpu,inherited_fd=fd), p4.arithmetic(p4.CUDA_FP64_WEIGHT,gpu,resource_admission=admission):
+        yield
+
+
 def internal(root,out,code,case,scope,device,*,plan_sha,sync_folder=None):
     _,plan=read_plan(root,out,code,plan_sha)
     clock=perf_counter_ns()
@@ -284,13 +309,13 @@ def worker_command(root,out,code,case,scope,device,plan_sha,folder=None):
     return cmd
 
 
-def external_cold(root,out,code,case,device,attempt,plan_sha):
+def external_cold(root,out,code,case,device,attempt,plan_sha,spawn):
     samples=[]
     for number in range(REPEATS[0]):
         command=worker_command(root,out,code,case,SCOPES[0],device,plan_sha)
         start=perf_counter_ns()
         try:
-            proc=subprocess.run(command,capture_output=True,text=True,timeout=TIMEOUT)
+            proc=subprocess.run(command,capture_output=True,text=True,timeout=TIMEOUT,**spawn)
         except subprocess.TimeoutExpired as error:
             (attempt/f"cold-{number}.log").write_text(str(error))
             raise
@@ -305,13 +330,13 @@ def external_cold(root,out,code,case,device,attempt,plan_sha):
     return samples,None
 
 
-def concurrent(root,out,code,case,device,attempt,plan_sha):
+def concurrent(root,out,code,case,device,attempt,plan_sha,spawn):
     processes=[]
     try:
         for i in range(WORKERS):
             with (attempt/f"concurrent-{i}.log").open("x") as log:
                 proc=subprocess.Popen(worker_command(root,out,code,case,SCOPES[-1],device,plan_sha,attempt),
-                                      stdout=log,stderr=subprocess.STDOUT)
+                                      stdout=log,stderr=subprocess.STDOUT,**spawn)
             processes.append(proc)
         deadline=monotonic()+TIMEOUT
         while len(list(attempt.glob("ready-*.json")))!=WORKERS:
@@ -350,7 +375,7 @@ def summary(samples,scope,overlap):
     return stats
 
 
-def stage(root,out,code,case,scope,device,device_id,environment,plan_sha):
+def stage(root,out,code,case,scope,device,device_id,environment,plan_sha,spawn=None):
     plan_pin,plan=read_plan(root,out,code,plan_sha)
     lineage=dict(plan=plan_pin["sha256"],case=case,scope=scope,device=device_id,environment=environment)
     directory=out/"stages"/device_id/case/scope
@@ -365,9 +390,9 @@ def stage(root,out,code,case,scope,device,device_id,environment,plan_sha):
         attempt.mkdir()
         try:
             if scope==SCOPES[0]:
-                samples,overlap=external_cold(root,out,code,case,device,attempt,plan_pin["sha256"])
+                samples,overlap=external_cold(root,out,code,case,device,attempt,plan_pin["sha256"],spawn or {})
             elif scope==SCOPES[-1]:
-                samples,overlap=concurrent(root,out,code,case,device,attempt,plan_pin["sha256"])
+                samples,overlap=concurrent(root,out,code,case,device,attempt,plan_pin["sha256"],spawn or {})
             else:
                 worker=Worker(root,plan,case,device)
                 prepared=worker.ready()
@@ -387,31 +412,17 @@ def stage(root,out,code,case,scope,device,device_id,environment,plan_sha):
             raise
 
 
-def device_environment(gpu):
-    from transfer import p4_runtime_device as p4
-    if gpu is None:
-        return "cpu","cpu",dict(torch=str(torch.__version__),threads=torch.get_num_threads(),cuda_runtime=None)
-    info=p4.gate(gpu)
-    need(torch.cuda.is_available() and torch.cuda.device_count()==1,"Only the registered physical CUDA device may be visible")
-    props=torch.cuda.get_device_properties(0)
-    return "cuda:0",gpu,dict(torch=str(torch.__version__),threads=torch.get_num_threads(),
-                             accelerator=props.name,driver=info["driver"],cuda_runtime=torch.version.cuda)
-
-
 def run(root,out,code,gpu=None,*,plan_sha,limit=None):
-    from transfer.p4_runtime_device import gate
-    from transfer.shared_gpu_lease import physical_lease
-
     plan_pin,plan=read_plan(root,out,code,plan_sha)
-    with (nullcontext() if gpu is None else physical_lease(gpu)):
-        device,identity,env=device_environment(gpu)
-        qualification=None if gpu is None else gate(gpu)
+    cpu=dict(torch=str(torch.__version__),threads=torch.get_num_threads(),cuda_runtime=None)
+    with (nullcontext((None,cpu,{})) if gpu is None else gpu_scope(gpu)) as (qualification,env,spawn):
+        device,identity=("cpu","cpu") if gpu is None else ("cuda:0",gpu)
         finished=[]
         for case in plan["cases"]:
             for scope in SCOPES:
                 if limit is not None and len(finished)>=limit:
                     return finished
-                finished.append(stage(root,out,code,case,scope,device,identity,env,plan_pin["sha256"]))
+                finished.append(stage(root,out,code,case,scope,device,identity,env,plan_pin["sha256"],spawn))
                 print(identity,case,scope,flush=True)
         directory=out/"stages"/identity
         with case_lock(directory):

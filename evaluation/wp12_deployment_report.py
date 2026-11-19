@@ -73,7 +73,7 @@ def audited_cost(root,out,code,plan_sha):
                              warmups=record["warmups"],summary=timing,batch=count,
                              pixels=sum(math.prod(s["shape"]) for s in plan["cases"][case]["requests"])))
         sources[device]=identity["sha256"]
-    need("cpu" in sources,"CPU deployment costs are required before optional physical qualification")
+    need(bool(sources),"An independently completed device campaign is required")
     return rows,sources,plan_pin,plan
 
 
