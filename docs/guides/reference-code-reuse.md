@@ -33,6 +33,10 @@ Replacement requires the original data/access, graph, budget, selection, recover
 
 The initial [2026-11-13 inventory](../references/completed-module-oss-review-20261113.json) is a source/metadata snapshot, not execution evidence. All execution remains in the authorized LXC; the execution chat owns remote tests, and the primary chat reviews code and results. New long experiments require a separately frozen budget and estimated duration.
 
+## Scene calibration and independent release
+
+Record the first-party distributor, scene-specific release, actual image/header binding, delivered and detector band identities, physical units, and dataset/label permissions separately from the code license. Model-level sampling and range are nominal evidence. Inspect optical tables and retained/deleted mappings at the version used by the project. The existing fallback may be used for declared approximate comparisons. An approved calibration view needs its own provenance and cache identity. See the [three-scene provenance review](../references/wp05-scene-provenance-20261119.json) and [holder intake](independent-optical-intake.md).
+
 ## Historical example (not the current queue)
 
 M1-C development screening, E1-A/B and [E1-C1 matched-control/runner engineering](coverage-screen-e1c.md) were complete at this historical snapshot; the registered fifteen-case/75000-update E1-C2 screen did not establish joint full/range gains. The then-next joint-training/MON-2 work is not a current scheduling instruction. See the [current task list](../../research/当前搭建状态与审查整改清单_20261102.md), [E1-C2 execution/results](../../research/reports/E1C2_五组覆盖调制三种子完整配对结果_20261102.md) and [E1 paper/code review](../references/e1-reference-review.json). The dynamic/compression/curriculum candidates in the [supplemental plan](../../research/动态计算与压缩课程学习_论文评审及搭建测试补充计划_20261102.md) do not automatically enable themselves or add a new research axis.
