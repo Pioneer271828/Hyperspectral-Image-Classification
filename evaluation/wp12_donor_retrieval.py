@@ -25,7 +25,7 @@ def verify_evaluation(value, roster, writer, *, case, arm, condition):
         probabilities = value["probabilities"][head]
         predictions = [max(range(2), key=p.__getitem__) for p in probabilities]
         for truth_name, truth in (("heads",labels),("null_heads",negatives)):
-            metrics = classification_metrics(truth,predictions,[0,1])
+            metrics = classification_metrics([y+1 for y in truth],[p+1 for p in predictions],[1,2])
             check(all(metric==value[truth_name][head][k] for k,metric in metrics.items()),"WP12 classification evidence differs")
         for point,(y,n,p) in enumerate(zip(labels,negatives,probabilities,strict=True)):
             check(len(p)==2 and all(0.<=v<=1. for v in p) and abs(sum(p)-1.)<2e-6,"Probability simplex violated")

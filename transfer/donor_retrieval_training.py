@@ -272,7 +272,8 @@ def summarize(predictions, labels):
     results = {}
     for head,rows in predictions.items():
         p = torch.as_tensor(rows,dtype=torch.float64)
-        metrics = classification_metrics(truth.tolist(),p.argmax(1).tolist(),[0,1])
+        # Class 0 is reserved for unlabeled pixels in the shared metrics API.
+        metrics = classification_metrics((truth+1).tolist(),(p.argmax(1)+1).tolist(),[1,2])
         metrics["nll"] = float(-p[torch.arange(truth.numel()),truth].clamp(min=1e-20).log().mean())
         results[head] = metrics
     return results
