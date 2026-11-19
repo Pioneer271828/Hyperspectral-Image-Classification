@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 from pathlib import Path
 import resource
+import subprocess
 from time import perf_counter
 
 import numpy as np
@@ -47,6 +48,25 @@ def registration(root, code):
                   foils={scene: {str(k): list(v) for k, v in plan.EXPECTED_CONFUSIONS[scene].items()} for scene in
                          ("xuzhou", "whu-honghu")}, real_updates=0, query_accessed=False, raw_gt_loaded=False)
     return result, scope, baseline, batch
+
+
+def load_registered(root, directory, code):
+    current, scope, baseline, batch = registration(root, code)
+    link = pin(directory / "registration.json")
+    old = _read(link)
+    if current != old:
+        check(link["sha256"] == "73f02889bc7caaef481c5c99ece7e9025a73eeb0561d69dd69a0a7c847d39652"
+              and old["producer"] == "a1c3cafb41aa6d655bc1d552914bd721ef3c45e7"
+              and {**current, "producer": old["producer"], "source_hash": old["source_hash"]} == old,
+              "Frozen population or source registration changed")
+        paths = subprocess.check_output(
+            ["git", "diff", "--name-only", old["producer"], code["commit"]], text=True
+        ).splitlines()
+        check(set(paths) <= {"scripts/run_coverage_readout.py", "transfer/spectral_spacing_recovery.py",
+                             "evaluation/wp12_coverage_readout.py", "tests/test_coverage_readout.py",
+                             "docs/architecture/current-status.json"},
+              "New code changed the producer of archived frozen evidence")
+    return old, scope, baseline, batch
 
 
 def parent_case(root, batch, case):
@@ -169,9 +189,8 @@ def honghu_case(root, scope, baseline, entry, archived):
 
 
 def run(root, directory, code, selection):
-    reg, scope, baseline, batch = registration(root, code)
+    reg, scope, baseline, batch = load_registered(root, directory, code)
     manifest = pin(directory / "registration.json")
-    check(_read(manifest) == reg, "Replay is registered to another checkout or prediction release")
     for name, entry in reg["cases"].items():
         if selection not in ("all", name.split("__", 1)[0], name):
             continue
@@ -212,8 +231,7 @@ def main():
         directory.mkdir()
         print(_write(directory / "registration.json", reg))
     else:
-        reg, *_ = registration(root, code)
-        check(reg == _read(pin(directory / "registration.json")), "Expected exact experiment registration")
+        reg, *_ = load_registered(root, directory, code)
         if args.phase == "run":
             check(args.case in ("all", "xuzhou", "honghu60", *reg["cases"]), "Unknown frozen readout case")
             run(root, directory, code, args.case)

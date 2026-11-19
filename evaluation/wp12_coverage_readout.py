@@ -9,7 +9,7 @@ import numpy as np
 
 from evaluation.frozen_band_region import HEADS, hard, paired
 from evaluation.frozen_mechanism import point_scores
-from scripts.run_coverage_readout import ABS, BATCH, WINDOWS, assert_probabilities, parent_case, registration
+from scripts.run_coverage_readout import ABS, BATCH, WINDOWS, assert_probabilities, parent_case, load_registered
 from scripts.run_frozen_band_region import _read, _write, check, pin
 from scripts.run_frozen_mechanisms import read_bundle
 from transfer.frozen_branch_readout import BRANCH_TREATMENTS
@@ -179,7 +179,7 @@ def synthetic(directory, registration_sha, code):
 
 
 def ingest(root, directory, code):
-    reg, _, _, batch = registration(root, code)
+    reg, _, _, batch = load_registered(root, directory, code)
     manifest = pin(directory / "registration.json")
     check(_read(manifest) == reg and not (directory / "wp12").exists(), "Expected new publication and fixed inputs")
     evidence, cost, sources = {}, {}, {}

@@ -114,6 +114,7 @@ class SpacingRun(NativeRun):
 class FixtureCondition:
     source_key: str
     bands: BandMetadata
+    gsd_m: float | None = None
 
     def validate(self, actual, receipt):
         check(receipt["observation"] == self.source_key and actual.view.bands == self.bands,
