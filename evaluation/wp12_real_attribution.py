@@ -81,7 +81,7 @@ def hh_fit(root, group, case, reg, scene, allowed, frozen, release, weights_pin,
     reference = linear.weights(model,scene.dataset)
     step = state["best"]["step"]
     end = state["cursor"]
-    require(0<step<=end and end==(24 if group=="honghu_short" else 120)
+    require(0<step<=end and end==(24 if group=="honghu_short" else 60)
             and len(state["trace"])==end and [x["step"] for x in state["trace"]]==list(range(1,end+1)),
             "Foreign training cursor or incomplete trajectory")
     observed = linear.paired_roles(role_meta["train"][1],release["train"],[x["tile"] for x in state["trace"]],
@@ -112,6 +112,7 @@ def hh_fit(root, group, case, reg, scene, allowed, frozen, release, weights_pin,
         require(state_hash(model)==current,"Frozen attribution changed a model tensor")
     return dict(group=group,case=case["id"],support_seed=case["support_seed"],model_seed=case.get("model_seed",64),
                 k=case["k"],method=case["method"],arm=case["arm"],fit=fit,exposure=observed,
+                archived_path_updates=end,reviewed_combined_path_updates=120 if group=="honghu_120" else None,
                 checkpoint=weights_pin,populations=population_pins,states=identities,
                 historic_event_margins=[dict(step=row["step"],heads=row["metrics"]) for row in state["history"]],
                 tensor_gradient_record=state.get("parameter_audit",{}).get("by_category"),
@@ -171,7 +172,7 @@ def long_cases(root, keys, device):
         if case["id"] not in keys:
             continue
         audit = stages.json_pin(root,item["audit"])
-        require(audit["case"]==case and audit["audit_optimizer_updates"]==0
+        require(audit["case"]==case and audit["audit_optimizer_updates"]==0 and item["optimizer_updates"]==120
                 and audit["raw_gt_loaded"] is audit["query_accessed"] is False,
                 "Foreign HP4 custody or observed validation")
         contract_path, = [p for p in audit["artifact_pins"] if p.endswith("/split/state.pt")]
