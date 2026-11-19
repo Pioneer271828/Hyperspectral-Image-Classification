@@ -23,12 +23,13 @@ def pin(pair):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=("fixture", "capture", "review", "history"))
+    p.add_argument("action", choices=("fixture", "capture", "review", "history", "direction-replay"))
     p.add_argument("--runs", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--expected-commit", required=True)
     p.add_argument("--input", nargs=2, metavar=("PATH", "SHA256"))
     p.add_argument("--gpu")
+    p.add_argument("--directions-receipt", nargs=2, metavar=("PATH", "SHA256"))
     p.add_argument("--synthetic", action="store_true")
     p.add_argument("--kind", choices=("xuzhou", "honghu"))
     p.add_argument("--layout", choices=("a", "b"), default="a")
@@ -42,6 +43,8 @@ def main(argv=None):
             "Use a clean matching commit and a new result path under the authorized runs")
     require_frozen_code(code)
     torch.set_num_threads(1)
+    require(args.directions_receipt is None or args.action == "history",
+            "Directional evidence is consumed only with historical records")
     if args.action == "fixture":
         from evaluation.wp12_cross_backend_fixture import fixture
 
@@ -59,12 +62,20 @@ def main(argv=None):
         elif args.action == "review":
             require(args.gpu is None, "Independent WP12 receipt review is CPU only")
             value = comparison.review_case(root, pin(args.input), out, code, test_history=history)
-        else:
+        elif args.action == "history":
             from evaluation.wp12_cross_backend_history import review_history
 
             require(args.gpu is None and not args.synthetic and not args.input,
                     "Historical compatibility replay uses the original admitted archive protocols")
-            value = review_history(root, out, code)
+            value = review_history(root, out, code,
+                        directions_receipt=pin(args.directions_receipt) if args.directions_receipt else None)
+        else:
+            from evaluation.wp12_cross_backend_history import replay_directions
+
+            require(args.gpu and not args.synthetic and not args.input,
+                    "Report the original admitted GPU UUID for exact directional replay")
+            with arithmetic(root, args.gpu) as execution:
+                value = replay_directions(root, out, code, execution)
     require_frozen_code(code)
     print(json.dumps(value), flush=True)
 

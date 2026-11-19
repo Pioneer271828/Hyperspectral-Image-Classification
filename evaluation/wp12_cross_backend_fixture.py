@@ -26,7 +26,7 @@ def models(release, seed):
     base = _baseline(release, seed)
     yield "off", "native", base
     yield "fixed1", "multiscale", MultiscaleTrial().initialize(base, seed)
-    yield "scale", "multiscale", MultiscaleTrial(cnn_multiscale="content", graph_multiscale="average").initialize(base, seed)
+    yield "scale", "multiscale", MultiscaleTrial(cnn_multiscale="content", graph_multiscale="mean").initialize(base, seed)
     kwargs = dict(alignment_mode="region", interaction_mode="gated", interaction_direction="both",
                   interaction_strength=.1, interaction_hidden_dim=32, interaction_chunk_pixels=16384)
     attention = dict(width=32, landmark_grid=[2, 2], top_k=3, query_chunk=16)
