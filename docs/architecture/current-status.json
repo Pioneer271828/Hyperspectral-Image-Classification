@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-19",
+  "as_of": "2026-11-20",
   "issue": 463,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
@@ -9,6 +9,8 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp05_wp06_scientific_candidate": "8d7feca196b4df16cfd5704778406c1dd30e1359",
+    "wp05_wp06_regional_graph_candidate": "b4ae7d8172170e92df6e4804eed108dd7cc0ac96",
     "accepted_g4i": "a0787ca6e3613909a9c7e61636b7b7ed1c0a618b",
     "accepted_g4i_result_docs": "a01aa94be2a6fc162a3d5ac3efa7d1fb55caf779",
     "monitoring_protection": "461c5b806556db15153a6a992963fbe217244123",
@@ -46,6 +48,14 @@
     "evaluation/g4_target_verification.py"
   ],
   "modules": [
+    {
+      "id": "WP05/WP06/WP08/WP12 同少样本缺带协议的区域图结构比较",
+      "state": "原生区域边工程、同设备恢复和独立 WP12 已通过，候选待主审",
+      "evidence": "源码 b4ae7d8172170e92df6e4804eed108dd7cc0ac96。CPU 512、GPU3 192 工程更新，另连续参照各 16；四臂实际 130 边。CPU 1,230 通过、9 跳过，pytest 42 通过。CUDA 9,072 点头零改判及索引变化。工程汇总 SHA256 23d13adc67f13123e7290e1385aba9bed300a9a2d1cf49aa5a52f4c4b424bd65。",
+      "remaining": "36 个严格匹配观测有 18 个预算内未找到，整组未准入。合成全列原图已提供结构路径，当前不建立远区可达增益或正式采纳。两景存量仅开发训练块，真实独立发布和可信发射源待核；新真实更新、原 GT、query、WP04 为 0。",
+      "report": "research/reports/WP05_WP06_WP08_WP12_区域图结构比较与候选整合_20261120.md",
+      "chat_report": "2026-11-20 第十包区域图结构和候选整合"
+    },
     {
       "id": "WP05/WP06/WP12 少样本、交付列和科学采用门槛",
       "state": "工程验收已通过，独立真实发布待持有人，候选待集成",
