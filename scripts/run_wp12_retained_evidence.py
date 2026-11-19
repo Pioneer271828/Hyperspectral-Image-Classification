@@ -189,6 +189,8 @@ def report_case(root, case, producer, device, *, locked=False):
             full_ids = retained
             roster = tuple(val.identities)
             support_reference = train
+            if locked:
+                fixed_body = probe.fit_support(support_reference)
         REQUIRE(roster == tuple(val.identities) and len(set(retained)) == len(retained)
                 and retained == [i for i in full_ids if i in set(retained)], "Same-point roster or retained order differs")
         metrics = {}
@@ -203,7 +205,7 @@ def report_case(root, case, producer, device, *, locked=False):
                 truth=val.truth, native=metrics, native_probabilities=[row["probabilities"] for row in native],
                 readout=probe.readout(train, val, rivals))
         if locked:
-            by_view[band]["fixed_full_support"] = probe.readout(support_reference, val, rivals)
+            by_view[band]["fixed_full_support"] = probe.score_support(fixed_body, val, rivals)
     for dependency in dependencies:
         stages.pinned(root, dependency)
     REQUIRE(state_hash(model) == identity

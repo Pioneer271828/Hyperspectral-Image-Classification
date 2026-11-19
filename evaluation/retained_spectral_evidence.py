@@ -8,7 +8,9 @@ import numpy as np
 import torch
 
 from evaluation.frozen_training_stages import HEADS, probabilities, require
+from model.research_config import digest
 from model.region_pixel_alignment import broadcast_regions
+from transfer.development_blocks import array_hash
 
 
 LAYERS = ("sensor", "vca", "pre_pool", "pooled", "cnn", "graph", "fused")
@@ -172,27 +174,46 @@ def point_metrics(values, class_ids, truth, rivals):
     return result
 
 
-def readout(train, development, rivals):
-    require(train.role == "devtrain" and development.role == "devval"
-            and set(train.identities).isdisjoint(development.identities), "Readout support and scoring roles overlap")
+def fit_support(train):
+    require(train.role == "devtrain", "Readout can only fit released support")
     y = np.asarray(train.truth)
     classes = np.unique(y)
     require(len(classes) >= 2, "Need at least two support classes")
     targets = (y[:, None] == classes).astype(np.float64)
-    output = {}
-    require(set(development.labels).issubset(train.labels), "Readout layers differ")
-    for key in development.labels:
-        x, val = (np.concatenate(role.labels[key]).astype(np.float64) for role in (train, development))
-        require(x.shape[1] == val.shape[1], "Fixed readout requires a common feature dimension")
+    base = targets.mean(0)
+    parameters = {}
+    for key, blocks in train.labels.items():
+        x = np.concatenate(blocks).astype(np.float64)
         mean, std = x.mean(0), x.std(0)
         scale = np.where(std > 1e-10, std, 1.0)
-        x, val = (x - mean) / scale, (val - mean) / scale
+        x = (x - mean) / scale
         centers = np.asarray([x[y == cls].mean(0) for cls in classes])
+        dual = np.linalg.solve(x @ x.T + np.eye(len(x)), targets - base)
+        parameters[key] = (mean, scale, x, centers, dual)
+    witness = digest(dict(classes=classes.tolist(), base=array_hash(base),
+                     parameters={key: [array_hash(value) for value in fields]
+                                 for key, fields in parameters.items()}))
+    return tuple(train.identities), classes, base, parameters, witness
+
+
+def score_support(fitted, development, rivals):
+    identities, classes, base, parameters, witness = fitted
+    require(development.role == "devval" and set(identities).isdisjoint(development.identities)
+            and set(development.labels).issubset(parameters), "Readout support and scoring roles or layers differ")
+    output = {}
+    for key, blocks in development.labels.items():
+        val = np.concatenate(blocks).astype(np.float64)
+        mean, scale, x, centers, dual = parameters[key]
+        require(x.shape[1] == val.shape[1], "Fixed readout requires a common feature dimension")
+        val = (val - mean) / scale
         centroid = -np.square(val[:, None] - centers).mean(2)
-        base = targets.mean(0)
-        ridge = (val @ x.T) @ np.linalg.solve(x @ x.T + np.eye(len(x)), targets - base) + base
+        ridge = (val @ x.T) @ dual + base
         output[key] = {method: point_metrics(value, classes, development.truth, rivals)
                        for method, value in (("centroid", centroid), ("ridge", ridge))}
-    return dict(fit_class_ids=classes.tolist(), ridge_penalty=1.0,
+    return dict(fit_class_ids=classes.tolist(), ridge_penalty=1.0, fit_sha256=witness,
                 scale_floor=1e-10, classes_missing_from_fit=sorted(set(development.truth)-set(classes.tolist())),
                 layers=output)
+
+
+def readout(train, development, rivals):
+    return score_support(fit_support(train), development, rivals)

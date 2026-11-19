@@ -126,7 +126,8 @@ def definition(kind, support_seed):
                 else np.full_like(arrays[row["id"]],np.nan) for row in rows}
     require(statistics == release_statistics(poisoned, rows, plan), "Confirmation contaminated support statistics")
     custody_plan = dict(minimum_buffer=12, generator=SCHEMA, support_seed=support_seed, roles=digest(roles))
-    provenance = dict(generator=SCHEMA, source_layout=kind, unlabeled_layout_seed=seed)
+    provenance = dict(generator=SCHEMA, source_layout=kind, unlabeled_layout_seed=seed,
+                      shared_state=digest([SCHEMA,kind,seed,"synthetic_observation_origin"]))
     release = custody.BankRelease(scene,"synthetic",shape,CLASSES,plan,master,statistics,provenance,custody_plan,tuple(rows))
     # Check the physically retained subset actually removes every designated erased line.
     kept = {master.band_ids[i] for i in retained_positions(master,"central_gap")}
