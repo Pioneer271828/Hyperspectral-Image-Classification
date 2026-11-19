@@ -74,7 +74,7 @@ def release_statistics(arrays, rows, plan):
 
 
 def retained_positions(bands, name):
-    if name not in VIEWS and name != "central_gap":
+    if name not in VIEWS and name not in ("central_gap", "matched_dispersed"):
         raise ValueError("Unregistered physical observation")
     valid = np.flatnonzero(bands.valid)
     if len(valid) < 4:
@@ -83,6 +83,8 @@ def retained_positions(bands, name):
     if name == "central_gap":
         start = (len(valid)-size)//2
         return tuple(map(int,np.r_[valid[:start],valid[start+size:]]))
+    if name == "matched_dispersed":
+        return tuple(map(int, valid[np.linspace(0, len(valid)-1, len(valid)-size, dtype=int)]))
     shape, _ = VIEWS[name]
     return tuple(int(x) for x in {
         "full": valid,

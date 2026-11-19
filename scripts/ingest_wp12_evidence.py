@@ -13,6 +13,10 @@ from scripts.summarize_unified_cohort import read_pinned
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if "--frozen-stages" in argv:
+        from evaluation.frozen_stage_cli import publish_cli
+
+        return publish_cli(argv)
     if "--native-real" in argv:
         native_real(argv)
         return

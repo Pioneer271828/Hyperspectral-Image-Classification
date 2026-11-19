@@ -219,9 +219,11 @@ def main(argv=None, *, intake=None):
     parser.add_argument("--mode", choices=("synthetic", "preflight", "real-stage", "coverage-register",
                                             "coverage-run", "coverage-replay", "coverage-reload",
                                             "coverage-audit","coverage-release-review","coverage-release-history",
-                                            "coverage-release-demo"), required=True)
+                                            "coverage-release-demo", "frozen-stage-register",
+                                            "frozen-stage-run"), required=True)
     parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--authority", nargs=2, metavar=("PATH","SHA256"))
+    parser.add_argument("--frozen-plan", nargs=2, metavar=("PATH", "SHA256"))
     parser.add_argument("--from-device")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--archive", nargs=2, action="append", default=[], metavar=("PATH", "SHA256"))
@@ -240,6 +242,17 @@ def main(argv=None, *, intake=None):
     out = external_directory(args.out)
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
+    if args.mode.startswith("frozen-stage-"):
+        from evaluation.frozen_stage_cli import replay_cli
+
+        if (args.case or args.phase or args.preflight or args.release or args.archive or args.authority
+                or args.from_device or args.workers != 1 or args.paviau_publication or args.paviau_engineering
+                or (args.mode == "frozen-stage-register") != bool(args.manifest)):
+            parser.error("Frozen stages accept a development release to register or a frozen plan to replay")
+        torch.set_num_threads(1)
+        return replay_cli(argv, code, root, out, args.gpu, args.manifest, plan_pin=args.frozen_plan)
+    if args.frozen_plan:
+        parser.error("A frozen plan applies only to frozen-stage replay")
     real = args.mode == "real-stage"
     if real != bool(args.preflight and args.case and args.phase) or (not real and (args.release or args.preflight or args.phase)):
         raise ValueError("A real stage requires its own explicit preflight, case and phase")
