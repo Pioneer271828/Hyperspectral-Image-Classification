@@ -36,6 +36,25 @@ python -B scripts/check_wp12_paired_heads.py capture --runs "$RUNS" --program "$
 python -B scripts/check_wp12_paired_heads.py real-preflight --runs "$RUNS" --out "$RESULTS/real-preflight.json" --expected-commit "$CONSUMER" --request "$REQUEST" "$REQUEST_SHA256" --approval "$APPROVAL" "$APPROVAL_SHA256"
 ```
 
+## 外部发布与优化授权
+
+持有人发布独立 Bank、三项角色的块清单、历史 Bank 和各用途的权限。运行申请 `wp05_wp06_external_paired_campaign_v1` 使用 `external_real_execution`，以字母数字键索引 `releases`。每条登记 `kind`、`k`、`support_seed`、`spatial_repeat`、`manifest`、`authority`、`source`、`model_seeds`、`initialization` 与 `device`。`source` 的两个字段分别是原已接受检查点的 `checkpoint` 和模型状态 `state` 的 SHA-256。`device` 是整张物理卡的 UUID。支持点来自 K1/5/10 的真实发布频数，支持种子可取 64/512/2048。同场景、同 K、同支持种子的空间重复须保持实际父块缓冲。支持和校准的来源也与既有开发历史隔离。
+
+审批方单独给出 `wp05_wp06_external_paired_execution_authority_v1`，包括 `decision="approved"`、同 `scope`、申请文件路径及 SHA-256 的 `request`、完整 `producer`、`source_hash`、绝对 `destination`、整个登记的 `updates`，以及 `raw_gt_authorized=false` 与 `query_authorized=false`。正式外部执行每臂沿用 128 步。原始线性头走 `inherit_head` 且只登记一个模型种子。`seeded_head` 可登记三个种子，每个种子只重新初始化既有融合头，并在配对两臂共享该初态。外部格式工程样本的权限使用独立测试 schema 和 `--test-publication`，正式入口只读取外部提供的授权。
+
+登记通过后使用实际发布键、种子和臂名启动。收到正常终止信号或到达 `--drain-after` 的游标时先落盘。相同身份和设备再入会续跑，完成时再入返回零更新。两景所有登记臂到达预算后，才可发布选中权重并独立消费。分类权限和只读成本权限各自使用独立回执；成本前向从观测接口取得输入。
+
+```bash
+python -B scripts/run_native_released_points.py --mode external-paired-register --runs "$RUNS" --out "$PROGRAM" --expected-commit "$PRODUCER" --manifest "$REQUEST" "$REQUEST_SHA256" --authority "$APPROVAL" "$APPROVAL_SHA256"
+CUDA_VISIBLE_DEVICES="$GPU_UUID" CUBLAS_WORKSPACE_CONFIG=:4096:8 python -B scripts/run_native_released_points.py --mode external-paired-run --runs "$RUNS" --out "$PROGRAM" --expected-commit "$PRODUCER" --case "$RELEASE" --model-seed "$MODEL_SEED" --head-arm "$ARM" --gpu "$GPU_UUID"
+python -B scripts/check_wp12_external_paired.py publish --runs "$RUNS" --program "$PROGRAM" --expected-commit "$PRODUCER"
+python -B scripts/check_wp12_external_paired.py capture --runs "$RUNS" --program "$PROGRAM" --out "$CAPTURE" --expected-commit "$PRODUCER"
+python -B scripts/check_wp12_external_paired.py review --runs "$RUNS" --program "$PROGRAM" --out "$REVIEW" --expected-commit "$PRODUCER" --capture "$CAPTURE" "$CAPTURE_SHA256"
+python -B scripts/ingest_wp12_evidence.py --external-paired-history --runs "$RUNS" --out "$WP12_INDEX" --expected-commit "$CONSUMER" --external-review "$REVIEW" "$REVIEW_SHA256"
+```
+
+历史索引固定同点发布和权重，仅按同一历史协议复算得失。洪湖 120 步的已审核混淆边际可比较正确数差，逐点得失留空。全景 Issue 184 和两景外部独立结果保留各自的证据身份。
+
 ## 只接收保留观测的交付序回退
 
 `bind_retained_ordinal` 可直接使用带已核身份的保留观测，及来自同一发布的 `DeliveredAxis`。它保留相同的像素、坐标、统计和波段 ID，仅用实际保留列在交付轴上的秩生成 `normalized/index_only` 坐标。没有可信交付序时沿用旧缺轴回退。有声明轴的已存档状态和旧前向保持逐位身份。若已知物理表不可信，应在料源准入中标为缺失。本候选不从输入自动鉴别失配，也不发明实测中心、幅宽或被删列。

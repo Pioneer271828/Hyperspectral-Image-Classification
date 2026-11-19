@@ -223,7 +223,7 @@ def index(root):
     cursors = {step:{head:focus_from_confusion(row["confusion"],(15,21)) for head,row in heads.items()}
                for step,heads in hh["observations"].items()}
     full_scene, hardware = (json_pin(root,proof(root,item)) for item in ("old_combined","independent"))
-    require(len(full_scene["combined"])==hardware["case_count"]==54 and hardware["new_query_reads"]==0
+    require(len(full_scene["combined"]["rows"])==hardware["case_count"]==54 and hardware["new_query_reads"]==0
             and full_scene["preregistered_benefit_conclusion"]==hardware["preregistered_benefit_conclusion"],
             "Foreign full-scene WP12 evidence")
     return dict(schema=SCHEMA,pins=links,
