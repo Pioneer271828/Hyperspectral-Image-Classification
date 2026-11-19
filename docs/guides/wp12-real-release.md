@@ -21,6 +21,12 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 
 旧版 `scripts/ingest_wp12_evidence.py --registration …` 保留。冻结 54 原采集、资源门槛和恢复接口分别见 `scripts/run_wp12_cost_campaign.py` 与 `scripts/measure_wp12_historical_cost.py`。该真实登记已完结。当前汇总只读取已授权历史分类统计、成本与冻结开发诊断，真实模型、原始真值和 query 输入均不执行。
 
+## 两景冻结开发误差归因
+
+从已授权的训练与开发角色读取既有冻结权重。在干净 checkout 用原研究入口 `scripts/run_wp12_retained_evidence.py --real-attribution`，按 `--group honghu_short|honghu_120|xuzhou` 产出逐案例回执。可用 `--shard INDEX COUNT` 分配同一批固定案例。已经落盘的同提交回执可直接复用。洪湖实际误判类的固定对照用 `--group honghu_120 --locked-honghu-rival`，只读取审核内同一 K5 从头训练五臂的选中权重。
+
+用原 WP12 ingest 的 `--real-attribution-review` 读取三个 `--source-shard GROUP DIRECTORY SHA`、`--floor FILE SHA` 及 `--locked-rivals FILE SHA`，各文件来自同一授权 runs 根。消费者独立重算三头误差、固定类别差、角色分母、已有梯度活动和保留位置对照。按发布权限输出描述性精度、保护可评性和正式合格状态。持有人按[最小发布示例](independent-attribution-package.md)提交相容的带表、类表和实际角色清单。
+
 ## 审核外部已批准的独立开发清单
 
 发布方先提供封存的 `BankRelease` 和相应 Bank 字节。提交两个已分别固定 SHA 的 JSON 文档。输出只记录摘要、角色/类别计数和每种用途的准入。

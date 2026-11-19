@@ -45,7 +45,7 @@ def historical(root):
     return out,history["historical_index"]
 
 
-def check_sources(xz, hh):
+def check_sources(root,xz,hh):
     source = json.loads(SOURCES.read_text(encoding="utf-8"))
     scenes = source["scenes"]
     require(set(scenes)=={"xuzhou","whu-honghu"},"Source inspection omitted a registered scene")
@@ -67,7 +67,20 @@ def check_sources(xz, hh):
     expected = scenes["whu-honghu"]["publisher_table_spot_checks"]
     require(list(honghu)==list(range(1,23)) and all(honghu[int(key)]==value for key,value in expected.items())
             and list(assignments["XUZHOU_CLASS_NAMES"])==list(range(1,10)), "Local named compatibility inventory differs")
+    from scripts.run_frozen_band_region import PINS
+
+    path,sha = PINS["hh_scope"]
+    receipt = json_pin(root,dict(path=str(root/path),sha256=sha))
+    conditions = {key:receipt["conditions"][key]["sampling"] for key in ("full","training_stride")}
+    full = conditions["full"]["selected_positions"]
+    stride = conditions["training_stride"]["selected_positions"]
+    require(full==list(range(270)) and stride==full[::2] and
+            all(len(entry["selected_band_ids"])==len(entry["selected_positions"]) for entry in conditions.values()),
+            "Archived HongHu original columns differ from the accepted role views")
+    actual_axis = {key:dict(columns=entry["selected_positions"],band_ids=entry["selected_band_ids"],
+                            metadata=entry["selected_metadata_hash"]) for key,entry in conditions.items()}
     return dict(reference_sha256=file_pin(SOURCES)["sha256"],inventory=source,
+                actual_honghu_delivered_columns=actual_axis,
                 local_reporting_aliases=assignments,
                 local_class_status="verified_numeric_order_within_each_approved_model_and_role",
                 cross_release_compatible=False,physical_claim="original_delivered_column_ids_only")
@@ -270,5 +283,5 @@ def review(root, out, code, directories, producers, floor_pin, rival_pin):
         recorded_gradient_exposure=dict(xuzhou=gradients.xuzhou(root),
              honghu_short=gradients.honghu(root,cases["honghu_short"],True),
              honghu_120=gradients.honghu(root,cases["honghu_120"],False)),
-        provenance=check_sources(xz,cases["honghu_short"]+cases["honghu_120"]),formal_class_floor=floor_pin,
+        provenance=check_sources(root,xz,cases["honghu_short"]+cases["honghu_120"]),formal_class_floor=floor_pin,
         independent_real_accuracy=None,raw_gt_loaded=False,query_accessed=False,optimizer_updates=0,wp04=False))
