@@ -16,11 +16,27 @@ def main():
     parser.add_argument("--out", required=True, type=Path)
     kinds = ("crash", "learning", "bn", "region")
     for key in (*kinds, "authorities"):
-        parser.add_argument("--" + key, required=True, nargs=2)
+        parser.add_argument("--" + key, nargs=2)
     extension = ("calibration", "legacy-region")
     for key in extension:
         parser.add_argument("--" + key, nargs=2)
+    parser.add_argument("--band-graph", nargs=2, metavar=("DIRECTORY", "REGISTRATION_SHA256"))
     args = parser.parse_args()
+    if args.band_graph:
+        if any(getattr(args, key.replace("-", "_")) for key in (*kinds, "authorities", *extension)):
+            parser.error("Band-graph registration cannot be mixed with legacy receipts")
+        from evaluation.wp12_band_graph import publish
+        code = code_snapshot()
+        require_frozen_code(code)
+        root = args.runs.resolve(strict=True)
+        folder = Path(args.band_graph[0]).resolve(strict=True)
+        out = external_directory(args.out)
+        evidence.require(code["commit"] == args.expected_commit and root in out.parents and root in folder.parents,
+                         "Band-graph evidence must stay within the authorized run directory")
+        print(publish(folder,out,code,args.band_graph[1]),flush=True)
+        return
+    if any(getattr(args,key) is None for key in (*kinds,"authorities")):
+        parser.error("Legacy WP12 requires --crash, --learning, --bn, --region and --authorities")
     if any(getattr(args, key.replace("-", "_")) for key in extension):
         if not all(getattr(args, key.replace("-", "_")) for key in extension):
             parser.error("Real calibration and legacy region receipts must both be pinned")

@@ -1,6 +1,7 @@
 """Preregistered native-grid training, exact continuation and endpoint replay."""
 
 from copy import deepcopy
+from contextlib import nullcontext
 from itertools import product
 import io
 import random
@@ -123,7 +124,8 @@ class Run:
             from transfer.native_released_real import RealReleasedRun
             if released is not native_released_training and type(released) is not RealReleasedRun:
                 from transfer.spatial_coverage_training import SpatialReleasedFixture
-                if type(released) is not SpatialReleasedFixture or not released.is_synthetic:
+                from transfer.band_graph_fixture import BandGraphFixture
+                if type(released) not in (SpatialReleasedFixture, BandGraphFixture) or not released.is_synthetic:
                     raise ValueError("Unknown released supervision provider")
         self._capacity = None
         self._region_action = None
@@ -199,10 +201,12 @@ class Run:
         timed = {}
         kwargs = dict(condition=condition, timed=timed, execution=self.execution,
                       graph_scale=self._contract.get("registered_graph_scale"))
+        if hasattr(self._released, "graph_override"):
+            kwargs["graph_override"] = self._released.graph_override(actual)
+        graph_context = nullcontext()
         if self._region_action is not None and self._contract["region_operation"] == "zero":
-            with self._region_action.region_action(self.model.backbone, self._region_action.RegionAction("zero")):
-                out, graph = forward(self.model, actual, self.producer, role, **kwargs)
-        else:
+            graph_context = self._region_action.region_action(self.model.backbone, self._region_action.RegionAction("zero"))
+        with graph_context:
             out, graph = forward(self.model, actual, self.producer, role, **kwargs)
         self.timing["forward_seconds"] += timed["forward_seconds"]
         self.timing["graph_seconds"] += sum(timed["graph_seconds"])

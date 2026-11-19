@@ -138,10 +138,10 @@ class NativeSupportModel(MultiDatasetVCASAHGCN):
 
 
 @contextmanager
-def _measure(module, attribute, timing, name, observer=None):
+def _measure(module, attribute, timing, name, observer=None, *, operation=None):
     if attribute in vars(module):
         raise ValueError("Module timing already bound")
-    original = getattr(module, attribute)
+    original = getattr(module, attribute) if operation is None else operation
 
     def wrapped(*args, **kwargs):
         result = _elapsed(timing, name, original, *args, **kwargs)

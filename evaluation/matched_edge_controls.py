@@ -16,7 +16,37 @@ from model.research_config import digest
 from research_runtime import tensor_hash
 
 
-def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=30.):
+def _reciprocal(ids, n):
+    edges = set(ids)
+    return all((e % n) * n + e // n in edges for e in edges)
+
+
+def _baseline(adjacency, *, per_row, seeds, symmetric):
+    base = deletion_masks(adjacency,per_row=per_row,random_seeds=seeds,tile_id=0)
+    if not symmetric:
+        return base
+    ix, weights, _ = _matrix(adjacency,"A")
+    n = adjacency.shape[0]
+    key = (ix[0]*n+ix[1]).tolist()
+    if not _reciprocal(key,n):
+        raise ValueError("Reciprocal matching requires an undirected support")
+    lookup = dict(zip(key,weights.tolist(),strict=True))
+    pairs = [(int(i),int(j)) for i,j in zip(*ix,strict=True) if i < j]
+    pairs.sort(key=lambda p: (-(lookup[p[0]*n+p[1]]+lookup[p[1]*n+p[0]]),*p))
+    remaining = [per_row]*n
+    chosen = []
+    for i,j in pairs:
+        if remaining[i] and remaining[j]:
+            chosen.extend((i*n+j,j*n+i))
+            remaining[i]-=1
+            remaining[j]-=1
+    base["removed"]["important"] = sorted(chosen)
+    chosen_degree = np.bincount([e//n for e in chosen],minlength=n)
+    base["degenerate_rows"] = [i for i,d in enumerate(chosen_degree) if d in (0,base["available_per_row"][i])]
+    return base
+
+
+def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=30., symmetric=False):
     started=time.perf_counter(); before=tensor_hash(adjacency)
     ix, weights, _=_matrix(adjacency,'A'); n=adjacency.shape[0]
     if n>2048 or adjacency._nnz()>65536: raise ValueError('Bounded local graph required')
@@ -29,7 +59,8 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
         raise ValueError('Increasing finite positive distance boundaries required')
     if type(time_limit) not in (int,float) or not math.isfinite(time_limit) or not 0<time_limit<=60:
         raise ValueError('Explicit bounded solver time required')
-    base=deletion_masks(adjacency,per_row=per_row,random_seeds=seeds,tile_id=0)
+    if type(symmetric) is not bool: raise ValueError('Explicit reciprocal control flag required')
+    base=_baseline(adjacency,per_row=per_row,seeds=seeds,symmetric=symmetric)
     nonself=ix[0]!=ix[1]; edges=ix[:,nonself]; weight=weights[nonself].astype(np.float64)
     ids=(edges[0]*n+edges[1]).tolist(); m=len(ids)
     xy=coordinates.detach().double().numpy().copy(); coordhash=tensor_hash(coordinates)
@@ -50,6 +81,16 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
             continue
         # Same cardinality plus overlap <= k-1 excludes the identical baseline.
         constraints=[LinearConstraint(matrix,counts,counts),LinearConstraint(target.reshape(1,-1),-np.inf,k-1)]
+        if symmetric:
+            locations = {edge:i for i,edge in enumerate(ids)}
+            reciprocal = [(i,locations[(edge%n)*n+edge//n]) for i,edge in enumerate(ids) if edge//n < edge%n]
+            if reciprocal:
+                first,second = zip(*reciprocal,strict=True)
+                row = np.arange(len(first))
+                columns = np.asarray((*first,*second))
+                equations = csc_matrix((np.r_[np.ones(len(row)), -np.ones(len(row))],
+                                        (np.r_[row,row],columns)),shape=(len(row),m))
+                constraints.append(LinearConstraint(equations,0,0))
         result=milp(cost,integrality=np.ones(m),bounds=Bounds(0,1),constraints=constraints,
                     options={'time_limit':float(time_limit),'mip_rel_gap':0.})
         if result.status==2:
@@ -74,6 +115,7 @@ def freeze(adjacency, coordinates, *, per_row, distance_bins, seeds, time_limit=
         'controls':controls,'solver':'scipy.optimize.milp/HiGHS','scipy_version':scipy.__version__,
         'elapsed_seconds':time.perf_counter()-started,'input_unchanged':True,'optimizer_updates':0,'query':0,
         'limits':'Exact deleted row/column degree and global distance-bin counts only; distances, weight mass and connectivity may differ. Random objective is not uniform sampling.'}
+    if symmetric: value['symmetric']=True
     value['plan_hash']=digest(value)
     return value
 
@@ -87,11 +129,13 @@ def verify(value, adjacency, coordinates, *, expected_hash):
     ix,weights,_=_matrix(adjacency,'A'); n=adjacency.shape[0]; ids=(ix[0]*n+ix[1]).tolist()
     if n!=value['node_count']: raise ValueError('Node count differs')
     xy=coordinates.detach().double().numpy()
-    base=deletion_masks(adjacency,per_row=value['per_row'],random_seeds=value['seeds'],tile_id=0)
+    symmetric=value.get('symmetric',False)
+    base=_baseline(adjacency,per_row=value['per_row'],seeds=value['seeds'],symmetric=symmetric)
     if base['removed']['important']!=value['baseline']['removed']: raise ValueError('Baseline differs')
     def counts(removed):
         if removed!=sorted(set(removed)) or not set(removed)<=set(ids) or any(e//n==e%n for e in removed):
             raise ValueError('Invalid nonself deletion')
+        if symmetric and not _reciprocal(removed,n): raise ValueError('Reciprocal deletion must remove both directions')
         rows=np.array([e//n for e in removed],dtype=int); cols=np.array([e%n for e in removed],dtype=int)
         lengths=np.linalg.norm(xy[rows]-xy[cols],axis=1)
         bins=np.searchsorted(value['distance_bins'],lengths,side='right')

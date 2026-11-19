@@ -168,7 +168,7 @@ def from_bank(bank, role, tile, band_spec, factor, producer, *, edge=EDGE_POLICY
     return _materialize(scene.dataset,scene.classes,view,lattice,context,role,producer), row
 
 
-def forward(model, actual, producer, role, *, condition=None, timed=None, execution=None, graph_scale=None):
+def forward(model, actual, producer, role, *, condition=None, timed=None, execution=None, graph_scale=None, graph_override=None):
     receipt = actual.verify(producer, role)
     if condition is not None:
         condition.validate(actual, receipt)
@@ -202,7 +202,9 @@ def forward(model, actual, producer, role, *, condition=None, timed=None, execut
     partition = forward_partition if execution is None else execution.partition
     capture = (lambda state: graphs.append(dict(**_graph_trace(state), q_shape=list(state.Q.shape)))
                if execution is None else graphs.append(state))
-    measured = (_measure(builder,"build_graph",timing,"graph_seconds",capture) if execution is None
+    if graph_override is not None and execution is not None:
+        raise ValueError("Fixed graph and alternate arithmetic must be registered separately")
+    measured = (_measure(builder,"build_graph",timing,"graph_seconds",capture, operation=graph_override) if execution is None
                 else execution.measure_graph(builder,timing,capture))
     with measured:
         if isinstance(model, ConditionalMultiscaleVCASAHGCN):

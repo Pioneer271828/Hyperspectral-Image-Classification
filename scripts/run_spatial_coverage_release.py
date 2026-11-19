@@ -240,7 +240,7 @@ def run(root, folder, code, select):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=("prepare","inspect","run","synthetic","wp12","start-real"))
+    parser.add_argument("phase", choices=("prepare","inspect","run","synthetic","wp12","start-real","band-graph"))
     parser.add_argument("--root",type=Path,required=True)
     parser.add_argument("--directory",type=Path,required=True)
     parser.add_argument("--expected-commit",required=True)
@@ -251,6 +251,11 @@ def main():
     check(code["commit"] == args.expected_commit, "Unexpected spatial checkout")
     root,out = external_directory(args.root),external_directory(args.directory)
     check(out.is_relative_to(root) and out != root, "Spatial output must stay inside authorized runs")
+    if args.phase == "band-graph":
+        from transfer.band_graph_campaign import run as run_band_graph
+        out.mkdir(exist_ok=True)
+        run_band_graph(out,code,args.scene)
+        return
     if args.phase == "start-real":
         raise ValueError("Real optimization requires a separately authorized execution release")
     if args.phase == "synthetic":
