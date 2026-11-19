@@ -143,16 +143,19 @@ def honghu_120(root):
     require(parent["committed_optimizer_updates"]==1200
             and all(item["optimizer_updates"]==120 for item in parent["cases"]),
             "Authorized long review no longer covers ten completed 120-step cases")
-    identities = {item["paired"]["state"]:item for item in parent["cases"]}
+    fields = ("support_seed","k","method","model_seed","arm")
+    identities = {tuple(item["case"][field] for field in fields):item for item in parent["cases"]}
     groups = defaultdict(dict)
     for row in rows:
-        item = identities[row["model"]]
+        item = identities[(row["support"],row["k"],row["method"],row["seed"],row["arm"])]
+        require(item["paired"]["state"]==row["model"],"Long reviewed model differs from its intake")
         cfg = item["case"]
         require(item["populations"]["val"]["sha256"] and item["populations"]["train"]["sha256"],
                 "Long reviewed case lost its frozen train/validation population identity")
         key = f's{row["support"]}-k{row["k"]}-{row["method"]}-m{row["seed"]}'
         groups[key][row["arm"]] = dict(case=cfg["id"],support_seed=row["support"],k=row["k"],method=row["method"],
-            model_seed=row["seed"],model_state=row["model"],selected=item["paired"]["selected_step"],
+            model_seed=row["seed"],model_state=row["model"]["model"],selected_state=row["model"]["best"],
+            selected=item["paired"]["selected_step"],
             support=item["populations"]["train"]["sha256"],validation=item["populations"]["val"]["sha256"],
             roles=row["role"],device=row["device"],heads={head:dict(total=sum(map(sum,value["confusion_matrix"])),
                   oa=value["oa"],aa=value["aa"],focus=focus_from_confusion(value["confusion_matrix"],(15,21)))
