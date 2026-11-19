@@ -1,5 +1,7 @@
 """Externally released paired heads through the native optimizer and append-only worker."""
 
+from collections import defaultdict
+from itertools import combinations
 from time import perf_counter
 
 import torch
@@ -12,6 +14,7 @@ from scripts import run_frozen_band_region as archive
 from scripts.run_frozen_band_region import _write
 from scripts.run_wp12_retained_evidence import RELEASE, pin
 from transfer import native_independent_release as independent, native_long_run as journal
+from transfer.development_bank import _gap
 from transfer.g3_training import state_hash
 from transfer.native_coverage_queue import case_lock
 from transfer.native_paired_head import ARMS, BUDGET, PairedHeadProvider, freeze_for_head
@@ -97,6 +100,8 @@ def open_request_bank(root,out,row,*,test):
             and bank.release.custody.get("spatial_repeat")==row["spatial_repeat"]
             and supports["per_class"]==[row["k"]]*bank.release.classes
             and all(n>0 for n in calibration["per_class"])
+            and not any(report[field] for report in (supports,calibration) for field in
+                        ("shared_historical_parents","shared_historical_samples","historical_buffer_conflicts"))
             and "support/calibration" not in result["role_buffer_conflicts"],
             "External K coverage, spatial repeat, support/calibration population or buffer differs")
     return bank,result,roles
@@ -119,6 +124,7 @@ def eligible(row,*,test):
 def register(root,out,code,request_pin,approval_pin,*,test):
     req,approved=read_admission(root,out,code,request_pin,approval_pin,test=test)
     releases={}
+    repeats=defaultdict(list)
     for key,row in req["releases"].items():
         require(key.isascii() and key.isalnum(),"Use stable alphanumeric publication keys")
         eligible(row,test=test)
@@ -127,13 +133,21 @@ def register(root,out,code,request_pin,approval_pin,*,test):
         require(source.heads[bank.release.scene].in_features==64
                 and source.heads[bank.release.scene].out_features==bank.release.classes,
                 "Source head and external class order differ")
-        releases[key]=dict(request=row,bank=bank.pin,roles=digest(roles),band_axis=bank.release.bands.fingerprint,
-                           intake=report,metadata_only_reads=bank.reads)
+        boxes={role:[bank.role_row(internal,tile)["parent_box"] for tile in roles[role]]
+               for role,internal in independent.ROLES.items()}
+        repeats[(row["kind"],row["k"],row["support_seed"])].append((boxes,report["minimum_buffer"]))
+        releases[key]=dict(request=row,bank=bank.pin,roles=digest(roles),geometry=digest(boxes),
+                           band_axis=bank.release.bands.fingerprint,intake=report,metadata_only_reads=bank.reads)
         require(bank.reads==0,"Registration opened retained perception data")
     require(len({row["bank"]["sha256"] for row in releases.values()})==len(releases)
             and len({(r["kind"],r["k"],r["support_seed"],r["spatial_repeat"])
                   for r in req["releases"].values()})==len(releases),
             "Duplicated Bank or spatial protocol is not independent support evidence")
+    for roster in repeats.values():
+        for (left,left_gap),(right,right_gap) in combinations(roster,2):
+            require(all(_gap(a,b)>=max(left_gap,right_gap)
+                        for origin in left.values() for target in right.values() for a in origin for b in target),
+                    "A named spatial repeat overlaps a released parent geometry")
     doc=dict(schema=SCHEMA,scope=req["scope"],producer=code["commit"],source_hash=code["source_hash"],
         request=request_pin,approval=approval_pin,approved_updates=approved["updates"],releases=releases,
         query_accessed=False,raw_gt_loaded=False)
@@ -170,7 +184,10 @@ class ExternalPairedProvider(PairedHeadProvider):
         kind=request["kind"]
         require(seed in request["model_seeds"] and arm in ARMS[kind],"Unknown paired external seed or arm")
         bank,report,roles=open_request_bank(root,out,request,test=test)
+        boxes={role:[bank.role_row(internal,tile)["parent_box"] for tile in roles[role]]
+               for role,internal in independent.ROLES.items()}
         require(bank.pin==record["bank"] and report==record["intake"] and digest(roles)==record["roles"]
+                and digest(boxes)==record["geometry"]
                 and bank.release.bands.fingerprint==record["band_axis"],"External role, order or Bank receipt differs")
         ProductionProvider.__init__(self,root,bank,roles,axis=bank.release.bands.band_ids,config=Switches(),
                      source=request["source"],seed=seed,budget=TEST_STEPS if test else BUDGET[kind],

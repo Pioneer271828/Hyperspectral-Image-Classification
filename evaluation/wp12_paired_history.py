@@ -3,7 +3,7 @@
 from collections import defaultdict
 from pathlib import Path
 
-from evaluation.frozen_training_stages import HEADS, file_pin, json_pin, pinned, require
+from evaluation.frozen_training_stages import HEADS, json_pin, pinned, require
 from evaluation.wp12_paired_head_review import pair_scores
 from evaluation.wp12_release_results import P4_REVIEW, csv_rows, p4_partial, proof
 from model.research_config import digest
@@ -84,7 +84,9 @@ def frozen_views(root, links):
                 require(digest(truth)==population,"Diagnostic heads disagree on released point order")
                 seen = pair_scores(truth,old,new,width,scene,head_kind=head,guard_population=20)
                 parent = rec["baseline"][target][head]
-                require(all(all(value[field]==parent[cls][field] for field in ("n","before","after","gains","losses"))
+                require(all((value["n"],value["before"],value["after"],value["losses"])==
+                            tuple(parent[cls][field] for field in ("n","full_correct","after","new_errors_from_full"))
+                            and value["n"]-value["before"]==parent[cls]["already_wrong_in_full"]
                             for cls,value in seen["transitions"].items()),
                         "Frozen point counts differ from the accepted parent's exact split")
                 metrics[target][head] = dict(

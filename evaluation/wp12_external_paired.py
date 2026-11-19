@@ -118,6 +118,8 @@ def capture(root,out,output,code,execution,*,test,release=None):
                     times = []
                     for rep in range(3):
                         execution.sync()
+                        if execution.device.type=="cuda":
+                            torch.cuda.reset_peak_memory_stats(execution.device)
                         start = perf_counter()
                         actual,labels,targets = p.consume(tile,band,use="cost")
                         require(labels is targets is None,"Cost reached the classification target interface")
@@ -128,7 +130,9 @@ def capture(root,out,output,code,execution,*,test,release=None):
                         end = perf_counter()
                         if rep:
                             times.append(dict(total=end-start, materialize=materialized-start,
-                                              forward=end-materialized, graph=sum(details["graph_seconds"])))
+                                              forward=end-materialized, graph=sum(details["graph_seconds"]),
+                                              cuda_peak_bytes=(torch.cuda.max_memory_allocated(execution.device)
+                                                               if execution.device.type=="cuda" else None)))
                     cost = dict(times=times,projection=projection,graph=graph,label_blind=True,
                                 observation=actual.receipt["observation"],bands=actual.receipt["source"]["band_ids"])
                 rows.append(dict(tile=tile,band=band,accuracy=accuracy,cost=cost))
@@ -169,6 +173,8 @@ def review(root,raw,output,code):
             old,new = (capture_doc["arms"][name] for name in names)
             require(all(capture_doc["arms"][name]["selected"]==marker["members"][name] for name in names)
                     and old["uses"]==entry["intake"]["uses"]
+                    and old["source"]==req["source"] and old["key"]==new["key"]==key
+                    and old["seed"]==new["seed"]==seed
                     and all(old[field]==new[field] for field in ("source","frozen","head","schedule","uses","classes",
                             "dimension","trainable_parameters","train_device")) and old["dimension"]==64
                     and old["trainable_parameters"]==65*old["classes"],"Independent paired identity differs")
@@ -204,6 +210,13 @@ def review(root,raw,output,code):
                         require(cost_a["observation"]==cost_b["observation"] and cost_a["bands"]==cost_b["bands"],
                                 "Cost arms have different original observations")
                         costs.setdefault(band,[]).append(dict(tile=x["tile"],before=cost_a["times"],after=cost_b["times"]))
+                if band in costs:
+                    statistics = {}
+                    for arm in ("before","after"):
+                        samples = [timing["total"] for row in costs[band] for timing in row[arm]]
+                        statistics[arm] = dict(p50_seconds=float(np.quantile(samples,.5)),
+                                               p95_seconds=float(np.quantile(samples,.95)))
+                    costs[band] = dict(blocks=costs[band],end_to_end=statistics)
                 if truth:
                     threshold = 20 if plan["scope"]==paired.REAL else 5
                     require([truth.count(c) for c in range(1,old["classes"]+1)]==
@@ -221,7 +234,8 @@ def review(root,raw,output,code):
         require(len({capture_doc["arms"][f"{key}-s{x}-{paired.ARMS[req['kind']][0]}"]["frozen"]
                      for x in req["model_seeds"]})==1,"A seed altered the frozen trunk")
         results[key] = dict(scene=scene,k=req["k"],support_seed=req["support_seed"],spatial_repeat=req["spatial_repeat"],
-                            band_axis=entry["band_axis"],bank=entry["bank"],uses=entry["intake"]["uses"],
+                            band_axis=entry["band_axis"],bank=entry["bank"],geometry=entry["geometry"],
+                            uses=entry["intake"]["uses"],
                             effective_model_initializations=len(starts),assessment=assessments)
     require_frozen_code(code)
     output.parent.mkdir(parents=True,exist_ok=True)
