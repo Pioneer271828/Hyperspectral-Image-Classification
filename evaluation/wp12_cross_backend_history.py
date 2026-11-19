@@ -389,10 +389,40 @@ def pavia_replay_pairs(root, receipt, audit, audit_pin, code, kind):
                 interpretation="CPU same-weight point transitions; checked against each original GPU confusion matrix")
 
 
+def archive_alias_rosters(doc, focus):
+    """Verify the old writer's bank order and its block-local, noncontiguous aliases."""
+    groups = {}
+    for row in doc["rows"]:
+        event = row["event"]
+        key = (event["factor"],event["band"],event["policy"])
+        blocks = groups.setdefault(key,[])
+        tile = row["tile"]
+        points,labels = row["points"],row["labels"]
+        evidence = row["evidence"]
+        released = evidence["released"]
+        # The original writer records offset*100 + within-block focus ordinal.
+        require(type(tile) is int and tile==len(blocks) and 0<len(labels)<100
+                and len(points)==len(labels) and all(type(i) is int for i in points)
+                and points==list(range(100*tile,100*tile+len(labels)))
+                and all(type(label) is int and label in focus for label in labels),
+                "Historical release has a duplicate, misplaced or reordered point alias")
+        require(evidence["role"]=="devval" and evidence["bank"]==doc["preflight_population"]
+                and all(isinstance(released[k],str) and len(released[k])==64 for k in ("point_set","source")),
+                "Historical alias disagrees with the approved evaluation Bank")
+        blocks.append((released["point_set"],released["source"],points,labels))
+    anchor = groups[(1,"full","native")]
+    require(len({r[0] for r in anchor})==len(anchor)
+            and [y for _,_,_,labels in anchor for y in labels]==doc["labels"]
+            and all(rows==anchor for rows in groups.values()),
+            "Historical frame changed the released block identity or ordered points")
+    return groups
+
+
 def existing_scale_views(doc, *, scene, classes, focus):
     require(doc["scene"] == scene and doc["role"] == "devval" and doc["real_updates"] == 0
             and doc["query_accessed"] is doc["raw_gt_loaded"] is False,
             "Stored band comparison escapes its authorized development scope")
+    archive_alias_rosters(doc,focus)
     groups = {}
     for row in doc["rows"]:
         event = row["event"]

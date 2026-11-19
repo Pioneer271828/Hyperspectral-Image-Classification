@@ -17,6 +17,10 @@ def main(argv=None):
         from evaluation.wp12_positive_cli import main as positive_control
 
         return positive_control(argv)
+    if "--paired-structure-review" in argv:
+        from scripts.run_wp_paired_structure import main as paired_structure
+
+        return paired_structure(["review",*(arg for arg in argv if arg!="--paired-structure-review")])
     if "--cross-backend-review" in argv:
         return cross_backend_review(argv)
     if "--native-pathways-review" in argv:

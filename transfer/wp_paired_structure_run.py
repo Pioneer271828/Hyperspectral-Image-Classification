@@ -58,7 +58,7 @@ def receipt(root, place, group, arm, plan_pin, spec, rows):
         device=spec["numeric"],exposure=dict(exposed),class_exposure=[
             sum(event["released"]["per_class"][i] for event in saved["history"]) for i in range(spec["classes"])],
         weights_changed=len(changed),groups=grouped,parameters=spec["initialization"]["parameters"],
-        timings=[{k:v for k,v in row.items() if k not in ("registration","model_state")} for row in rows])
+        timings=[{k:v for k,v in row.items() if k not in ("registration","model_state","serialization_seconds")} for row in rows])
     if done.exists():
         require(json_pin(root,file_pin(done))==body,"Completion receipt disagrees with the durable trajectory")
         return file_pin(done)
@@ -127,6 +127,7 @@ def execute(root, out, code, group, arm, execution, *, test, until=None, referen
 
 def completed(root,out,group,arm,plan_pin,g,*,reference=False):
     place = arm_dir(out,group,arm,reference=reference)
+    require((place/"receipt.json").is_file(),"A registered arm has not finished")
     done = file_pin(place/"receipt.json")
     record = json_pin(root,done)
     spec = json_pin(root,record["registration"])

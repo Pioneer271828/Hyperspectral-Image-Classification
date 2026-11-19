@@ -40,6 +40,8 @@ def pair(a,b,*,equal=False):
 
 def designs(devices):
     slots = [*devices[:3]] or ["cpu"]
+    if len(devices)==1:
+        slots.append("cpu")
     science = {}
     xz = {"off":OFF,"fixed1":FIXED,"scale":SCALES,"aligned":{"backend":"aligned"}}
     xz_pairs = [pair("off","fixed1",equal=True),pair("off","scale"),pair("off","aligned")]

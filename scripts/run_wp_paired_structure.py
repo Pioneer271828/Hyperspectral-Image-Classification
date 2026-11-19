@@ -64,7 +64,7 @@ def marker(root,out,code,*,test):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action",choices=("fixture","register","arm","group","queue","freeze","capture","review"))
+    p.add_argument("action",choices=("fixture","register","arm","group","queue","freeze","capture","review","draft"))
     p.add_argument("--runs",type=Path,required=True)
     p.add_argument("--campaign",type=Path,required=True)
     p.add_argument("--expected-commit",required=True)
@@ -81,6 +81,7 @@ def main(argv=None):
     p.add_argument("--reference",action="store_true")
     p.add_argument("--release")
     p.add_argument("--capture",nargs=3,action="append",metavar=("RELEASE","PATH","SHA256"))
+    p.add_argument("--evidence",nargs=2)
     p.add_argument("--workers",type=int,default=3)
     a = p.parse_args(argv)
     root,campaign = a.runs.resolve(strict=True),external_directory(a.campaign)
@@ -128,6 +129,12 @@ def main(argv=None):
         with arithmetic(root,a.gpu) as execution:
             value = comparison.run_case(root,publication["releases"][a.release],out,code,execution,
                                         test_history=[] if a.synthetic else None)
+    elif a.action=="draft":
+        from evaluation.wp12_paired_structure_draft import draft
+
+        require(out is not None and not out.exists() and a.evidence,
+                "Provide a fresh draft path and the engineering acceptance receipt")
+        value = draft(root,out,code,pin(a.evidence))
     else:
         from evaluation.wp12_paired_structure import review
 
