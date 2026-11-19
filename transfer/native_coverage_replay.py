@@ -52,10 +52,11 @@ def frozen_model(root, name, bank, intake, documents):
 
 
 def representative(bank, truth):
-    for index, tile in enumerate(bank.role_rows("devval")):
+    for tile in bank.role_rows("devval"):
         points = [j for j, (_, label) in enumerate(tile["samples"]) if label in truth]
         if points:
-            return tile, index, points
+            # The archive counts only tiles with a released focus label.
+            return tile, 0, points
     raise ValueError("Approved archive has no compatible published validation tile")
 
 

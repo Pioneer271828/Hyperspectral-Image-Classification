@@ -32,7 +32,7 @@ def test_native_queue_enforces_bank_role_budget_and_graph_cache(registered, tmp_
         provider.materialize("devval", event, producer)
     with pytest.raises(ValueError):
         provider.materialize("query", event, producer)
-    with pytest.raises(ValueError, match="budget"):
+    with pytest.raises(ValueError, match="registered native exposure"):
         runner = native.Run(spec, producer, released=provider)
         runner.start()
         runner.update(dict(event, step=13))
