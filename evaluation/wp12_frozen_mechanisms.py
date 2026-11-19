@@ -13,12 +13,12 @@ import numpy as np
 
 from evaluation.frozen_band_region import HEADS, paired
 from evaluation.frozen_mechanism import (
-    _margin, apply_temperature, calibration, contrasts,
+    FULL_INFORMATION_CONTRASTS, NATIVE_CONTRASTS, _margin, apply_temperature, calibration, contrasts,
     fit_algebraic_temperature, interaction, leave_one, point_scores, validate_probabilities,
 )
 from model.research_config import digest
 from scripts.run_frozen_band_region import _read, _write, check, pin
-from scripts.run_frozen_mechanisms import LANES, _case_form, read_bundle
+from scripts.run_frozen_mechanisms import LANES, PREVIOUS_SCOPE, PREVIOUS_SUMMARY, _case_form, read_bundle
 from transfer import frozen_mechanism_plan as plan
 from transfer.development_blocks import array_hash
 
@@ -43,6 +43,10 @@ DECISION_FIELDS = ("scene", "case", "window", "head", "class_id", "denominator",
                    "graph_only_delta_recall", "feature_only_delta_recall", "joint_delta_recall",
                    "graph_only_delta_margin", "feature_only_delta_margin", "interaction_delta_margin",
                    "native_band_protection", "supported_effect")
+TRANSITION_FIELDS = ("scene", "case", "protocol", "role", "window", "contrast", "evidence", "head", "group",
+                     "point", "truth", "source_prediction", "target_prediction", "transition", "source_rank",
+                     "target_rank", "source_true_probability", "target_true_probability", "delta_true_probability",
+                     "source_fixed_foil_margin", "target_fixed_foil_margin")
 
 
 def _csv_value(value):
@@ -56,6 +60,7 @@ class Tables:
     metric: object
     classes: object
     decision: object
+    transition: object
 
     def metrics(self, identity, row):
         values = row["metrics"]
@@ -92,6 +97,34 @@ class Tables:
                 foils=_csv_value(old["foils"]), calibrated_probability=new["true_probability"] if temperature else None,
                 calibrated_truth_minus_best=new["true_minus_best"] if temperature else None,
                 calibrated_foils=_csv_value(new["foils"]) if temperature else None))
+            count += 1
+        return count
+
+    def transitions(self, identity, aliases, labels, baseline, current, *, focus, foils, groups):
+        first = point_scores(baseline, labels, foils)
+        second = point_scores(current, labels, foils)
+        count = 0
+        for alias, label, group, old, new in zip(aliases, labels, groups, first, second, strict=True):
+            if label not in focus:
+                continue
+            a, b = old["predicted"], new["predicted"]
+            if a == b:
+                change = "same_correct" if a == label else "same_wrong"
+            elif a == label:
+                change = "correct_to_error"
+            elif b == label:
+                change = "error_to_correct"
+            else:
+                change = "error_to_other_error"
+            fixed = foils.get(label, ())
+            margins = [min(readout["foils"][str(cls)]["margin"] for cls in fixed) if fixed else
+                       readout["true_minus_best"] for readout in (old, new)]
+            self.transition.writerow(dict(
+                **identity, point=alias, truth=label, group=group, source_prediction=a, target_prediction=b,
+                transition=change, source_rank=old["rank"], target_rank=new["rank"],
+                source_true_probability=old["true_probability"], target_true_probability=new["true_probability"],
+                delta_true_probability=new["true_probability"]-old["true_probability"],
+                source_fixed_foil_margin=margins[0], target_fixed_foil_margin=margins[1]))
             count += 1
         return count
 
@@ -251,11 +284,22 @@ def _native(root, scope, lane, case, meta, arrays, tables):
                                                 {k: v[random_mask] for k, v in masks.items()})
                         if row["contrast"] == "target_vs_random")
         all_metrics = possible
-    class_rows = point_rows = 0
+    class_rows = point_rows = transition_rows = 0
     for row in all_metrics:
         class_rows += tables.metrics(ident, row)
     controls = defaultdict(list)
     for window in windows:
+        pair = {"full": values["full"], **values[window["id"]]}
+        for contrast, (target, source) in {**NATIVE_CONTRASTS, **FULL_INFORMATION_CONTRASTS}.items():
+            mode = ("counterfactual_full_information" if contrast in FULL_INFORMATION_CONTRASTS
+                    else "native_performance" if contrast == "missing_vs_full" else "mechanism")
+            mask = random_mask if contrast == "target_vs_random" else np.ones(len(truth), dtype=bool)
+            for head in HEADS:
+                transition_rows += tables.transitions(
+                    dict(**ident, window=window["id"], contrast=contrast, evidence=mode, head=head),
+                    np.asarray(result["aliases"])[mask].tolist(), truth[mask].tolist(),
+                    pair[source][head][mask], pair[target][head][mask],
+                    focus=focus, foils=foils, groups=np.asarray(by_group)[mask].tolist())
         if window["seed"] is not None:
             controls[window["width"]].append(window)
     random_comparisons = 0
@@ -269,6 +313,11 @@ def _native(root, scope, lane, case, meta, arrays, tables):
                 row.update(contrast=f"window_vs_fixed_random_{control['seed']}", evidence="native_same_count_control")
                 class_rows += tables.metrics(ident, row)
                 random_comparisons += 1
+                head = row["head"]
+                transition_rows += tables.transitions(
+                    dict(**ident, window=window["id"], contrast=row["contrast"], evidence=row["evidence"], head=head),
+                    result["aliases"], truth.tolist(), series["full"][head], series[window["id"]]["clean"][head],
+                    focus=focus, foils=foils, groups=by_group)
     point_groups = {"full": {"full": values["full"]},
                     **{key: value for key, value in values.items() if key != "full"}}
     for condition, cells in point_groups.items():
@@ -288,7 +337,7 @@ def _native(root, scope, lane, case, meta, arrays, tables):
                         n=r["metrics"]["denominator"], from_cal_ece=r["before"][1]["ece10"],
                         to_cal_ece=r["after"][1]["ece10"])
                    for r in all_metrics if r["contrast"] == "missing_vs_full" and r["group"] == "all"]
-    return dict(scene=lane, case=case, n=len(truth), points=point_rows, class_rows=class_rows,
+    return dict(scene=lane, case=case, n=len(truth), points=point_rows, class_rows=class_rows, transitions=transition_rows,
                 comparisons=len(all_metrics)+random_comparisons, windows=len(windows), group_count=result["group_count"],
                 plot_values=projections, decisions=decisions, temperatures=temperatures,
                 eligible_random_n=int(random_mask.sum()), model_seed=result["model_seed"],
@@ -322,7 +371,7 @@ def _honghu(scope, lane, case, meta, arrays, tables):
     check(keys == set(arrays) and (result["forwards"] == 0) == is_short
           and (result["feature_readout"] is not None) == registry["spatial"],
           "HongHu archive or replay stages mixed incompatible training protocols")
-    shape_values, count_points, count_classes, count_comparisons, readouts = {}, 0, 0, 0, []
+    shape_values, count_points, count_classes, count_comparisons, count_transitions, readouts = {}, 0, 0, 0, 0, []
     focus = plan.FOCUS["whu-honghu"]
     foils = plan.EXPECTED_CONFUSIONS["whu-honghu"]
     exposed = dict(scene="whu-honghu", case=case, protocol=registry["protocol"])
@@ -348,8 +397,8 @@ def _honghu(scope, lane, case, meta, arrays, tables):
                 confusions=dict(sorted({pred: sum(x["predicted"] == pred for x in rows)
                                         for pred in {x["predicted"] for x in rows}}.items()))))
 
-    def compare(condition, name, a, b, labels, role, group="all"):
-        nonlocal count_classes, count_comparisons
+    def compare(condition, name, a, b, labels, role, aliases, group="all", point_groups=None):
+        nonlocal count_classes, count_comparisons, count_transitions
         for head in HEADS:
             source, target = a[head], b[head]
             metrics = paired(target.argmax(1)+1, source.argmax(1)+1, labels, 22)
@@ -363,6 +412,12 @@ def _honghu(scope, lane, case, meta, arrays, tables):
                 window=condition, contrast=name, head=head, group=group, evidence="honghu_frozen_descriptive",
                 metrics=metrics, before=[calibration(source, labels), calibration(target, labels)], after=None))
             count_comparisons += 1
+            if group == "all":
+                count_transitions += tables.transitions(
+                    dict(**exposed, role=role, window=condition, contrast=name,
+                         head=head, evidence="honghu_frozen_descriptive"),
+                    aliases, labels, source, target, focus=focus, foils=foils,
+                    groups=point_groups if point_groups is not None else ["all"] * len(labels))
 
     for condition in ("nominal", "full"):
         for role in roles:
@@ -372,7 +427,8 @@ def _honghu(scope, lane, case, meta, arrays, tables):
                 ):
                     continue
                 lookup = [{h: shape_values[f"{condition}__{stage}__{role}__{h}"] for h in HEADS} for stage in (a, b)]
-                compare(condition, f"{b}_vs_{a}", *lookup, roles[role]["labels"], roles[role]["role"])
+                compare(condition, f"{b}_vs_{a}", *lookup, roles[role]["labels"], roles[role]["role"],
+                        roles[role]["aliases"])
     if registry["spatial"]:
         aliases = [a for block in result["spatial"] for a in block["aliases"]]
         labels = [label for block in result["spatial"] for label in block["labels"]]
@@ -384,11 +440,12 @@ def _honghu(scope, lane, case, meta, arrays, tables):
               and (sum(m.astype(int) for m in masks.values()) == 1).all(), "HongHu spatial groups are incomplete")
         spatial = {kind: {h: validate_probabilities(arrays[f"spatial__{kind}__{h}"], len(labels), 22) for h in HEADS}
                    for kind in ("clean", "matched", "target")}
+        chosen_groups = [next(key for key in masks if masks[key][i]) for i in range(len(labels))]
         for key, mask in {"all": np.ones(len(labels), dtype=bool), **masks}.items():
             for a, b in (("clean", "target"), ("clean", "matched"), ("matched", "target")):
                 compare("full_spatial", f"{b}_vs_{a}", {h: spatial[a][h][mask] for h in HEADS},
-                        {h: spatial[b][h][mask] for h in HEADS}, np.asarray(labels)[mask].tolist(), "devval", key)
-        chosen_groups = [next(key for key in masks if masks[key][i]) for i in range(len(labels))]
+                        {h: spatial[b][h][mask] for h in HEADS}, np.asarray(labels)[mask].tolist(), "devval",
+                        np.asarray(aliases)[mask].tolist(), key, np.asarray(chosen_groups)[mask].tolist())
         for cell, heads in spatial.items():
             for head, probability in heads.items():
                 count_points += tables.points(
@@ -398,6 +455,7 @@ def _honghu(scope, lane, case, meta, arrays, tables):
     return dict(scene="whu-honghu", case=case, protocol=registry["protocol"], seed=registry["seed"],
                 selected=registry["selected"], k=registry["k"], method=registry["method"], budget=registry["budget"],
                 points=count_points, class_rows=count_classes, comparisons=count_comparisons, readouts=readouts,
+                transitions=count_transitions,
                 feature_readout=result["feature_readout"], groups={k: sum(v) for k, v in result["geometry_groups"].items()},
                 existing_cuda_max=result.get("nominal_cpu_cuda_probability_max_abs"),
                 existing_cuda_flips=result.get("nominal_cpu_cuda_hard_flips")), roles["val"]["aliases"]
@@ -431,6 +489,45 @@ def _seed_boundary(scope, details):
                 "Remaining-scene estimates are descriptive and never model selection"])
 
 
+def _honghu_competition(details):
+    """List prespecified explanations with the actual rank and feature witnesses."""
+    rows = []
+    for case in (item for item in details if item["scene"] == "whu-honghu"):
+        by_phase = {(item["condition"], item["stage"], item["role"], item["head"], item["class_id"]): item
+                    for item in case["readouts"]}
+        for head in HEADS:
+            for cls in plan.FOCUS["whu-honghu"]:
+                stages = ("initial", "selected", "last")
+                role_table = {}
+                for role in ("train", "val"):
+                    role_table[role] = [
+                        {name: by_phase["nominal", stage, role, head, cls][name]
+                         for name in ("n", "correct", "rank_mean", "margin_mean", "true_probability_mean")}
+                        for stage in stages]
+                train, val = role_table["train"], role_table["val"]
+                chosen = by_phase["full", "selected", "val", head, cls]
+                geometry = [row for row in (case["feature_readout"] or {}).get(head, [])
+                            if row["true_class"] == cls]
+                separable_with_wrong_head = [{
+                    "foil": row["foil"], "closer_own_n": row["rank_geometry_own_nearer"],
+                    "score_gap": row["weight_projection_gap_mean"]+row["bias_gap"],
+                } for row in geometry if (row["rank_geometry_own_nearer"] > row["validation_count"]/2
+                                           and row["weight_projection_gap_mean"]+row["bias_gap"] < 0)]
+                rows.append(dict(
+                    case=case["case"], protocol=case["protocol"], seed=case["seed"], stage_order=list(stages),
+                    head=head, class_id=cls, scores=role_table,
+                    selected_full_count=chosen["n"], selected_full_correct=chosen["correct"],
+                    train_rank_change_last_minus_initial=train[-1]["rank_mean"]-train[0]["rank_mean"],
+                    val_rank_change_last_minus_initial=val[-1]["rank_mean"]-val[0]["rank_mean"],
+                    selected_train_val_rank_gap=val[1]["rank_mean"]-train[1]["rank_mean"],
+                    fit_witness="train_rank_improved" if train[-1]["rank_mean"] < train[0]["rank_mean"]
+                    else "train_rank_did_not_improve",
+                    distribution_witness="sparse_train_val_descriptive_no_counterfactual",
+                    head_geometry_witness=separable_with_wrong_head, observed_space_counts=case["groups"],
+                    causal_budget_identifiable=False))
+    return rows
+
+
 def ingest(root, scope_link, batch_link, case_dir, output, commit, device_link=None):
     for path in (scope_link["path"], batch_link["path"], case_dir, output):
         check(Path(path).resolve().is_relative_to(root), "WP12 path escapes authorized runs")
@@ -438,12 +535,16 @@ def ingest(root, scope_link, batch_link, case_dir, output, commit, device_link=N
     check(scope["schema"] == batch["schema"] == plan.POLICY and batch["status"] == "complete" and
           batch["scope"] == scope_link["sha256"] and batch["commit"] == scope["code"]["commit"] and
           batch["query_accessed"] is batch["raw_gt_loaded"] is scope["model_selection"] is False and
-          scope["optimizer_updates"] == batch["optimizer_updates"] == 0, "WP12 refuses altered or training evidence")
+          scope["optimizer_updates"] == batch["optimizer_updates"] == 0 and
+          scope.get("parents", {}).get("scope", {}).get("sha256") == PREVIOUS_SCOPE and
+          scope.get("parents", {}).get("summary", {}).get("sha256") == PREVIOUS_SUMMARY,
+          "WP12 refuses altered or training evidence")
     forms = {_case_form(lane, name): (lane, name) for lane in LANES for name in scope["cases"][lane]}
     check(len(forms) == batch["cases"] == 56 and set(forms) == set(batch["artifacts"]),
           "WP12 requires the complete registered case matrix")
     output.mkdir(exist_ok=False)
     specs = {"point": ("point-scores.csv", POINT_FIELDS), "metric": ("paired-metrics.csv", METRIC_FIELDS),
+             "transition": ("point-transitions.csv", TRANSITION_FIELDS),
              "classes": ("paired-classes.csv", CLASS_FIELDS), "decision": ("mechanism-decisions.csv", DECISION_FIELDS)}
     details, populations = [], {}
     with ExitStack() as stack:
@@ -463,20 +564,28 @@ def ingest(root, scope_link, batch_link, case_dir, output, commit, device_link=N
                                else _honghu(scope, lane, case, meta, arrays, tables))
             check(populations.setdefault(row["scene"], identities) == identities,
                   "Case is no longer on the same released point ordering")
+            row["cost"] = dict(worker_seconds=meta["elapsed"], process_rss_peak_kib=meta["rss_peak_kib"],
+                               block_forwards=batch["artifacts"][filename]["forwards"])
             details.append(row)
     artifacts = {name: pin(output / name)["sha256"] for name, _ in specs.values()}
     results = _write(output / "scientific-summary.json", dict(details=details, boundary=_seed_boundary(scope, details),
         populations={scene: dict(n=len(ids), alias_sha256=digest(ids)) for scene, ids in populations.items()},
-        registered_honghu=scope["eligible_honghu"], holds=dict(optimization=0, query=0, raw_gt=0)))
+        registered_honghu=scope["eligible_honghu"], honghu_competing_explanations=_honghu_competition(details),
+        holds=dict(optimization=0, query=0, raw_gt=0)))
     artifacts["scientific-summary.json"] = results["sha256"]
     device = _read(device_link) if device_link else None
     if device:
         check(device["scope"] == scope_link["sha256"] and device["optimizer_updates"] == 0 and
-              device["query_accessed"] is device["raw_gt_loaded"] is False, "Device experiment scope differs")
+              device["query_accessed"] is device["raw_gt_loaded"] is False and device["status"] == "measured" and
+              {(row["scene"], row["name"]) for row in device["rows"]} ==
+              {(scene, name) for scene, names in plan.ARCHITECTURES.items() for name in names} and
+              all(row["cuda_peaks"]["allocated"] > 0 and row["points"] > 0 for row in device["rows"]),
+              "Device experiment scope differs")
     return _write(output / "receipt.json", dict(
         schema="wp12_frozen_band_graph_mechanism_v1", status="accepted_development_only",
         scope=scope_link["sha256"], batch=batch_link["sha256"], producer=batch["commit"], intake=commit,
         case_count=len(details), point_score_rows=sum(row["points"] for row in details),
+        point_transition_rows=sum(row["transitions"] for row in details),
         comparative_rows=sum(row["comparisons"] for row in details),
         class_rows=sum(row["class_rows"] for row in details),
         physical_forwards=sum(row["forwards"] for row in batch["artifacts"].values()),

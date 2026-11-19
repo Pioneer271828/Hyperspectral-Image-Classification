@@ -1,5 +1,4 @@
 from dataclasses import replace
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -10,6 +9,7 @@ from evaluation.wp12_frozen_mechanisms import _digest_trace, check_aliases, inge
 from loadData.observation_sampling import BandMetadata, ObservationView, _apply
 from loadData.spatial_protocol import PartitionObservation
 from scripts.run_frozen_band_region import _write
+from scripts.run_frozen_mechanisms import PREVIOUS_SCOPE, PREVIOUS_SUMMARY
 from transfer.conditional_multiscale import ConditionalMultiscaleVCASAHGCN
 from transfer.frozen_mechanism_graph import assert_same_view, execute
 from transfer.frozen_mechanism_plan import POLICY, random_control, windows
@@ -85,6 +85,8 @@ def test_calibration_is_order_preserving_and_reports_empty():
 def test_wp12_refuses_missing_and_mixed_receipts(tmp_path):
     kwargs = dict(schema=POLICY, query_accessed=False, raw_gt_loaded=False, optimizer_updates=0)
     scope = _write(tmp_path/"scope.json", {**kwargs,"code":{"commit":"a"}, "model_selection":False,
+                                         "parents":{"scope":{"sha256":PREVIOUS_SCOPE},
+                                                    "summary":{"sha256":PREVIOUS_SUMMARY}},
                                          "cases":{"xuzhou":["off"],"paviaU":[],"honghu24":[],"honghu60":[]}})
     bad_scope = _write(tmp_path/"foreign.json", dict(**kwargs,status="complete",scope=scope["sha256"],commit="b"))
     with pytest.raises(ValueError, match="altered or training"):
