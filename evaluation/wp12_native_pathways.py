@@ -27,7 +27,7 @@ def graph_for(model):
 
 
 @torch.no_grad()
-def capture(model,scene,tile,view):
+def capture_call(model,invoke):
     b = graph_for(model)
     original = b.forward_stages
     saved = {}
@@ -38,9 +38,13 @@ def capture(model,scene,tile,view):
         return original(cnn_input,region_input,q,a,*args,**kwargs)
 
     with patch.object(b,"forward_stages",new=stages):
-        result = _forward(model,scene,tile,observation_view=view)
+        result = invoke()
     require(set(saved)=={"clean","q","a"},"Archived model did not expose its actual original Q/A")
     return saved["clean"],saved["q"].coalesce(),saved["a"].coalesce(),tuple(result[:3])
+
+
+def capture(model,scene,tile,view):
+    return capture_call(model,lambda:_forward(model,scene,tile,observation_view=view))
 
 
 def spatial_forward(model,scene,clean,q,a,*,fixed=True,features=False,split=False):

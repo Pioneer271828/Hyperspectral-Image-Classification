@@ -10,6 +10,7 @@ from evaluation.frozen_band_region import HEADS, hard
 from evaluation.frozen_training_stages import file_pin, json_pin, require
 from evaluation.wp12_paired_head_review import pair_scores
 from evaluation.wp12_release_qualification import classification_status
+from evaluation.wp12_spatial_release import STRATA, classify as spatial_classify, read_annotations, score_stratum
 from model.research_config import digest
 from research_runtime import require_frozen_code, tensor_hash
 from scripts.run_frozen_band_region import _write
@@ -102,6 +103,8 @@ def capture(root,out,output,code,execution,*,test,release=None):
         require(_exact(paired.journal.packet(root,link),body),"Selected consumer rejected foreign checkpoint contents")
         model = p.baseline(seed).to(execution.device)
         model.load_state_dict(body["state"],strict=True)
+        annotation_pin = p.intake.get("spatial_annotations")
+        annotations = read_annotations(root,p.bank,p.roles,annotation_pin) if annotation_pin else None
         rows = []
         for band in VIEWS:
             for tile in p.roles["evaluation"]:
@@ -115,6 +118,8 @@ def capture(root,out,output,code,execution,*,test,release=None):
                                                    for head,value in zip(HEADS,probs[:3],strict=True)},
                                     observation=actual.receipt["observation"], graph=graph,
                                     bands=actual.receipt["source"]["band_ids"])
+                    if annotations is not None:
+                        accuracy["spatial"] = spatial_classify(p.bank,p.roles,annotations,"evaluation",tile,targets.points)
                 if p.intake["uses"]["cost"]["eligible"]:
                     times = []
                     for rep in range(3):
@@ -180,13 +185,14 @@ def review(root,raw,output,code):
                             "dimension","trainable_parameters","train_device")) and old["dimension"]==64
                     and old["trainable_parameters"]==65*old["classes"],"Independent paired identity differs")
             starts.add(old["head"])
-            aggregate, costs = {}, {}
+            aggregate, costs, spatial = {}, {}, {}
             for band in VIEWS:
                 left = [row for row in old["rows"] if row["band"]==band]
                 right = [row for row in new["rows"] if row["band"]==band]
                 require(len(left)==len(right)==entry["intake"]["role_reports"]["evaluation"]["blocks"],
                         "A captured evaluation block was omitted")
                 truth, a, b = [], {head:[] for head in HEADS}, {head:[] for head in HEADS}
+                strata = {name:[] for name in STRATA}
                 for x,y in zip(left,right,strict=True):
                     require(x["tile"]==y["tile"],"Paired probes differ in evaluation geometry")
                     ca,cb = x["accuracy"],y["accuracy"]
@@ -199,6 +205,16 @@ def review(root,raw,output,code):
                                 and all(ca["probabilities"][head]==cb["probabilities"][head] for head in ("cnn","graph")),
                                 "Evaluation geometry, deleted columns or diagnostics changed within the pair")
                         labels = ca["truth"]
+                        require(ca.get("spatial")==cb.get("spatial"),"Paired arms saw different spatial annotations")
+                        annotations = ca.get("spatial")
+                        if annotations is not None:
+                            require(entry["intake"].get("spatial_annotations") and annotations["n"]==len(labels),
+                                    "Spatial classification was not released for the observed point roster")
+                            for name in STRATA:
+                                mask = annotations["strata"][name]
+                                require(len(mask)==len(labels) and all(type(x) is bool for x in mask),
+                                        "Invalid accepted spatial flags")
+                                strata[name].extend(len(truth)+i for i,allowed in enumerate(mask) if allowed)
                         truth.extend(labels)
                         for head in HEADS:
                             a[head].extend(hard(ca["probabilities"][head],len(labels),old["classes"]))
@@ -225,6 +241,11 @@ def review(root,raw,output,code):
                             "Independent labels differ from the approved population")
                     aggregate[band] = {head:pair_scores(truth,a[head],b[head],old["classes"],scene,head_kind=head,
                                                        guard_population=threshold) for head in HEADS}
+                    if entry["intake"].get("spatial_annotations"):
+                        spatial[band] = {}
+                        for name,indices in strata.items():
+                            spatial[band][name] = score_stratum(truth,a,b,indices,old["classes"],scene,
+                                        threshold=threshold,real=plan["scope"]==paired.REAL)
             require((set(new["exposure"])==set(VIEWS) and set(old["exposure"])=={"full"} if req["kind"]=="xuzhou"
                     else old["exposure"]==new["exposure"] and set(old["exposure"])=={"full"}),
                     "Training observations do not implement the registered comparison")
@@ -233,6 +254,7 @@ def review(root,raw,output,code):
                         cost_allowed=old["uses"]["cost"]["eligible"],real=plan["scope"]==paired.REAL)
                         for head in HEADS} for band in VIEWS}
             assessments[str(seed)] = dict(classification=aggregate or None,qualification=eligibility,cost=costs or None,
+                                           spatial_classification=spatial or None,
                                            arm_selected_steps=[old["selected_step"],new["selected_step"]],
                                            checkpoint_lineages=[old["history"],new["history"]])
         require(len(starts)==len(req["model_seeds"]),"Named model seeds reuse an identical initialized head")

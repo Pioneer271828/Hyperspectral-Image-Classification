@@ -16,7 +16,7 @@ from scripts.run_native_released_points import arithmetic
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action",choices=("controls","real"))
+    parser.add_argument("action",choices=("controls","real","readouts","external"))
     parser.add_argument("--runs",type=Path,required=True)
     parser.add_argument("--out",type=Path,required=True)
     parser.add_argument("--expected-commit",required=True)
@@ -39,6 +39,21 @@ def main(argv=None):
         out.parent.mkdir(parents=True,exist_ok=True)
         require_frozen_code(code)
         value = _write(out,{**result,"producer":code["commit"]})
+    elif args.action in ("readouts","external"):
+        require(args.case is args.drain_after is None and not out.exists(),"Use a fresh frozen readout destination")
+        if args.action=="readouts":
+            from evaluation.wp12_block_readouts import old_readouts
+
+            require(args.gpu is None,"Archived probe scores use their original CPU arithmetic")
+            out.parent.mkdir(parents=True,exist_ok=True)
+            value = _write(out,{**old_readouts(root),"producer":code["commit"]})
+        else:
+            from evaluation.wp12_pathways_external import observe_roles
+
+            with arithmetic(root,args.gpu) as execution:
+                result = observe_roles(root,out,code,execution)
+            value = _write(out/"external.json",result)
+        require_frozen_code(code)
     else:
         from evaluation.wp12_native_pathways_real import run
 

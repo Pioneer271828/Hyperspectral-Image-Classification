@@ -147,9 +147,16 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     """Open the pinned intake. The release owner provides the separate authority receipt."""
     manifest = authorized_document(root,manifest_pin)
     authority = authorized_document(root,authority_pin)
-    check(set(manifest)=={"schema","candidate","roles","minimum_buffer","history"},
+    base_fields={"schema","candidate","roles","minimum_buffer","history"}
+    check(set(manifest) in (base_fields,base_fields|{"spatial_annotations"}),
           "Exact independent manifest fields required")
+    annotations=manifest.get("spatial_annotations")
     approved_fields={"schema","approved_manifest_sha256","historical_bank_sha256","uses","source_mode"}
+    if "spatial_annotations" in manifest:
+        approved_fields.add("spatial_annotations_sha256")
+        check(isinstance(annotations,dict) and set(annotations)=={"path","sha256"} and
+              authority.get("spatial_annotations_sha256")==annotations["sha256"],
+              "Spatial annotations require the same release owner approval")
     check(manifest["schema"]==MANIFEST and set(authority)==approved_fields and authority["schema"]==AUTHORITY
           and authority["approved_manifest_sha256"]==manifest_pin["sha256"],"Independent manifest is not authorized")
     bank=bank_from_entry(root,manifest["candidate"])
@@ -167,6 +174,11 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     check(authority["historical_bank_sha256"]==sorted(old.pin["sha256"] for old in historical),
           "The release owner must bind the history used to establish independence")
     result=assess(bank,historical,manifest["roles"],gap=manifest["minimum_buffer"],permitted=authority["uses"])
+    if annotations and result["uses"]["independent_accuracy"]["eligible"]:
+        from evaluation.wp12_spatial_release import read_annotations
+
+        read_annotations(root,bank,manifest["roles"],annotations)
+        result["spatial_annotations"]=annotations
     return bank,result,manifest["roles"]
 
 
