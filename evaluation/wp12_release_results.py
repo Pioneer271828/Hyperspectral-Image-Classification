@@ -128,7 +128,7 @@ def frozen54(root):
         resource = dict(status="measured", scope=reg["scope"], warmups=reg["warmups"], repeats=reg["repeats"],
                         **timing, peak_allocated_bytes=measured["peak_bytes"], parameters=measured["parameters"],
                         package_bytes=measured["package_bytes"], graph_seconds=None, end_to_end_ms=None,
-                        reason="Graph is included in resident latency. Build-only, loading and I/O time were not separated.",
+                        reason="Timed model forward uses resident inputs. Preparation, loading, transfer and I/O are out of scope. No build-only timer.",
                         receipt=link["sha256"])
         cost_by_key[key] = (resource,job["workload"]["tensor_sha256"])
         originals.append(result)
@@ -149,6 +149,8 @@ def frozen54(root):
     lifecycle = dict(cases=54, existing_accepted=54, pending=0, new_measurements=0, planned_warmups=162,
                      timed_samples=648, validation_forwards=audit["validation_forwards"],
                      planned_case_timeout_seconds=reg["case_timeout_seconds"], planned_machine_hours=None,
+                     maximum_serial_case_timeout_hours=len(rows)*reg["case_timeout_seconds"]/3600,
+                     measured_full_machine_hours=None,
                      recorded_timed_sample_seconds=math.fsum(x["cost"]["mean_ms"]*reg["repeats"] for x in rows)/1000,
                      independent_audit_seconds=audit["elapsed_seconds"], gpu=audit["hardware"],
                      benefit=accuracy["preregistered_benefit_conclusion"], receipt=pins["independent"]["sha256"],

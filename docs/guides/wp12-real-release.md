@@ -16,7 +16,7 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 - `cases.json` 和 `real-results.csv` 使用已接受的模型、场景、种子、K、数据协议、端点、波段和设备字段。按这些字段精确选取可使用 `evaluation.wp12_release_results.select(rows, scene="xuzhou", seed=64, role="devval_released_focus_only")`。
 - `cohorts.json` 和 `real-seed-summary.csv` 在相同协议、波段、端点、设备、工作负载及计时边界内计算均值与样本 SD。单种子或缺测没有 SD。同行多类指标的支持集与模型种子单列。
 - `real-per-class.csv` 列三头逐类分母、召回与 F1。`real-class-seed-summary.csv` 提供各组逐类均值与样本 SD。无发布点的类别召回为空。
-- 历史 54 例成本由原始计时和既有独立回执重新组装。选中检查点完全一致时才接回历史冻结分类。成本是 RTX 4090 同卡的热态常驻推理，图已包含在前向内。构图独立耗时、冷启动和端到端 I/O 未测。
+- 历史 54 例成本由原始计时和既有独立回执重新组装。选中检查点完全一致时才接回历史冻结分类。成本是 RTX 4090 同卡的热态常驻模型前向。输入与图准备、加载和传输在计时边界之外。缺少独立构图计时、冷启动和端到端 I/O。
 - PaviaU 原生适配的固定代表块成本与整套开发验证精度分开建账。洪湖五臂只承认已审的同协议组。WP06 逐块单次构图/前向和七层探针开销保留为诊断记录，没有重复测量的尾延迟或峰值显存。各来源的时延单位相同，比较边界可能不同。
 
 旧版 `scripts/ingest_wp12_evidence.py --registration …` 保留。冻结 54 原采集、资源门槛和恢复接口分别见 `scripts/run_wp12_cost_campaign.py` 与 `scripts/measure_wp12_historical_cost.py`。该真实登记已完结。当前汇总只读取已授权历史分类统计、成本与冻结开发诊断，真实模型、原始真值和 query 输入均不执行。
