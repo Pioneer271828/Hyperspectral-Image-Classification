@@ -94,3 +94,17 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 - 提供经预先审核的 WP02 支持、校准、确认三角色，给出原场景父块、空间缓冲及历史祖先。支持种子固定 2048，每类 5 个有效训练点。校准、确认各有逐类支持，校准分数用于选步，确认封存在训练范围外。原波段坐标与物理单位已核验，归一化统计只来自支持数据。
 - 申请中的 `physical_devices` 绑定全部 12 个案例到实体 UUID。授权记录提供 `schema`、`decision=approved`、`scope=external_real_execution`、申请固定清单 `request`、精确 `source_commit` 和 `source_hash`、`destination`、`design_sha256`、`optimizer_updates=18000`、`raw_gt_authorized=false`、`query_authorized=false`。授权由负责发布方提供。在 LXC 可从 `research_runtime.code_snapshot()` 和 `digest(transfer.native_long_campaign.DESIGN)` 得到待审核指纹。
 - 未获授权、通过旧标签家族冒充独立确认、缺源状态或带轴、设备和目的地错配均拒绝。历史缺权重的案例继续留空。真实 18,000 步及五臂 45,000 步方案均未启动。
+
+## 合成谱信号正对照与上下文审计
+
+在授权 LXC 的干净检出运行以下合成入口。它登记全部工况、预算及验真阈值，先验真支持和校准，再训练与封存，最后才生成确认块。中断后从原检查点继续，已经完成的同设备案例直接复用。可添加至多三个完整的 `--gpu "$uuid"`，每个设备分到完整的三臂配对。
+
+~~~bash
+"$python_bin" -B scripts/run_native_positive_control.py \
+  --runs "$runs" --campaign "$runs/spectral-positive-control-v2" \
+  --review "$runs/spectral-positive-control-v2-review" --workers 8
+~~~
+
+训练登记、单例运行和冻结可通过 `scripts/run_native_released_points.py` 的 `positive-control-register`、`positive-control-run --case "$case"`、`positive-control-freeze` 执行。均需精确 SHA 和授权运行根，且拒绝真实许可参数。可在独立检出使用 `--review-only --producer-checkout "$checkout"`，复用已冻结训练。WP12 的 `--positive-control-case` 与 `--positive-control-publish` 分别接收单例和全队列冻结。附上 `--v1 PATH SHA` 可接入旧谱观察审计；旧 v1 归档只读入口为 `--v1-spectral-audit --freeze PATH SHA --review PATH SHA`。这些 WP12 命令使用 `scripts/ingest_wp12_evidence.py`。
+
+实验先比较具有已知谱中心的加载器 oracle、仅支持点质心和带 L2 的线性读出。局部正控若未达到预登记下限，不能据此判定某条网络旁路。位置打乱仅用于确认，对原标签位置和谱轴做身份核对后，重排输入的坐标通道并重建图。真实默认模型和原验收协议继续由现有入口管理。
