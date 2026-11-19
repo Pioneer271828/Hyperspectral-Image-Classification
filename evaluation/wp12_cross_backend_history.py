@@ -401,16 +401,16 @@ def existing_scale_views(doc, *, scene, classes, focus):
         predictions = {head:probabilities(row["probabilities"][head],len(row["points"]),classes)
                        .argmax(1).tolist() for head in HEADS}
         for i,(point,label) in enumerate(zip(row["points"],row["labels"],strict=True)):
-            require(point not in points and doc["labels"][point] == label and label in focus,
-                    "Historical scale views changed released point order or identity")
+            require(type(point) is int and point >= 0 and point not in points and label in focus,
+                    "Historical scale views changed released point identity")
             points[point] = (label,{head:predictions[head][i]+1 for head in HEADS})
     results = {}
     for key, after in groups.items():
         factor,band,policy = key
         before = groups[(factor,"full","native")]
-        require(after.keys() == before.keys() and sorted(after) == list(range(len(doc["labels"])))
-                and all(before[i][0]==r[0] for i,r in after.items()), "Historical comparison is not same-point")
         index = sorted(before)
+        require(after.keys() == before.keys() and [before[i][0] for i in index] == doc["labels"]
+                and all(before[i][0]==r[0] for i,r in after.items()), "Historical comparison is not same-point")
         effects = {}
         for h in HEADS:
             result = raw_pair([before[i][0] for i in index],[before[i][1][h] for i in index],
