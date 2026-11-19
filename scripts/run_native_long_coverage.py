@@ -75,6 +75,7 @@ def main(argv=None):
     parser.add_argument("--producer-checkout",type=Path,default=ROOT)
     parser.add_argument("--gpu",action="append",default=[])
     parser.add_argument("--review-only",action="store_true")
+    parser.add_argument("--historical-snapshot",nargs=2,metavar=("PATH","SHA256"))
     args = parser.parse_args(argv)
     root = args.runs.resolve(strict=True)
     campaign, review = args.campaign.resolve(), args.review.resolve()
@@ -108,12 +109,19 @@ def main(argv=None):
             signal_reference(producer,py,common,campaign,logs/f"ordered-drain-{uuid4().hex}.log")
         expected = cycle(args.gpu or [None])
         groups = {}
-        for name in plan["cases"]:
-            folder = campaign/"cases"/name
-            if not (folder/"receipt.json").is_file():
-                default = None if name == REFERENCE else next(expected)
-                gpu = recorded_device(folder,default)
-                groups.setdefault(gpu,[]).append(name)
+        paired = {}
+        for name, profile in plan["cases"].items():
+            key = (profile["scene"],profile["model_seed"])
+            paired.setdefault(key,[]).append(name)
+        for names in paired.values():
+            existing = [recorded_device(campaign/"cases"/name,None) for name in names
+                        if (campaign/"cases"/name/"registration.json").is_file()]
+            default = existing[0] if existing else None if REFERENCE in names else next(expected)
+            for name in names:
+                folder = campaign/"cases"/name
+                if not (folder/"receipt.json").is_file():
+                    gpu = recorded_device(folder,default)
+                    groups.setdefault(gpu,[]).append(name)
 
         def group(item):
             gpu, names = item
@@ -160,8 +168,9 @@ def main(argv=None):
         require(value["freeze"] == frozen and value["consumer"] == consumer_sha and value["status"] == "passed",
                 "Existing WP12 publication belongs to a different frozen campaign")
     else:
+        history = ["--historical-snapshot",*args.historical_snapshot] if args.historical_snapshot else []
         invoke(ROOT,py,"scripts/ingest_wp12_evidence.py",
-               ["--long-stage-publish",*scope,"--receipts",receipts,"--out",out],logs/"publish")
+               ["--long-stage-publish",*scope,"--receipts",receipts,"--out",out,*history],logs/"publish")
     print(json.dumps(file_pin(out)),flush=True)
 
 

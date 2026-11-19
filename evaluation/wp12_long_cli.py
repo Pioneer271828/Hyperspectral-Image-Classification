@@ -51,6 +51,7 @@ def main(argv):
     parser.add_argument("--gpu")
     parser.add_argument("--case")
     parser.add_argument("--receipts", type=Path)
+    parser.add_argument("--historical-snapshot",nargs=2,metavar=("PATH","SHA256"))
     args = parser.parse_args(argv)
     root, place, out = args.runs.resolve(strict=True), external_directory(args.campaign), external_directory(args.out)
     require(root in place.parents and root in out.parents and out != place and place not in out.parents,
@@ -64,12 +65,13 @@ def main(argv):
     plan = json_pin(root,frozen_receipt["campaign"])
     producer = production(code,plan["producer"],plan["source_hash"])
     if args.long_stage_case:
-        require(args.case and args.receipts is None, "One frozen case and original device required")
+        require(args.case and args.receipts is None and args.historical_snapshot is None, "One frozen case and original device required")
         require(out.parent.is_dir(), "Create the independent output directory first")
         lease = nullcontext() if args.gpu is None else physical_lease(args.gpu)
         with lease, arithmetic(CPU if args.gpu is None else CUDA_FP64_WEIGHT,args.gpu) as execution:
             result = independent_case(root,place,out,code,producer,pin,args.case,execution)
     else:
         require(args.receipts and not args.case and not args.gpu, "Frozen publish requires all independent receipts")
-        result = publish(root,place,out,code,producer,pin,args.receipts.resolve(strict=True))
+        history = dict(zip(("path","sha256"),args.historical_snapshot,strict=True)) if args.historical_snapshot else None
+        result = publish(root,place,out,code,producer,pin,args.receipts.resolve(strict=True),history)
     print(json.dumps(result),flush=True)

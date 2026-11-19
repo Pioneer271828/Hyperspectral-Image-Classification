@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from itertools import product
+from pathlib import Path
 import statistics
 from time import perf_counter
 
@@ -26,12 +27,6 @@ def frozen(root, place, production, freeze_pin):
             and freeze["query_accessed"] is freeze["raw_gt_loaded"] is False,
             "Full frozen campaign required before opening confirmation data")
     return plan, freeze
-
-
-def _observed_rows(rows, name):
-    for row in rows:
-        if row["band"] == name:
-            yield row
 
 
 def add_metrics(row):
@@ -67,7 +62,7 @@ def read_confirmation(run, provider, blocks, step):
     peak = torch.cuda.max_memory_allocated(run.device) if run.device.type == "cuda" else None
     metrics = {}
     for band in VIEWS:
-        rows_for_band = list(_observed_rows(evaluated["rows"], band))
+        rows_for_band = [row for row in evaluated["rows"] if row["band"] == band]
         master = provider.bank.release.bands
         band_ids = [master.band_ids[i] for i in retained_positions(master, band)]
         require(all(row["band"] == band and row["graph"]["q_nnz"] > 0
@@ -162,6 +157,8 @@ def independent_case(root, place, out, authority, producer, freeze_pin, name, ex
     require_frozen_code(authority)
     journal = [{key: row[key] for key in ("step","start","updates","reason","wall_seconds","timing")} for row in journals]
     totals = {key: sum(row["timing"][key] for row in journal) for key in journal[0]["timing"]}
+    first_durable, last_durable = (Path(row["pin"]["path"]).stat().st_mtime_ns for row in (journals[0], journals[-1]))
+    require(last_durable >= first_durable, "Checkpoint durable timestamps are out of order")
     result = dict(policy=plan["schema"], status="passed", name=name, profile=plan["cases"][name],
                   freeze=freeze_pin, source=original, consumer=authority["commit"], updates=0,
                   selected=selection, full_validation_nll=full_nll, full_validation_bitwise=True,
@@ -170,12 +167,29 @@ def independent_case(root, place, out, authority, producer, freeze_pin, name, ex
                   raw_gt_loaded=False, query_accessed=False, phases=views, device=execution.numeric,
                   cost=dict(training_exposure=totals, first_validation=journal[0]["timing"]["validation_seconds"],
                             checkpointed_fit_seconds=sum(row["wall_seconds"] for row in journal),
+                            first_to_last_durable_seconds=(last_durable-first_durable)/1e9,
+                            checkpoint_bytes=sum(Path(row["pin"]["path"]).stat().st_size for row in journals),
                             verification_wall_seconds=perf_counter()-start),
                   journal=journal, reference=reference_proof)
     return _write(out, result)
 
 
-def publish(root, place, out, authority, producer, freeze_pin, receipts):
+def blocked_history(root, pin):
+    previous = json_pin(root, pin)
+    require(previous["policy"] == "wp12_frozen_development_stages_v1"
+            and previous["original_archive"]["checked_cases"] == 54
+            and previous["query_accessed"] is previous["raw_gt_loaded"] is False,
+            "Only the trusted prior WP12 development scope may be reused")
+    proof = previous["honghu"]
+    require(len(proof["accepted"]) == len(proof["missing"]) == 10 and proof["added"] == 0
+            and len(set(proof["accepted"]) | proof["missing"].keys()) == 20
+            and all(row["status"] == "not_started" and row["stage_files"] == row["case_files"] == 0
+                    for row in proof["missing"].values()), "Unweighted historical cells cannot become long evidence")
+    return dict(prior_receipt=pin["sha256"], independent_accepted=10, without_checkpoint=sorted(proof["missing"]),
+                new_replays=0, new_updates=0)
+
+
+def publish(root, place, out, authority, producer, freeze_pin, receipts, history_pin=None):
     plan, frozen_value = frozen(root, place, producer, freeze_pin)
     all_cases = {}
     for name, expected in plan["cases"].items():
@@ -188,11 +202,14 @@ def publish(root, place, out, authority, producer, freeze_pin, receipts):
                 "Incomplete or foreign independent audit")
         all_cases[name] = row
     effects = {}
+    arithmetic_pairs = {}
     cohorts = defaultdict(list)
     for scene, seed in product(SCENES, SEEDS):
         base, active = (all_cases[f"{scene}-m{seed}-{arm}"] for arm in ARMS)
         require(all(base[key] == active[key] for key in ("exposure", "released_inputs", "initial_shared")),
                 "Coverage arm changed shared initialization, physical observation or opportunity")
+        arithmetic_key = lambda row: {k: v for k,v in row["device"].items() if k != "physical_uuid"}
+        arithmetic_pairs[f"{scene}/m{seed}"] = arithmetic_key(base) == arithmetic_key(active)
         pair = {}
         for stage, view, head in product(("initial","middle","selected","last"), VIEWS, HEADS):
             a,b = (row["phases"][stage]["heads_by_view"][view] for row in (base,active))
@@ -227,9 +244,12 @@ def publish(root, place, out, authority, producer, freeze_pin, receipts):
                          redundant_meets_threshold=sum(x >= threshold for x in redundant),
                          total=len(selected), extra_reference_updates=STEPS)
         require(all_cases[REFERENCE]["reference"]["state_optimizer_rng_history_exact"], "Required recovery proof missing")
+    historical = None if history_pin is None else blocked_history(root, history_pin)
     result = dict(status="passed", scope=plan["scope"], policy=plan["schema"], producer=producer["commit"],
                   consumer=authority["commit"], freeze=freeze_pin, optimizer_updates=12*STEPS,
                   new_audit_optimizer_updates=0, cases=all_cases, sample_sd=summaries,
-                  matched_arms=effects, synthetic_control=synthetic, query_accessed=False, raw_gt_loaded=False)
+                  matched_arms=effects, matched_arithmetic=arithmetic_pairs,
+                  synthetic_control=synthetic, historical_missing=historical,
+                  query_accessed=False, raw_gt_loaded=False)
     require_frozen_code(authority)
     return _write(out, result)
