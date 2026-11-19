@@ -16,6 +16,7 @@ from research_runtime import require_frozen_code, tensor_hash
 from scripts.run_frozen_band_region import _write
 from transfer import native_independent_release as independent, wp_cross_backend as backend, wp_support_match as support_match
 from transfer import wp_region_graph as regional, wp_causal_graph_design as causal
+from transfer import wp_coverage_release as coverage
 from transfer.development_bank_training import _baseline
 from transfer.g3_training import state_hash
 from transfer.native_production_model import Switches
@@ -57,6 +58,15 @@ def validate_group(group, releases, *, test):
         and p["baseline"]!=p["candidate"] and p["comparison"] in MATCHES
         and p["baseline"] in arms and p["candidate"] in arms for p in pairs),
         "Explicit baseline, candidate and capacity relation required")
+    spectral = [spec for spec in arms.values() if spec["backend"]==coverage.BACKEND]
+    require(bool(spectral)==("coverage" in releases[group["release"]]),
+            "The five E1 arms need an explicit observation-exposure release")
+    if spectral:
+        modes = {spec.get("condition") for spec in spectral}
+        required = set(coverage.MODES) if group["purpose"]=="science" else {"none","continuous"}
+        require(len(spectral)==len(arms)==len(modes) and modes==required
+                and all(set(s)=={"backend","condition"} for s in spectral),
+                "Expected the registered E1 five-mode roster or the bounded recovery pair")
     region = [spec for spec in arms.values() if spec["backend"]==regional.BACKEND]
     if region:
         require(test and group["factor"]==1 and len(region)==len(arms)
@@ -85,10 +95,11 @@ def request_spec(root, request_pin, *, test):
             "Explicit registered paired training request required")
     for release in request["releases"].values():
         needed = {"manifest","authority","source","k"}
-        require(needed <= release.keys() <= needed|{"observation_protocol","claim_policy","matched_exposure","causal_graph"}
+        require(needed <= release.keys() <= needed|{"observation_protocol","claim_policy","matched_exposure","causal_graph","coverage"}
                 and release.get("observation_protocol", PHYSICAL) in (PHYSICAL, COLUMNS)
                 and release.get("claim_policy") in (None, PAVIA)
                 and release.get("matched_exposure") in (None, support_match.MODE)
+                and ("coverage" not in release or release["coverage"]==coverage.GRAPH)
                 and type(release["k"]) is int and release["k"]>0,
                 "Release must bind observed Bank roles and support budget")
         require(release["source"] is None or set(release["source"])=={"weights","metadata","state"},
@@ -127,9 +138,13 @@ def admit(root, out, record, *, test):
     require(columns == ("delivered_columns" in intake),
             "The approved columns and physical protocols are separate registrations")
     views = independent.COLUMN_VIEWS if columns else VIEWS
+    exposure = intake.get("observation_exposure")
+    require(("coverage" in record)==(exposure is not None),
+            "Coverage and other paired arms require separately authorized view rosters")
+    approved_views = tuple(intake.get("observation_views",[]))
     require(intake["uses"]["independent_accuracy"]["eligible"]
             and (columns or intake["uses"]["cost"]["eligible"])
-            and tuple(intake.get("observation_views",[]))==views
+            and (approved_views==views or exposure is not None and set(views)<=set(approved_views))
             and intake["role_reports"]["support"]["per_class"]==[record["k"]]*bank.release.classes
             and roles["support"] and roles["calibration"] and roles["evaluation"],
             "Paired training needs eligible three-role custody, agreed bands and covered support budget")
@@ -169,9 +184,13 @@ def initialization(model, base, source):
     extra = {"alignment":[],"messages":[],"selectors":[]}
     if isinstance(model,regional.RegionSupportModel):
         extra["regional_scoring"] = []
+    if model.backbone.coverage_modulation is not None:
+        extra["coverage"] = []
     for name in sorted(params.keys()-original.keys()):
         if name in {"backbone.spectrum_score.weight","backbone.graph_score.weight"} and "regional_scoring" in extra:
             slot = "regional_scoring"
+        elif name.startswith("backbone.coverage_modulation.") and "coverage" in extra:
+            slot = "coverage"
         elif name.startswith("backbone.interaction."):
             slot = "messages" if name.startswith(("backbone.interaction.to_pixels.","backbone.interaction.to_regions.")) else "alignment"
         else:
@@ -208,6 +227,8 @@ def start_arms(bank, group, source):
         a,b = (group["arms"][route[key]] for key in ("baseline","candidate"))
         if a["backend"]==b["backend"]==regional.BACKEND:
             require(first["inventory"]==last["inventory"], "Regional policies must share every initial parameter")
+        if equal and a["backend"]==b["backend"]==coverage.BACKEND:
+            require(first["inventory"]==last["inventory"],"Equal-capacity E1 controls must share initial tensors")
         if equal and a["backend"]==b["backend"]=="region_message":
             require(a["direction"]==b["direction"] and first["inventory"]==last["inventory"],
                     "Equal-capacity directional comparison changed projection initialization or direction")
@@ -237,7 +258,8 @@ def register(root, out, code, request_pin, approval_pin, *, test):
         for name,group in request["groups"].items():
             if group["release"]==key:
                 require(group["factor"] in intake.get("observation_factors",[1])
-                        and group["steps"]>=len(roles["support"])*len(intake["observation_views"]),
+                        and group["steps"]>=len(roles["support"])*len(
+                            intake.get("observation_exposure",{}).get("support",intake["observation_views"])),
                         "Lattice not approved or budget cannot expose each support block to all registered views")
                 if key in matched:
                     blocks = len(roles["support"])
@@ -299,6 +321,7 @@ class StructuralProvider(ProductionProvider):
         self.spec,self.arm,self.test = spec,arm,test
         self.intake = intake
         self.views = tuple(intake["observation_views"])
+        self.exposure = intake.get("observation_exposure")
         self.causal = json_pin(root,entry["causal_graph"]) if "causal_graph" in entry else None
         if self.causal is not None:
             preflight = original["causal_preflight"]
@@ -322,6 +345,8 @@ class StructuralProvider(ProductionProvider):
         require(arm==self.arm and seed==self.seed+7321,"A different architecture or initialization was requested")
         model = backend.train_variant(source,self.spec["arms"][arm],seed)
         require(state_hash(model)==self.init["state"],"Initialized variant differs from the approved shared start")
+        if self.exposure is not None:
+            model.coverage_program = coverage.GraphProgram(deepcopy(source),self.config.graph_scale)
         if isinstance(model,regional.RegionSupportModel):
             anchor = deepcopy(model).eval().requires_grad_(False)
             config = self.spec["arms"][arm]
@@ -346,7 +371,7 @@ class StructuralProvider(ProductionProvider):
     def materialize(self, role, event, producer):
         purpose = {"devtrain":"support","devval":"calibration"}[role]
         require(producer==self.producer and event["tile"] in self.roles[purpose]
-                and event["factor"]==self.spec["factor"] and event["band"] in self.views,
+                and event["factor"]==self.spec["factor"] and event["band"] in (self.views if self.exposure is None else self.exposure[purpose]),
                 "Optimization or selection used an unauthorized role, factor or band")
         self.event_step = event.get("step",0)
         key = ProductionProvider.key(role, event)
@@ -361,6 +386,8 @@ class StructuralProvider(ProductionProvider):
     def registered_forward(self, model, actual, role, execution):
         if isinstance(model,regional.RegionSupportModel):
             return regional.forward_region(model,actual,self.producer,role,execution,model.graph_program,step=self.event_step)
+        if self.exposure is not None:
+            return coverage.run(model,actual,self.producer,role,execution,model.coverage_program)
         timing = {}
         result,graph = forward(model,actual,self.producer,role,execution=execution,timed=timing,
                                graph_scale=self.config.graph_scale)
@@ -387,18 +414,20 @@ class StructuralProvider(ProductionProvider):
         support = self.roles["support"]
         rng = np.random.default_rng(seed)
         schedule = []
+        fit_bands = self.views if self.exposure is None else self.exposure["support"]
+        calibration_bands = self.views if self.exposure is None else self.exposure["calibration"]
         epoch = 0
         while len(schedule)<self.budget:
             for tile in rng.permutation(support).tolist():
                 event = dict(step=len(schedule)+1,tile=tile,factor=factor,
-                    band=self.views[(epoch+support.index(tile))%len(self.views)],condition="registered")
+                    band=fit_bands[(epoch+support.index(tile))%len(fit_bands)],condition="registered")
                 if self.matched_exposure:
                     event["visit"] = epoch
                 schedule.append(event)
             epoch += 1
         schedule = schedule[:self.budget]
         val = [dict(tile=tile,factor=factor,band=band,condition="registered")
-               for tile,band in product(self.roles["calibration"],self.views)]
+               for tile,band in product(self.roles["calibration"],calibration_bands)]
         roster = {}
         for role,events in (("devtrain",schedule),("devval",val)):
             for event in events:

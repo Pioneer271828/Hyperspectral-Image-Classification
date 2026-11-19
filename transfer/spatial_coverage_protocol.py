@@ -117,7 +117,7 @@ def apply_view(full, master, name, box=None):
 
 def metadata_view(view, master, positions, original_mode, policy):
     """Use registered delivery order for index-only fallback, without optical claims."""
-    if original_mode != "declared" or policy not in ("declared","missing","ordinal","permuted_ordinal","misaligned"):
+    if original_mode != "declared" or policy not in ("declared","missing","ordinal","permuted_ordinal","misaligned","rejected_axis"):
         raise ValueError("Independent metadata control must preserve a declared retained-band view")
     if policy == "declared":
         return view, original_mode
@@ -128,14 +128,14 @@ def metadata_view(view, master, positions, original_mode, policy):
     if (len(master.band_ids)<2 or bands.band_ids!=tuple(master.band_ids[i] for i in positions)
             or tuple(sorted(set(positions)))!=positions):
         raise ValueError("Original retained IDs and trusted delivered order differ")
-    if policy=="missing":
+    if policy in ("missing","rejected_axis"):
         centers=tuple(np.linspace(0.,1.,len(positions)))
     else:
         centers=tuple(i/(len(master.band_ids)-1) for i in positions)
         if policy=="permuted_ordinal":
             centers=centers[::-1]
     made=BandMetadata(bands.source_id,bands.band_ids,centers,"normalized","index_only",bands.valid)
-    return replace(view,bands=made),"missing" if policy=="missing" else "index"
+    return replace(view,bands=made),"missing" if policy in ("missing","rejected_axis") else "index"
 
 
 def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None,
@@ -157,7 +157,7 @@ def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=N
                                                 band_ids=list(view.bands.band_ids))),
               "normalized": array_hash(view.observation.spectral), "band_order": view.bands.fingerprint,
               "band_view": band, "spectral_metadata_mode": mode, "registered_box": box}
-    if metadata in ("ordinal","permuted_ordinal","misaligned"):
+    if metadata in ("ordinal","permuted_ordinal","misaligned","rejected_axis"):
         source["independent_metadata_policy"] = metadata
     if (profile is None)!=(synthetic_labels is None) or (profile is not None and release.profile!="synthetic"):
         raise ValueError("Physical profile and dense truth are restricted to an authenticated synthetic view")

@@ -338,6 +338,53 @@ def generate_regions(out, campaign, code, devices):
     return dict(request=pin,approval=approval)
 
 
+
+def generate_coverage(out, campaign, code, devices):
+    """Use the existing Bank and erased-signal fixture with separate observation roles."""
+    from transfer import wp_coverage_release as coverage
+
+    out.mkdir(parents=True)
+    scene = "xuzhou"
+    physical_history,_,_ = bank_at(out/"physical-history",scene,"h",None)
+    column_history,_,_ = bank_at(out/"column-history",scene,"h",None,columns=True)
+    variants = {"physical-a":("a",512,False), "physical-draw":("a",2048,False),
+                "physical-layout":("b",512,False), "delivered-columns":("a",512,True)}
+    arms = {name:dict(backend=coverage.BACKEND,condition=name) for name in coverage.MODES}
+    links = [pair("none","continuous"), *(pair(name,"continuous",equal=True)
+              for name in ("anchor_only","binary","shuffled"))]
+    releases, groups = {}, {}
+    for key,(layout,draw,columns) in variants.items():
+        branch = out/key
+        branch.mkdir()
+        bank,roles,_ = bank_at(branch/"release",scene,layout,None,k=1,support_seed=draw,
+                               matched=True,columns=columns)
+        history = column_history if columns else physical_history
+        views = independent.COLUMN_VIEWS if columns else independent.PHYSICAL_COVERAGE_VIEWS
+        exposure = dict(support=list(VIEWS),calibration=["full"],evaluation=list(views))
+        record = dict(schema=independent.MANIFEST,candidate=bank,roles=roles,minimum_buffer=4,
+                      history=[history],observation_exposure=exposure,observation_views=list(views),
+                      observation_factors=[1])
+        if columns:
+            record["delivered_columns"] = independent.column_inventory(BandMetadata(**bank["release"]["bands"]))
+        pin = _write(branch/"intake.json",record)
+        authority = _write(branch/"engineering-owner.json",dict(schema=independent.AUTHORITY,
+            approved_manifest_sha256=pin["sha256"],historical_bank_sha256=[history["pin"]["sha256"]],
+            uses=dict(independent_accuracy=True,cost=True,frozen_diagnostics=False),source_mode="synthetic"))
+        releases[key] = dict(manifest=pin,authority=authority,source=None,k=1,coverage=coverage.GRAPH,
+                             matched_exposure=MATCHED_EXPOSURE,**({"observation_protocol":COLUMNS} if columns else {}))
+        device = devices[0] if devices and not columns else "cpu"
+        groups[key] = dict(release=key,seed=64,factor=1,steps=12,clock=[0,4,8,12],
+                           arms=arms,pairs=links,device=device,purpose="science")
+    groups["coverage-recovery"] = {**groups["physical-a"],"seed":512,"purpose":"recovery",
+                                  "arms":{name:arms[name] for name in ("none","continuous")},"pairs":links[:1]}
+    contrasts = {key:dict(baseline="physical-a",comparison=key,factor=factor) for key,factor in
+                 (("physical-draw","support_seed"),("physical-layout","spatial_layout"))}
+    data = dict(schema=SCHEMA,scope=SYNTHETIC,releases=releases,groups=groups,support_contrasts=contrasts)
+    request = _write(out/"request.json",data)
+    approval = _write(out/"engineering-only.json",expected_approval(data,request,campaign,code,test=True))
+    return dict(request=request,approval=approval)
+
+
 def controls(root, entry, producer):
     from transfer.spatial_coverage_protocol import bank_observation
 
@@ -350,7 +397,7 @@ def controls(root, entry, producer):
         raw = actual.view.observation.spectral
         varies = bool(np.ptp(raw,axis=(0,1)).max()>1e-7)
         kind = row["origin"]["pattern"]
-        expected = not (kind=="removed_only" and band=="central_gap")
+        expected = not (kind=="removed_only" and observed=="central_gap")
         require(varies==expected,"Planted signal was removed from the wrong physical view or leaked")
         retained_checks[f"{tile}/{band}"] = dict(pattern=kind,variable_spectra=varies)
     if bank.release.scene!="whu-honghu":

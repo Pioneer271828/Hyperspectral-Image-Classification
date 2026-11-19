@@ -13,10 +13,10 @@ from transfer.g3_training import state_hash
 from transfer.native_scale_observation import forward
 from transfer.region_message_attention import RegionMessageVCASAHGCN, profile_region_messages
 
-from transfer import wp_region_graph as regional
+from transfer import wp_coverage_release as coverage, wp_region_graph as regional
 
 
-BACKENDS = ("native", "multiscale", "aligned", "region_message")
+BACKENDS = ("native", "multiscale", "aligned", "region_message", coverage.BACKEND)
 TRAIN_BACKENDS = (*BACKENDS,regional.BACKEND)
 
 
@@ -47,7 +47,7 @@ def make_model(architecture, backend):
             and (backend != "region_message" or isinstance(kwargs["region_attention"], dict))
             and (not multiscale or {"cnn_multiscale", "cnn_dilation"} <= multiscale),
             "Architecture disagrees with the declared backend")
-    factory = {"native": MultiDatasetVCASAHGCN, "aligned": MultiDatasetVCASAHGCN,
+    factory = {"native": MultiDatasetVCASAHGCN, "aligned": MultiDatasetVCASAHGCN, coverage.BACKEND: MultiDatasetVCASAHGCN,
                "multiscale": ConditionalMultiscaleVCASAHGCN, "region_message": RegionMessageVCASAHGCN}[backend]
     with torch.random.fork_rng(devices=[]):
         model = factory(counts, **kwargs).eval()
@@ -78,7 +78,9 @@ def restore(architecture, backend, state, expected_state, *, device="cpu"):
 def load_export(root, export, *, device="cpu"):
     fields = {"backend", "weights", "metadata", "state"}
     region = export["backend"]==regional.BACKEND
-    require(set(export)==(fields|{"graph_program"} if region else fields), "Exact checkpoint export pins required")
+    coverage_model = export["backend"]==coverage.BACKEND
+    required = fields|({"graph_program"} if region else {"coverage_graph"} if coverage_model else set())
+    require(set(export)==required, "Exact checkpoint export pins required")
     weights = pinned(root, export["weights"])
     metadata = pinned(root, export["metadata"])
     require(metadata == weights.with_suffix(weights.suffix + ".json"), "Weights and architecture are not sidecars")
@@ -95,6 +97,11 @@ def load_export(root, export, *, device="cpu"):
         source = restore(architecture,regional.BACKEND,anchor,graph["state"])
         causal = json_pin(root,graph["causal_design"]) if controlled else None
         model.graph_program = regional.program_for(source,graph["policy"],graph["seed"],graph["budget"],causal)
+    if coverage_model:
+        proof = export["coverage_graph"]
+        require(set(proof)=={"anchor","scale","condition"} and proof["anchor"]["backend"]=="native"
+                and proof["condition"]==coverage.mode(model), "Coverage export differs from its graph or condition")
+        model.coverage_program = coverage.GraphProgram(load_export(root,proof["anchor"]),proof["scale"])
     return model
 
 
@@ -111,6 +118,10 @@ def semantic_identity(model, backend):
         program = model.graph_program
         identity["regional_support"] = dict(version=regional.VERSION,policy=program.policy,seed=program.seed,
                                              budget=program.budget,anchor=state_hash(program.anchor),scale=regional.SCALE)
+    if backend==coverage.BACKEND:
+        program = model.coverage_program
+        identity["coverage"] = dict(policy=coverage.GRAPH,anchor=program.state,scale=program.scale,
+                                    condition=coverage.mode(model))
     return identity
 
 
@@ -127,6 +138,8 @@ def train_variant(base, spec, seed):
         require(set(spec)=={"backend","policy"} and spec["policy"] in regional.POLICIES,
                 "Explicit and bounded regional stage-two policy required")
         return regional.RegionSupportModel.initialize(base,seed)
+    if backend == coverage.BACKEND:
+        return coverage.initialize(base,spec,seed)
     if backend == "native":
         require(set(spec) == {"backend"}, "Unexpected native baseline switches")
         return base
@@ -186,6 +199,8 @@ def run_block(model, actual, producer, role, execution):
     with manager:
         if isinstance(model,regional.RegionSupportModel):
             output, graph, timing = regional.forward_region(model,actual,producer,role,execution,model.graph_program)
+        elif hasattr(model,"coverage_program"):
+            output, graph, timing = coverage.run(model,actual,producer,role,execution,model.coverage_program)
         else:
             output, graph = forward(model, actual, producer, role, execution=execution, timed=timing)
     execution.sync()
@@ -194,6 +209,8 @@ def run_block(model, actual, producer, role, execution):
                  message_trace=output[3].get("interaction", {}).get("region_message", {}))
     require(len(output) >= 4 and all(value.shape[0] == actual.receipt["pixels"] for value in output[:3]),
             "Backend did not emit the original three point heads")
+    if "coverage_anchor_seconds" in timing:
+        stats["coverage_anchor_seconds"] = timing["coverage_anchor_seconds"]
     if "regional" in timing:
         stats["regional_seconds"] = timing["regional"]
     return output[:3], graph, stats

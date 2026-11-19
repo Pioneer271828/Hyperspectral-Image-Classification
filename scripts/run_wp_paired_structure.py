@@ -77,6 +77,7 @@ def main(argv=None):
     suite.add_argument("--scientific",action="store_true")
     suite.add_argument("--regional",action="store_true")
     suite.add_argument("--causal",action="store_true")
+    suite.add_argument("--coverage",action="store_true")
     p.add_argument("--devices",nargs="+",default=[])
     p.add_argument("--gpu")
     p.add_argument("--group")
@@ -94,11 +95,11 @@ def main(argv=None):
     require(code["commit"]==a.expected_commit and root in campaign.parents
             and (out is None or root in out.parents),"Use the exact clean checkout and authorized output root")
     require_frozen_code(code)
-    require(1<=a.workers<=8 and (a.action=="fixture" or not (a.qualification or a.scientific or a.regional or a.causal or a.devices))
+    require(1<=a.workers<=8 and (a.action=="fixture" or not (a.qualification or a.scientific or a.regional or a.causal or a.coverage or a.devices))
             and (a.action in ("arm","group","capture") or a.gpu is None),"Unexpected execution or device flags")
     torch.set_num_threads(1)
     if a.action=="fixture":
-        from transfer.wp_paired_structure_fixture import generate, generate_regions, generate_scientific
+        from transfer.wp_paired_structure_fixture import generate, generate_coverage, generate_regions, generate_scientific
 
         require(a.synthetic and out is not None and not out.exists() and out!=campaign
                 and not a.request and not a.approval
@@ -108,6 +109,8 @@ def main(argv=None):
             from transfer.wp_causal_graph_fixture import generate as generate_causal
 
             value = generate_causal(out,campaign,code,a.devices)
+        elif a.coverage:
+            value = generate_coverage(out,campaign,code,a.devices)
         elif a.regional:
             value = generate_regions(out,campaign,code,a.devices)
         elif a.scientific:

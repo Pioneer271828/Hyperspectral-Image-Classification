@@ -27,6 +27,21 @@ AUTHORITY = "wp02_independent_development_approval_v1"
 ROLES = {"support": "devtrain", "calibration": "devval", "evaluation": "devval"}
 USES = ("independent_accuracy", "cost", "frozen_diagnostics")
 COLUMN_VIEWS = ("full", "central_gap", "matched_dispersed", "metadata_missing")
+PHYSICAL_COVERAGE_VIEWS = (*COLUMN_VIEWS, "held_range", "misaligned_gap")
+FIT_COVERAGE_VIEWS = COLUMN_VIEWS[:3]
+
+
+def validate_exposure(exposure, views, *, columns):
+    allowed = COLUMN_VIEWS if columns else PHYSICAL_COVERAGE_VIEWS
+    check(isinstance(exposure,dict) and set(exposure)==ROLES.keys()
+          and all(isinstance(row,list) and row and len(row)==len(set(row))
+                  and all(v in allowed for v in row) for row in exposure.values())
+          and exposure["evaluation"]==views
+          and set(exposure["calibration"])<=set(exposure["support"])<=set(FIT_COVERAGE_VIEWS)
+          and set(exposure["support"])<set(views) and "full" in exposure["calibration"],
+          "Exposure must register optimization, calibration and independently approved held-out observations")
+    return deepcopy(exposure)
+
 
 
 def column_inventory(bands):
@@ -37,6 +52,12 @@ def column_inventory(bands):
 
 def observation_view(band, intake):
     if "delivered_columns" not in intake:
+        if "observation_exposure" in intake:
+            check(band in intake["observation_views"], "Physical coverage view was not approved")
+            if band == "metadata_missing":
+                return "full", "missing"
+            if band == "misaligned_gap":
+                return "central_gap", "rejected_axis"
         return band, None
     check(band in intake["observation_views"], "Delivered-column view was not approved")
     return ("full", "missing") if band == "metadata_missing" else (band, "ordinal")
@@ -169,13 +190,16 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     manifest = authorized_document(root,manifest_pin)
     authority = authorized_document(root,authority_pin)
     base_fields={"schema","candidate","roles","minimum_buffer","history"}
-    check(base_fields <= manifest.keys() <= base_fields | {"spatial_annotations", "observation_views", "observation_factors", "delivered_columns"},
+    check(base_fields <= manifest.keys() <= base_fields | {"spatial_annotations", "observation_views", "observation_factors", "delivered_columns", "observation_exposure"},
           "Exact independent manifest fields required")
     views = manifest.get("observation_views")
     columns = "delivered_columns" in manifest
+    exposure = None
+    if "observation_exposure" in manifest:
+        exposure = validate_exposure(manifest["observation_exposure"],views,columns=columns)
     if "observation_views" in manifest:
         check(isinstance(views, list) and views and all(
-            view in (COLUMN_VIEWS if columns else COLUMN_VIEWS[:3]) for view in views)
+            view in (COLUMN_VIEWS if columns else PHYSICAL_COVERAGE_VIEWS if exposure else COLUMN_VIEWS[:3]) for view in views)
             and len(set(views)) == len(views), "Explicit unique approved retained-band views required")
     factors = manifest.get("observation_factors")
     if "observation_factors" in manifest:
@@ -203,6 +227,13 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
                   and "spatial_annotations" not in manifest
                   and all(not row["samples"] for row in bank.release.rows),
                   "Cost-only delivered columns require an observation-only Bank without labels or annotations")
+    if exposure and not columns:
+        check(bank.release.bands.wavelength_quality=="verified",
+              "Physical coverage requires the owner-bound verified original axis")
+        if "held_range" in views:
+            held = retained_positions(bank.release.bands,"held_range")
+            check(all(held!=retained_positions(bank.release.bands,view) for view in exposure["support"]),
+                  "Held-out range duplicates an optimization observation")
     supplemental = [bank_from_entry(root,row) for row in manifest["history"]]
     if bank.release.profile=="synthetic":
         check(authority["source_mode"]=="synthetic" and test_history is not None and
@@ -217,7 +248,7 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     check(authority["historical_bank_sha256"]==sorted(old.pin["sha256"] for old in historical),
           "The release owner must bind the history used to establish independence")
     result=assess(bank,historical,manifest["roles"],gap=manifest["minimum_buffer"],permitted=authority["uses"],
-                  delivered_columns=columns)
+                  delivered_columns=columns or exposure is not None)
     if annotations and result["uses"]["independent_accuracy"]["eligible"]:
         from evaluation.wp12_spatial_release import read_annotations
 
@@ -229,6 +260,8 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
         result["observation_factors"] = factors
     if columns:
         result["delivered_columns"] = inventory
+    if exposure is not None:
+        result["observation_exposure"] = exposure
     return bank,result,manifest["roles"]
 
 
@@ -238,7 +271,8 @@ def materialize_reviewed(bank, report, assigned, role, tile, producer, band, *, 
             or role not in ROLES or use not in USES or type(factor) is not int
             or factor not in report.get("observation_factors",[1])
             or not report["uses"][use]["eligible"] or tile not in assigned[role]
-            or (use!="independent_accuracy" and role!="evaluation")):
+            or (use!="independent_accuracy" and role!="evaluation")
+            or ("observation_exposure" in report and band not in report["observation_exposure"][role])):
         raise ValueError("Independent consumption crosses role, publication or approved use")
     observed, metadata = observation_view(band, report)
     if use=="cost" and "delivered_columns" in report:
@@ -247,7 +281,7 @@ def materialize_reviewed(bank, report, assigned, role, tile, producer, band, *, 
                                 observation_only=True),None,None
     row = bank.role_row(ROLES[role],tile)
     if use=="cost":
-        return bank_observation(bank,row,producer,observed,factor=factor),None,None
+        return bank_observation(bank,row,producer,observed,factor=factor,metadata=metadata),None,None
     return bank_view(bank,row,producer,observed,factor=factor,metadata=metadata)
 
 

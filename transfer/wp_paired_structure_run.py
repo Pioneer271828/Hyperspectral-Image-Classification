@@ -17,7 +17,7 @@ from transfer.g3_training import state_hash
 from transfer.native_coverage_queue import case_lock
 from transfer.wp_paired_structure import REAL, SCHEMA, StructuralProvider, open_plan
 from transfer.wp_support_match import exposure as count_exposure
-from transfer import wp_region_graph as regional
+from transfer import wp_coverage_release as coverage, wp_region_graph as regional
 
 PUBLICATION = "wp05_wp08_paired_structure_publication_v1"
 
@@ -182,6 +182,17 @@ def export_selected(root, out, plan, link, name, group, arm, data):
             torch.save(selected["state"],stream)
             _atomic_new(path,stream.getvalue())
     export = dict(backend=backend_name,weights=file_pin(path),metadata=meta,state=identity)
+    if backend_name==coverage.BACKEND:
+        anchor_path = path.parent/"coverage-graph-initial.pt"
+        anchor_meta = write_once(root,anchor_path.with_suffix(".pt.json"),base.export_config())
+        if not anchor_path.exists():
+            with io.BytesIO() as stream:
+                torch.save(base.state_dict(),stream)
+                _atomic_new(anchor_path,stream.getvalue())
+        require(state_hash(base)==spec["initialization"]["base"],"Coverage graph anchor differs from the paired shared start")
+        export["coverage_graph"] = dict(
+            anchor=dict(backend="native",weights=file_pin(anchor_path),metadata=anchor_meta,state=state_hash(base)),
+            scale=spec["graph_scale"],condition=group["arms"][arm]["condition"])
     if anchor is not None:
         anchor_path = path.parent/"stage-two-initial.pt"
         if not anchor_path.exists():
@@ -200,6 +211,12 @@ def export_selected(root, out, plan, link, name, group, arm, data):
               exposure=digest(spec["training"]),initialization=context["initialization"],
               class_axis=list(range(1,spec["classes"]+1)),band_axis=spec["band_axis"],
               arithmetic=digest(spec["numeric"]),selection=comparison.SELECTION)
+    if backend_name==coverage.BACKEND:
+        exposure = bank["authority"]["observation_exposure"]
+        require({v["band"] for v in spec["training"]}==set(exposure["support"])
+                and {v["band"] for v in spec["validation"]}==set(exposure["calibration"]),
+                "Declared E1 exposure differs from the completed registered schedule")
+        protocol["observation_exposure"] = exposure
     if "delivered_columns" in bank["authority"]:
         from evaluation.wp12_scientific_claim import COLUMNS
 

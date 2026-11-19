@@ -23,7 +23,7 @@ from transfer import wp_cross_backend as model_io
 from transfer.g3_training import state_hash
 from transfer.native_paired_head_campaign import GATES
 from transfer import wp_region_graph as regional, wp_causal_graph_design as causal_design
-from transfer import wp_causal_graph as causal_runtime
+from transfer import wp_causal_graph as causal_runtime, wp_coverage_release as coverage
 
 DESIGN = "wp05_wp08_frozen_comparison_v1"
 ENDPOINT = "wp05_wp08_frozen_endpoint_v1"
@@ -74,7 +74,8 @@ def open_case(root, request, *, test_history=None):
         factor = protocol.get("factor",1)
         fields = set(protocol)
         columns = "delivered_columns" in intake
-        require(PROTOCOL <= fields <= PROTOCOL|{"factor", "observation_protocol"}
+        require(PROTOCOL <= fields <= PROTOCOL|{"factor", "observation_protocol", "observation_exposure"}
+                and protocol.get("observation_exposure")==intake.get("observation_exposure")
                 and (protocol.get("observation_protocol") == COLUMNS if columns
                      else "observation_protocol" not in protocol)
                 and type(factor) is int and factor in intake.get("observation_factors",[1])
@@ -91,6 +92,18 @@ def open_case(root, request, *, test_history=None):
         schedules = [validate_endpoint(body, protocol, seed) for body in models.values()]
         regional_models = [body["checkpoint"]["graph_program"] for body in models.values()
                            if body["checkpoint"]["backend"]==regional.BACKEND]
+        coverage_models = [body["checkpoint"]["coverage_graph"] for body in models.values()
+                           if body["checkpoint"]["backend"]==coverage.BACKEND]
+        assigned_exposure = intake.get("observation_exposure")
+        require(bool(coverage_models)==(assigned_exposure is not None),
+                "Frozen coverage arms and owner-approved exposure differ")
+        if coverage_models:
+            scale = 50 if bank.release.scene=="paviaU" else 100
+            require(len(coverage_models)==len(models)
+                    and len({row["condition"] for row in coverage_models})==len(models)
+                    and all(row["anchor"]==coverage_models[0]["anchor"] and row["anchor"]["state"]==protocol["initialization"]
+                            and row["scale"]==scale for row in coverage_models),
+                    "Coverage requires a common initial retained-observation graph source")
         controlled = None
         if regional_models:
             witness_pins = [r.get("causal_design") for r in regional_models]
@@ -179,6 +192,8 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                             targets.cells.tolist(),row["accuracy"]["truth"])
                 if cost:
                     timings, first_run = [],None
+                    if hasattr(model,"coverage_program"):
+                        model.coverage_program.views.clear()
                     for rep in range(3):
                         execution.sync()
                         if execution.device.type == "cuda":
@@ -194,7 +209,7 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                                       if execution.device.type == "cuda" else None, **detail)
                         if rep:
                             timings.append(sample)
-                        elif "regional_support" in graph:
+                        elif "regional_support" in graph or "coverage" in graph:
                             first_run = sample
                     row["cost"] = dict(label_blind=True, samples=timings, graph=graph,
                                        observation=actual.receipt["observation"], bands=actual.receipt["source"]["band_ids"],
@@ -253,6 +268,8 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
         cost = row["cost"]
         program = semantics.get("regional_support")
         for record in (row["accuracy"],cost):
+            if "coverage" in semantics and record is not None:
+                check_coverage_trace(record,semantics["coverage"],independent.observation_view(band,intake)[1])
             if program is not None and record is not None:
                 graph = record["graph"]
                 proof = regional.verify_trace(graph["regional_support"],record["observation"],
@@ -263,6 +280,10 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
                         and proof["original_counts"]["nnz"]==graph["a0_nnz"],
                         "Fixed regional support changed the learned first-stage graph")
         if cost is not None:
+            if "coverage" in semantics:
+                sample = cost["first_measurement"]
+                require(0<=sample["coverage_anchor_seconds"]<=sample["elapsed"]<=sample["total"],
+                        "Coverage cold cost lacks its retained-graph construction")
             require(cost["label_blind"] is True and len(cost["samples"]) == 2 and cost["bands"] == bands
                     and cost["observation"] == observations["cost"][(band,tile)]
                     and cost["outputs"] == [[cost["graph"]["q_shape"][0], classes]]*len(HEADS)
@@ -297,6 +318,20 @@ def checked_blocks(bank, roles, intake, geometry, observations, arm, body, pin, 
             probabilities(record["heads"][head], len(truth), classes)
         checked[(band, tile)] = row
     return checked
+
+
+def check_coverage_trace(record, expected, metadata):
+    trace = record["graph"]["coverage"]
+    axis = "index" if metadata=="ordinal" else "missing" if metadata in ("missing","rejected_axis") else "declared"
+    require(trace["observation"]==record["observation"] and trace["policy"]==expected["policy"]
+            and trace["anchor"]==expected["anchor"] and trace["mode"]==expected["condition"]
+            and trace["axis"]==axis and trace["result"]==("rejected_axis" if metadata=="rejected_axis"
+                                                       else "ordinal" if metadata=="ordinal" else None),
+            "Coverage graph or metadata scope does not match the approved retained observation")
+    fallback = {"index":"index_only_metadata","missing":"missing_metadata"}.get(axis)
+    if expected["condition"]=="none" or fallback is not None:
+        require(trace["active_anchors"]==0 and trace["fallback"]==(None if expected["condition"]=="none" else fallback),
+                "An untrusted metadata axis must not activate physical coverage")
 
 
 def check_interventions(record, controlled, tile, band, classes):
@@ -345,6 +380,13 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
             for name in STRATA:
                 strata[name].extend(len(truth)+i for i, use in enumerate(a["spatial"]["strata"][name]) if use)
         truth.extend(a["truth"])
+        left_coverage = a["graph"].get("coverage")
+        right_coverage = b["graph"].get("coverage")
+        if left_coverage is not None or right_coverage is not None:
+            require(left_coverage is not None and right_coverage is not None
+                    and left_coverage["anchor"]==right_coverage["anchor"]
+                    and all(a["graph"][key]==b["graph"][key] for key in ("q","a0")),
+                    "E1 pair changed graph weights or support on the same retained observation")
         left_support = a["graph"].get("regional_support")
         right_support = b["graph"].get("regional_support")
         structural = None
@@ -367,6 +409,8 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
         blocks[str(tile)] = dict(points=len(a["truth"]), heads=block)
         if structural is not None:
             blocks[str(tile)]["regional_support"] = structural
+        if left_coverage is not None:
+            blocks[str(tile)]["coverage"] = dict(same_graph=True,baseline=left_coverage,candidate=right_coverage)
     scores, qualifications, spatial = None, None, None
     if truth:
         scores = {head:raw_pair(truth, pred_before[head], pred_after[head], classes, floor=FORMAL_FLOOR)
@@ -490,6 +534,14 @@ def review_case(root, capture, out, code, *, test_history=None, reference=None):
                 roles["evaluation"], bank.release.scene, bank.release.classes, scope=raw["scope"]) for band in raw["views"]}
         summary[key] = dict(seed=ready["seed"], budget=ready["budget"], pairs=scored, factor=group["factor"],
                             arms={name: {k:v for k,v in arm.items() if k!="rows"} for name, arm in ready["arms"].items()})
+        exposure = group["protocol"].get("observation_exposure")
+        if exposure is not None:
+            summary[key]["observation_exposure"] = exposure
+            for views in scored.values():
+                for name, result in views.items():
+                    result["exposure"] = dict(optimization_seen=name in exposure["support"],
+                                              calibration_seen=name in exposure["calibration"],
+                                              evaluation_approved=True)
     require_frozen_code(code)
     parity = None if reference is None else compare_devices(json_pin(root,reference),raw)
     return _write(out, dict(schema=REVIEW, capture=capture, baseline_capture=reference, device_parity=parity,
