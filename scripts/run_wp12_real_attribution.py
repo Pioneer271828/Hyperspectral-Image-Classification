@@ -56,7 +56,7 @@ def run(root, out, code, group, keys, gpu):
     require(set(results)==set(keys),"A registered case was omitted")
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit",required=True)
     parser.add_argument("--runs",type=Path,required=True)
@@ -65,7 +65,7 @@ def main():
     parser.add_argument("--case",action="append")
     parser.add_argument("--shard",nargs=2,type=int,metavar=("INDEX","COUNT"),default=(0,1))
     parser.add_argument("--gpu")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     root,out = args.runs.resolve(strict=True),external_directory(args.out)
     code = code_snapshot()
     require(root in out.parents and code["commit"]==args.expected_commit,"Unexpected source or output scope")

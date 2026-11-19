@@ -23,7 +23,7 @@ COHORTS = (
 )
 
 
-def definition(kind, k, draw, spatial, *, omit_support=False):
+def definition(kind, k, draw, spatial, *, omit_support=False, evaluation_counts=None):
     scene = paired.SCENES[kind]
     shape, classes = custody.SCENES[scene]
     offset, index = {"a": (0, 0), "b": (165, 1), "h": (330, 2)}[spatial]
@@ -48,7 +48,8 @@ def definition(kind, k, draw, spatial, *, omit_support=False):
                 count = k//4 + int((i-label)%4<k%4)
                 start = (0, 1, 3)[paired.SEEDS.index(draw)]
             else:
-                count = 3
+                n = evaluation_counts.get(label,9) if role=="evaluation" and evaluation_counts else 9
+                count = n//3 + int((i-6)<n%3) if role=="evaluation" else 3
                 start = 0
             positions = rng.permutation(len(locations))[start:start+count]
             require(len(positions)==count,"Fixture class does not have its declared release population")
@@ -69,8 +70,9 @@ def definition(kind, k, draw, spatial, *, omit_support=False):
     return release, arrays, roles
 
 
-def release_bank(path, kind, k, draw, spatial, *, omit_support=False):
-    release, arrays, roles = definition(kind, k, draw, spatial, omit_support=omit_support)
+def release_bank(path, kind, k, draw, spatial, *, omit_support=False, evaluation_counts=None):
+    release, arrays, roles = definition(kind, k, draw, spatial, omit_support=omit_support,
+                                         evaluation_counts=evaluation_counts)
     stored = custody.publish(path,path.parent,release,lambda row:arrays[row["id"]],resume=path.exists())
     return dict(pin={name:stored[name] for name in ("root","sha256","registration")},release=asdict(release)), roles, release
 

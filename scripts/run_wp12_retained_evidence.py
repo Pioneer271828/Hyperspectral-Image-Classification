@@ -264,6 +264,10 @@ def run(root, directory, expected, device, selected, *, locked=False):
 
 
 def main():
+    if "--real-attribution" in sys.argv[1:]:
+        from scripts.run_wp12_real_attribution import main as attribution
+
+        return attribution([option for option in sys.argv[1:] if option!="--real-attribution"])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)

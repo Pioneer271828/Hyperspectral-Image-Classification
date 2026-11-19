@@ -17,6 +17,8 @@ def main(argv=None):
         from evaluation.wp12_positive_cli import main as positive_control
 
         return positive_control(argv)
+    if "--real-attribution-review" in argv:
+        return real_attribution(argv)
     if "--external-paired-history" in argv:
         return external_paired_history(argv)
     if "--v1-spectral-audit" in argv:
@@ -84,6 +86,34 @@ def main(argv=None):
     require_frozen_code(code)
     with out.open("x", encoding="utf-8") as stream:
         stream.write(serialized)
+
+
+def real_attribution(argv):
+    from evaluation.frozen_training_stages import require
+    from evaluation.wp12_attribution_review import review
+    from evaluation.wp12_real_attribution import SHARD_GROUPS
+
+    parser = argparse.ArgumentParser(description="Independently verify frozen development attribution")
+    parser.add_argument("--real-attribution-review",action="store_true",required=True)
+    parser.add_argument("--runs",type=Path,required=True)
+    parser.add_argument("--out",type=Path,required=True)
+    parser.add_argument("--expected-commit",required=True)
+    parser.add_argument("--source-shard",nargs=3,action="append",required=True,metavar=("GROUP","DIRECTORY","SHA"))
+    parser.add_argument("--floor",nargs=2,required=True,metavar=("FILE","SHA"))
+    args = parser.parse_args(argv)
+    root,out = args.runs.resolve(strict=True),external_directory(args.out)
+    code = code_snapshot()
+    require(root in out.parents and code["commit"]==args.expected_commit and not out.exists(),
+            "Use the exact source commit and a fresh external result")
+    require_frozen_code(code)
+    sources = {group:Path(directory).resolve(strict=True) for group,directory,_ in args.source_shard}
+    producers = {group:commit for group,_,commit in args.source_shard}
+    require(set(sources)==set(SHARD_GROUPS) and len(args.source_shard)==len(SHARD_GROUPS)
+            and all(root in folder.parents for folder in sources.values()),"Each released group needs its exact pinned source")
+    floor_pin = dict(zip(("path","sha256"),args.floor,strict=True))
+    result = review(root,out,code,sources,producers,floor_pin)
+    require_frozen_code(code)
+    print(json.dumps(result),flush=True)
 
 
 def external_paired_history(argv):

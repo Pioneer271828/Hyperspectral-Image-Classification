@@ -9,6 +9,7 @@ import torch
 from evaluation.frozen_band_region import HEADS, hard
 from evaluation.frozen_training_stages import file_pin, json_pin, require
 from evaluation.wp12_paired_head_review import pair_scores
+from evaluation.wp12_release_qualification import classification_status
 from model.research_config import digest
 from research_runtime import require_frozen_code, tensor_hash
 from scripts.run_frozen_band_region import _write
@@ -227,7 +228,11 @@ def review(root,raw,output,code):
             require((set(new["exposure"])==set(VIEWS) and set(old["exposure"])=={"full"} if req["kind"]=="xuzhou"
                     else old["exposure"]==new["exposure"] and set(old["exposure"])=={"full"}),
                     "Training observations do not implement the registered comparison")
-            assessments[str(seed)] = dict(classification=aggregate or None,cost=costs or None,
+            eligibility = {band:{head:classification_status(aggregate.get(band,{}).get(head),
+                        accuracy_allowed=old["uses"]["independent_accuracy"]["eligible"],
+                        cost_allowed=old["uses"]["cost"]["eligible"],real=plan["scope"]==paired.REAL)
+                        for head in HEADS} for band in VIEWS}
+            assessments[str(seed)] = dict(classification=aggregate or None,qualification=eligibility,cost=costs or None,
                                            arm_selected_steps=[old["selected_step"],new["selected_step"]],
                                            checkpoint_lineages=[old["history"],new["history"]])
         require(len(starts)==len(req["model_seeds"]),"Named model seeds reuse an identical initialized head")
@@ -243,4 +248,8 @@ def review(root,raw,output,code):
                               raw=raw, results=results, raw_gt_loaded=False, query_accessed=False,
                               external_real_updates=plan["approved_updates"] if plan["scope"]==paired.REAL else 0,
                               real_accuracy_available=plan["scope"]==paired.REAL and
-                              any(r["uses"]["independent_accuracy"]["eligible"] for r in results.values())))
+                              any(r["uses"]["independent_accuracy"]["eligible"] for r in results.values()),
+                              formal_independent_accuracy_qualified=any(
+                                  all(item["qualification"]["central_gap" if row["scene"]=="xuzhou" else "full"]
+                                      ["fused"]["qualified"] for item in row["assessment"].values())
+                                  for row in results.values())))
