@@ -4,6 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
 from copy import deepcopy
 import fcntl
+from functools import lru_cache
 from itertools import product
 import multiprocessing
 from pathlib import Path
@@ -14,12 +15,13 @@ import torch
 
 from evaluation.frozen_band_region import HEADS
 from loadData.observation_sampling import BandMetadata
-from model.checkpoint_io import save_model_checkpoint
+from model.checkpoint_io import load_model_checkpoint, save_model_checkpoint
 from model.research_config import digest
 from research_runtime import require_frozen_code
 from scripts.run_frozen_band_region import check, pin, _read, _write
 from transfer import development_bank as custody, native_scale_training as native
 from transfer.development_bank_training import _initial
+from transfer.g3_training import state_hash
 from transfer.native_released_points import LOSS, MODE
 from transfer.p4_coverage import ARMS
 from transfer.spatial_coverage_protocol import VIEWS, bank_view, counts, release_statistics
@@ -38,10 +40,19 @@ PREDECESSOR = {"resume": "prefix", "completed": "resume"}
 def design():
     rows = {}
     for scene, support, k, split, arm in product(SCENES, SUPPORT, (1, 5), SPLITS, ARMS):
-        model = native.SEEDS[(list(SCENES).index(scene) + SUPPORT.index(support) + SPLITS.index(split)) % 3]
+        model = native.SEEDS[(tuple(SCENES).index(scene) + SPLITS.index(split)) % 3]
         name = f"{scene}-s{support}-k{k}-{split}-{arm}"
         rows[name] = dict(scene=scene, support_seed=support, k=k, split=split, spectral_arm=arm, model_seed=model)
     return rows
+
+
+def source_seed(scene):
+    return 81271 + tuple(SCENES).index(scene)
+
+
+@lru_cache(maxsize=len(SCENES))
+def source_state(scene):
+    return state_hash(shared_source(scene, source_seed(scene)))
 
 
 def generated(scene, support_seed, k, split):
@@ -91,7 +102,7 @@ def generated(scene, support_seed, k, split):
     authority = dict(minimum_buffer=3, construction=SCHEMA, geometry=geometry, validation_seed=3031,
                      support_seed=support_seed, k=k, partition=split)
     release = custody.BankRelease(scene, "synthetic", shape, classes, geometry, bands, stats,
-                                  {"kind": "synthetic_static_source", "seed": support_seed},
+                                  {"kind": "synthetic_static_source", "seed": source_seed(scene), "shared_state": source_state(scene)},
                                   authority, tuple(rows))
     return release, arrays
 
@@ -110,12 +121,12 @@ def prepare(root, code):
                     registration=pin(path/"registration.json")["sha256"])
         custody.Bank(bank, folder, release).verify_authority(bank)
         banks[name] = bank
-        source = f"{scene}-s{support}"
-        if source not in sources:
-            weights = folder / f"{source}.pt"
+        if scene not in sources:
+            weights = folder / f"{scene}-static-source.pt"
             if not weights.exists():
-                save_model_checkpoint(shared_source(scene, support), weights)
-            sources[source] = dict(weights=pin(weights), sidecar=pin(Path(str(weights)+".json")))
+                save_model_checkpoint(shared_source(scene, source_seed(scene)), weights)
+            check(state_hash(load_model_checkpoint(weights)) == source_state(scene), "Historical source weights differ")
+            sources[scene] = dict(weights=pin(weights), sidecar=pin(Path(str(weights)+".json")))
     document = dict(schema=SCHEMA, producer=code["commit"], banks=banks, sources=sources, cases=design(),
                     scope="synthetic_only", query_accessed=False, raw_gt_loaded=False, real_updates=0)
     path = root/"queue.json"
@@ -135,10 +146,15 @@ class CoverageFixture(SpatialReleasedFixture):
         key = f"{scene}-s{support}-k{k}-{split}"
         expected, _ = generated(scene, support, k, split)
         bank = custody.Bank(queue["banks"][key], root/"inputs", expected)
-        source = queue["sources"][f"{scene}-s{support}"]
+        source = queue["sources"][scene]
         self.bank, self.source_files, self.roster = bank, deepcopy(source), {}
         self.scene, self.classes = scene, SCENES[scene]
-        self.source_seed, self.split, self.arm, self.producer = support, split, cfg["spectral_arm"], queue["producer"]
+        self.source_seed, self.split, self.arm, self.producer = source_seed(scene), split, cfg["spectral_arm"], queue["producer"]
+
+    def initialization(self, seed):
+        target, witness = super().initialization(seed)
+        check(witness["source"] == self.bank.release.source["shared_state"], "Source model is foreign to this Bank")
+        return target, witness
 
     def model_factory(self, source, arm, seed):
         with torch.random.fork_rng(devices=[]):
@@ -275,7 +291,6 @@ def run_case(root, code, name, *, execution=None):
         check(evaluated["fused_nll"] == packet["fused_nll"], "Selected frozen validation changed")
         changed = sorted({key for row in full["history"] for key, value in row["fresh"].items()
                           if value["changed"] and (value["gradient_l1"] or 0) > 0})
-        # Binary coverage deliberately has no physical signal when metadata is missing.
         check(provider.arm == "none" or changed, "Coverage arm made no effective update")
         require_frozen_code(code)
         result = dict(**provider.config, registration=digest(spec), bank=provider.bank.pin["sha256"],
