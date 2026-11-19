@@ -26,6 +26,7 @@ def register(root, out, code, *, request=None, approval=None, real=False):
     if real:
         queue = real_inputs(root, out, code, request, approval)
         require(not any(out == Path(entry["bank"]["root"]) or out in Path(entry["bank"]["root"]).parents
+                        or Path(entry["bank"]["root"]) in out.parents
                         for entry in queue["inputs"].values()), "Execution output overlaps a publication")
         out.mkdir(exist_ok=True)
     else:
@@ -137,6 +138,7 @@ def execute(root, out, code, case, execution, *, until=STEPS, reference=False):
     provider = MatchedProvider(root, code, plan, case)
     spec = provider.contract(provider.classes, provider.seed, "off", 1, code["commit"], numeric=execution.numeric)
     contract = digest(spec)
+    place.parent.mkdir(exist_ok=True)
     with case_lock(place), drain_on_signal() as drain:
         reg = place/"registration.json"
         if reg.exists():
