@@ -180,6 +180,7 @@ def forward(model, actual, producer, role, *, condition=None, timed=None, execut
     graphs, timing = [], {} if timed is None else timed
     bands = actual.view.bands
     kwargs = coverage_forward_kwargs(model,bands)
+    kwargs["wavelength_unit"] = bands.wavelength_unit
     if bands.fwhm is not None:
         kwargs["fwhm"] = np.asarray(bands.fwhm,dtype=np.float32)
         kwargs["fwhm_unit"] = bands.fwhm_unit
@@ -199,9 +200,9 @@ def forward(model, actual, producer, role, *, condition=None, timed=None, execut
         if isinstance(model, ConditionalMultiscaleVCASAHGCN):
             metadata, coverage, gsd = (bands, None, None) if condition is None else condition.values()
             with model.partition_bands(metadata), model.physical_conditions(coverage,gsd):
-                out = partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
+                out = partition(*args, **kwargs)
         else:
-            out = partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
+            out = partition(*args, **kwargs)
     timing["forward_seconds"] = perf_counter()-started
     if execution is not None:
         graphs = [execution.graph_trace(state) for state in graphs]

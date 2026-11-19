@@ -64,6 +64,7 @@ def load_registered(root, directory, code):
         ).splitlines()
         check(set(paths) <= {"scripts/run_coverage_readout.py", "transfer/spectral_spacing_recovery.py",
                              "evaluation/wp12_coverage_readout.py", "tests/test_coverage_readout.py",
+                             "transfer/native_scale_observation.py",
                              "docs/architecture/current-status.json"},
               "New code changed the producer of archived frozen evidence")
     return old, scope, baseline, batch
