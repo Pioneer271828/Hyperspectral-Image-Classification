@@ -51,7 +51,10 @@ def history(root, links, docs):
     trained = paviau_trained(links["pavia_matrix"],root,paviau_prepared(links["pavia_preflight"],root))
     check(trained["phase_receipts"]==117,"PaviaU historical phases differ")
     xz = docs["xz_audit"]
-    check(xz["status"]=="passed" and xz["raw_gt"] is xz["query"] is False,"Foreign Xuzhou archive")
+    # Legacy WP07 reports absence as integer event counts.
+    check(xz["status"]=="passed" and all(type(xz[key]) in (bool,int) and xz[key]==0
+                                       for key in ("raw_gt","query","independent_updates")),
+          "Foreign Xuzhou archive")
     old_xz = {arm:{end:{key:result[key] for key in ("step","metrics")}
                    for end,result in item["endpoints"].items()}
               for arm,item in xz["results"].items()}
