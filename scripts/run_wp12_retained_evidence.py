@@ -78,6 +78,7 @@ def collect_xuzhou(model, scene, record, band, bands):
 def collect_bank(model, bank, producer, band, archive, exact):
     views, native, checks, seen = {}, [], [], set()
     classes = model.heads[archive["scene"]].out_features
+    focus_offset = 0
     previous = {row["tile"]: row for row in archive["rows"]
                 if row["event"] == dict(band=band, factor=1, policy="native")}
     for role in ("devtrain", "devval"):
@@ -92,14 +93,20 @@ def collect_bank(model, bank, producer, band, archive, exact):
             native.extend(dict(id=[ordinal, key], truth=label,
                                probabilities={head: value[i].tolist() for head, value in heads.items()})
                           for i, (key, label) in enumerate(zip(ids, truth, strict=True)))
-            if ordinal not in previous:
-                continue
-            old = previous[ordinal]
-            now = evidence(actual, targets)
-            REQUIRE(all(value == now[key] for key, value in old["evidence"].items() if key != "view"),
-                    "Archived admitted observation members differ")
             selected = [i for i, label in enumerate(truth) if label in FOCUS[archive["scene"]]]
-            REQUIRE(old["points"] == selected and old["labels"] == [truth[i] for i in selected],
+            if not selected:
+                continue
+            index = focus_offset
+            focus_offset += 1
+            if band == "matched_dispersed":
+                continue
+            REQUIRE(index in previous, "Archived focus tile roster differs")
+            old = previous[index]
+            now = evidence(actual, targets)
+            differences = [key for key, value in old["evidence"].items() if key != "view" and value != now[key]]
+            REQUIRE(not differences, f"Archived admitted observation members differ: {differences}")
+            REQUIRE(old["points"] == [index*100+i for i in range(len(selected))]
+                    and old["labels"] == [truth[i] for i in selected],
                     "Archived focus label order differs")
             graph = data[3]
             original = old["computation"]["graph"]
@@ -107,7 +114,7 @@ def collect_bank(model, bank, producer, band, archive, exact):
                     "Archived graph differs")
             checks.append({head: compare_probabilities(old["probabilities"][head], value[selected], exact)
                            for head, value in heads.items()})
-            seen.add(ordinal)
+            seen.add(index)
     REQUIRE(seen == previous.keys(), "Incomplete archived released factor-1 replay")
     return views, native, checks
 
