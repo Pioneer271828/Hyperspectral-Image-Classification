@@ -7,6 +7,7 @@ import numpy as np
 import torch
 
 from model.checkpoint_io import load_model_checkpoint, save_model_checkpoint
+from model.coverage_config import CONDITIONS
 from model.research_config import digest
 from transfer import native_positive_training as controls
 from transfer.native_scale_observation import forward
@@ -14,7 +15,7 @@ from transfer.spectral_spacing_recovery import model_for
 from transfer.wp06_center_spectral import fused_residual
 
 ARMS = ("native", "center", "spatial_shift", "pixel")
-SPECTRAL = ("none", "continuous")
+SPECTRAL = ("none", *CONDITIONS)
 RESIDUAL = ("none", "x_residual")
 CONFIG = "wp05_wp06_production_switches_v1"
 
@@ -146,8 +147,8 @@ def open_production(path, device, *, legacy=None, axis=None):
                 or metadata["fingerprint"] != digest([asdict(config), registered])):
             raise ValueError("Exported switches or band identity differ")
     if (model.backbone.region_residual_mode != config.residual
-            or model.backbone.coverage_mode != ("affine" if config.spectral == "continuous" else "none")
-            or (config.spectral == "continuous" and model.backbone.coverage_modulation.condition != "continuous")
+            or model.backbone.coverage_mode != ("none" if config.spectral == "none" else "affine")
+            or (config.spectral != "none" and model.backbone.coverage_modulation.condition != config.spectral)
             or config.arm == "pixel" or not registered or list(registered) != sorted(set(registered))):
         raise ValueError("Checkpoint topology or declared band axis differs")
     model.backbone.adapter.cache_attention = False

@@ -78,8 +78,11 @@ def probe(model, invoke, *, site=None, donor=None, graph_action=None, collect=Fa
         return at("fused",fuse(cnn,graph))
 
     def builder(*args,**kwargs):
-        state=build(*args,**kwargs) if graph_action is None else graph_action
+        state=build(*args,**kwargs)
         states.append(state)
+        if graph_action is not None:
+            REQUIRE(tensor_hash(state.Q)==tensor_hash(graph_action.Q), "Matched edge arm changed assignment")
+            return graph_action
         return state
 
     with ExitStack() as hooks:

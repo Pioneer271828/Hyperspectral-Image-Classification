@@ -115,7 +115,8 @@ def apply_view(full, master, name, box=None):
     return replace(view, observation=_spatial_view(view.observation, box), bands=effective), positions, mode
 
 
-def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None):
+def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None,
+                     metadata=None):
     _, _, original, context = bank.materialize(row, {"mode": "none"})
     release = bank.release
     stats = release.statistics
@@ -123,6 +124,15 @@ def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=N
             or original.observation.plan_hash != release.plan_hash):
         raise ValueError("Statistics or space differs from the bank release")
     view, positions, mode = apply_view(original, release.bands, band, box)
+    if metadata is not None:
+        if mode != "declared" or metadata not in ("declared","missing"):
+            raise ValueError("Independent metadata control must preserve a declared retained-band view")
+        if metadata == "missing":
+            bands = view.bands
+            neutral = BandMetadata(bands.source_id,bands.band_ids,tuple(np.linspace(0.,1.,len(positions))),
+                                   "normalized","index_only",bands.valid)
+            view = replace(view,bands=neutral)
+        mode = metadata
     source = {**context, "positions": list(positions), "band_ids": list(view.bands.band_ids),
               "retained_statistics": digest(dict(plan=release.plan_hash, parent=stats["statistics_hash"],
                                                 minimum=[stats["minimum"][i] for i in positions],
@@ -138,8 +148,9 @@ def bank_observation(bank, row, producer, band, box=None, *, factor=1, profile=N
     return _materialize(release.scene, release.classes, view, lattice, source, row["role"], producer, profile=profile)
 
 
-def bank_view(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None):
-    actual = bank_observation(bank, row, producer, band, box, factor=factor, profile=profile, synthetic_labels=synthetic_labels)
+def bank_view(bank, row, producer, band, box=None, *, factor=1, profile=None, synthetic_labels=None, metadata=None):
+    actual = bank_observation(bank, row, producer, band, box, factor=factor, profile=profile,
+                              synthetic_labels=synthetic_labels,metadata=metadata)
     targets = bind(actual, row, producer, row["role"], synthetic_labels=synthetic_labels)
     return actual, np.asarray(targets.points, dtype=np.int64).reshape((-1, 2)), targets
 
