@@ -3,6 +3,8 @@
 from collections import Counter
 import csv
 from math import isclose
+from pathlib import Path
+import subprocess
 from time import perf_counter
 
 import numpy as np
@@ -90,7 +92,12 @@ def sealed_arm(root, family, arm, reg, complete):
     kind = ("multiscale" if "cnn_multiscale" in family_stage else "region_message" if "region_attention" in family_stage
             else "aligned" if arm == "aligned" else "native")
     same_context = {key: spec[key] for key in ("data", "exposure_hash", "policy_hash", "updates", "sampler_seed",
-                               "torch_seed", "lr", "optimizer_config", "sampler", "loss", "selection", "device", "scheduler")}
+                               "torch_seed", "lr", "sampler", "loss", "selection", "device", "scheduler")}
+    # Different registered architectures add different parameter slots, but the
+    # single group's Adam hyperparameters must be identical.
+    require(len(spec["optimizer_config"]) == 1 and "params" in spec["optimizer_config"][0],
+            "Historical arm did not use a single registered Adam group")
+    same_context["optimization"] = {k:v for k,v in spec["optimizer_config"][0].items() if k!="params"}
     same_context["exposure"] = digest([[row[k] for k in ("step", "tile_id", "anchor", "support_ids")] for row in history])
     return packet, kind, same_context, full["checkpoint"]
 
@@ -314,6 +321,74 @@ def paviau(root, archive):
                 exclusion="Only factor-one off is shared; trained WP07 candidates used factor 2 or 4 and WP08 trained only factor 1.")
 
 
+def pavia_replay_pairs(root, receipt, audit, audit_pin, code, kind):
+    raw = json_pin(root,receipt)
+    script = "scripts/replay_wp12_cross_paviau.py"
+    require(raw["schema"] == "wp12_paviau_archive_point_replay_v1" and raw["archive"] == kind
+            and raw["audit"] == audit_pin and raw["query_accessed"] is raw["raw_gt_loaded"] is False
+            and raw["optimizer_updates"] == 0 and raw["numeric"] == "cpu_frozen_replay",
+            "Wrong admitted PaviaU point replay receipt")
+    require(raw["source"] == {"wp07":"ca22ac5ae52a4c1893f1bb340f1514be6eda6651",
+                             "wp08":"a67f6af84742d51da8d4a1abaf6808e91f946e4e"}[kind]
+            and isinstance(raw["consumer"],str) and len(raw["consumer"])==40
+            and all(c in "0123456789abcdef" for c in raw["consumer"]), "Wrong frozen replay source")
+    subprocess.run(["git","merge-base","--is-ancestor",raw["consumer"],code["commit"]],check=True)
+    previous = subprocess.check_output(["git","show",raw["consumer"]+":"+script])
+    current = subprocess.check_output(["git","show",code["commit"]+":"+script])
+    require(current == previous, "Archived point replays must use these same producer bindings")
+
+    if kind=="wp07":
+        cases = {saved["case"]:saved for link in audit["case_replays"] for saved in [json_pin(root,link)]}
+        endpoint_names = {"selected":"head_metrics","last":"last_head_metrics"}
+        artifact = next(pin for pin in audit["files"] if Path(pin["path"]).name=="paired-endpoints.csv")
+        with pinned(root,artifact).open(newline="",encoding="utf-8") as stream:
+            requests = {(int(x["seed"]),int(x["base_factor"]),x["base_arm"],int(x["factor"]),x["arm"],x["relation"])
+                        for x in csv.DictReader(stream)}
+    else:
+        cases = {saved["case"]:saved for saved in audit["cases"]}
+        endpoint_names = {"selected":"head_metrics","last":"terminal_head_metrics"}
+        templates = {tuple(p) for pair_group in audit["rules"]["comparisons"].values() for p in pair_group}
+        requests = {(seed,1,control,1,candidate,"same_factor_message") for seed in (64,512,2048)
+                    for candidate,control in templates}
+    require(set(cases)==set(raw["cases"]), "PaviaU replay skipped or introduced an archived model arm")
+    for name, arm in raw["cases"].items():
+        pinned(root,arm["registration"])
+        pinned(root,arm["checkpoint"])
+        stage = json_pin(root,cases[name]["stages"][1])
+        require(arm["checkpoint"]==stage["checkpoint"] and arm["steps"]==60
+                and arm["selected"]==cases[name]["selected_step"]
+                and set(arm["rows"])==set(endpoint_names),
+                "PaviaU replay changed the archived recovery or selected checkpoint")
+    pairs, holes = {}, []
+    for seed,base_factor,base,factor,arm,relation in sorted(requests):
+        first,last = (f"paviaU/{seed}/{f}/{name}" for f,name in ((base_factor,base),(factor,arm)))
+        key = f"{first}/{factor}/{arm}"
+        record = dict(budget=60,relation=relation,baseline=first,candidate=last,comparisons={},
+                      steps=[raw["cases"][name]["selected"] for name in (first,last)])
+        require(raw["cases"][first]["device"]==raw["cases"][last]["device"],
+                "Original PaviaU guard cannot pair the two training devices")
+        pairs[key] = record
+        for phase,attribute in endpoint_names.items():
+            bands = record["comparisons"][phase] = {}
+            for band in ("full","even_retained_positions"):
+                a,b = (raw["cases"][name]["rows"][phase][band] for name in (first,last))
+                truth = [r[0] for r in a["values"]]
+                require(a["point_order"]==b["point_order"] and truth==[r[0] for r in b["values"]]
+                        and Counter(truth)=={x:5 for x in range(1,10)}, "Replayed point set differs within PaviaU")
+                columns = bands[band] = {}
+                for i,head in enumerate(HEADS,1):
+                    result = raw_pair(truth,[r[i] for r in a["values"]],[r[i] for r in b["values"]],9,floor=5)
+                    matches = (result["before"]==cases[first][attribute][head][band]["confusion_matrix"],
+                               result["after"]==cases[last][attribute][head][band]["confusion_matrix"])
+                    require(tuple(r["confusion_match"][head] for r in (a,b))==matches,
+                            "PaviaU point receipt misreported a disagreement with its original audit")
+                    columns[head] = result if all(matches) else None
+                    if not all(matches):
+                        holes.append(dict(pair=key,phase=phase,view=band,head=head,replay_matches=list(matches)))
+    return dict(receipt=receipt,pairs=pairs, unavailable=holes,
+                interpretation="CPU same-weight point transitions; checked against each original GPU confusion matrix")
+
+
 def existing_scale_views(doc, *, scene, classes, focus):
     require(doc["scene"] == scene and doc["role"] == "devval" and doc["real_updates"] == 0
             and doc["query_accessed"] is doc["raw_gt_loaded"] is False,
@@ -323,11 +398,12 @@ def existing_scale_views(doc, *, scene, classes, focus):
         event = row["event"]
         key = (event["factor"],event["band"],event["policy"])
         points = groups.setdefault(key, {})
+        predictions = {head:probabilities(row["probabilities"][head],len(row["points"]),classes)
+                       .argmax(1).tolist() for head in HEADS}
         for i,(point,label) in enumerate(zip(row["points"],row["labels"],strict=True)):
             require(point not in points and doc["labels"][point] == label and label in focus,
                     "Historical scale views changed released point order or identity")
-            points[point] = (label,{head:probabilities(row["probabilities"][head],len(row["points"]),classes)
-                                    .argmax(1)[i].item()+1 for head in HEADS})
+            points[point] = (label,{head:predictions[head][i]+1 for head in HEADS})
     results = {}
     for key, after in groups.items():
         factor,band,policy = key
@@ -345,7 +421,7 @@ def existing_scale_views(doc, *, scene, classes, focus):
                 no_cross_reason=doc["no_cross_reason"], comparison_to_same_factor_full_native=results)
 
 
-def review_history(root,out,code):
+def review_history(root,out,code,*,paviau_replays=None):
     pins = {key:named_pin(root,*value) for key,value in ARCHIVES.items()}
     archive = {key:json_pin(root,pin) for key,pin in pins.items()}
     historic = archive["xz_hh_spectral"]
@@ -355,9 +431,15 @@ def review_history(root,out,code):
     coverage = {key: dict(views=list(value["views"]),points=value["point_visits"])
                 for key,value in historic["native"].items() if key.startswith("hh-")}
     require_frozen_code(code)
+    pavia = paviau(root,archive)
+    if paviau_replays:
+        require(set(paviau_replays) == {"wp07","wp08"},"Provide both registered PaviaU replay receipts")
+        pavia["point_comparisons"] = {kind:pavia_replay_pairs(root,paviau_replays[kind], archive[source],
+                                      pins[source],code,kind) for kind,source in
+                                      (("wp07","pavia_wp07"),("wp08","pavia_gpu5"))}
     findings = dict(scope="protocol_bound_real_development",sources=pins,producer=code["commit"],
         xuzhou_full=xuzhou(root),xuzhou_directions=directions(root,archive["xz_directional"],archive["xz_directional_cpu"]),
-        paviau=paviau(root,archive),
+        paviau=pavia,
         xuzhou_central_gap=dict(native_receipt=pins["xz_hh_spectral"],
                                same_weight_scale_receipt=pins["xz_scale_gap"],
                                same_weight_scale=existing_scale_views(archive["xz_scale_gap"],

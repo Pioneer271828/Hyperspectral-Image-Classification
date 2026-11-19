@@ -28,6 +28,7 @@ def main(argv=None):
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--expected-commit", required=True)
     p.add_argument("--input", nargs=2, metavar=("PATH", "SHA256"))
+    p.add_argument("--paviau-replay", nargs=3, metavar=("FAMILY", "PATH", "SHA256"), action="append")
     p.add_argument("--gpu")
     p.add_argument("--synthetic", action="store_true")
     p.add_argument("--kind", choices=("xuzhou", "honghu"))
@@ -42,6 +43,7 @@ def main(argv=None):
             "Use a clean matching commit and a new result path under the authorized runs")
     require_frozen_code(code)
     torch.set_num_threads(1)
+    require(args.paviau_replay is None or args.action == "history", "Only history can consume PaviaU archive replays")
     if args.action == "fixture":
         from evaluation.wp12_cross_backend_fixture import fixture
 
@@ -64,7 +66,9 @@ def main(argv=None):
 
             require(args.gpu is None and not args.synthetic and not args.input,
                     "Historical compatibility replay uses the original admitted archive protocols")
-            value = review_history(root, out, code)
+            links = args.paviau_replay or []
+            require(len({item[0] for item in links})==len(links),"Repeated PaviaU replay family")
+            value = review_history(root, out, code, paviau_replays={key:pin([path,sha]) for key,path,sha in links})
     require_frozen_code(code)
     print(json.dumps(value), flush=True)
 
