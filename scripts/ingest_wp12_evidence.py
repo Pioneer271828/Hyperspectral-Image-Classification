@@ -13,6 +13,10 @@ from scripts.summarize_unified_cohort import read_pinned
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if "--long-stage-case" in argv or "--long-stage-publish" in argv:
+        from evaluation.wp12_long_cli import main as long_coverage
+
+        return long_coverage(argv)
     if "--historical-stage-run" in argv:
         from evaluation.frozen_stage_cli import historical_cli
 
