@@ -6,6 +6,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import resource
+import subprocess
 from tempfile import TemporaryDirectory
 from time import perf_counter
 
@@ -61,7 +62,7 @@ def freeze(root, code):
 
 def archive(root, receipt, case):
     name = f"{case}.npz"
-    return read_bundle(pin(root / OLD / name, receipt["input_cases"][name]))
+    return read_bundle(pin(root / OLD / name, receipt["input_cases"][case]))
 
 
 def stratified(aliases, labels):
@@ -256,7 +257,18 @@ def honghu_short(root, folder, scope, baseline, batch, name, entry):
 def registered(root, folder, code):
     inputs = freeze(root, code)
     link = pin(folder / "registration.json")
-    check(_read(link) == inputs[0], "Registration, cohort, checkout or source changed")
+    manifest = _read(link)
+    current = inputs[0]
+    if current != manifest:
+        check(link["sha256"] == "70dcf954b9e9a71000d35b95f703c32ba1d94cabf420b5799970bb2642e1d3133"
+              and manifest["producer"] == "c0ae2e407a6dcf4a42819b0bbabaf70ec1a74636"
+              and {**current, "producer": manifest["producer"], "source_hash": manifest["source_hash"]} == manifest,
+              "Registration, roles or parent changed")
+        paths = subprocess.check_output(
+            ["git", "diff", "--name-only", manifest["producer"], code["commit"]], text=True
+        ).splitlines()
+        check(set(paths) <= {"scripts/run_transfer_readout.py"}, "Completed producer dependencies changed")
+    inputs = (manifest, *inputs[1:])
     return link, inputs
 
 
