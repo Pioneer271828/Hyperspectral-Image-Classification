@@ -115,7 +115,10 @@ def old_readouts(root):
     case_names = [f"{scene}-s{seed}-none-{method}" for scene in ("xuzhou","whu-honghu") for seed in SEEDS
                   for method in ("target_scratch_full","source_pretrained_full_finetune")]
     for case in case_names:
-        require(case in review["outputs"] or case+".json" in review["outputs"],"Exact historical accepted probe case missing")
+        report_path = str(root/PAIRED/(case+".json"))
+        case_review = json_pin(root,dict(path=report_path,sha256=review["outputs"][report_path]))
+        require(case_review["case"]==case and all(not case_review[stage]["numerical_failures"]
+                for stage in ("initial","terminal")),"Exact historical accepted probe case missing")
         outcomes = {}
         for stage in ("initial","terminal"):
             folder = root/"wp06-v2-paired-execution01"/case/stage

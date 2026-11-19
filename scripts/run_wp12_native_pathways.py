@@ -16,7 +16,7 @@ from scripts.run_native_released_points import arithmetic
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action",choices=("controls","real","readouts","external"))
+    parser.add_argument("action",choices=("controls","real","readouts","external","branches"))
     parser.add_argument("--runs",type=Path,required=True)
     parser.add_argument("--out",type=Path,required=True)
     parser.add_argument("--expected-commit",required=True)
@@ -54,6 +54,15 @@ def main(argv=None):
                 result = observe_roles(root,out,code,execution)
             value = _write(out/"external.json",result)
         require_frozen_code(code)
+    elif args.action=="branches":
+        from evaluation.wp12_native_pathways_real import branches
+
+        require(args.case and args.drain_after is None and not out.exists(),"Use a pinned branch case and new result")
+        with arithmetic(root,args.gpu) as execution:
+            result = branches(root,args.case,execution)
+        require_frozen_code(code)
+        out.parent.mkdir(parents=True,exist_ok=True)
+        value = _write(out,{**result,"producer":code["commit"]})
     else:
         from evaluation.wp12_native_pathways_real import run
 

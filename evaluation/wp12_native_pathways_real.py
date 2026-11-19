@@ -180,3 +180,53 @@ def run(root,out,code,case,execution,*,drain_after=None):
                         driver_wall_seconds=perf_counter()-t)
         return dict(status="drained",committed=len(ledger),new_blocks=new,expected=len(cases),
                     plan=plan_pin,load_seconds=setup_seconds,driver_wall_seconds=perf_counter()-t)
+
+
+def branches(root,case,execution):
+    """Project the actual CNN and graph endpoint features onto one frozen fused margin."""
+    import torch
+
+    require(case in ("xz-initial","xz-selected","hh-short-shared","hh-long-scratch"),"Unknown approved branch comparison")
+    setup = xuzhou if case.startswith("xz-") else honghu
+    model,scene,basis,blocks = setup(root,case)
+    model.to(execution.device).eval().requires_grad_(False)
+    model.backbone.adapter.cache_attention=False
+    model.backbone.adapter.clear_attention_cache()
+    original = state_hash(model)
+    measurements = {}
+    tick = perf_counter()
+    for role,block,band,tile,labels,read in blocks:
+        if case.startswith("xz-") and role!="val":
+            continue
+        focus = np.flatnonzero(np.isin(labels,FOCUS[scene.dataset]))
+        if not len(focus):
+            continue
+        observation = read()
+        clean,q,a,reference = path.capture(model,scene,tile,observation)
+        with torch.no_grad():
+            logits,features,_,_ = path.spatial_forward(model,scene.dataset,clean,q,a,features=True)
+            left = features["stage2_cnn"]
+            right = features["stage2_graph"]
+            projected = (model.backbone.fuse_features(left,torch.zeros_like(right)),
+                         model.backbone.fuse_features(torch.zeros_like(left),right))
+            linear = model.heads[scene.dataset]
+            rows = []
+            for ordinal,cell in enumerate(focus,1):
+                true = int(labels[cell])
+                rivals = (1,) if scene.dataset=="xuzhou" else ((21 if true==15 else 20,) if case=="hh-long-scratch"
+                         else RIVALS[scene.dataset][true])
+                for rival in rivals:
+                    delta = linear.weight[true-1]-linear.weight[rival-1]
+                    bias = float(linear.bias[true-1]-linear.bias[rival-1])
+                    parts = [float(delta@v[cell]) for v in projected]
+                    actual = float(logits["fused"][cell,true-1]-logits["fused"][cell,rival-1])
+                    require(abs(sum(parts)+bias-actual)<2.5e-5,"Frozen fused logit reconstruction differs by branch")
+                    rows.append(dict(ordinal=ordinal,truth=true,rival=rival,margin=actual,bias=bias,
+                                     cnn_dot=parts[0],graph_dot=parts[1],
+                                     predictions={h:int(p[cell].argmax())+1 for h,p in zip(auth.HEADS,reference,strict=True)}))
+        measurements[f"{role}-{block:03d}-{band}"] = dict(role=role,block=block,band=band,rows=rows)
+    execution.sync()
+    require(state_hash(model)==original,"Frozen branch decomposition changed the model")
+    return dict(schema="wp12_native_fused_branch_projection_v1",case=case,model=original,basis=basis,
+                measurement=measurements,numeric=execution.numeric,seconds=perf_counter()-tick,
+                optimizer_updates=0,raw_gt_loaded=False,query_accessed=False)

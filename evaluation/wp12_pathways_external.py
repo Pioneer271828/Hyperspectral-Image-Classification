@@ -84,10 +84,11 @@ def observe_roles(root,out,code,execution):
                 labels.extend(y for _,y in target.points)
                 ids.extend(i for i,_ in target.points)
                 block_ids.extend([tile]*len(target.points))
+                cells = torch.as_tensor(target.cells.copy(),device=clean.device)
                 for layer in groups:
-                    groups[layer].append(features[layer][target.cells].detach().cpu())
+                    groups[layer].append(features[layer][cells].detach().cpu())
                 for head,result in zip(HEADS,old_native,strict=True):
-                    native[head].extend((result[target.cells].argmax(1)+1).tolist())
+                    native[head].extend((result[cells].argmax(1)+1).tolist())
                 if role=="evaluation":
                     ann.append(spatial.classify(bank,assigned,certified,role,tile,target.points))
             views[band][role] = dict(labels=labels,ids=ids,blocks=block_ids,annotations=ann,native=native,
