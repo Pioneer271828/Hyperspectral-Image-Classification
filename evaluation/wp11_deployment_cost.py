@@ -1,7 +1,7 @@
 """Registered cold, warm, resident and concurrent deployment measurements."""
 
-from collections import defaultdict
 from contextlib import nullcontext
+import io
 import json
 import os
 from pathlib import Path
@@ -14,19 +14,21 @@ from time import monotonic, perf_counter_ns, sleep
 import torch
 
 from evaluation.wp12_cost_primitives import timing_summary
-from inference.native_deployment import Runtime, clock_ms, output_hash, prepare
+from evaluation import wp11_static_cost as old_static
+from inference.native_deployment import Request, Runtime, clock_ms, output_hash, prepare
+from inference.route_controls import request_hash
 from model.research_config import digest
-from research_runtime import hash_file, require_frozen_code
+from research_runtime import hash_file, require_frozen_code, tensor_hash
 from scripts import run_frozen_band_region as archive
-from transfer import band_scale_real
 from transfer.development_blocks import read_pin
-from transfer.g3_training import state_hash
 from transfer.native_coverage_queue import case_lock
 from transfer.native_coverage_replay import EXPECTED_ARCHIVES, frozen_model
 from transfer.spatial_coverage_protocol import bank_observation
 
 SCHEMA="wp11_native_deployment_cost_v1"
-CASES={"paviaU":"paviaU-64","xuzhou":"xuzhou","whu-honghu":"whu-honghu"}
+NATIVE_CASES={"paviaU":"paviaU-64","xuzhou":"xuzhou","whu-honghu":"whu-honghu"}
+MATCHED_CASES={"xuzhou_wp11_light":"light","xuzhou_wp11_full":"full_matched"}
+CASES=(*NATIVE_CASES,*MATCHED_CASES)
 SCOPES=("cold_process_first_prediction","warm_end_to_end","resident_forward","concurrent_throughput")
 REPEATS=(3,6,6,4)
 WARMUPS=2
@@ -76,7 +78,7 @@ def approved_archive(root, name):
 
 
 def context(root,case, *, load=False):
-    name=CASES[case]
+    name=NATIVE_CASES[case]
     source, docs=archive.source_documents(root)
     previous=approved_archive(root,name)
     bank,intake=archive._freeze_bank(root,case,{"sources":source})
@@ -110,21 +112,48 @@ def planned_inputs(bank,producer):
     return requests
 
 
+def matched_manifest(root):
+    name,sha=LEGACY["wp11_manifest"]
+    return document(root,dict(path=str(root/name),sha256=sha))
+
+
+def matched_inputs(root,out):
+    manifest=matched_manifest(root)
+    release=old_static.read_release(manifest["release"])
+    previous=old_static.prepare(release)
+    need(request_hash(previous)==manifest["static_input"],"Approved WP11 matched observations changed")
+    rows=[]
+    for record in previous:
+        rows.append(dict(record))
+    packet=out/"wp11-matched-xuzhou-inputs.pt"
+    with packet.open("xb") as stream:
+        torch.save(rows,stream)
+    slots=[dict(shape=list(row["x"].shape[:2]),original_bands=row["wavelengths"].numel(),
+                retained_bands=row["wavelengths"].numel(),observation=digest(row["id"])) for row in rows]
+    return archive.pin(packet),slots,manifest
+
+
 def register(root,out,code):
     out.mkdir()
     cases={}
-    for scene in CASES:
+    for scene in NATIVE_CASES:
         bank,model,_=context(root,scene)
         inputs=planned_inputs(bank,code["commit"])
         cases[scene]=dict(bank=bank.pin["sha256"],model=model["model"],weights=model["checkpoint"],
-                          archive=EXPECTED_ARCHIVES[CASES[scene]],requests=inputs)
+                          archive=EXPECTED_ARCHIVES[NATIVE_CASES[scene]],requests=inputs,mode="full",
+                          workload="native_bank_raw_published_block",io_per_warm=len(inputs))
+    inputs,matched,manifest=matched_inputs(root,out)
+    for case, path in MATCHED_CASES.items():
+        cases[case]=dict(model=manifest["models"][path]["state"],archive=LEGACY["wp11_manifest"][1],
+                         workload="archived_wp11_label_blind_tensor_requests",io_per_warm=1,
+                         request_packet=inputs,requests=matched,mode="light" if path=="light" else "full")
     history=inherited(root)
     plan=dict(schema=SCHEMA,producer=code["commit"],cases=cases,archive=history,
               repeats=dict(zip(SCOPES,REPEATS,strict=True)),warmups=WARMUPS,concurrent_workers=WORKERS,
               os_cache="normal_os_page_cache_uncontrolled_no_flush",graph_policy="rebuild",
-              workload_rule="middle-area published devval block; full and central-gap views; no label-based choice",
-              resolution="native",mode="full",device_limits=dict(min_cuda_free_mib=12288,max_cuda_utilization=60),
-              estimated_seconds=dict(cpu=100,gpu=110),timeout_per_worker_seconds=TIMEOUT,
+              workload_rule="middle-area native block full/gap or exact archived WP11 matched input packet",
+              resolution="native_or_original_wp11_request",device_limits=dict(min_cuda_free_mib=12288,max_cuda_utilization=60),
+              estimated_seconds=dict(cpu=140,gpu=150),timeout_per_worker_seconds=TIMEOUT,
               real_measurement=True,labels_emitted=False,optimizer_updates=0,query_accessed=False)
     require_frozen_code(code)
     return archive._write(out/"measurement-plan.json",plan)
@@ -134,9 +163,9 @@ def read_plan(root,out,code,expected=None):
     pin=archive.pin(out/"measurement-plan.json")
     need(expected is None or expected==pin["sha256"],"Frozen measurement plan digest differs")
     plan=document(root,pin)
-    need(plan["schema"]==SCHEMA and plan["producer"]==code["commit"] and plan["cases"].keys()==CASES.keys()
+    need(plan["schema"]==SCHEMA and plan["producer"]==code["commit"] and plan["cases"].keys()==set(CASES)
          and plan["repeats"]==dict(zip(SCOPES,REPEATS,strict=True)) and plan["warmups"]==WARMUPS
-         and plan["concurrent_workers"]==WORKERS and plan["mode"]=="full" and plan["graph_policy"]=="rebuild",
+         and plan["concurrent_workers"]==WORKERS and plan["graph_policy"]=="rebuild",
          "Foreign deployment measurement plan or clock")
     return pin,plan
 
@@ -146,14 +175,32 @@ class Worker:
         started=perf_counter_ns()
         self.plan,self.case=plan,case
         self.record=plan["cases"][case]
-        self.bank,previous,model=context(root,case,load=True)
-        need(previous["model"]==self.record["model"] and previous["checkpoint"]==self.record["weights"]
-             and self.bank.pin["sha256"]==self.record["bank"],"Case admission changed after registration")
-        self.runtime=Runtime(device=device,full=model,identity={"full":self.record["model"]})
+        self.root=root
+        self.reads=0
+        self.old_hash=None
+        self.mode=self.record["mode"]
+        if case in NATIVE_CASES:
+            self.bank,previous,model=context(root,case,load=True)
+            need(self.mode=="full" and previous["model"]==self.record["model"] and previous["checkpoint"]==self.record["weights"]
+                 and self.bank.pin["sha256"]==self.record["bank"],"Case admission changed after registration")
+        else:
+            path=MATCHED_CASES[case]
+            manifest=matched_manifest(root)
+            self.legacy_source=manifest["static_input"]
+            self.legacy_path=path
+            reference=plan["archive"]["wp11_static"]["samples"][path]
+            need(self.record["model"]==manifest["models"][path]["state"]==reference["weights"],
+                 "Archived WP11 matched checkpoint differs")
+            self.old_hash=reference["output_hashes"]
+            model=old_static.load_static(old_static.read_release(manifest["release"]),path)
+        self.runtime=Runtime(device=device,identity={self.mode:self.record["model"]},**{self.mode:model})
         self.load_ms=clock_ms(started)
 
     def ready(self):
+        if self.case in MATCHED_CASES:
+            return self.legacy_ready()
         values=[]
+        previous=self.bank.reads
         for i,row in enumerate(self.record["requests"]):
             tile=self.bank.role_row("devval",row["tile"])
             need(digest([tile["parent_tile"],tile["parent_box"]])==row["parent"]
@@ -163,29 +210,45 @@ class Worker:
                             original_band_count=row["original_bands"],expected=row["observation"])
             need(list(request.x.shape[:2])==row["shape"],"Prepared deployment work shape differs")
             values.append(request)
+        self.reads+=self.bank.reads-previous
         return values
+
+    def legacy_ready(self):
+        raw=read_pin(self.record["request_packet"],self.root)
+        rows=torch.load(io.BytesIO(raw),map_location="cpu",weights_only=True)
+        need(request_hash(rows)==self.legacy_source,"Label-blind original WP11 request packet changed")
+        self.reads+=1
+        return [Request(row["id"],row["dataset"],digest(row["id"]),self.legacy_source,"original_full",
+                        row["x"].to(self.runtime.device),row["wavelengths"].to(self.runtime.device),None,
+                        None,row["scale"],1.,True) for row in rows]
 
     def sample(self,warm,prepared=None):
         start=perf_counter_ns()
-        previous=self.bank.reads
+        previous=self.reads
         if self.runtime.device.type=="cuda":
             torch.cuda.reset_peak_memory_stats(self.runtime.device)
         requests=self.ready() if warm else prepared
         self.runtime.sync()
         prep=clock_ms(start) if warm else 0.
-        output=self.runtime.run(requests,"full")
+        output=self.runtime.run(requests,self.mode)
         if warm:
             identity=output_hash(output)
             latency=clock_ms(start)
         else:
             latency=output["elapsed_ms"]
             identity=output_hash(output)
-        need(self.bank.reads-previous==(len(requests) if warm else 0) and
-             output["counts"]["graph_builds"]==len(requests) and output["counts"]["light_calls"]==0,
-             "Observed read or graph count differs from the measured scope")
+        graph_calls=len(requests) if self.mode=="full" else 0
+        light_calls=len(requests) if self.mode=="light" else 0
+        need(self.reads-previous==(self.record["io_per_warm"] if warm else 0)
+             and output["counts"]["graph_builds"]==graph_calls and output["counts"]["light_calls"]==light_calls,
+             "Observed reads or lazy model/graph calls differ from the measured scope")
+        if self.old_hash is not None and self.runtime.device.type=="cpu":
+            need(old_static.output_hashes(self.legacy_path,output["predictions"])==self.old_hash,
+                 "Matched WP11 CPU path differs from accepted historical predictions")
         return dict(wall_ms=latency,prepare_ms=prep,forward_ms=output["elapsed_ms"],graph_ms=output["graph_ms"],
                     gpu_event_ms=output["gpu_event_ms"],graph_calls=output["counts"]["graph_builds"],
-                    io_reads=self.bank.reads-previous,prediction=identity,
+                    io_reads=self.reads-previous,prediction=identity,request_blocks=len(requests),
+                    light_calls=light_calls,
                     rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
                     cuda_peak_bytes=torch.cuda.max_memory_allocated(self.runtime.device) if self.runtime.device.type=="cuda" else None)
 
@@ -279,7 +342,7 @@ def summary(samples,scope,overlap):
         stats=dict(p50_ms=median(values),p95_ms=ordered[-2]+.9*(ordered[-1]-ordered[-2]),
                    mean_ms=fmean(values),wall_ms=values)
     else:
-        stats=timing_summary([s["wall_ms"] for s in samples],repeats=len(samples),blocks=samples[0]["graph_calls"])
+        stats=timing_summary([s["wall_ms"] for s in samples],repeats=len(samples),blocks=samples[0]["request_blocks"])
     stats.update(rss_peak_kib=max(s["rss_kib"] for s in samples),
                  cuda_process_peak_bytes=max((s["cuda_peak_bytes"] for s in samples if s["cuda_peak_bytes"] is not None),default=None),
                  graph_ms=sum(s["graph_ms"] for s in samples),wall_concurrent_ms=overlap,

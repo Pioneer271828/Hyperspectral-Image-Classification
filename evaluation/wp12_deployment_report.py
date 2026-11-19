@@ -41,10 +41,12 @@ def audited_cost(root,out,code,plan_sha):
                  and record["query_accessed"] is False,"Foreign benchmark scope receipt")
             seen.add((case,scope))
             samples=record["samples"]
-            count=len(plan["cases"][case]["requests"])
+            registered=plan["cases"][case]
+            count=len(registered["requests"])
+            graph_count=count if registered["mode"]=="full" else 0
             need(len(samples)==plan["repeats"][scope] and
-                 all(s["wall_ms"]>0 and s["graph_calls"]==count
-                     and s["io_reads"]==(0 if scope=="resident_forward" else count)
+                 all(s["wall_ms"]>0 and s["graph_calls"]==graph_count and s["light_calls"]+s["graph_calls"]==count
+                     and s["io_reads"]==(0 if scope=="resident_forward" else registered["io_per_warm"])
                      and (s["gpu_event_ms"] is not None)==(device!="cpu") for s in samples),
                  "Timing samples do not represent their declared operations")
             reps={s["prediction"] for s in samples}
@@ -66,7 +68,8 @@ def audited_cost(root,out,code,plan_sha):
                 need(len({r["pid"] for r in samples})==len(samples) and all(
                         r["process_exit_ms"]>=r["wall_ms"]>=r["inside_request_ms"] for r in samples),
                      "Cold process ordering does not enclose first available prediction")
-            rows.append(dict(case=case,scope=scope,device=device,digest=link["sha256"],sample_count=len(samples),
+            rows.append(dict(case=case,scope=scope,device=device,mode=registered["mode"],workload=registered["workload"],
+                             digest=link["sha256"],sample_count=len(samples),
                              warmups=record["warmups"],summary=timing,batch=count,
                              pixels=sum(math.prod(s["shape"]) for s in plan["cases"][case]["requests"])))
         sources[device]=identity["sha256"]
@@ -121,7 +124,7 @@ def publish(root,run,code,plan_sha,synthetic):
         _write(stage/"synthetic-routing.json",routes)
         with (stage/"costs.csv").open("x",encoding="utf-8",newline="") as file:
             writer=csv.writer(file)
-            a=("case","scope","device","batch","pixels","sample_count","warmups")
+            a=("case","scope","device","mode","workload","batch","pixels","sample_count","warmups")
             b=("p50_ms","p95_ms","rss_peak_kib","cuda_process_peak_bytes","graph_ms","concurrent_requests_per_second")
             writer.writerow((*a,*b))
             for row in costs:
