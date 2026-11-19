@@ -148,13 +148,17 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
     manifest = authorized_document(root,manifest_pin)
     authority = authorized_document(root,authority_pin)
     base_fields={"schema","candidate","roles","minimum_buffer","history"}
-    check(base_fields <= manifest.keys() <= base_fields | {"spatial_annotations", "observation_views"},
+    check(base_fields <= manifest.keys() <= base_fields | {"spatial_annotations", "observation_views", "observation_factors"},
           "Exact independent manifest fields required")
     views = manifest.get("observation_views")
     if "observation_views" in manifest:
         check(isinstance(views, list) and views and all(
             view in ("full", "central_gap", "matched_dispersed") for view in views)
             and len(set(views)) == len(views), "Explicit unique approved retained-band views required")
+    factors = manifest.get("observation_factors")
+    if "observation_factors" in manifest:
+        check(isinstance(factors,list) and factors and all(type(f) is int and f in (1,2,4) for f in factors)
+              and factors==sorted(set(factors)), "Explicit unique approved native lattice factors required")
     annotations=manifest.get("spatial_annotations")
     approved_fields={"schema","approved_manifest_sha256","historical_bank_sha256","uses","source_mode"}
     if "spatial_annotations" in manifest:
@@ -186,20 +190,23 @@ def open_independent(root, manifest_pin, authority_pin, *, test_history=None):
         result["spatial_annotations"]=annotations
     if views is not None:
         result["observation_views"] = views
+    if factors is not None:
+        result["observation_factors"] = factors
     return bank,result,manifest["roles"]
 
 
-def materialize_reviewed(bank, report, assigned, role, tile, producer, band, *, use):
+def materialize_reviewed(bank, report, assigned, role, tile, producer, band, *, use, factor=1):
     """Only an admitted purpose may consume the exact manifest role and original band view."""
     if (report["bank"]!=scope_identity(bank) or report["role_assignment"]!=digest(assigned)
-            or role not in ROLES or use not in USES
+            or role not in ROLES or use not in USES or type(factor) is not int
+            or factor not in report.get("observation_factors",[1])
             or not report["uses"][use]["eligible"] or tile not in assigned[role]
             or (use!="independent_accuracy" and role!="evaluation")):
         raise ValueError("Independent consumption crosses role, publication or approved use")
     row = bank.role_row(ROLES[role],tile)
     if use=="cost":
-        return bank_observation(bank,row,producer,band),None,None
-    return bank_view(bank,row,producer,band)
+        return bank_observation(bank,row,producer,band,factor=factor),None,None
+    return bank_view(bank,row,producer,band,factor=factor)
 
 
 def audit_existing(root, out, code):

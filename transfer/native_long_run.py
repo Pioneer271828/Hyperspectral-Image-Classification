@@ -109,12 +109,14 @@ def checkpoints(root, place, contract, *, read_all=False, steps=STEPS):
     return rows
 
 
-def append(place, run, parent, start, end, contract, timings, reason, started):
+def append(place, run, parent, start, end, contract, timings, reason, started, *, cuda_peak=None):
     packet = run.pack()
     interval = {key: run.timing[key]-before for key, before in timings.items()}
     journal = dict(registration=contract, parent=parent, start=start, step=end, updates=end-start,
                    wall_seconds=perf_counter()-started, timing=interval, reason=reason,
                    model_state=state_hash(run.model), learning_rate=run.optimizer.param_groups[0]["lr"])
+    if cuda_peak is not None:
+        journal["cuda_peak"] = cuda_peak
     checkpoint_started = perf_counter()
     pin = write_checkpoint(checkpoint(place,end), dict(journal=journal, training=packet))
     return dict(**journal, pin=pin, serialization_seconds=perf_counter()-checkpoint_started)

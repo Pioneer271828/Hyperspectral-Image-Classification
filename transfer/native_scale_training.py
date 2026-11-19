@@ -134,7 +134,8 @@ class Run:
                 from transfer.native_mechanism_edges import EdgeProvider
                 from transfer.native_paired_head import PairedHeadProvider
                 from transfer.native_external_paired import ExternalPairedProvider
-                if (type(released) not in (MatchedProvider, ProductionProvider, ExternalPairedProvider)
+                from transfer.wp_paired_structure import StructuralProvider
+                if (type(released) not in (MatchedProvider, ProductionProvider, ExternalPairedProvider, StructuralProvider)
                         and (type(released) not in (*providers, PositiveProvider, EdgeProvider, PairedHeadProvider) or not released.is_synthetic)):
                     raise ValueError("Unknown released supervision provider")
         self._capacity = None

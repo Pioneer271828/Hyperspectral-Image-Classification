@@ -8,12 +8,12 @@ import torch
 from evaluation.frozen_training_stages import json_pin, pinned, require
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from transfer.conditional_multiscale import ConditionalMultiscaleVCASAHGCN
+from transfer.multiscale_training import MultiscaleTrial
 from transfer.g3_training import state_hash
 from transfer.native_scale_observation import forward
 from transfer.region_message_attention import RegionMessageVCASAHGCN, profile_region_messages
 
 BACKENDS = ("native", "multiscale", "aligned", "region_message")
-HEADS = ("fused", "graph", "cnn")
 
 
 def make_model(architecture, backend):
@@ -76,6 +76,64 @@ def semantic_identity(model, backend):
                 interaction=bone.interaction_config.interaction_mode,
                 direction=bone.interaction_config.interaction_direction if bone.interaction is not None else None,
                 attention=getattr(model, "region_attention", None))
+
+
+DIRECTIONS = ("both", "cnn_to_graph", "graph_to_cnn")
+GATES = dict(alignment_mode="region", interaction_mode="gated", interaction_strength=.1,
+             interaction_hidden_dim=32, interaction_chunk_pixels=16384, graph_update_mode="none")
+ATTENTION = dict(width=32, landmark_grid=(2,2), top_k=3, query_chunk=16)
+
+
+def train_variant(base, spec, seed):
+    """Map an identical shared start to each registered scale or directional architecture."""
+    backend = spec["backend"]
+    if backend == "native":
+        require(set(spec) == {"backend"}, "Unexpected native baseline switches")
+        return base
+    if backend == "multiscale":
+        require(set(spec) == {"backend","trial"}, "Expected one explicit WP07 scale trial")
+        model = MultiscaleTrial(**spec["trial"]).initialize(base,seed).eval()
+        model.backbone.adapter.cache_attention = False
+        return model
+    require((backend == "aligned" and set(spec) == {"backend"}) or
+            (backend == "region_message" and set(spec) == {"backend","mode","direction"}
+             and spec["mode"] in ("local","combined") and spec["direction"] in DIRECTIONS),
+            "Expected an aligned gate or a registered paired directional backend")
+    cfg = base.export_config()
+    shared = base.state_dict()
+    with torch.random.fork_rng(devices=[]):
+        torch.manual_seed(seed)
+        cfg["backbone_kwargs"].update(GATES, interaction_direction="both")
+        aligned = make_model(cfg,"aligned")
+    initial = aligned.state_dict()
+    require(shared.keys() <= initial.keys() and all(k.startswith("backbone.interaction.") for k in initial.keys()-shared.keys()),
+            "Alignment must extend the original shared inventory")
+    aligned.load_state_dict({**initial,**shared},strict=True)
+    if backend == "aligned":
+        return aligned
+    with torch.random.fork_rng(devices=[]):
+        torch.manual_seed(seed)
+        cfg["backbone_kwargs"]["region_attention"] = dict(mode=spec["mode"],**ATTENTION)
+        model = make_model(cfg,"region_message")
+    outer = "backbone.interaction."
+    mapped = {outer+"exchange."+k.removeprefix(outer) if k.startswith(outer) else k:v
+              for k,v in aligned.state_dict().items()}
+    complete = model.state_dict()
+    fresh = {f"{outer}{branch}.{projection}.weight" for branch in ("to_pixels","to_regions")
+             for projection in ("query","key","value","output")}
+    require(mapped.keys() <= complete.keys() and complete.keys()-mapped.keys()==fresh
+            and all(complete[k].shape==v.shape and complete[k].dtype==v.dtype for k,v in mapped.items()),
+            "Region projections and renamed outer gate no longer match the archived layout")
+    model.load_state_dict({**complete,**mapped},strict=True)
+    direction = spec["direction"]
+    if direction != "both":
+        cfg["backbone_kwargs"]["interaction_direction"] = direction
+        active = make_model(cfg,"region_message")
+        obsolete = ("graph_to_cnn","to_pixels") if direction=="cnn_to_graph" else ("cnn_to_graph","to_regions")
+        reject = (outer+"exchange."+obsolete[0]+".",outer+obsolete[1]+".")
+        active.load_state_dict({k:v for k,v in model.state_dict().items() if not k.startswith(reject)},strict=True)
+        model = active
+    return model
 
 
 @torch.no_grad()

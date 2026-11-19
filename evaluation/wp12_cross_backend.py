@@ -69,7 +69,10 @@ def open_case(root, request, *, test_history=None):
         require(re.fullmatch("[a-z0-9_-]+", name) and set(group) == {"seed", "protocol", "arms", "pairs"}
                 and type(group["seed"]) is int and 0 <= group["seed"] < 2**32, "Invalid comparison roster")
         protocol, seed = group["protocol"], group["seed"]
-        require(set(protocol) == PROTOCOL and type(protocol["budget"]) is int and protocol["budget"] >= 0
+        factor = protocol.get("factor",1)
+        require(set(protocol) in (PROTOCOL,PROTOCOL|{"factor"})
+                and type(factor) is int and factor in intake.get("observation_factors",[1])
+                and type(protocol["budget"]) is int and protocol["budget"] >= 0
                 and protocol["selection"] == SELECTION
                 and protocol["class_axis"] == list(range(1, bank.release.classes+1))
                 and all(type(label) is int for label in protocol["class_axis"])
@@ -88,7 +91,7 @@ def open_case(root, request, *, test_history=None):
                     and all(isinstance(arm, str) and arm in models for arm in pair) and pair[0] != pair[1]
                     for pair in pairs) and len(set(map(tuple, pairs))) == len(pairs),
                 "Invalid explicit model comparisons")
-        groups[name] = {**group, "models": models}
+        groups[name] = {**group, "models": models, "factor": factor}
     return bank, intake, roles, groups
 
 
@@ -110,6 +113,7 @@ def run_case(root, request, out, code, execution, *, test_history=None):
     started, runs = perf_counter(), {}
     for cohort, group in groups.items():
         arms = {}
+        factor = group["factor"]
         for name, body in group["models"].items():
             start = perf_counter()
             spec = body["checkpoint"]
@@ -123,7 +127,7 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                 row = dict(role="evaluation", tile=tile, view=band, accuracy=None, cost=None)
                 if accuracy and bank.role_row("devval", tile)["samples"]:
                     actual, _, targets = independent.materialize_reviewed(
-                        bank, intake, roles, "evaluation", tile, producer, band, use="independent_accuracy")
+                        bank, intake, roles, "evaluation", tile, producer, band, use="independent_accuracy",factor=factor)
                     output, graph, timing = model_io.run_block(model, actual, producer, "devval", execution)
                     row["accuracy"] = dict(order=digest([key for key, _ in targets.points]),
                         truth=[label for _, label in targets.points], observation=actual.receipt["observation"],
@@ -138,7 +142,7 @@ def run_case(root, request, out, code, execution, *, test_history=None):
                             torch.cuda.reset_peak_memory_stats(execution.device)
                         start = perf_counter()
                         actual, labels, targets = independent.materialize_reviewed(
-                            bank, intake, roles, "evaluation", tile, producer, band, use="cost")
+                            bank, intake, roles, "evaluation", tile, producer, band, use="cost",factor=factor)
                         materialized = perf_counter()
                         require(labels is targets is None, "Cost materialized classification data")
                         output, graph, detail = model_io.run_block(model, actual, producer, "devval", execution)
@@ -154,7 +158,8 @@ def run_case(root, request, out, code, execution, *, test_history=None):
             arms[name] = dict(endpoint=group["arms"][name], state=spec["state"], phase=body["phase"],
                               step=body["step"], semantics=model_io.semantic_identity(model, spec["backend"]),
                               load_seconds=load_seconds, parameters=sum(p.numel() for p in model.parameters()), rows=rows)
-        runs[cohort] = dict(arms=arms, pairs=group["pairs"], budget=group["protocol"]["budget"], seed=group["seed"])
+        runs[cohort] = dict(arms=arms, pairs=group["pairs"], budget=group["protocol"]["budget"],
+                            seed=group["seed"],factor=factor)
     require_frozen_code(code)
     return _write(out, dict(schema=CAPTURE, request=request, producer=producer, numeric=execution.numeric, cohorts=runs,
                             scope=intake["source_mode"], bank=bank.pin, uses=intake["uses"], roles=digest(roles),
@@ -285,7 +290,8 @@ def compare_devices(reference, capture):
     per_backend = {}
     for name, group in capture["cohorts"].items():
         old = reference["cohorts"][name]
-        require(set(old["arms"]) == set(group["arms"]), "Device capture changed the registered roster")
+        require(set(old["arms"]) == set(group["arms"]) and old.get("factor",1)==group.get("factor",1),
+                "Device capture changed the registered roster or lattice factor")
         for arm, row in group["arms"].items():
             earlier = old["arms"][arm]
             require(all(earlier[k] == row[k] for k in ("endpoint","state","phase","step","semantics")),
@@ -330,14 +336,15 @@ def review_case(root, capture, out, code, *, test_history=None, reference=None):
     geometry = read_annotations(root, bank, roles, pin) if pin else None
     observations = {}
     use = "cost" if intake["uses"]["cost"]["eligible"] else "independent_accuracy"
-    for band, tile in product(raw["views"], roles["evaluation"]):
-        actual, _, _ = independent.materialize_reviewed(bank, intake, roles, "evaluation", tile,
-                                                         code["commit"], band, use=use)
-        observations[band,tile] = actual.receipt["observation"]
+    for factor, band, tile in product(sorted({g["factor"] for g in groups.values()}),raw["views"],roles["evaluation"]):
+        actual, _, _ = independent.materialize_reviewed(bank,intake,roles,"evaluation",tile,
+                                                         code["commit"],band,use=use,factor=factor)
+        observations.setdefault(factor,{})[band,tile] = actual.receipt["observation"]
     summary = {}
     for key, group in groups.items():
         ready = raw["cohorts"][key]
         require(ready["budget"] == group["protocol"]["budget"] and ready["seed"] == group["seed"]
+                and ready.get("factor",1) == group["factor"]
                 and ready["pairs"] == group["pairs"] and set(ready["arms"]) == set(group["arms"]),
                 "Capture changes the paired training budget, model seed, or roster")
         checked = {}
@@ -350,13 +357,13 @@ def review_case(root, capture, out, code, *, test_history=None, reference=None):
                     and model.heads[bank.release.scene].out_features == bank.release.classes,
                     "Consumption checkpoint has another model or class inventory")
             semantics = model_io.semantic_identity(model, export["backend"])
-            checked[name] = checked_blocks(bank, roles, intake, geometry, observations,
+            checked[name] = checked_blocks(bank, roles, intake, geometry, observations[group["factor"]],
                                            arm, body, group["arms"][name], semantics)
         scored = {}
         for base, candidate in group["pairs"]:
             scored[f"{base}/{candidate}"] = {band: matched_view(checked[base], checked[candidate], band,
                 roles["evaluation"], bank.release.scene, bank.release.classes, scope=raw["scope"]) for band in raw["views"]}
-        summary[key] = dict(seed=ready["seed"], budget=ready["budget"], pairs=scored,
+        summary[key] = dict(seed=ready["seed"], budget=ready["budget"], pairs=scored, factor=group["factor"],
                             arms={name: {k:v for k,v in arm.items() if k!="rows"} for name, arm in ready["arms"].items()})
     require_frozen_code(code)
     parity = None if reference is None else compare_devices(json_pin(root,reference),raw)
