@@ -4,8 +4,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from evaluation import wp12_cross_backend as comparator
+from evaluation import wp12_cross_backend as comparator, wp12_scientific_claim as claims
 from evaluation.frozen_training_stages import file_pin, json_pin, require
+from model.research_config import digest
 from research_runtime import require_frozen_code
 from scripts.run_frozen_band_region import _write
 from transfer import native_independent_release as independent, wp_cross_backend as model_io
@@ -42,23 +43,9 @@ def observed_parity(root,campaign,plan,code,group,arm,spec,packet,raw,execution,
     return dict(point_heads=n,max_abs_probability=error,changed_predictions=changes)
 
 
-def results_by_pair(cohort, descriptors, scene):
+def results_by_pair(cohort, descriptors, scene, *, protocol, policy, expected_views):
     for pair in descriptors:
-        label = f'{pair["baseline"]}/{pair["candidate"]}'
-        views = cohort["pairs"][label]
-        gates = {}
-        for band,row in views.items():
-            scores = row["accuracy"]
-            if scores is None:
-                gates[band] = False
-                continue
-            if scene in ("xuzhou","whu-honghu"):
-                gates[band] = all(scores[h]["prior_gate"]["protected"] for h in ("fused","graph","cnn"))
-                gates[band] = gates[band] and scores["fused"]["prior_gate"]["target_gain"]
-            else:
-                gates[band] = all(item["protected"] is True for item in scores.values())
-            gates[band] = gates[band] and all(item["min_class_n"]>=20 for item in scores.values())
-        yield label,dict(capacity=pair["comparison"],views=gates,passes=all(gates.values()))
+        yield claims.paired_result(pair,cohort,scene,protocol,policy,expected_views)
 
 
 def review(root,campaign,out,code,captures,execution,*,test):
@@ -117,14 +104,26 @@ def review(root,campaign,out,code,captures,execution,*,test):
             closed[name] = dict(pair=["off","fixed1"],exact_model_and_adam=True,selected=proofs["off"]["selected"])
         all_cases[name] = proofs
         if group["purpose"]=="science":
-            for key,value in results_by_pair(result,group["pairs"],readouts[release]["scene"]):
-                candidates[(release,group["factor"],key)].append(dict(seed=group["seed"],**value))
+            intake = plan["inputs"][release]["authority"]
+            science = plan["releases"][release]
+            observation = science.get("observation_protocol",claims.PHYSICAL)
+            policy = science.get("claim_policy")
+            expected_views = tuple(intake["observation_views"])
+            by_pair = {f'{p["baseline"]}/{p["candidate"]}':p for p in group["pairs"]}
+            for key,value in results_by_pair(result,group["pairs"],readouts[release]["scene"],
+                                            protocol=observation,policy=policy,expected_views=expected_views):
+                pair = by_pair[key]
+                experiment = digest([group["steps"],group["clock"],observation,expected_views,
+                    group["arms"][pair["baseline"]],group["arms"][pair["candidate"]],pair["comparison"]])
+                candidates[(release,group["factor"],key,experiment,expected_views)].append(
+                    dict(seed=group["seed"],**value))
     decisions = {}
-    for (release,factor,key),scores in candidates.items():
-        seeds = len({s["seed"] for s in scores})
-        favorable = seeds>=3 and all(s["passes"] for s in scores)
-        decisions[f"{release}/factor{factor}/{key}"] = dict(seeds=seeds,criteria=scores,all_registered_gates=favorable,
-                                                            adopted=(not test and favorable))
+    for (release,factor,key,experiment,expected_views),scores in candidates.items():
+        authentic = (not test and plan["scope"]=="external_real_execution"
+                     and readouts[release]["scope"]=="external_real"
+                     and readouts[release]["uses"]["independent_accuracy"]["eligible"])
+        decisions[f"{release}/factor{factor}/{key}/{experiment}"] = claims.conclusion(
+            scores,expected_views,authentic_real=authentic)
     science_steps = sum(g["steps"]*len(g["arms"]) for g in plan["groups"].values() if g["purpose"]=="science")
     controls = None
     if test:
