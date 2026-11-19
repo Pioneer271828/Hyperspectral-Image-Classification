@@ -17,6 +17,8 @@ def main(argv=None):
         from evaluation.wp12_positive_cli import main as positive_control
 
         return positive_control(argv)
+    if "--native-pathways-review" in argv:
+        return native_pathways(argv)
     if "--real-attribution-review" in argv:
         return real_attribution(argv)
     if "--external-paired-history" in argv:
@@ -86,6 +88,32 @@ def main(argv=None):
     require_frozen_code(code)
     with out.open("x", encoding="utf-8") as stream:
         stream.write(serialized)
+
+
+def native_pathways(argv):
+    from evaluation.frozen_training_stages import require
+    from evaluation.wp12_pathways_review import review
+
+    parser = argparse.ArgumentParser(description="Verify native path measurements and released role receipts")
+    parser.add_argument("--native-pathways-review",action="store_true",required=True)
+    parser.add_argument("--runs",type=Path,required=True)
+    parser.add_argument("--out",type=Path,required=True)
+    parser.add_argument("--expected-commit",required=True)
+    names = ("real_root","branch_root","controls_cpu","controls_gpu","gpu_real","external","readouts")
+    for name in names:
+        parser.add_argument("--"+name.replace("_","-"),type=Path,required=True)
+    args = parser.parse_args(argv)
+    root,out = args.runs.resolve(strict=True),external_directory(args.out)
+    code = code_snapshot()
+    sources = {name:getattr(args,name).resolve(strict=True) for name in names}
+    require(root in out.parents and code["commit"]==args.expected_commit and not out.exists()
+            and all(root in p.parents for p in sources.values()),"Inputs or output escaped the authorized runs")
+    require_frozen_code(code)
+    result = review(root,out,code,real_root=sources["real_root"],branch_root=sources["branch_root"],
+                    cpu_path=sources["controls_cpu"],gpu_path=sources["controls_gpu"],gpu_real=sources["gpu_real"],
+                    external_path=sources["external"],readout_path=sources["readouts"])
+    require_frozen_code(code)
+    print(json.dumps(result),flush=True)
 
 
 def real_attribution(argv):

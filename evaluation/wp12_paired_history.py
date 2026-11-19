@@ -146,7 +146,7 @@ def honghu_120(root):
     parent = json_pin(root,proof(root,"p4"))
     require(parent["committed_optimizer_updates"]==1200
             and all(item["optimizer_updates"]==120 for item in parent["cases"]),
-            "Authorized long review no longer covers ten completed 120-step cases")
+            "Authorized long review no longer covers ten cases with 120 aggregate updates across two paths")
     fields = ("support_seed","k","method","model_seed","arm")
     identities = {tuple(item["case"][field] for field in fields):item for item in parent["cases"]}
     groups = defaultdict(dict)
@@ -175,6 +175,7 @@ def honghu_120(root):
                     require(current["n"]==old["n"],"Long confusion rows changed the class denominator")
                     current.update(delta_correct=current["correct"]-old["correct"],gains=None,losses=None)
     return dict(review=proof(root,"p4"),archive=P4_REVIEW,scope="reviewed_confusion_margins_only",
+                paths_per_case=2,optimizer_steps_per_path=60,aggregate_optimizer_updates_per_case=120,
                 point_transition_join_available=False,cohorts=dict(groups),coverage=gaps)
 
 
@@ -264,7 +265,7 @@ def index(root):
                     history_22_weight_materialized=hh["history_22_weight_materialized"],
                     score_only_cursor_delta=True,protocol=hh["protocol"],support_seed=512,k=5),
                 xuzhou_historical_protection_failures=xuzhou_protection(root,links),
-                nonmatching_scopes=["short_vs_reviewed_120","K1_vs_K5","scratch_vs_shared_transfer",
+                nonmatching_scopes=["short_vs_reviewed_two_60_step_paths","K1_vs_K5","scratch_vs_shared_transfer",
                                     "full_scene_frozen54_vs_guarded_K5","historical_vs_external_independent"],
                 real_optimizer_updates=0,raw_gt_loaded=False,query_accessed=False,
                 wp04_executed=False,independent_real_accuracy=None)

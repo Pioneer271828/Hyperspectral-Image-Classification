@@ -53,7 +53,7 @@ python -B scripts/check_wp12_external_paired.py review --runs "$RUNS" --program 
 python -B scripts/ingest_wp12_evidence.py --external-paired-history --runs "$RUNS" --out "$WP12_INDEX" --expected-commit "$CONSUMER" --external-review "$REVIEW" "$REVIEW_SHA256"
 ```
 
-历史索引固定同点发布和权重，仅按同一历史协议复算得失。洪湖 120 步的已审核混淆边际可比较正确数差，逐点得失留空。全景 Issue 184 和两景外部独立结果保留各自的证据身份。
+历史索引固定同点发布和权重，仅按同一历史协议复算得失。洪湖每例连续与分段两条各 60 步路径的已审核混淆边际可比较正确数差，逐点得失留空。全景 Issue 184 和两景外部独立结果保留各自的证据身份。
 
 ## 只接收保留观测的交付序回退
 
