@@ -16,7 +16,7 @@ REFERENCE={"xuzhou":"xuzhou-s64-k211","honghu":"honghu-s64-k211","fallback":"fal
 SOURCE_HISTORY=("wp05-wp06-production-20261119-qa/accepted/production.json",
                 "f432c0e4862ac6ae3def6c639697e688ef2c6c74a7487836753c55fb8575cc52")
 SOURCE_B=("wp05-wp06-production-20261119-qa/program-v2/cases/source-b/receipt.json",
-          "e3c0b58cf02aef470fe3a184362bff6a84e61cb662b22d8814098e1e2a637ff65")
+          "e3c0b58cf02aef470fe3a184362bff6a84e61cb662b22d814098e1e2a637ff65")
 GATES=dict(aggregate_delta=-.005,ordinary_delta_recall=-.02,honghu_rare_added_errors=0,
            targets={"xuzhou":[5,6],"whu-honghu":[15,21]},target_correct_gain_min=1,
            every_target_nonnegative=True,minimum_supported_confirmation_per_class=5,
