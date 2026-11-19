@@ -214,7 +214,7 @@ def generate_scientific(out, campaign, code, devices):
             options["matched_exposure"] = MATCHED_EXPOSURE
         if prospective:
             options["claim_policy"] = PAVIA
-        return dict(manifest=pin,authority=authority,source=src,k=k,**options)
+        return dict(manifest=pin,authority=authority,source=None if scene=="whu-honghu" else src,k=k,**options)
 
     for i,(alias,scene) in enumerate(SCENES_BY_KEY.items()):
         device = devices[i % len(devices)] if devices else "cpu"
