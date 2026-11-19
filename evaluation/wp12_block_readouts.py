@@ -7,13 +7,14 @@ import torch
 
 from evaluation.classification_metrics import classification_metrics
 from evaluation.frozen_training_stages import json_pin, pinned, require
-from evaluation.linear_probe import validate_plan, fingerprint
+from evaluation.linear_probe import POLICY, validate_plan, fingerprint
 from model.research_config import digest
 
 ROLES = ("support","calibration","evaluation")
 SEEDS = (64,512,2048)
 LAYERS = ("stage1_cnn","stage1_graph","stage2_cnn","stage2_graph")
 PAIRED = "wp06-v2-paired-review01"
+V2 = "equal_capacity_frozen_linear_probe_stable_standardization_v2"
 EVIDENCE = {
     "full54_acceptance": (PAIRED+"/acceptance.json","eb0ba5878acd896bbebd1fd1b7c7a8c987232aa4827ae239ddaba16a4a6017a3"),
     "locked_support": ("wp05-wp06-production-20261119-qa/accepted/locked-support.json",
@@ -61,7 +62,16 @@ def score_layer(x,layer,normalization,*,width,classes):
             and b.shape==(classes,) and x.shape[1]==normalization["original_width"] and columns[-1]<x.shape[1]
             and normalization["parameters"]==classes*(width+1) and (scale>0).all().item(),
             "Readout does not have the fixed fitted width, original channels or class axis")
-    values = (x.detach().cpu().double()[:,columns]-mean)/scale
+    source = x.detach().cpu().double()[:,columns]
+    if "anchor" in normalization:
+        anchor = torch.tensor(normalization["anchor"],dtype=torch.float64)
+        offset = torch.tensor(normalization["center_offset"],dtype=torch.float64)
+        exponent = torch.tensor(normalization["working_exponent"],dtype=torch.int32)
+        require(anchor.shape==offset.shape==exponent.shape==mean.shape,"Foreign fitted v2 center")
+        # The accepted v2 algorithm subtracts the fitted shift in this exact order.
+        values = ((torch.ldexp(source,-exponent)-anchor)-offset)/torch.ldexp(scale,-exponent)
+    else:
+        values = (source-mean)/scale
     logp = (values @ w.T + b).log_softmax(1)
     require(torch.isfinite(logp).all().item(),"Frozen readout yielded nonfinite results")
     return logp
@@ -128,12 +138,16 @@ def old_readouts(root):
             pack,state,expected = (torch.load(pinned(root,files[key]),map_location="cpu",weights_only=True)
                                    for key in ("pack","state","logp"))
             report = json_pin(root,files["report"])
-            plan = validate_plan(report["plan"])
+            plan = report["plan"]
+            require(plan["policy"]==V2,"Expected the audited stable standardization policy")
+            validate_plan({**plan,"policy":POLICY})
             require(plan["width"]==64 and plan["seed"] in SEEDS and plan["l2"]==1e-4
                     and plan["lr"]==.1 and state["cursor"]==plan["steps"]==500
                     and pack["identity"]["query_labels_accessed"] is False,"Different historical fit hyperparameters/roles")
             norms = {layer:report["layers"][layer]["normalization"] for layer in LAYERS}
             weights = {layer:state["layers"][layer]["best"] for layer in LAYERS}
+            require(all(weights[layer]["step"]==report["layers"][layer]["selected_step"] and
+                        "anchor" in norms[layer] for layer in LAYERS),"Selected v2 readout or frozen center changed")
             actual = {}
             for legacy_role,role in (("train","support"),("val","calibration")):
                 y = (pack["labels"][legacy_role]+1).tolist()
