@@ -28,6 +28,7 @@ from transfer.registered_development import load_development
 from transfer.spatial_coverage_protocol import bank_view
 
 SCHEMA = "wp12_retained_spectral_devval_v1"
+LOCKED = "wp12_locked_support_readout_devval_v1"
 RELEASE = ("wp11-matched-xuzhou-frozen01/release.json",
            "9a4493d2c25c6cff64d6b8ee8958e467546985865b72df41540327262d24aacb")
 PREVIOUS = ("wp05-wp06-frozen-stage-20261119-qa/candidate/cpu.json",
@@ -51,10 +52,10 @@ def compare_probabilities(old, new, exact):
     return float(np.max(np.abs(a-b)))
 
 
-def collect_xuzhou(model, scene, record, band, bands):
+def collect_xuzhou(model, scene, record, band, bands, layers):
     views, native = {}, []
     for role, support in (("devtrain", "train_support"), ("devval", "validation_support")):
-        released = views[role] = probe.ReleasedBlocks(role, scene.classes)
+        released = views[role] = probe.ReleasedBlocks(role, scene.classes, layers=layers)
         labels = sparse_labels(record, scene.plan, support)
         for tile, binding in zip(scene.plan["tiles"], record["roles"], strict=True):
             if binding["role"] != role:
@@ -66,7 +67,8 @@ def collect_xuzhou(model, scene, record, band, bands):
             view = stages.checked_view(scene, tile, band, bands)
             actual = view.observation
             identifiers = actual.global_ids.ravel()[cells].tolist()
-            data = probe.capture(model, actual.spectral, lambda: (_forward(model, scene, tile, observation_view=view), None))
+            data = probe.capture(model, actual.spectral,
+                                 lambda: (_forward(model, scene, tile, observation_view=view), None), layers=layers)
             heads = released.add(len(released.q), cells, identifiers, target[cells], data)
             if role == "devval":
                 native.extend(dict(id=[tile["id"], identifier], truth=int(label),
@@ -75,18 +77,19 @@ def collect_xuzhou(model, scene, record, band, bands):
     return views, native
 
 
-def collect_bank(model, bank, producer, band, archive, exact):
+def collect_bank(model, bank, producer, band, archive, exact, layers):
     views, native, checks, seen = {}, [], [], set()
     classes = model.heads[archive["scene"]].out_features
     focus_offset = 0
     previous = {row["tile"]: row for row in archive["rows"]
                 if row["event"] == dict(band=band, factor=1, policy="native")}
     for role in ("devtrain", "devval"):
-        released = views[role] = probe.ReleasedBlocks(role, classes)
+        released = views[role] = probe.ReleasedBlocks(role, classes, layers=layers)
         for ordinal, row in enumerate(bank.role_rows(role)):
             actual, labels, targets = bank_view(bank, row, producer, band, factor=1)
             ids, truth = labels[:, 0].tolist(), labels[:, 1].tolist()
-            data = probe.capture(model, actual.view.observation.spectral, lambda: forward(model, actual, producer, role))
+            data = probe.capture(model, actual.view.observation.spectral,
+                                 lambda: forward(model, actual, producer, role), layers=layers)
             heads = released.add(ordinal, targets.cells, ids, truth, data)
             if role == "devtrain":
                 continue
@@ -119,8 +122,9 @@ def collect_bank(model, bank, producer, band, archive, exact):
     return views, native, checks
 
 
-def report_case(root, case, producer, device):
+def report_case(root, case, producer, device, *, locked=False):
     exact = device.type == "cpu"
+    layers = probe.SHARED_LAYERS if locked else probe.LAYERS
     if case in CASES[:4]:
         plan = stages.stage_plan(root, pin(root, RELEASE))
         archive = stages.json_pin(root, pin(root, PREVIOUS))
@@ -137,7 +141,7 @@ def report_case(root, case, producer, device):
         identity, step, checkpoint = state_hash(model), spec["step"], spec["state"]["sha256"]
 
         def collect(band):
-            roles, rows = collect_xuzhou(model, scene, record, band, plan["bands"][band])
+            roles, rows = collect_xuzhou(model, scene, record, band, plan["bands"][band], layers)
             old = archive["cases"][case]["views"][band]["points"]
             REQUIRE([(r["id"], r["truth"]) for r in rows] == [(r["id"], r["truth"]) for r in old],
                     "Historical trajectory label roster differs")
@@ -164,7 +168,7 @@ def report_case(root, case, producer, device):
         dependencies = ()
 
         def collect(band):
-            roles, rows, checks = collect_bank(model, bank, producer, band, archive, exact)
+            roles, rows, checks = collect_bank(model, bank, producer, band, archive, exact, layers)
             row = bank.role_rows("devval")[0]
             actual, _, _ = bank_view(bank, row, producer, band, factor=1)
             return roles, rows, checks, list(actual.view.bands.band_ids)
@@ -184,9 +188,12 @@ def report_case(root, case, producer, device):
             reference = native
             full_ids = retained
             roster = tuple(val.identities)
+            support_reference = train
         REQUIRE(roster == tuple(val.identities) and len(set(retained)) == len(retained)
                 and retained == [i for i in full_ids if i in set(retained)], "Same-point roster or retained order differs")
         metrics = {}
+        REQUIRE(train.identities == support_reference.identities and train.truth == support_reference.truth,
+                "Support roster changed across retained views")
         for head in stages.HEADS:
             p = np.asarray([row["probabilities"][head] for row in native])
             metrics[head] = probe.point_metrics(p, list(range(1, classes+1)), val.truth, rivals)
@@ -195,6 +202,8 @@ def report_case(root, case, producer, device):
                 native_transitions=stages.paired(reference, native, classes, rivals),
                 truth=val.truth, native=metrics, native_probabilities=[row["probabilities"] for row in native],
                 readout=probe.readout(train, val, rivals))
+        if locked:
+            by_view[band]["fixed_full_support"] = probe.readout(support_reference, val, rivals)
     for dependency in dependencies:
         stages.pinned(root, dependency)
     REQUIRE(state_hash(model) == identity
@@ -216,7 +225,7 @@ def validate_static(root):
                 use="historical_full_band_only", altered_static_q_replay=False)
 
 
-def run(root, directory, expected, device, selected):
+def run(root, directory, expected, device, selected, *, locked=False):
     from evaluation.wp11_deployment_cost import gpu_scope
 
     code = code_snapshot()
@@ -226,12 +235,13 @@ def run(root, directory, expected, device, selected):
     REQUIRE(root in directory.parents, "Outputs must stay within authorized runs")
     directory.mkdir(parents=True, exist_ok=True)
     static = validate_static(root)
+    schema = LOCKED if locked else SCHEMA
     missing = []
     for case in selected:
         path = directory/f"{case}.json"
         if path.exists():
             data = json.loads(path.read_bytes())
-            REQUIRE(data["schema"] == SCHEMA and data["producer"] == expected
+            REQUIRE(data["schema"] == schema and data["producer"] == expected
                     and data["device"] == str(device) and data["result"]["case"] == case
                     and set(data["result"]["views"]) == set(stages.VIEWS),
                     "Existing receipt requires a separate run directory")
@@ -243,9 +253,9 @@ def run(root, directory, expected, device, selected):
     REQUIRE(device.type == "cpu" or uuid is not None and uuid.startswith("GPU-"), "Pin a single physical GPU UUID")
     with (nullcontext((None, None, None)) if device.type == "cpu" else gpu_scope(uuid)) as (admission, numeric, _):
         for case in missing:
-            result = report_case(root, case, expected, device)
+            result = report_case(root, case, expected, device, locked=locked)
             require_frozen_code(code)
-            write_json(directory/f"{case}.json", dict(schema=SCHEMA, producer=expected, device=str(device),
+            write_json(directory/f"{case}.json", dict(schema=schema, producer=expected, device=str(device),
                        case=case, static=static, result=result, admission=admission, numeric=numeric,
                        optimizer_updates=0, query_accessed=False, raw_gt_loaded=False))
             print(f"accepted {case} {device}", flush=True)
@@ -258,8 +268,10 @@ def main():
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--case", choices=CASES, action="append")
+    parser.add_argument("--locked-readout", action="store_true")
     args = parser.parse_args()
-    run(args.runs.resolve(strict=True), args.out, args.expected_commit, torch.device(args.device), args.case or CASES)
+    run(args.runs.resolve(strict=True), args.out, args.expected_commit, torch.device(args.device), args.case or CASES,
+        locked=args.locked_readout)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from model.region_pixel_alignment import broadcast_regions
 
 
 LAYERS = ("sensor", "vca", "pre_pool", "pooled", "cnn", "graph", "fused")
+SHARED_LAYERS = ("vca", "pooled", "fused")
 
 
 def as_pixels(value):
@@ -66,7 +67,7 @@ def assignment_variance(q, pixels, pooled):
                 between_region=float(between), total=float(total))
 
 
-def capture(model, spectral, forward):
+def capture(model, spectral, forward, *, layers=LAYERS):
     """Attach read-only hooks to the original calculation, before any readout fit."""
     backbone = model.backbone
     features = {}
@@ -98,7 +99,8 @@ def capture(model, spectral, forward):
 
     with torch.inference_mode(), ExitStack() as stack:
         stack.callback(backbone.adapter.register_forward_hook(adapter).remove)
-        stack.callback(backbone.CNN_denoise[-1].register_forward_hook(clean).remove)
+        if "pre_pool" in layers:
+            stack.callback(backbone.CNN_denoise[-1].register_forward_hook(clean).remove)
         stack.enter_context(patch.object(backbone, "forward_stages", new=forward_stages))
         stack.enter_context(patch.object(backbone, "fuse_features", new=fuse_features))
         sync()
@@ -107,25 +109,27 @@ def capture(model, spectral, forward):
         sync()
         seconds = perf_counter() - start
         features["pooled"] = broadcast_regions(state["q"], state["regions"])
-        values = {key: as_pixels(value) for key, value in features.items()}
-        values["sensor"] = np.asarray(spectral).reshape(-1, spectral.shape[-1])
-        n = len(values["sensor"])
-        require(set(values) == set(LAYERS) and all(len(value) == n and np.isfinite(value).all()
-                for value in values.values()), "Native feature capture lost pixel alignment")
-        q = assignment_variance(state["q"], values["pre_pool"], as_pixels(state["regions"]))
+        if "sensor" in layers:
+            features["sensor"] = torch.as_tensor(np.array(spectral, copy=True))
+        values = {key: as_pixels(features[key]) for key in layers}
+        n = spectral.shape[0] * spectral.shape[1]
+        require(all(len(value) == n and np.isfinite(value).all() for value in values.values()),
+                "Native feature capture lost pixel alignment")
+        q = dict(pixels=n) if "pre_pool" not in values else assignment_variance(
+            state["q"], values["pre_pool"], as_pixels(state["regions"]))
         heads = {head: as_pixels(value) for head, value in zip(HEADS, output[:3], strict=True)}
     return values, heads, q, graph, seconds
 
 
 class ReleasedBlocks:
-    def __init__(self, role, classes):
+    def __init__(self, role, classes, *, layers=LAYERS):
         require(role in ("devtrain", "devval"), "Only released development roles are admissible")
         self.role = role
         self.classes = classes
         self.identities = []
         self.truth = []
-        self.labels = {layer: [] for layer in LAYERS}
-        self.moments = {layer: [] for layer in LAYERS}
+        self.labels = {layer: [] for layer in layers}
+        self.moments = {layer: [] for layer in layers} if layers == LAYERS else {}
         self.q = []
         self.seconds = 0.0
 
@@ -137,8 +141,9 @@ class ReleasedBlocks:
                 and ((truth >= 1) & (truth <= self.classes)).all(), "Invalid released sample binding")
         self.identities.extend(identities)
         self.truth.extend(truth.tolist())
-        for key in LAYERS:
+        for key in self.labels:
             self.labels[key].append(values[key][cells])
+        for key in self.moments:
             self.moments[key].append(moment(values[key]))
         self.q.append(dict(block=block, **q))
         self.seconds += seconds
@@ -175,8 +180,10 @@ def readout(train, development, rivals):
     require(len(classes) >= 2, "Need at least two support classes")
     targets = (y[:, None] == classes).astype(np.float64)
     output = {}
-    for key in LAYERS:
+    require(set(development.labels).issubset(train.labels), "Readout layers differ")
+    for key in development.labels:
         x, val = (np.concatenate(role.labels[key]).astype(np.float64) for role in (train, development))
+        require(x.shape[1] == val.shape[1], "Fixed readout requires a common feature dimension")
         mean, std = x.mean(0), x.std(0)
         scale = np.where(std > 1e-10, std, 1.0)
         x, val = (x - mean) / scale, (val - mean) / scale
