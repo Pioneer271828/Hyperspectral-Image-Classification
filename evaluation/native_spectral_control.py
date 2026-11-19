@@ -50,7 +50,8 @@ def verify_loader(row, shape, full_raw, low, high, positions, actual, labels, ta
             "Physical band order differs from independent indices")
     require(np.array_equal(targets.cells,independent_idx)
             and np.array_equal(labels,np.asarray(row["samples"],dtype=np.int64))
-            and np.array_equal(actual.view.observation.global_ids.reshape(-1)[independent_idx],labels[:,0]),
+            and np.array_equal(actual.view.observation.global_ids.reshape(-1)[independent_idx],-1-independent_idx)
+            and np.array_equal(actual.lattice.centers()[independent_idx].astype(np.int64)@np.asarray([shape[1],1]),labels[:,0]),
             "Released supervision identities differ from the actual loader lattice")
     raw = full_raw[...,positions]
     low, high = np.asarray(low)[positions],np.asarray(high)[positions]

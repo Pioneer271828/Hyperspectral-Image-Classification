@@ -129,7 +129,8 @@ class Run:
                 from transfer.native_coverage_queue import CoverageFixture
                 providers = (SpatialReleasedFixture, BandGraphFixture, BandScaleFixture, CoverageFixture)
                 from transfer.native_long_campaign import MatchedProvider
-                if type(released) is not MatchedProvider and (type(released) not in providers or not released.is_synthetic):
+                from transfer.native_positive_training import PositiveProvider
+                if type(released) is not MatchedProvider and (type(released) not in (*providers,PositiveProvider) or not released.is_synthetic):
                     raise ValueError("Unknown released supervision provider")
         self._capacity = None
         self._region_action = None
@@ -196,6 +197,11 @@ class Run:
         return result
 
     def _forward(self, actual, role, intervention):
+        if hasattr(self._released, "registered_forward"):
+            out, graph, timing = self._released.registered_forward(self.model,actual,role,self.execution)
+            self.timing["forward_seconds"] += timing["forward_seconds"]
+            self.timing["graph_seconds"] += sum(timing["graph_seconds"])
+            return out, graph, None
         if hasattr(self._released, "selection_condition"):
             condition = self._released.selection_condition(actual, self._contract)
         elif self._capacity is not None:

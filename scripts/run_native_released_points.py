@@ -240,6 +240,27 @@ def long_coverage(root, out, code, args):
     print(json.dumps(result), flush=True)
 
 
+def positive_control(root,out,code,args):
+    from transfer import native_positive_training as controls
+
+    if (sys.platform != "linux" or not __debug__ or args.long_real or args.manifest or args.authority
+            or args.release or args.preflight or args.phase or args.frozen_plan or args.archive or args.from_device
+            or args.drain_after is not None or args.workers != 1 or args.paviau_publication or args.paviau_engineering):
+        raise ValueError("Positive controls require the isolated synthetic scope only")
+    torch.set_num_threads(1)
+    if args.mode == "positive-control-run":
+        if not args.case:
+            raise ValueError("An exact registered case is required")
+        with arithmetic(root,args.gpu) as execution:
+            result = controls.run_case(root,out,code,args.case,execution)
+    else:
+        if args.case or args.gpu:
+            raise ValueError("Registration/freeze are CPU-only roster operations")
+        operation = controls.register if args.mode == "positive-control-register" else controls.freeze
+        result = operation(root,out,code)
+    print(json.dumps(result),flush=True)
+
+
 def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
@@ -251,7 +272,9 @@ def main(argv=None, *, intake=None):
                                             "coverage-audit", "coverage-stage-register", "coverage-release-review","coverage-release-history",
                                             "coverage-release-demo", "frozen-stage-register",
                                             "frozen-stage-run", "coverage-long-register", "coverage-long-run",
-                                            "coverage-long-reference", "coverage-long-freeze"), required=True)
+                                            "coverage-long-reference", "coverage-long-freeze",
+                                            "positive-control-register", "positive-control-run",
+                                            "positive-control-freeze"), required=True)
     parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--authority", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--frozen-plan", nargs=2, metavar=("PATH", "SHA256"))
@@ -275,6 +298,8 @@ def main(argv=None, *, intake=None):
     out = external_directory(args.out)
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
+    if args.mode.startswith("positive-control-"):
+        return positive_control(root,out,code,args)
     if args.mode.startswith("coverage-long-"):
         return long_coverage(root, out, code, args)
     if args.long_real or args.drain_after is not None:
