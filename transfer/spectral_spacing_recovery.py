@@ -197,7 +197,7 @@ def run_synthetic(directory, code):
             link = pin(place / "receipt.json")
             case = _read(link)
             original_baseline = (name == "64-dense-none" and link["sha256"] ==
-                                 "59b061007a0302a081e72b5f40e6c68d603006f2dc1d9e2fb1c030082e9ff1434")
+                                 "59b061007a0302a081e72b5f40e6c68d603006f2dc1d9e2fb1c03082e9ff1434")
             check((original_baseline or case.get("producer") == code["commit"])
                   and (case["seed"], case["density"], case["arm"]) == (seed, density, arm)
                   and all(pin(place / f"{phase}.pt")["sha256"] == sha
