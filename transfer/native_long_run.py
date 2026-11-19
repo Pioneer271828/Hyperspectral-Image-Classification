@@ -83,7 +83,7 @@ def checkpoint(place, step):
     return place/f"clock-{step:04d}.pt"
 
 
-def checkpoints(root, place, contract, *, read_all=False):
+def checkpoints(root, place, contract, *, read_all=False, steps=STEPS):
     previous = None
     rows = []
     for path in sorted(place.glob("clock-*.pt")):
@@ -96,7 +96,7 @@ def checkpoints(root, place, contract, *, read_all=False):
         require(item["training"]["registration"] == contract and item["training"]["cursor"] == step
                 and info["registration"] == contract and info["start"] == start and info["step"] == step
                 and info["updates"] == step-start and info["parent"] == (None if previous is None else previous["pin"]["sha256"])
-                and (step == 0 if previous is None else start < step <= STEPS), "Checkpoint lineage/cursor differs")
+                and (step == 0 if previous is None else start < step <= steps), "Checkpoint lineage/cursor differs")
         if rows and read_all:
             old = rows[-1]["item"]["training"]
             require(old["history"] == item["training"]["history"][:start]

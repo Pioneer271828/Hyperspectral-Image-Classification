@@ -304,6 +304,33 @@ def paired_heads(root,out,code,args):
     print(json.dumps(result),flush=True)
 
 
+def external_paired(root,out,code,args):
+    from transfer import native_external_paired as paired
+
+    if (sys.platform!="linux" or not __debug__ or args.long_real or args.preflight or args.release
+            or args.phase or args.frozen_plan or args.archive or args.from_device or args.workers!=1
+            or args.paviau_publication or args.paviau_engineering):
+        raise ValueError("External paired execution requires its exact registered scope")
+    torch.set_num_threads(1)
+    if args.mode=="external-paired-register":
+        if args.case or args.gpu or args.model_seed or args.head_arm or args.drain_after is not None or args.reference:
+            raise ValueError("Registration takes only the independent request and execution approval")
+        request,approval = (dict(zip(("path","sha256"), item, strict=True)) if item else None
+                            for item in (args.manifest,args.authority))
+        output=paired.register(root,out,code,request,approval,test=args.test_publication)
+    else:
+        if args.manifest or args.authority or not args.case or args.model_seed is None or not args.head_arm:
+            raise ValueError("Use the admitted release, model seed and head arm")
+        plan,_=paired.load(root,out,code,test=args.test_publication)
+        planned_device=plan["releases"][args.case]["request"]["device"]
+        if planned_device!=(args.gpu or paired.DEVICE_CPU):
+            raise ValueError("The execution device differs from the registered physical device")
+        with arithmetic(root,args.gpu) as execution:
+            output=paired.execute(root,out,code,args.case,args.model_seed,args.head_arm,execution,
+                                  test=args.test_publication,until=args.drain_after,reference=args.reference)
+    print(json.dumps(output),flush=True)
+
+
 def main(argv=None, *, intake=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
@@ -318,7 +345,8 @@ def main(argv=None, *, intake=None):
                                             "coverage-long-reference", "coverage-long-freeze",
                                             "positive-control-register", "positive-control-run",
                                             "positive-control-freeze", "production-register", "production-run",
-                                            "paired-head-register", "paired-head-run"), required=True)
+                                            "paired-head-register", "paired-head-run",
+                                            "external-paired-register", "external-paired-run"), required=True)
     parser.add_argument("--manifest", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--authority", nargs=2, metavar=("PATH","SHA256"))
     parser.add_argument("--frozen-plan", nargs=2, metavar=("PATH", "SHA256"))
@@ -333,6 +361,10 @@ def main(argv=None, *, intake=None):
     parser.add_argument("--paviau-engineering", action="store_true")
     parser.add_argument("--case")
     parser.add_argument("--phase", choices=("full", "prefix", "resume", "completed"))
+    parser.add_argument("--test-publication",action="store_true")
+    parser.add_argument("--model-seed",type=int)
+    parser.add_argument("--head-arm")
+    parser.add_argument("--reference",action="store_true")
     args = parser.parse_args(argv)
     code = code_snapshot()
     require_frozen_code(code)
@@ -342,6 +374,10 @@ def main(argv=None, *, intake=None):
     out = external_directory(args.out)
     if root not in out.parents:
         raise ValueError("Output must stay in the authorized runs root")
+    if args.mode.startswith("external-paired-"):
+        return external_paired(root,out,code,args)
+    if args.test_publication or args.model_seed is not None or args.head_arm or args.reference:
+        parser.error("External paired fields require an external paired action")
     if args.mode.startswith("paired-head-"):
         return paired_heads(root,out,code,args)
     if args.mode.startswith("production-"):

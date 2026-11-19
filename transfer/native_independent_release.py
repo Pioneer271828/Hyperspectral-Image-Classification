@@ -20,7 +20,7 @@ from transfer.development_blocks import read_pin
 from transfer.native_coverage_queue import generated
 from transfer.native_released_points import scores
 from transfer.native_scale_observation import forward
-from transfer.spatial_coverage_protocol import bank_view, counts, release_statistics
+from transfer.spatial_coverage_protocol import bank_observation, bank_view, counts, release_statistics
 
 MANIFEST = "wp02_independent_development_intake_v1"
 AUTHORITY = "wp02_independent_development_approval_v1"
@@ -178,8 +178,9 @@ def materialize_reviewed(bank, report, assigned, role, tile, producer, band, *, 
             or (use!="independent_accuracy" and role!="evaluation")):
         raise ValueError("Independent consumption crosses role, publication or approved use")
     row = bank.role_row(ROLES[role],tile)
-    view, labels, targets = bank_view(bank,row,producer,band)
-    return (view,None,None) if use=="cost" else (view,labels,targets)
+    if use=="cost":
+        return bank_observation(bank,row,producer,band),None,None
+    return bank_view(bank,row,producer,band)
 
 
 def audit_existing(root, out, code):
