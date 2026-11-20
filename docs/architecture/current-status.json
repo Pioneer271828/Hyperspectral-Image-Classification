@@ -9,6 +9,7 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp05_wp06_gpu_recovery_integration_candidate": "65ef959fc3dcf63c5f4fa65142dc21b0280ab4f6",
     "wp02_wp05_wp06_real_readiness_candidate": "58b3ff182668c3fd6bc0d40400748011d619251b",
     "wp05_m1_e1_coverage_wp12_candidate": "1fbbb7e9b4de55ff649540e241b7d89b6b5c815a",
     "wp05_wp06_causal_region_candidate": "dcd1001d3a8204513358ef92b44979f7d4a895f2",
@@ -51,6 +52,14 @@
     "evaluation/g4_target_verification.py"
   ],
   "modules": [
+    {
+      "id": "WP05/WP06/WP12 双卡队列、精确同卡恢复和主线集成",
+      "state": "双实体卡队列、三种同卡恢复、冻结三头及 WP12 工程通过",
+      "evidence": "主线 465526c643d03c4ce11dc14a1f68dbf7c79b343d 合入隔离候选。GPU0/3 实际并行，264 工程更新和 108 连续参照更新。三臂 SIGTERM 各 13+23 步逐位恢复，完成队列重入 0。GPU/CPU 39,690 个冻结点头零改判，420 条无标签成本条件。归档 54/54 核实，仅引用。PaviaU GPU3 已落盘恢复工件复核通过。",
+      "remaining": "独立三角色、可信物理轴或有用途的交付列、逐类独立确认和单独真实优化批准仍待持有人。旧 P4 GPU5 的 22 类同卡恢复待资源，与本轮 GPU0/3 工程资格独立。真实优化、原 GT、query、WP04 为零。",
+      "report": "research/reports/WP05_WP06_WP12_双GPU同卡恢复与主线集成验收_20261120.md",
+      "chat_report": "2026-11-20 第十四包 GPU 恢复与候选集成"
+    },
     {
       "id": "WP02/WP05/WP06/WP12 三景真实准入、同点误差和同容量读出",
       "state": "三景授权盘点、两景真实冻结同容量和 WP12 独立复核完成",
@@ -1809,9 +1818,9 @@
     },
     {
       "id": "WP02/WP05/WP07/WP12 PaviaU 固定空间开发",
-      "state": "开发银行已发布；生产验证和恢复通过",
+      "state": "开发银行已发布，生产验证和 GPU3 代表性同卡恢复通过",
       "evidence": "127训练、41开发验证块，各角色9类各5点。真实生产初态13配置各82视图含48空视图，两带各45点，三头逐点复算与预检一致。39例合成走生产全程和分段共312步，完成重入0；WP12接入合成审计并保有旧表。",
-      "remaining": "GPU3复查69%超资源门槛，CUDA未升级验收。PaviaU真实39例2340步未放行；真实校准、独立确认与完整研究待验，P4和Issue #249维持原进度。",
+      "remaining": "早期 GPU3 69% 资源拒绝保留。后续落盘的 factor4/joint 连续 4 步、分段 2+2 步和完成态零更新经第十四包只读逐位验收。PaviaU 真实 39 例 2340 步待放行，独立确认与完整研究待验。",
       "report": "research/reports/WP02_WP05_WP07_WP12_PaviaU固定空间发布与原生接入_20261118.md"
     }
   ],
