@@ -8,7 +8,7 @@ from unittest.mock import patch
 import torch
 
 from g4_light_full_target import prepare_case
-from g4_light_memory_probe import backward_snapshot
+from g4_light_memory_probe import backward_snapshot, main
 from g4_light_target import ADAPTER_HEADS
 from model.research_config import ResearchConfig
 from test_g4_light_full_target import registration_fixture
@@ -16,6 +16,25 @@ from loadData.dataset_registry import file_hash
 
 
 class LightMemoryProbeTests(unittest.TestCase):
+    def test_cli_requires_explicit_isolation_strategy(self):
+        args = ["--expected-commit", "reviewed", "--producer-checkout", "frozen-tree",
+                "--registration", "frozen-registration", "--out", "new-output", "--gpu", "5"]
+        code = {"commit": "reviewed", "source_hash": "reviewed-files"}
+        with (patch("g4_light_memory_probe.checked_probe", return_value=code),
+              patch("g4_light_memory_probe.profile") as legacy,
+              patch("g4_light_memory_probe.launch_recompute") as isolated,
+              patch("builtins.print")):
+            main(args)
+            self.assertEqual(legacy.call_args.args[0].strategy, "offload")
+            isolated.assert_not_called()
+            legacy.reset_mock()
+            main([*args, "--strategy", "recompute", "--verify-source-only"])
+            selected, source = isolated.call_args.args
+            self.assertEqual(selected.strategy, "recompute")
+            self.assertTrue(selected.verify_source_only)
+            self.assertIs(source, code)
+            legacy.assert_not_called()
+
     def test_original_and_offloaded_backward_are_exact(self):
         device = os.environ.get("LIGHT_MEMORY_TEST_DEVICE", "cpu")
         with TemporaryDirectory() as directory:

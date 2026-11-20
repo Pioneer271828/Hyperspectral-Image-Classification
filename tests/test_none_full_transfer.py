@@ -18,7 +18,7 @@ from research_runtime import code_snapshot
 from target_initialization import METHODS, domain_keys, state_id
 
 
-def fixture(root):
+def fixture(root, *, fixture_target="xuzhou", fixture_seed=64):
     # Simulated receipt/catalogue for initialization tests only. Real training
     # consumes the independently accepted LXC batch, not this fixture.
     root.mkdir(parents=True)
@@ -42,7 +42,7 @@ def fixture(root):
     def write(path, value):
         path.write_text(json.dumps(value))
     write(root / "launch.json", launch)
-    case = next(c for c in cases if (c["held_out"], c["seed"]) == ("xuzhou", 64))
+    case = next(c for c in cases if (c["held_out"], c["seed"]) == (fixture_target, fixture_seed))
     folder = Path(case["out"])
     folder.mkdir(parents=True)
     source = ResearchConfig.from_dict(case["settings"]["config"]).build_model({n: DATASETS[n][2] for n in case["settings"]["source_tasks"]})

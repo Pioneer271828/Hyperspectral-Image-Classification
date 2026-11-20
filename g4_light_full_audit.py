@@ -5,7 +5,8 @@ from pathlib import Path
 import torch
 
 from evaluation.g4_target import independent_trainval
-from g4_light_full_target import POLICY, UPDATES, prepare_case
+from g4_light_engineering_registration import SCOPE, code_identity
+from g4_light_full_target import MEMORY_FIELD, POLICY, UPDATES, prepare_case
 from g4_light_target import HEAD_ONLY
 from g4_matched_target_audit import REQUIRED, files, read
 from joint_training import _tree_fingerprint, schedule_for, validation_epochs
@@ -67,6 +68,11 @@ def audit_case(registration_path, registration_sha256, code, key, *, device="cud
             or artifacts.get(progress["state_file"]) != progress["state_sha256"]
             or any(Path(name).name != name or before.get(str(folder / name)) != sha for name, sha in artifacts.items())):
         raise ValueError("Light target artifacts or authoritative state hashes differ")
+    if MEMORY_FIELD in settings:
+        cost_path = folder / "adaptation-cost.json"
+        if (artifacts.get(cost_path.name) != before.get(str(cost_path))
+                or read(cost_path).get(MEMORY_FIELD) != settings[MEMORY_FIELD]):
+            raise ValueError("Registered adapter policy is missing from the measured cost")
     state, saved, last = [torch.load(folder / name, map_location="cpu", weights_only=True) for name in
                           (progress["state_file"], "selected-probabilities.pt", "last.pt")]
     if (state["identity"] != identity or state["start_code"] != code or state["cursor"] != UPDATES
@@ -104,4 +110,8 @@ def audit_case(registration_path, registration_sha256, code, key, *, device="cud
             **checks, "exact_reload_repeats": 3, "adapter_changed_steps": changes,
             "result_sha256": before[str(folder / "result.json")], "primary_sha256": before[str(primary)],
             "sidecar_sha256": before[str(primary) + ".json"], "protected_inputs": provenance["protected_files"],
+            **({MEMORY_FIELD: settings[MEMORY_FIELD]} if MEMORY_FIELD in settings else {}),
+            **({"scope": SCOPE, "producer": code_identity(code), "registration_sha256": registration_sha256,
+                "ledger": provenance["scheduled_role"], "device": str(device)}
+               if provenance.get("scope") == SCOPE else {}),
             "artifacts": before, "new_optimizer_updates": 0, "query_labels_accessed": False}

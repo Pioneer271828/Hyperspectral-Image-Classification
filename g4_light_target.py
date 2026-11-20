@@ -1,7 +1,7 @@
 """Twelve-update full-source head-only / VCA-adapter controls; no query release."""
 import argparse
 import copy
-from contextlib import redirect_stdout
+from contextlib import nullcontext, redirect_stdout
 import json
 import math
 from pathlib import Path
@@ -9,6 +9,7 @@ import sys
 import time
 
 import torch
+from g4_light_adapter_memory import RECOMPUTE, recompute_value_projection
 import g4_support_target as bounded
 from joint_baseline import NAMES, _item_fingerprint
 from joint_training import run_training
@@ -86,11 +87,16 @@ def initialize(target, method, mode, *, model_seed, head_seed, source_spec, devi
     return model, record, binding
 
 
-def settings(target, method, mode, *, model_seed, support_seed, per_class, binding, source_spec, device="cpu"):
+def settings(target, method, mode, *, model_seed, support_seed, per_class, binding, source_spec, device="cpu",
+             adapter_recompute=False):
     policy = contract(method)
     value = bounded.settings(target, METHODS[1], mode, model_seed=model_seed, support_seed=support_seed,
         per_class=per_class, binding=binding, source_spec=source_spec, device=device)
     value.update(protocol=POLICY, method=method, light_target_parameter_policy=policy)
+    if adapter_recompute:
+        if method != ADAPTER_HEADS:
+            raise ValueError("Eval adapter recomputation is only applicable to VCA plus heads")
+        value["adapter_backward_policy"] = RECOMPUTE
     return value
 
 
@@ -103,7 +109,8 @@ class LightTargetRuntime(TargetRuntime):
             raise ValueError("The short light target runtime requires its engineering budget")
         expected = settings(options["target"], options["method"], options["config"]["model"]["region_residual_mode"],
             model_seed=options["model_seed"], support_seed=options["support_seed"], per_class=options["support_per_class"],
-            binding=options["support_context_binding"], source_spec=self.source_spec, device=options["config"]["device"])
+            binding=options["support_context_binding"], source_spec=self.source_spec, device=options["config"]["device"],
+            adapter_recompute=options.get("adapter_backward_policy") == RECOMPUTE)
         if {k: v for k, v in options.items() if k not in ("executed_optimizer_steps", "selected_step")} != expected:
             raise ValueError("Frozen light target engineering policy differs")
         return True
@@ -129,8 +136,11 @@ class LightTargetRuntime(TargetRuntime):
         value = bounded.read(path) if path.exists() else {"settings_sha256": binding, "events": [],
             "scope": "initialization_calibration_optimizer_and_validation_with_invariant_checks",
             "excludes": ["input_preparation_guards", "trainer_serialization", "completed_readonly_verification"],
-            "deployment_speedup_claim": False}
-        if value["settings_sha256"] != binding:
+            "deployment_speedup_claim": False,
+            **({"adapter_backward_policy": self.settings["adapter_backward_policy"]}
+               if "adapter_backward_policy" in self.settings else {})}
+        if (value["settings_sha256"] != binding
+                or value.get("adapter_backward_policy") != self.settings.get("adapter_backward_policy")):
             raise ValueError("Cost record belongs to another adaptation policy")
         value["events"].append({"phase": phase, "seconds": time.perf_counter() - start})
         write_json(path, value)
@@ -188,11 +198,14 @@ class LightTargetRuntime(TargetRuntime):
         else:
             model.train(); model.backbone.eval()
             optimizer.zero_grad(set_to_none=True)
-            outputs = selected_outputs(model, name, item, "train")
-            terms = loss_terms(outputs, item["train_labels"].to(outputs[0].device), config)
-            if not torch.isfinite(terms["total"]):
-                raise ValueError("Nonfinite adapter-heads loss")
-            terms["total"].backward()
+            memory_policy = (recompute_value_projection(model.backbone.adapter)
+                             if self.settings.get("adapter_backward_policy") == RECOMPUTE else nullcontext())
+            with memory_policy:
+                outputs = selected_outputs(model, name, item, "train")
+                terms = loss_terms(outputs, item["train_labels"].to(outputs[0].device), config)
+                if not torch.isfinite(terms["total"]):
+                    raise ValueError("Nonfinite adapter-heads loss")
+                terms["total"].backward()
             grad = {}
             for key, prefix in (("adapter", "backbone.adapter."), ("fused_head", "heads."),
                                 ("graph_head", "hgnn_heads."), ("cnn_head", "cnn_heads.")):
@@ -232,7 +245,8 @@ class LightTargetRuntime(TargetRuntime):
     def checkpoint_metadata(self, model):
         if self._parameter_binding(model) != self.parameter_contract:
             raise ValueError("Checkpoint parameter contract changed")
-        return {**super().checkpoint_metadata(model), "light_target_contract": self.parameter_contract,
+        execution = {key: self.settings[key] for key in ("adapter_backward_policy",) if key in self.settings}
+        return {**super().checkpoint_metadata(model), **execution, "light_target_contract": self.parameter_contract,
                 "support_context_binding": self.settings["support_context_binding"],
                 "target_validation_arithmetic": copy.deepcopy(TARGET_ARITHMETIC)}
 
@@ -243,20 +257,24 @@ class LightTargetRuntime(TargetRuntime):
         meta = model.training_config
         if (actual != self.parameter_contract or meta.get("light_target_contract") != actual
                 or meta.get("support_context_binding") != self.settings["support_context_binding"]
+                or meta.get("adapter_backward_policy") != self.settings.get("adapter_backward_policy")
                 or meta.get("target_validation_arithmetic") != TARGET_ARITHMETIC):
             raise ValueError("Selected light target permission/context/arithmetic differs")
         return model
 
 
 def prepare(manifest, manifest_sha256, out, *, target, method, mode, model_seed, support_seed,
-            per_class, source_spec, source_files=None, device="cpu"):
+            per_class, source_spec, source_files=None, device="cpu", adapter_recompute=False):
     contract(method)
     options, items, provenance, source, _, guard = bounded.prepare(manifest, manifest_sha256, out,
         target=target, method=METHODS[1], mode=mode, model_seed=model_seed, support_seed=support_seed,
         per_class=per_class, source_spec=source_spec, source_files=source_files, device=device)
     options = settings(target, method, mode, model_seed=model_seed, support_seed=support_seed,
-        per_class=per_class, binding=options["support_context_binding"], source_spec=source_spec, device=device)
+        per_class=per_class, binding=options["support_context_binding"], source_spec=source_spec, device=device,
+        adapter_recompute=adapter_recompute)
     provenance = {**provenance, "policy": POLICY, "light_target_parameter_policy": contract(method)}
+    if adapter_recompute:
+        provenance["adapter_backward_policy"] = RECOMPUTE
     runtime = LightTargetRuntime(options, items, out, source_spec=source_spec)
     return options, items, provenance, source, runtime, guard
 
@@ -273,6 +291,8 @@ def main(argv=None):
     parser.add_argument("--per-class", type=int, choices=(1, 5, 10), required=True)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--adapter-recompute", action="store_true",
+                        help="Opt into eval-mode value recomputation for a new light engineering run")
     parser.add_argument("--stop-after", type=int, choices=(2,))
     args = parser.parse_args(argv)
     code = code_snapshot()
@@ -284,7 +304,7 @@ def main(argv=None):
     options, items, provenance, code, runtime, guard = prepare(args.manifest, args.manifest_sha256, args.out,
         target=args.target, method=args.method, mode=args.mode, model_seed=args.model_seed,
         support_seed=args.support_seed, per_class=args.per_class, device=args.device,
-        source_spec=bounded.read(args.source_spec), source_files=pins)
+        source_spec=bounded.read(args.source_spec), source_files=pins, adapter_recompute=args.adapter_recompute)
     start = time.perf_counter()
     with redirect_stdout(sys.stderr):
         value = run_training(options, items, args.out, provenance, code, runtime_adapter=runtime,
