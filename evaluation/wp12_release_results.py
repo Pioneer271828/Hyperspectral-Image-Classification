@@ -377,7 +377,7 @@ def cohorts(rows):
     return output
 
 
-def publish(root, out, code):
+def publish(root, out, code, *, shared_edge=None):
     frozen, lifecycle = frozen54(root)
     sparse = native_pavia(root)
     diagnostics = band_diagnostics(root)
@@ -385,12 +385,19 @@ def publish(root, out, code):
     cases = [*frozen,*sparse,*diagnostics,*partial]
     require(len({case_key(row) for row in cases})==len(cases),"Conflicting registered release case identity")
     summary = cohorts(cases)
+    mechanism = None
+    if shared_edge is not None:
+        from evaluation.wp12_shared_edge_interaction import publication
+
+        mechanism = publication(root, shared_edge, code["commit"])
     require(not out.exists(),"Use a fresh output directory")
     with TemporaryDirectory(dir=out.parent,prefix=".unified-real-") as tmp:
         stage = Path(tmp)/"publication"
         stage.mkdir()
         _write(stage/"cases.json",cases)
         _write(stage/"cohorts.json",summary)
+        if mechanism is not None:
+            _write(stage/"shared-edge-development.json", mechanism)
         with (stage/"real-per-class.csv").open("x",encoding="utf-8",newline="") as file:
             w=csv.writer(file)
             w.writerow(("source","protocol","scene","seed","support","k","method","arm","role","band","factor",
@@ -407,11 +414,17 @@ def publish(root, out, code):
                 write_csv(file,name,items)
         files={path.name:hash_file(path) for path in stage.iterdir()}
         require_frozen_code(code)
+        mechanism_proof = ({} if mechanism is None else
+                           {"shared_edge_development": {"review": shared_edge, "role": "devval",
+                            "cases": len(mechanism["results"]),
+                            "sampled_points": sum(row["total_sampled_points"] for row in mechanism["results"].values()),
+                            "independent_confirmation": False}})
         receipt=_write(stage/"receipt.json",dict(schema=SCHEMA,status="published",producer=code["commit"],
             files=files,qualified_historical_joint_cases=len(frozen),native_development_rows=len(sparse),
             bounded_diagnostic_rows=len(diagnostics),layer_replay_rows=sum(bool(r["layers"]) for r in diagnostics),
             partial_five_arm_rows=len(partial),coverage=gaps,
-            cost_lifecycle=lifecycle,formal_independent_accuracy_rows=0,new_query_reads=0,new_optimizer_updates=0))
+            cost_lifecycle=lifecycle,formal_independent_accuracy_rows=0,new_query_reads=0,new_optimizer_updates=0,
+            **mechanism_proof))
         os.rename(stage,out)
     return dict(path=str(out/"receipt.json"),sha256=receipt["sha256"])
 

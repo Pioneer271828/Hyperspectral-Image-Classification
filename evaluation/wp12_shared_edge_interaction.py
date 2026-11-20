@@ -3,23 +3,27 @@
 from collections import Counter
 from contextlib import ExitStack
 from dataclasses import replace
-from math import sqrt
+import json
+from math import isfinite, sqrt
 
 import numpy as np
 import torch
 
 from evaluation import wp12_mechanism_real as real
+from evaluation import wp12_shared_edge_roster as roster
 from evaluation.frozen_training_stages import HEADS, VIEWS, probabilities, require
 from evaluation.graph_edge_intervention import delete_support
 from evaluation.matched_edge_controls import freeze, verify
 from evaluation.wp12_locked_support import transitions
 from evaluation.wp12_native_pathways import graph_for
-from model.research_config import digest
+from model.research_config import canonical_json, digest
 from model.region_pixel_alignment import pool_regions
 from research_runtime import tensor_hash
 from transfer.g3_training import state_hash
 
 SCHEMA = "wp06_shared_edge_band_interaction_v1"
+REVIEW = "wp12_frozen_shared_edge_development_review_v2"
+HISTORICAL_CAPTURE = "4355c23ad24516bd3eb79731b456832ac559aa0f"
 CASES = ("selected", "whu-honghu")
 ANCHOR = "matched_dispersed"
 RANDOM = 7719
@@ -264,6 +268,9 @@ def run(root, case, producer, device, *, reference=None):
     state_before = state_hash(model)
     require(old is not None, "An externally pinned historical native baseline is required")
     if reference is not None:
+        trusted = roster.authority(root, case)
+        validate_roster(reference, trusted)
+        validate_native_scores(reference, trusted)
         require(device.type == "cuda" and reference["device"] == "cpu" and reference["case"] == case
                 and reference["registration"] == digest(rule) and reference["authority"] == endpoint.authority
                 and reference["checkpoint"] == endpoint.checkpoint and reference["state"] == state_before,
@@ -310,19 +317,35 @@ def run(root, case, producer, device, *, reference=None):
                 device=str(device), optimizer_updates=0, raw_gt_loaded=False, query_accessed=False)
 
 
+def signed_probability_difference(value):
+    return type(value) in (float, int) and -1 <= value <= 1 and isfinite(value)
+
+
+def valid_score(row, truth, rival, classes):
+    predicted, highest = row["predicted"], row["highest_other"]
+    margin, fixed = row["highest_margin"], row["margin"]
+    return (type(predicted) is int and 1 <= predicted <= classes
+            and type(highest) is int and 1 <= highest <= classes and highest != truth
+            and signed_probability_difference(margin)
+            and (margin >= 0 if predicted == truth else predicted == highest and margin <= 0)
+            and row["fixed_rival"] == rival
+            and (fixed is None if rival is None else signed_probability_difference(fixed)
+                 and fixed >= margin and (rival != highest or fixed == margin)))
+
+
 def checked_receipt(row, producer):
     require(row["schema"] == SCHEMA and row["producer"] == producer and row["case"] in CASES
             and row["registration"] == digest(registration(producer)) and row["device"] in ("cpu", "cuda")
             and row["scope"] == "historical_released_development_only"
             and row["raw_gt_loaded"] is row["query_accessed"] is False and row["optimizer_updates"] == 0
             and row["focus"] == list(real.FOCUS[row["scene"]]), "Foreign roles, scope or frozen mechanism registration")
-    reviewed, seen = [], set()
+    reviewed = []
     classes = row["classes"]
+    rivals = {int(k): v for k, v in row["rivals"].items()}
     for block in row["groups"]:
-        require(block["points_sha256"] not in seen and bool(block["truth"])
-                and set(block["scores"]) == set(block["pathway_proofs"]) == set(block["interventions"]) == set(VIEWS),
-                "Duplicate points, zero denominator or missing retained cell")
-        seen.add(block["points_sha256"])
+        truth = block["truth"]
+        require(bool(truth) and set(block["scores"]) == set(block["pathway_proofs"])
+                == set(block["interventions"]) == set(VIEWS), "Zero denominator or missing retained cell")
         masks = confirmed_masks(block["control"])
         for band in VIEWS:
             require(set(block["scores"][band]) == {"native", *masks}
@@ -332,9 +355,9 @@ def checked_receipt(row, producer):
             native = block["scores"][band]["native"]["cnn"]
             for key, scores in block["scores"][band].items():
                 require(set(scores) == set(HEADS)
-                        and all(len(points) == len(block["truth"]) and all(
-                            type(p["predicted"]) is int and 1 <= p["predicted"] <= classes for p in points)
-                                for points in scores.values()), "Head predictions cross the locked point or class order")
+                        and all(len(points) == len(truth)
+                                and all(valid_score(p, y, rivals.get(y), classes) for p, y in zip(points, truth))
+                                for points in scores.values()), "Invalid ordered head scores or signed probability margins")
                 if key != "native":
                     arm = block["interventions"][band][key]
                     require(arm["mask_sha256"] == digest(masks[key]) and arm["cnn_equal"] is True
@@ -385,25 +408,75 @@ def score_interaction(blocks, left, right, reference, altered, classes):
     return interaction_counts(aligned, left, right, reference, altered, classes)
 
 
-def reduction(root, receipt, producer):
-    audited = checked_receipt(receipt, producer)
-    blocks = [block for block, _ in audited]
-    classes = receipt["classes"]
-    archived = real.locked_history(root, receipt["case"], receipt["checkpoint"])["result"]
-    require(archived["authority"] == receipt["authority"] and archived["state"] == receipt["state"],
-            "Independent review must bind the same frozen authority and numerical state")
-    for block in blocks:
-        window = slice(block["offset"], block["offset"]+len(block["truth"]))
+def validate_roster(receipt, authority):
+    identity, expected, archived = authority
+    require(digest({key: receipt[key] for key in identity}) == digest(identity),
+            "The frozen model, role, or released population identity differs")
+    blocks = receipt["groups"]
+    require(len(blocks) == len(expected), "Incomplete frozen focal-block roster")
+    require(len({block["points_sha256"] for block in blocks}) == len(blocks)
+            and len({block["ordinal"] for block in blocks}) == len(blocks), "Duplicate frozen focal block")
+    for block, spec in zip(blocks, expected, strict=True):
+        check = {key: block[key] for key in ("ordinal", "tile", "parent", "offset", "first_focus")}
+        require(digest(check) == digest({key: spec[key] for key in check}),
+                "Focal-block order, original parent, offset or first class differs")
+        require(block["points_sha256"] == spec["points_sha256"] and block["truth"] == spec["truth"],
+                "Ordered released point identity or truth differs")
         for band in VIEWS:
-            expected = archived["views"][band]
-            require(block["columns"][band] == expected["band_ids"] and block["truth"] == expected["truth"][window],
-                    "Point or column order differs from the pinned development baseline")
-            for head in HEADS:
-                scores = [row[head] for row in expected["native_probabilities"][window]]
-                hard = (probabilities(scores, len(block["truth"]), classes).argmax(1)+1).tolist()
-                require(hard == decisions(block, band, "native", head), "Native head differs from the pinned baseline")
-    identity = {k:receipt[k] for k in ("scene","case","step","checkpoint","authority","state","release","focus")}
-    status = [dict(ordinal=block["ordinal"], parent=block["parent"], points=len(block["truth"]),
+            require(block["columns"][band] == archived[band]["band_ids"],
+                    "Retained columns differ from the pinned development baseline")
+
+
+def validate_native_scores(receipt, authority):
+    identity, specs, archived = authority
+    for block, spec in zip(receipt["groups"], specs, strict=True):
+        truth = spec["truth"]
+        window = slice(spec["offset"], spec["offset"] + len(truth))
+        for band in VIEWS:
+            rows = archived[band]["native_probabilities"][window]
+            source = {head: probabilities([row[head] for row in rows], len(truth), identity["classes"]).astype(np.float32)
+                      for head in HEADS}
+            expected = real.output_rows(source, truth, real.RIVALS[identity["scene"]])
+            native = block["scores"][band]["native"]
+            if receipt["device"] == "cpu":
+                require(native == expected, "Ordered native CPU scores differ from the pinned baseline")
+            else:
+                require(all([p["predicted"] for p in native[head]] == [p["predicted"] for p in expected[head]]
+                            for head in HEADS), "Native GPU decisions differ from the pinned baseline")
+
+
+def branch_errors(block, label, band, rival):
+    counts = {key: dict(n=0, fused_correct=0, fused_to_fixed_rival=0, both_branches_to_fixed_rival=0)
+              for key in ("both_correct", "cnn_only_wrong", "graph_only_wrong", "both_wrong")}
+    rows = block["scores"][band]["native"]
+    totals = dict(n=0, correct=dict.fromkeys(HEADS, 0), fixed_rival=rival,
+                  to_fixed_rival=None if rival is None else dict.fromkeys(HEADS, 0))
+    for index, actual in enumerate(block["truth"]):
+        if actual != label:
+            continue
+        predictions = {head: rows[head][index]["predicted"] for head in HEADS}
+        cnn_wrong, graph_wrong = predictions["cnn"] != label, predictions["graph"] != label
+        key = {(False, False): "both_correct", (True, False): "cnn_only_wrong",
+               (False, True): "graph_only_wrong", (True, True): "both_wrong"}[cnn_wrong, graph_wrong]
+        counts[key]["n"] += 1
+        counts[key]["fused_correct"] += predictions["fused"] == label
+        if rival is not None:
+            counts[key]["fused_to_fixed_rival"] += predictions["fused"] == rival
+            counts[key]["both_branches_to_fixed_rival"] += predictions["cnn"] == predictions["graph"] == rival
+        totals["n"] += 1
+        for head, predicted in predictions.items():
+            totals["correct"][head] += predicted == label
+            if rival is not None:
+                totals["to_fixed_rival"][head] += predicted == rival
+    return dict(**totals, cross_head=counts)
+
+
+def reduction(audited, authority, producer):
+    identity, _, _ = authority
+    blocks = [block for block, _ in audited]
+    classes = identity["classes"]
+    status = [dict(ordinal=block["ordinal"], tile=block["tile"], parent=block["parent"], offset=block["offset"],
+                   first_focus=block["first_focus"], points=len(block["truth"]),
                    counts={str(y):block["truth"].count(y) for y in receipt["focus"]},
                    point_identity=block["points_sha256"], columns=block["columns"],
                    status=block["control"]["status"], masks={k:digest(v) for k,v in masks.items()},
@@ -423,17 +496,29 @@ def reduction(root, receipt, producer):
                                                                    left,right,reference,altered,classes)
                                      for parent in parents}
             comparisons[label]["matched"][f"{reference}/{altered}"] = entry
-    return dict(**identity, blocks=status, total_sampled_points=sum(len(b["truth"]) for b in blocks),
-                available_development_points=sum(receipt["release"]["evaluation_per_class"]), contrasts=comparisons)
+    focal = {}
+    for block, masks in audited:
+        all_classes = {str(label): {band: branch_errors(block, label, band, identity["rivals"].get(str(label)))
+                                   for band in VIEWS} for label in sorted(set(block["truth"]))}
+        for label in block["first_focus"]:
+            native = all_classes[str(label)]
+            floor = all(cell["correct"]["fused"] == 0 for cell in native.values())
+            scope = ("matched_development_only" if masks else "native_baseline_floor_without_matched_control"
+                     if floor else "native_only_without_matched_control")
+            focal[str(label)] = dict(parent=block["parent"], tile=block["tile"], scope=scope, native=native,
+                                     same_block_reference={c: rows for c, rows in all_classes.items() if c != str(label)})
+    return dict(**identity, role="devval", blocks=status, focal=focal,
+                total_sampled_points=sum(len(b["truth"]) for b in blocks),
+                available_development_points=sum(identity["release"]["evaluation_per_class"]), contrasts=comparisons)
 
 
-def device_parity(cpu, cuda, producer):
-    before, after = checked_receipt(cpu, producer), checked_receipt(cuda, producer)
+def device_parity(cpu, cuda, before, after):
     require(cpu["device"] == "cpu" and cuda["device"] == "cuda" and all(cpu[k] == cuda[k] for k in
             ("case","scene","checkpoint","authority","state","release")), "The device replay crossed a frozen release")
-    n, flips, margin = 0, 0, 0.0
+    n, flips, margin, fixed_n, fixed_margin = 0, 0, 0.0, 0, None
     for (a, masks_a), (b, masks_b) in zip(before, after, strict=True):
-        require(all(a[k] == b[k] for k in ("tile","parent","truth","points_sha256","columns","control"))
+        require(all(a[k] == b[k] for k in
+                    ("ordinal","tile","parent","offset","first_focus","truth","points_sha256","columns","control"))
                 and masks_a == masks_b, "The devices used different geometry, point order, or edge masks")
         for view in VIEWS:
             for arm in ("native", *masks_a):
@@ -442,4 +527,59 @@ def device_parity(cpu, cuda, producer):
                         n += 1
                         flips += x["predicted"] != y["predicted"]
                         margin = max(margin, abs(x["highest_margin"] - y["highest_margin"]))
-    return dict(paired_head_points=n, decision_changes=flips, max_highest_margin_difference=margin)
+                        if x["margin"] is not None:
+                            fixed_n += 1
+                            fixed_margin = max(fixed_margin or 0.0, abs(x["margin"] - y["margin"]))
+    return dict(paired_head_points=n, decision_changes=flips, max_highest_margin_difference=margin,
+                paired_fixed_rival_head_points=fixed_n, max_fixed_rival_margin_difference=fixed_margin)
+
+
+def review(root, cpu_pins, cuda_pins, consumer, capture):
+    from evaluation.frozen_training_stages import json_pin
+
+    require(capture in (consumer, HISTORICAL_CAPTURE), "Unrecognized shared-edge capture implementation")
+    require(bool(cpu_pins) and cpu_pins.keys() <= set(CASES)
+            and (not cuda_pins or cuda_pins.keys() == cpu_pins.keys()),
+            "CUDA evidence must cover the same reviewed cases as CPU")
+    results, parity = {}, {}
+    for case in cpu_pins:
+        authority = roster.authority(root, case)
+        checked = {}
+        for device, pins in (("cpu", cpu_pins), ("cuda", cuda_pins)):
+            if case not in pins:
+                continue
+            row = json_pin(root, pins[case])
+            require(row["case"] == case and row["device"] == device, "Receipt device or case is foreign")
+            validate_roster(row, authority)
+            audited = checked_receipt(row, capture)
+            validate_native_scores(row, authority)
+            checked[device] = row, audited
+        cpu, before = checked["cpu"]
+        if cuda_pins:
+            cuda, after = checked["cuda"]
+            require(cuda["reference"] == [cpu_pins[case]["path"], cpu_pins[case]["sha256"]],
+                    "The GPU receipt did not reuse the pinned CPU plan")
+            parity[case] = device_parity(cpu, cuda, before, after)
+        results[case] = reduction(before, authority, capture)
+    total = None
+    if parity:
+        total = {key: sum(row[key] for row in parity.values()) for key in
+                 ("paired_head_points", "decision_changes", "paired_fixed_rival_head_points")}
+        for key in ("max_highest_margin_difference", "max_fixed_rival_margin_difference"):
+            total[key] = max((row[key] for row in parity.values() if row[key] is not None), default=None)
+    return dict(policy=REVIEW, producer=consumer, capture_producer=capture, cpu=cpu_pins, cuda=cuda_pins,
+                results=results, device_parity=parity, global_device_parity=total,
+                registered_cases=list(CASES), missing_cases=[case for case in CASES if case not in results],
+                real_optimizer_updates=0, raw_gt_loaded=False, query_accessed=False, independent_confirmation=False)
+
+
+def publication(root, pin, consumer):
+    from evaluation.frozen_training_stages import json_pin
+
+    saved = json_pin(root, pin)
+    require(saved["policy"] == REVIEW and saved["producer"] == consumer and not saved["missing_cases"]
+            and set(saved["cpu"]) == set(CASES), "Unified WP12 publication requires both frozen development cases")
+    verified = review(root, saved["cpu"], saved["cuda"], consumer, saved["capture_producer"])
+    require(digest(json.loads(canonical_json(verified))) == digest(saved),
+            "Shared-edge development review differs from independent sources")
+    return verified

@@ -8,7 +8,9 @@ import numpy as np
 import torch
 
 from evaluation import wp12_shared_edge_interaction as experiment
+from evaluation.wp12_shared_edge_roster import focal_roster
 from loadData.observation_sampling import BandMetadata
+from model.research_config import digest
 
 
 def grid(shape, *, weights=None):
@@ -89,6 +91,51 @@ class SharedEdgeBandTests(unittest.TestCase):
         self.assertIsNone(scores["classes"]["3"]["interaction_recall"])
         self.assertFalse(scores["classes"]["1"]["floor_met"])
         self.assertEqual(scores["views"]["central"]["1"]["moves"], [[1,1,1],[2,1,1]])
+
+    def test_first_focal_roster_uses_preceding_blocks_and_original_parent(self):
+        groups, truth = focal_roster([
+            dict(id=2, parent_tile=2, samples=[]),
+            dict(id=3, parent_tile=3, samples=[(20, 2)]),
+            dict(id=5, parent_tile=3, samples=[(27, 5), (30, 2)]),
+            dict(id=8, parent_tile=8, samples=[(35, 5)]),
+            dict(id=11, parent_tile=10, samples=[(39, 6)]),
+        ], [5, 6])
+        self.assertEqual(truth, [2, 5, 2, 5, 6])
+        self.assertEqual(groups, [
+            dict(ordinal=2, tile=5, parent=3, offset=1, points_sha256=digest([27, 30]), truth=[5, 2], first_focus=[5]),
+            dict(ordinal=4, tile=11, parent=10, offset=4, points_sha256=digest([39]), truth=[6], first_focus=[6]),
+        ])
+
+    def test_trusted_roster_rejects_rehashed_block_and_point_substitutions(self):
+        rows = [dict(id=3, parent_tile=2, samples=[(20, 5), (21, 5)]),
+                dict(id=7, parent_tile=7, samples=[(25, 6)])]
+        groups, _ = focal_roster(rows, [5, 6])
+        identity = dict(scene="xuzhou", focus=[5, 6])
+        archive = {view: {"band_ids": [1, 2]} for view in experiment.VIEWS}
+        receipt = dict(**identity, groups=[
+            dict(**spec, columns={view: [1, 2] for view in experiment.VIEWS}) for spec in groups])
+        authority = identity, groups, archive
+        experiment.validate_roster(receipt, authority)
+        omitted = deepcopy(receipt)
+        omitted["groups"].pop()
+        duplicate = deepcopy(receipt)
+        duplicate["groups"][1] = deepcopy(duplicate["groups"][0])
+        relocated = deepcopy(receipt)
+        relocated["groups"][0]["parent"] = 6
+        exchanged = deepcopy(receipt)
+        exchanged["groups"][0]["points_sha256"] = digest([21, 20])
+        for modified, reason in ((omitted, "Incomplete"), (duplicate, "Duplicate"),
+                                 (relocated, "original parent"), (exchanged, "point identity")):
+            with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, reason):
+                experiment.validate_roster(modified, authority)
+
+    def test_score_requires_finite_consistent_signed_margins(self):
+        score = dict(predicted=2, highest_other=2, fixed_rival=2, highest_margin=-.5, margin=-.5)
+        self.assertTrue(experiment.valid_score(score, 1, 2, 3))
+        for fields in (dict(highest_margin=float("nan")), dict(margin=float("inf")), dict(margin=-1.1),
+                       dict(highest_other=1), dict(predicted=1), dict(fixed_rival=3), dict(margin=-.7)):
+            with self.subTest(fields=fields):
+                self.assertFalse(experiment.valid_score(score | fields, 1, 2, 3))
 
 
 if __name__ == "__main__":
