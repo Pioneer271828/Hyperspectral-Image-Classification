@@ -9,6 +9,7 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp05_honghu_p4_short_review_candidate": "fa8905aa313280db3b7181c4dcfab36702e34c38",
     "wp05_wp06_gpu_recovery_integration_candidate": "65ef959fc3dcf63c5f4fa65142dc21b0280ab4f6",
     "wp02_wp05_wp06_real_readiness_candidate": "58b3ff182668c3fd6bc0d40400748011d619251b",
     "wp05_m1_e1_coverage_wp12_candidate": "1fbbb7e9b4de55ff649540e241b7d89b6b5c815a",
@@ -52,6 +53,14 @@
     "evaluation/g4_target_verification.py"
   ],
   "modules": [
+    {
+      "id": "WP05/WP06/WP12 洪湖 P4 活动登记与同点复盘",
+      "state": "现有真实 10/20 独审完成并接入同点复盘，GPU4 剩余批准等待资源",
+      "evidence": "冻结迁移批准已核实，两槽登记互斥。GPU6 原 1,200 步与 490 份工件保留，4,620 次实际同点头对照零改判。类 15/21 每头 0/5，含同块最近异类错分、原选步、逐类与成本。PaviaU 39 例、徐州 8 臂按各自真实发布范围登记。CPU 20 项和迁移接口兼容负例通过。",
+      "remaining": "登记 GPU4 空闲约 3,208 MiB，低于 12,288 MiB 门槛。余下 10 例 1,200 步未启动。原归属保留，尚无 20 例合并接受，独立确认、13,500 与 180,000 步继续等待原前置。本轮真实优化和模型前向为 0。",
+      "report": "research/reports/WP05_WP06_WP12_洪湖P4剩余登记与同点科学复盘_20261120.md",
+      "chat_report": "2026-11-20 第十五包洪湖P4迁移准入与科学复盘"
+    },
     {
       "id": "WP05/WP06/WP12 双卡队列、精确同卡恢复和主线集成",
       "state": "双实体卡队列、三种同卡恢复、冻结三头及 WP12 工程通过",
@@ -1600,7 +1609,7 @@
       "id": "WP05 P4 物理 UUID 独立资源与三臂前置",
       "state": "真实独立队列已提交1200/2400步，GPU6的10/20例通过独立复算",
       "evidence": "PR475。生产worker冻结3a6381。CPU两队列20例2400合成步，完结重入0，故障时另一worker保留60步。主审接受6f59b7a637478804ff9a47cb8acef596f93d9d54的490文件原十例保留链与15项最小回归及合并拒绝工程。读原独审30bafc44496bff71174a789e1b15b53f7cdcd581637396933a115be6e4c67e2a和冻结轨迹，十臂均在第30步选中，同组五臂三头OA和逐类召回相同，新增优化和前向0。两条路径仅用于恢复验证。",
-      "remaining": "GPU6独立槽10/10、1200/1200完成，原GPU1两组10例仍0/1200。9de32c37f77826675a59884cd1f1ffa494458278已封存GPU4单卡串行新登记。仍为两组完整五臂、单物理槽1200步，复用GPU4完整资格。原双卡登记模式有效。真实发布待审核，接管未发生。13500和180000暂停。",
+      "remaining": "GPU6独立槽10/10、1200/1200完成，原GPU1两组10例仍0/1200。9de32c37f77826675a59884cd1f1ffa494458278 的 GPU4 单卡串行两组五臂、1200 步已有批准且本轮复核有效。GPU4 未达原资源门槛，目的地尚未创建，接管未发生。13500和180000暂停。",
       "report": "research/reports/WP05_WP07_WP12_短训练与释放点生产验收_20261114.md",
       "chat_report": "外部报告更正版在授权容器 runs/wp05-honghu-fit-existing-ten-erratum01/review.md，包SHA-256 90ca34f0818c724431e365aa05ddfa3ca02e74d807e6a1d2ad2e1ca243a3f34a。GPU4串行scope与待审release位于 runs/wp05-resource-migration-serial-control01。"
     },
@@ -1818,9 +1827,9 @@
     },
     {
       "id": "WP02/WP05/WP07/WP12 PaviaU 固定空间开发",
-      "state": "开发银行已发布，生产验证和 GPU3 代表性同卡恢复通过",
+      "state": "开发银行、GPU3 代表性同卡恢复与后续真实 39 例发布点验收已有回执",
       "evidence": "127训练、41开发验证块，各角色9类各5点。真实生产初态13配置各82视图含48空视图，两带各45点，三头逐点复算与预检一致。39例合成走生产全程和分段共312步，完成重入0；WP12接入合成审计并保有旧表。",
-      "remaining": "早期 GPU3 69% 资源拒绝保留。后续落盘的 factor4/joint 连续 4 步、分段 2+2 步和完成态零更新经第十四包只读逐位验收。PaviaU 真实 39 例 2340 步待放行，独立确认与完整研究待验。",
+      "remaining": "早期 GPU3 69% 资源拒绝保留。后续落盘的 factor4/joint 连续 4 步、分段 2+2 步和完成态零更新经第十四包只读逐位验收。后续签收的真实 39 例 2340 步见第十五包按原已发布开发点复核，独立确认、可信物理轴与完整研究待验。",
       "report": "research/reports/WP02_WP05_WP07_WP12_PaviaU固定空间发布与原生接入_20261118.md"
     }
   ],
