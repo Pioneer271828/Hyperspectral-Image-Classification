@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from evaluation.wp12_p4_short_review import (
-    CLASSES, CONTEXT, HEADS, descriptive_cross_cohorts, focus_readout, nearest_other_labels, roster_pair,
+    CLASSES, CONTEXT, HEADS, decision_margins, descriptive_cross_cohorts, focus_readout, nearest_other_labels, roster_pair,
     threshold_comparison,
 )
 from transfer import p4_frozen_diagnostic_metrics as metrics
@@ -31,6 +31,16 @@ class P4ShortReviewTests(unittest.TestCase):
         lost = threshold_comparison(truth,baseline,candidate,first,metrics.recompute(candidate,truth))
         self.assertEqual(lost["recall_loss_classes_gt_2pp"], [15])
         self.assertFalse(lost["oa_aa_limits_passed"])
+
+    def test_score_changes_can_leave_winners_fixed_even_below_the_sufficient_bound(self):
+        baseline = np.array([[.8,.1,.1],[.51,.48,.01],[.49,.49,.02]])
+        candidate = np.array([[.7,.2,.1],[.54,.43,.03],[.50,.48,.02]])
+        evidence = decision_margins(baseline,candidate)
+        self.assertEqual(evidence["points_with_score_change"],3)
+        self.assertEqual(evidence["points_with_sufficient_margin"],1)
+        self.assertEqual(evidence["points_with_baseline_tie"],1)
+        self.assertEqual(evidence["points_with_baseline_winner_still_strictly_first"],3)
+        self.assertAlmostEqual(evidence["candidate_gap_to_baseline_winner_min"],.02)
 
     def test_spatial_neighbours_stay_inside_the_released_block_and_record_ties(self):
         layout = [({"box":[0,3,0,4]},np.array([1,4,6])),

@@ -13,6 +13,7 @@ from evaluation.wp12_cross_backend import FORMAL_FLOOR
 from evaluation.wp12_p4_progress import case_stages, observe_lock
 from evaluation.wp12_real_readiness import transition
 from scripts.review_wp05_p4_real import case_labels
+from transfer import p4_coverage_review as coverage_review
 from transfer import p4_frozen_diagnostic_metrics as metrics
 from transfer.p4_resource_migration import release_for
 from transfer.p4_three_arm_contract import PROTECTION
@@ -94,7 +95,60 @@ def cost(audit, source):
     return result
 
 
-def accepted_scores(root, row, labels, audit):
+def archived_mechanism(case, registration, state, audit):
+    trace = state["trace"]
+    require([event["step"] for event in trace] == list(range(1,61)),
+            "Archived P4 coverage evidence must include every optimizer step")
+    coverage = registration["coverage"]
+    initialization = audit["initialization"]["coverage"]
+    active = case["arm"] != "none"
+    require(coverage["metadata"] == "nominal" and initialization["arm"] == case["arm"],
+            "P4 coverage configuration differs from the archived arm")
+    records = coverage["records"]
+    participation = coverage_review.participation(trace,audit["initialization"],records["train"])
+    require(participation == audit["coverage_participation"],
+            "Archived optimizer participation disagrees with the independent audit")
+    for name,evidence in participation["parameters"].items():
+        observed = [(event["step"],event["coverage"]["parameters"][name]) for event in trace]
+        evidence["first_gradient_step"] = next(
+            (step for step,value in observed if (value["gradient_l1"] or 0) > 0),None)
+        evidence["first_change_step"] = next(
+            (step for step,value in observed if value["changed_elements"] > 0),None)
+    graphs = {}
+    for stage in ("initial","selected","last"):
+        graphs[stage] = {}
+        for role in ("train","val"):
+            rows = audit["fit"][stage][role]["graphs"]
+            require(rows and len({r["tile"] for r in rows}) == len(rows),
+                    "Duplicate or absent audited graph tiles")
+            record = records[role]
+            require(all((r["bands"],r["metadata_sha256"],r["coverage_active"]) ==
+                        (len(record["selected_positions"]),record["selected_metadata_hash"],active) for r in rows),
+                    "Archived graph view differs from the registered retained columns or coverage arm")
+            graphs[stage][role] = rows
+    return dict(metadata_mode=coverage["metadata"],
+                observations={role:{field:record[field] for field in (
+                    "source_band_count","source_metadata_hash","selected_positions","selected_band_ids",
+                    "selected_metadata_hash","record_hash")} for role,record in records.items()},
+                initialized_operator=initialization.get("operator"), optimizer_participation=participation,
+                first_all_train_classes_step=audit["first_all_classes_step"], graphs=graphs)
+
+
+def graph_comparison(base, candidate):
+    result = {}
+    for stage,roles in base.items():
+        result[stage] = {}
+        for role,before in roles.items():
+            after = candidate[stage][role]
+            require([row["tile"] for row in before] == [row["tile"] for row in after],
+                    "P4 graph comparison requires the same ordered tiles")
+            result[stage][role] = dict(tiles=len(before),
+                q_changed=sum(a["q_sha256"] != b["q_sha256"] for a,b in zip(before,after,strict=True)),
+                a_changed=sum(a["a_sha256"] != b["a_sha256"] for a,b in zip(before,after,strict=True)))
+    return result
+
+
+def accepted_scores(root, row, labels, audit, registration):
     folder = Path(row["audit"]["path"]).parent
     artifacts = audit["artifact_pins"]
     best = None
@@ -117,6 +171,7 @@ def accepted_scores(root, row, labels, audit):
         if best is None:
             best = probabilities
             nll = [e["metrics"]["fused"]["nll"] for e in history]
+            mechanism = archived_mechanism(row["case"],registration,state,audit)
         else:
             require(all(np.array_equal(best[head],probabilities[head]) for head in HEADS),
                     "Migrated full and split selected scores disagree")
@@ -124,7 +179,7 @@ def accepted_scores(root, row, labels, audit):
         actual = metrics.recompute(values,labels)
         expected = {k:row["heads"][head][k] for k in actual}
         require(metrics.equivalent(actual,expected), "Selected point decisions disagree with the accepted three-head metrics")
-    return best,nll
+    return best,nll,mechanism
 
 
 def nearest_other_labels(layout, truth):
@@ -174,6 +229,28 @@ def focus_readout(labels, probabilities, label, neighbours=None):
     return result
 
 
+def decision_margins(baseline, candidate):
+    before,after = (scores.astype(np.float64,copy=True) for scores in (baseline,candidate))
+    winner = before.argmax(1)
+    index = np.arange(len(winner))
+    shift = np.abs(after-before).max(1)
+    prior_confidence,later_confidence = before.max(1),after.max(1)
+    prior_winner,later_winner = before[index,winner],after[index,winner]
+    before[index,winner] = -np.inf
+    after[index,winner] = -np.inf
+    gap = prior_winner-before.max(1)
+    subsequent_gap = later_winner-after.max(1)
+    return dict(points_with_score_change=int(np.count_nonzero(shift)),
+                points_with_sufficient_margin=int(np.count_nonzero(gap > 2*shift)),
+                points_with_baseline_tie=int(np.count_nonzero(gap == 0)),
+                points_with_baseline_winner_still_strictly_first=int(np.count_nonzero(subsequent_gap > 0)),
+                baseline_gap_min=float(gap.min()),baseline_gap_median=float(np.median(gap)),
+                candidate_gap_to_baseline_winner_min=float(subsequent_gap.min()),
+                candidate_gap_to_baseline_winner_median=float(np.median(subsequent_gap)),
+                max_absolute_point_score_change=float(shift.max()),
+                mean_max_probability=[float(prior_confidence.mean()),float(later_confidence.mean())])
+
+
 def threshold_comparison(labels, baseline, candidate, base_metrics, candidate_metrics):
     """Compare actual saved point decisions and report the registered descriptive limits."""
     a,b = (value.argmax(1)+1 for value in (baseline,candidate))
@@ -182,7 +259,7 @@ def threshold_comparison(labels, baseline, candidate, base_metrics, candidate_me
     delta = metrics.difference(candidate,baseline,candidate_metrics,base_metrics)
     low = [i for i,r in zip(CLASSES,delta["recall"],strict=True)
            if 100*r < -PROTECTION["max_small_recall_drop_pp"]]
-    return dict(delta=delta, recall_loss_classes_gt_2pp=low,
+    return dict(delta=delta,decision_margins=decision_margins(baseline,candidate), recall_loss_classes_gt_2pp=low,
                 oa_aa_limits_passed=all(100*delta[m]>=-PROTECTION["max_oa_aa_drop_pp"] for m in ("oa","aa")),
                 focus={str(label):transition(left,right,label) for label in FOCUS})
 
@@ -310,18 +387,24 @@ def run(root, plan_pin, authority, acceptance=None):
         require(audit["populations"] == budget["populations"] and len(truth) == 110
                 and np.bincount(truth,minlength=23).tolist() == [0]+[5]*22,
                 "Accepted P4 validation population differs from the fixed 110-point role")
-        scores,nll = accepted_scores(root,row,truth,audit)
+        scores,nll,mechanism = accepted_scores(root,row,truth,audit,reg)
         probability[case["id"]] = (truth,scores)
         summary = dict(case=case["id"],source=row["source"],scope=row["scope"]["sha256"],audit=row["audit"],
             selected_step=row["selected_step"],validation_nll=nll,physical_uuid=case["physical_uuid"],
             pair_sha256=case["pair_sha256"],observation=case["observation_sha256"],
             support=audit["populations"]["train"],validation=audit["populations"]["val"],
-            heads=row["heads"],exposure=audit["exposure"],audit_seconds=row["audit_seconds"],
+            heads=row["heads"],exposure=audit["exposure"],mechanism=mechanism,audit_seconds=row["audit_seconds"],
             paths=cost(audit,row["paths"]),focus={h:{str(label):focus_readout(truth,scores[h],label,neighbours)
                                                 for label in FOCUS} for h in HEADS})
         result[case["id"]] = summary
         by_cohort[cohort_key(case)][case["arm"]] = summary
     paired = {"/".join(map(str,key)):roster_pair(key,lines,probability) for key,lines in by_cohort.items()}
+    graph_pairs = {"/".join(map(str,key)):{arm:graph_comparison(lines["none"]["mechanism"]["graphs"],
+                    lines[arm]["mechanism"]["graphs"]) for arm in PAIR_ARMS} for key,lines in by_cohort.items()}
+    roster_cells = [dict(support_seed=key[0],k=key[1],method=key[2],model_seed=key[3],sampler_seed=key[4],
+                         accepted_arms=sorted(by_cohort.get(key,{})),
+                         pending_arms=sorted(migration.ARMS-by_cohort.get(key,{}).keys()))
+                    for key in sorted({cohort_key(case) for case in parent["cases"]})]
     pending = sorted(set(plan["cases"])-result.keys())
     require(len(result) in (10,20) and len(result)+len(pending)==20,
             "A case was counted twice or a nonaccepted case entered the publication")
@@ -329,6 +412,7 @@ def run(root, plan_pin, authority, acceptance=None):
                 plan=plan_pin,approval=authority,combined_acceptance=acceptance,original_review=review_pin,
                 cases=result,matched_cohorts=paired,pending=pending,migrated_progress=stage,
                 cross_cohort_descriptive=descriptive_cross_cohorts(by_cohort),
+                roster_cells=roster_cells, graph_comparisons_to_none=graph_pairs,
                 recovered_paths_are_replicates=False,original_timing=review["timing"],
                 protection=dict(registered_fit_limits=PROTECTION,minimum_independent_devval_per_class=FORMAL_FLOOR,
                                 independent_confirmation=None,adoption_result=None),
