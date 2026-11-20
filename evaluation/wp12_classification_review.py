@@ -1,5 +1,6 @@
 """Release a protocol-scoped classification and cost review from approved aggregates."""
 
+import csv
 import json
 from itertools import product
 from math import isclose
@@ -8,6 +9,8 @@ from statistics import median
 from tempfile import TemporaryDirectory
 
 from evaluation import wp12_p4_short_review as p4, wp12_release_results as native
+from evaluation import wp12_support_head as support, wp12_support_head_cost as support_cost
+from evaluation import wp12_support_head_provenance as support_provenance
 from evaluation.classification_metrics import metrics_from_confusion
 from model.research_config import digest
 from research_runtime import ROOT, hash_file, require_frozen_code, write_json
@@ -177,6 +180,42 @@ def stage_summary(heads):
     return summary
 
 
+def support_review(root, link, reviewer):
+    reviewed = native.document(root,link)
+    require(reviewed["schema"]==support.SCHEMA and reviewed["case"] in support.PINS
+            and reviewed["development_only"] is True and reviewed["backbone_optimizer_updates"]==0
+            and reviewed["raw_gt_loaded"] is reviewed["query_accessed"] is False,
+            "Expected a current support-head development review")
+    support_provenance.ancestor(reviewed["producer"],reviewer)
+    case = reviewed["case"]
+    _,source = support.frozen_case(root,case)
+    result = reviewed["results"]
+    identity = reviewed["measurement_identity"]
+    require(result["source"]==source and result["registered_candidate"] is False,
+            "Support-head result differs from its frozen case")
+    plan,_,verified = support_cost.evidence(root,reviewed["cost"],identity["plan_producer"],source,
+                                          result["artifact"],reviewer=reviewer)
+    require(verified==identity and plan["selection"]==result["deployed_selection"],
+            "Support-head review modified the measured identity or selection")
+    raw = native.document(root,reviewed["cost"])
+    return dict(scene=source["scene"],reviewer=reviewed["producer"],review_sha256=link["sha256"],
+                cost_sha256=reviewed["cost"]["sha256"],identity=verified,selection=plan["selection"],
+                model_and_head_load_seconds=raw["model_and_head_load_seconds"],
+                input_load_seconds=raw["input_load_seconds"],resident=raw["resident"],
+                rss_kib=raw["rss_kib"],cuda_peak_bytes=raw["cuda_peak_bytes"])
+
+
+def p4_grid(result):
+    cells = {(entry["k"],entry["method"]):len(entry["accepted_arms"]) for entry in result["roster_cells"]}
+    accepted = len(result["cases"])
+    require(set(cells)==set(product((1,5),("scratch","shared_transfer"))) and len(result["roster_cells"])==4
+            and sum(cells.values())==accepted and accepted+len(result["pending"])==20
+            and ((accepted==20)==(result["combined_acceptance"] is not None))
+            and all(n in (0,5) for n in cells.values()),
+            "P4 report requires a disjoint partial or complete registered roster")
+    return cells
+
+
 def historical_pairs(cohorts):
     matched = {}
     for row in cohorts:
@@ -241,7 +280,7 @@ def text_report(result):
               f"| 徐州真实短训 | 旧本地固定多尺度对照 {xuzhou['cases']} 臂、{xuzhou['steps']:,} 步，原空间开发角色 |",f"| 洪湖 P4 | {accepted}/20 例，支持种子 2048、模型 512、采样 64，22 类每类 5 个开发点 |",
               "", "| 洪湖 P4 支持量 | 从头 | 共享迁移 |",
               "| --- | ---: | ---: |"]
-    cells = {(entry["k"],entry["method"]):len(entry["accepted_arms"]) for entry in p4_result["roster_cells"]}
+    cells = p4_grid(p4_result)
     for k in (1,5):
         lines.append(f"| K{k} | {cells[k,'scratch']}/5 | {cells[k,'shared_transfer']}/5 |")
     lines += ["", "| 洪湖 P4 同视图 none 基线 | 融合正确 | 图正确 | CNN 正确 |",
@@ -278,12 +317,116 @@ def text_report(result):
         per_block = cost["resident_per_block"]
         samples = " / ".join(f"{per_block[key]['median_ms']:.2f}" for key in ("native","fixed_full","same_view"))
         lines.append(f"| 冻结头 · {scene} | 两块三视图，原生 / 固定全带 / 同视图 | {samples} |")
+    lines += ["","原冻结头成本来自旧格式，原文设备为 CPU，实际执行 SHA 以及实体设备身份未在旧格式单列。"]
+    if result["support_measurements"]:
+        lines += ["","| 分类头测量复核 | 计划制作 SHA | 实际执行 SHA | 记录的设备 |",
+                  "| --- | --- | --- | --- |"]
+    for row in result["support_measurements"]:
+        identity = row["identity"]
+        actual = identity["execution"]
+        worker = "旧格式未记录" if actual is None else actual["commit"]
+        host = identity["reported_device"] if actual is None else (
+            actual["hardware"]["physical_uuid"] or actual["hardware"]["name"] or actual["hardware"]["device"])
+        lines.append(f"| {row['scene']} · {row['selection']} | {identity['plan_producer']} | {worker} | {host} |")
+    lines += ["",
+              "去身份论文表 `paired-scene-seed.csv` 给出同景同种子 OA/AA 和成对百分点差。",
+              "`deployment-cost-evidence.csv` 分别列常驻、加载、缺测范围和设备来源。",
+              "冻结头与冻结 54 的既有负结果各自保留，真实 P4 的缺格及未测精度不参与排名。"]
     return "\n".join([*lines,""])
 
 
-def publish(root, out, code, acceptance=None):
+def paper_tables(folder, result, historical_cases):
+    paired_fields = ("protocol","precision","scene","seed","head","candidate","baseline","denominator",
+                     "candidate_oa","baseline_oa","delta_oa_pp","candidate_aa","baseline_aa","delta_aa_pp",
+                     "protection_status")
+    cost_fields = ("source","scene","seed","configuration","scope","status","reported_device",
+                   "physical_uuid","plan_producer","execution_commit","p50_ms","p95_ms","load_ms",
+                   "peak_allocated_bytes","source_sha256")
+    flags = result["full_factorial"]["registered_protections"]
+    short = result["full_factorial"]["saved_heads"]
+    rows = {(r["precision"],r["scene"],r["seed"],r["mode"],r["supervision"]):r["heads"] for r in short}
+    matched = [r for r in historical_cases if r["source"]=="frozen54"]
+    named = {(r["scene"],r["seed"],r["method"],r["arm"]):r for r in matched}
+    paired_name = "paired-scene-seed.csv"
+    cost_name = "deployment-cost-evidence.csv"
+    with (folder/paired_name).open("x",encoding="utf-8",newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(paired_fields)
+
+        def pairing(protocol,precision,scene,seed,candidate,baseline,heads,controls,protection):
+            for head,a in heads.items():
+                if head not in controls:
+                    continue
+                b = controls[head]
+                require(a["count"]==b["count"],"Paper pair changed the evaluation population")
+                writer.writerow((protocol,precision,scene,seed,head,candidate,baseline,a["count"],
+                                 a["oa"],b["oa"],100*(a["oa"]-b["oa"]),a["aa"],b["aa"],100*(a["aa"]-b["aa"]),
+                                 protection))
+
+        for (precision,scene,seed,mode,supervision),heads in sorted(rows.items()):
+            arm = (mode,supervision)
+            if arm==ARMS[0]:
+                continue
+            for control in (ARMS[:3] if arm==ARMS[-1] else ARMS[:1]):
+                gate = next((r for r in flags[precision] if arm==ARMS[-1] and r["control"]==list(control)),None)
+                pairing("m4_supervision_factorial_full_v1",precision,scene,seed,"-".join(arm),"-".join(control),
+                        heads,rows[(precision,scene,seed,*control)],
+                        "registered_passed" if gate and gate["passed"] else "descriptive_same_protocol")
+        for (scene,seed,method,arm),candidate in sorted(named.items()):
+            if arm=="none":
+                continue
+            baseline = named[(scene,seed,method,"none")]
+            require(candidate["protocol"]==baseline["protocol"],"Frozen54 seed pair changed protocol")
+            pairing(candidate["protocol"],"recorded",scene,seed,f"{method}/{arm}",f"{method}/none",
+                    candidate["heads"],baseline["heads"],"archived_primary_benefit_not_supported")
+
+    with (folder/cost_name).open("x",encoding="utf-8",newline="") as stream:
+        writer = csv.DictWriter(stream,fieldnames=cost_fields)
+        writer.writeheader()
+        for row in matched:
+            cost = row["cost"]
+            writer.writerow(dict(source="frozen54",scene=row["scene"],seed=row["seed"],
+                configuration=f"{row['method']}/{row['arm']}",scope=cost["scope"],status="historical_measured",
+                reported_device="cuda:0",physical_uuid=row["device"],
+                p50_ms=cost["p50_ms"],p95_ms=cost["p95_ms"],peak_allocated_bytes=cost["peak_allocated_bytes"],
+                source_sha256=cost["receipt"]))
+        for scene,row in result["support_heads"].items():
+            old = row["deployment"]["all"]
+            for config,values in old["cost"]["resident_per_block"].items():
+                writer.writerow(dict(source="support_head_archive",scene=scene,configuration=config,
+                    scope=support_cost.TIMING_SCOPE,status="legacy_execution_not_recorded",
+                    reported_device="cpu",p50_ms=values["median_ms"],source_sha256=old["receipt_sha256"]["cost"]))
+            writer.writerow(dict(source="support_head_archive",scene=scene,configuration="all",
+                scope="model_and_head_load",status="legacy_execution_not_recorded",reported_device="cpu",
+                load_ms=1000*old["cost"]["loading_seconds"],source_sha256=old["receipt_sha256"]["cost"]))
+        for row in result["support_measurements"]:
+            identity = row["identity"]
+            actual = identity["execution"]
+            scope = dict(source="support_head_replay",scene=row["scene"],plan_producer=identity["plan_producer"],
+                         execution_commit=None if actual is None else actual["commit"],
+                         physical_uuid=None if actual is None else actual["hardware"]["physical_uuid"],
+                         reported_device=identity["reported_device"],status=identity["identity_status"],
+                         peak_allocated_bytes=row["cuda_peak_bytes"] if actual is not None else None,
+                         source_sha256=row["cost_sha256"])
+            for block,view in row["resident"].items():
+                for config,values in view["items"].items():
+                    time = values["timing"]
+                    writer.writerow(dict(**scope,configuration=f"{row['selection']}/{block}/{config}",
+                        scope=identity["timing_scope"],p50_ms=time["p50_ms"],p95_ms=time["p95_ms"]))
+            writer.writerow(dict(**scope,configuration=row["selection"],scope="model_and_head_load",
+                                 load_ms=1000*row["model_and_head_load_seconds"]))
+        for scene in SCENES:
+            writer.writerow(dict(source="m4_factorial",scene=scene,configuration="all",
+                                 scope="matched_deployment_device_benchmark",status="unmeasured"))
+    return {name:hash_file(folder/name) for name in (paired_name,cost_name)}
+
+
+def publish(root, out, code, acceptance=None, support_receipts=()):
     factorial = complete_factorial(root)
     heads = stage_summary(native.document(root,pin(root,"heads")))
+    measurements = [support_review(root,link,code["commit"]) for link in support_receipts]
+    require(len({r["cost_sha256"] for r in measurements})==len(measurements),
+            "The same support deployment may not be counted twice")
     p4_result = p4.run(root,pin(root,"migration"),pin(root,"approval"),acceptance)
     require(len(p4_result["cases"]) in (10,20) and p4_result["raw_gt_loaded"] is p4_result["query_accessed"] is False,
             "P4 scope must supply the registered accepted archive")
@@ -299,12 +442,14 @@ def publish(root, out, code, acceptance=None):
                                   if row["source"]=="frozen54" and row["scene"]==scene) for scene in SCENES}
         result = dict(schema=SCHEMA,producer=code["commit"],full_factorial=factorial,p4=p4_result,
                       historical_pairs=historical_pairs(aggregate),historical_cost_ms=durations,
-                      support_heads=heads,native_real=dict(receipt=receipt_path.relative_to(folder).as_posix(),
+                      support_heads=heads,support_measurements=measurements,
+                      native_real=dict(receipt=receipt_path.relative_to(folder).as_posix(),
                                         sha256=replay["sha256"],files=old["files"],frozen_cost=old["cost_lifecycle"]),
                       new_query_reads=0,new_training_updates=0,new_cost_measurements=0)
+        result["paper_files"] = paper_tables(folder,result,cases)
         write_json(folder/"classification-review.json",result)
         (folder/"classification-review.md").write_text(text_report(result),encoding="utf-8")
         require_frozen_code(code)
         folder.rename(out)
-    artifacts = ("classification-review.json","classification-review.md","native-real/receipt.json")
+    artifacts = ("classification-review.json","classification-review.md","native-real/receipt.json",*result["paper_files"])
     return {name:hash_file(out/name) for name in artifacts}

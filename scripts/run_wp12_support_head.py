@@ -4,8 +4,6 @@ import argparse
 from contextlib import nullcontext
 import os
 from pathlib import Path
-import re
-import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -14,21 +12,6 @@ from evaluation import wp12_support_head as wp12, wp12_support_head_cost as cost
 from evaluation.frozen_training_stages import file_pin, require
 from inference import support_readout
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
-
-
-def execution_commit(code, previous):
-    if previous is None or previous==code["commit"]:
-        return code["commit"]
-    require(re.fullmatch("[0-9a-f]{40}",previous),"A complete historical producer SHA is required")
-    relation = subprocess.run(["git","merge-base","--is-ancestor",previous,code["commit"]],check=False)
-    require(relation.returncode==0,"Historical producer is outside the checked-out ancestry")
-    changed = subprocess.check_output(["git","diff","--name-only","-z",previous,code["commit"]],text=True)
-    consumers = {"README.md","evaluation/wp12_classification_review.py","scripts/ingest_wp12_evidence.py",
-                 "scripts/run_wp12_support_head.py"}
-    require(all(path in consumers or path.startswith(("docs/","tests/","research/reports/","research/当前搭建"))
-                for path in changed.split("\0") if path),
-            "Historical support head requires unchanged fit and deployment runtime")
-    return previous
 
 
 def cli():
@@ -42,13 +25,15 @@ def cli():
         parser.add_argument("--"+key,nargs=2,metavar=("PATH","SHA256"))
     parser.add_argument("--gpu",help="Single authorized physical CUDA UUID for the deployment worker")
     parser.add_argument("--selection",help="Pinned released support subset for prepare, defaults to all")
-    parser.add_argument("--execution-commit",help="Ancestor that produced the existing deployment plan or receipt")
+    historical = parser.add_mutually_exclusive_group()
+    historical.add_argument("--plan-commit",dest="plan_commit",help="Producer of the sealed observation plan")
+    historical.add_argument("--execution-commit",dest="plan_commit",help="Legacy alias for --plan-commit")
     args = parser.parse_args()
     required = {"fit":set(),"prepare":{"artifact"},"deploy":{"plan"},"review":{"artifact","cost"}}
     received = {key for key in ("artifact","plan","cost") if getattr(args,key) is not None}
     require(required[args.operation]==received and (args.gpu is None or args.operation=="deploy")
             and (args.selection is None or args.operation=="prepare")
-            and (args.execution_commit is None or args.operation in ("deploy","review")),
+            and (args.plan_commit is None or args.operation in ("deploy","review")),
             "The operation requires its specific frozen input receipts")
     code = code_snapshot()
     require_frozen_code(code)
@@ -57,23 +42,23 @@ def cli():
     out = external_directory(args.out)
     require(root in out.parents and not out.exists() and out.parent.is_dir(),
             "Expected fresh output under the authorized runs root")
-    producer = execution_commit(code,args.execution_commit)
+    plan_producer = args.plan_commit or code["commit"]
     pins = {key:dict(zip(("path","sha256"),getattr(args,key),strict=True)) for key in received}
     if args.operation=="deploy":
-        plan = cost.open_plan(root,pins["plan"],producer)
+        plan = cost.open_plan(root,pins["plan"],plan_producer)
         require(plan["source"]["fit_receipt"]==wp12.PINS[args.case],"Deployment plan binds a foreign case")
-        scope = nullcontext()
+        scope = nullcontext((None,None,None))
         if args.gpu is not None:
             from evaluation.wp11_deployment_cost import gpu_scope
 
             require(os.environ.get("CUDA_VISIBLE_DEVICES")==args.gpu,"Expose exactly the planned physical device")
             scope = gpu_scope(args.gpu)
-        with scope:
-            out.mkdir()
-            result = cost.deploy(root,pins["plan"],out,{**code,"commit":producer},"cpu" if args.gpu is None else "cuda:0")
+        with scope as (admission,_,_):
+            result = cost.deploy(root,pins["plan"],out,code,plan_producer,
+                                 "cpu" if args.gpu is None else "cuda:0",admission=admission)
     elif args.operation=="fit":
         out.mkdir()
-        result = wp12.fit_case(root,args.case,out)
+        result = wp12.fit_case(root,args.case,out,code["commit"])
     else:
         _,source = wp12.frozen_case(root,args.case)
         if args.operation=="prepare":
@@ -83,11 +68,11 @@ def cli():
             out.mkdir()
             result = cost.prepare_plan(root,source,pins["artifact"],out,code["commit"],selection)
         else:
-            deployed = cost.evidence(root,pins["cost"],producer,source,pins["artifact"])
+            deployed = cost.evidence(root,pins["cost"],plan_producer,source,pins["artifact"],reviewer=code["commit"])
             review = wp12.review_case(root,args.case,pins["artifact"],deployed)
             write_json(out,dict(schema=wp12.SCHEMA,producer=code["commit"],case=args.case,development_only=True,
                 raw_gt_loaded=False,query_accessed=False,backbone_optimizer_updates=0,cost=pins["cost"],
-                execution_producer=producer,results=review))
+                measurement_identity=deployed[2],results=review))
             result = file_pin(out)
     require_frozen_code(code)
     print(result,flush=True)

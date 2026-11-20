@@ -302,6 +302,7 @@ def classification_cost_review(argv):
     parser.add_argument("--out",type=Path,required=True)
     parser.add_argument("--expected-commit",required=True)
     parser.add_argument("--combined-acceptance",nargs=2,metavar=("PATH","SHA256"))
+    parser.add_argument("--support-review",nargs=2,action="append",default=[],metavar=("PATH","SHA256"))
     args = parser.parse_args(argv)
     code = code_snapshot()
     require_frozen_code(code)
@@ -310,7 +311,8 @@ def classification_cost_review(argv):
             and root in out.parents and not out.exists() and out.parent.is_dir(),
             "Use a clean expected Linux checkout and a fresh output below the authorized runs root")
     accepted = dict(zip(("path","sha256"),args.combined_acceptance,strict=True)) if args.combined_acceptance else None
-    print(json.dumps(publish(root,out,code,accepted),ensure_ascii=False),flush=True)
+    supports = [dict(path=path,sha256=sha) for path,sha in args.support_review]
+    print(json.dumps(publish(root,out,code,accepted,supports),ensure_ascii=False),flush=True)
 
 
 def native_real(argv):

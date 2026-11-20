@@ -20,7 +20,7 @@ PINS = {
     "selected": "24a43448d8878ba140cfda6397c738cd443dcf2e259aa26244e6dc5e23721e62",
     "whu-honghu": "991b85ac4f3b8116e4bfa6ced6ecec1547f8bed9384f9441b99cf078bf8f777e",
 }
-SCHEMA = "wp12_deployed_support_head_v1"
+SCHEMA = "wp12_deployed_support_head_v2"
 
 
 def frozen_case(root, case):
@@ -59,7 +59,7 @@ def binding(arrays, mask, classes):
                 counts=np.bincount(arrays["devtrain_y"][rows],minlength=classes+1)[1:].tolist())
 
 
-def fit_case(root, case, out):
+def fit_case(root, case, out, producer):
     old,source = frozen_case(root,case)
     pack = pinned(root,old["feature_pack"])
     elapsed = {}
@@ -86,7 +86,7 @@ def fit_case(root, case, out):
     artifact = file_pin(path)
     readout.load(root,artifact,source)
     write_json(out/"fit-timing.json",dict(artifact=artifact,one_off_fit_seconds=elapsed,
-               export_seconds=export_seconds,scientific_optimizer_updates=0,backbone_forwards=0))
+               export_seconds=export_seconds,scientific_optimizer_updates=0,backbone_forwards=0,producer=producer))
     return artifact
 
 
