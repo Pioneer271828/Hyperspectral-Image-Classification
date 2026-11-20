@@ -1,5 +1,6 @@
 """Frozen multi-backend forecasts and independent WP12 comparison on admitted roles."""
 
+from collections import defaultdict
 from itertools import product
 import math
 import re
@@ -445,6 +446,39 @@ def matched_view(first, second, band, tiles, scene, classes, *, scope):
     return result
 
 
+def band_loss_scores(checked, parent_by_tile, classes):
+    """Compare two approved equal-count deletions on one frozen endpoint."""
+    parents = defaultdict(list)
+    for tile, parent in parent_by_tile.items():
+        dispersed = checked["matched_dispersed", tile]["accuracy"]
+        central = checked["central_gap", tile]["accuracy"]
+        if dispersed is None:
+            require(central is None, "Band loss cannot change which points are scored")
+            continue
+        require(central is not None and all(dispersed[k] == central[k] for k in ("truth", "order", "spatial")),
+                "Band loss requires the same ordered points and geometry across views")
+        parents[parent].append((dispersed, central))
+
+    whole_truth, whole_before, whole_after = [], {h: [] for h in HEADS}, {h: [] for h in HEADS}
+    by_parent = {}
+    for parent, blocks in sorted(parents.items()):
+        truth = [label for before, _ in blocks for label in before["truth"]]
+        whole_truth.extend(truth)
+        heads = {}
+        for head in HEADS:
+            before, after = [], []
+            for dispersed, central in blocks:
+                before.extend((np.asarray(dispersed["heads"][head]).argmax(1)+1).tolist())
+                after.extend((np.asarray(central["heads"][head]).argmax(1)+1).tolist())
+            whole_before[head].extend(before)
+            whole_after[head].extend(after)
+            heads[head] = transitions(truth, before, after, classes)
+        by_parent[str(parent)] = dict(points=len(truth), transitions=heads)
+    scores = {h: raw_pair(whole_truth, whole_before[h], whole_after[h], classes, floor=FORMAL_FLOOR)
+              for h in HEADS}
+    return dict(points=len(whole_truth), scores=scores, parents=by_parent)
+
+
 def compare_devices(reference, capture):
     """Check CPU/CUDA captures of the same frozen exports and ordered Bank observations."""
     reference_numeric, candidate_numeric = reference["numeric"], capture["numeric"]
@@ -508,6 +542,23 @@ def review_case(root, capture, out, code, *, test_history=None, reference=None):
     geometry = read_annotations(root, bank, roles, pin) if pin else None
     observations = {}
     uses = [use for use in ("independent_accuracy", "cost") if intake["uses"][use]["eligible"]]
+    band_loss = None
+    if "independent_accuracy" in uses and {"central_gap", "matched_dispersed"} <= set(raw["views"]):
+        retained = {view: independent.observation_bands(bank.release.bands, view, intake)
+                    for view in ("matched_dispersed", "central_gap")}
+        original_count = sum(bank.release.bands.valid)
+        require(len(retained["central_gap"]) == len(retained["matched_dispersed"]) < original_count,
+                "Equal-band loss requires two actual deletions of the same size")
+        if retained["central_gap"] != retained["matched_dispersed"]:
+            band_loss = dict(baseline_view="matched_dispersed", candidate_view="central_gap",
+                             retained_columns=retained, removed_count=original_count-len(retained["central_gap"]),
+                             support_seed=bank.release.custody.get("support_seed"),
+                             support_per_class=intake["role_reports"]["support"]["per_class"],
+                             spatial_repeat=bank.release.custody.get("spatial_repeat"),
+                             role_assignment_sha256=intake["role_assignment"], space_plan_sha256=bank.release.plan_hash,
+                             wavelength_quality=bank.release.bands.wavelength_quality,
+                             minimum_protection_per_class=FORMAL_FLOOR)
+            parents = {tile: bank.role_row("devval", tile)["parent_tile"] for tile in roles["evaluation"]}
     for factor, band, tile in product(sorted({g["factor"] for g in groups.values()}),raw["views"],roles["evaluation"]):
         proofs = observations.setdefault(factor, {})
         for use in uses:
@@ -540,6 +591,12 @@ def review_case(root, capture, out, code, *, test_history=None, reference=None):
                 roles["evaluation"], bank.release.scene, bank.release.classes, scope=raw["scope"]) for band in raw["views"]}
         summary[key] = dict(seed=ready["seed"], budget=ready["budget"], pairs=scored, factor=group["factor"],
                             arms={name: {k:v for k,v in arm.items() if k!="rows"} for name, arm in ready["arms"].items()})
+        if band_loss is not None:
+            summary[key]["matched_band_loss"] = {
+                **band_loss,
+                "arms": {name: band_loss_scores(blocks, parents, bank.release.classes)
+                         for name, blocks in checked.items()},
+            }
         exposure = group["protocol"].get("observation_exposure")
         if exposure is not None:
             summary[key]["observation_exposure"] = exposure

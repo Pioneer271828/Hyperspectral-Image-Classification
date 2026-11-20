@@ -25,7 +25,7 @@ class CrossBackendComparisonTests(unittest.TestCase):
         cls.addClassCleanup(cls.tmp.cleanup)
         cls.root = Path(cls.tmp.name)
         cls.code = {"commit": "a"*40}
-        cls.request = fixtures.fixture(cls.root/"released","xuzhou","a",[64],views=("full",))
+        cls.request = fixtures.fixture(cls.root/"released","xuzhou","a",[64])
         with patch.object(comparison,"require_frozen_code"), arithmetic(cls.root,None) as execution:
             cls.capture = comparison.run_case(cls.root,cls.request,cls.root/"capture.json",cls.code,execution,test_history=[])
 
@@ -42,6 +42,52 @@ class CrossBackendComparisonTests(unittest.TestCase):
         self.assertTrue(spatial["boundary"]["n"]>0 and spatial["narrow"]["n"]>0)
         self.assertFalse(spatial["narrow"]["qualification"]["fused"]["protection_evaluable"])
         self.assertFalse(reviewed["query_accessed"] or reviewed["raw_gt_loaded"])
+
+    def test_band_loss_reuses_the_frozen_arm_and_keeps_parent_denominators(self):
+        with patch.object(comparison,"require_frozen_code"):
+            receipt = comparison.review_case(self.root,self.capture,self.root/"band-loss.json",self.code,test_history=[])
+        band_loss = json_pin(self.root,receipt)["cohorts"]["s64"]["matched_band_loss"]
+        self.assertEqual((band_loss["baseline_view"], band_loss["candidate_view"]),
+                         ("matched_dispersed", "central_gap"))
+        central, dispersed = (band_loss["retained_columns"][view] for view in ("central_gap", "matched_dispersed"))
+        self.assertEqual(len(central), len(dispersed))
+        self.assertNotEqual(central, dispersed)
+        self.assertEqual(band_loss["support_seed"], 512)
+        self.assertEqual(band_loss["support_per_class"], [5]*9)
+        self.assertEqual(band_loss["spatial_repeat"], "a")
+        for arm in band_loss["arms"].values():
+            self.assertEqual(arm["points"], 81)
+            self.assertEqual(len(arm["parents"]), 3)
+            for head in ("fused", "graph", "cnn"):
+                score = arm["scores"][head]
+                self.assertIsNone(score["protected"])
+                for key, row in score["transitions"].items():
+                    self.assertEqual(row["n"], 9)
+                    self.assertEqual(sum(p["transitions"][head][key]["n"] for p in arm["parents"].values()), row["n"])
+
+    def test_band_loss_keeps_zero_denominators_and_merges_tiles_by_parent(self):
+        def record(truth, labels, order):
+            encoded = [[float(label == candidate) for candidate in (1, 2, 3)] for label in labels]
+            return {"accuracy": dict(truth=truth, order=order, spatial=None,
+                                     heads={head: encoded for head in ("fused", "graph", "cnn")})}
+
+        data = {
+            ("matched_dispersed", 1): record([1, 2], [1, 1], "first"),
+            ("central_gap", 1): record([1, 2], [3, 2], "first"),
+            ("matched_dispersed", 2): record([1], [2], "second"),
+            ("central_gap", 2): record([1], [1], "second"),
+        }
+        result = comparison.band_loss_scores(data, {1: 7, 2: 7}, 3)
+        self.assertEqual(list(result["parents"]), ["7"])
+        scores = result["scores"]["fused"]["transitions"]
+        self.assertEqual(scores["1"]["moves"], [[1, 3, 1], [2, 1, 1]])
+        self.assertEqual(scores["1"]["losses"], 1)
+        self.assertEqual(scores["2"]["gains"], 1)
+        self.assertEqual(scores["3"]["n"], 0)
+        self.assertIsNone(scores["3"]["recall_delta"])
+        data["central_gap", 2]["accuracy"]["order"] = "foreign"
+        with self.assertRaisesRegex(ValueError, "same ordered points"):
+            comparison.band_loss_scores(data, {1: 7, 2: 7}, 3)
 
     def test_wrong_taxonomy_budget_phase_and_calibration_are_rejected(self):
         manifest = json_pin(self.root,self.request)
