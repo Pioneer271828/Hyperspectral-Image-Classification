@@ -125,8 +125,11 @@ def pixel_grid(state):
     h, w = state.image_shape
     ids = torch.arange(gh*gw)
     normalized = torch.stack(((ids//gw + .5)/gh, (ids%gw + .5)/gw), dim=1)
+    position = state.region_positions.detach().cpu()
+    # CUDA may round division by a constant differently. Only the checked
+    # integer grid below enters the exact distance and degree constraints.
     require(state.diagnostics.get("position_kind") == "grid_seed_centers"
-            and torch.equal(state.region_positions.detach().cpu(), normalized.to(state.region_positions.dtype)),
+            and torch.allclose(position, normalized.to(position.dtype), rtol=0, atol=torch.finfo(position.dtype).eps),
             "Edge masks require the original shared spatial seed centers")
     return integer_grid((h, w), (gh, gw)), gh*gw
 

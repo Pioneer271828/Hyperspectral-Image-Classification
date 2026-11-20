@@ -25,6 +25,17 @@ def grid(shape, *, weights=None):
 
 
 class SharedEdgeBandTests(unittest.TestCase):
+    def test_grid_identity_allows_a_float_rounding_step_but_not_a_shift(self):
+        original = grid((3,3))
+        integer_grid, divisor = experiment.pixel_grid(original)
+        original.region_positions = torch.nextafter(original.region_positions, torch.ones_like(original.region_positions))
+        rounded_grid, rounded_divisor = experiment.pixel_grid(original)
+        self.assertTrue(torch.equal(integer_grid, rounded_grid))
+        self.assertEqual(divisor, rounded_divisor)
+        original.region_positions[0,0] += 1e-4
+        with self.assertRaisesRegex(ValueError, "spatial seed centers"):
+            experiment.pixel_grid(original)
+
     def test_native_views_bind_the_same_original_footprint_not_the_view_namespace(self):
         axis = BandMetadata("fixture", tuple(range(6)), tuple(range(400,406)), "nm", "verified", (True,)*6)
         spectra = np.arange(24, dtype=np.float32).reshape(2,2,6)
