@@ -6,13 +6,15 @@ model/input). Neither is incremental model memory. Artifact bytes are the
 checkpoint plus architecture sidecar, excluding runtime and input data.
 """
 
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
+import fcntl
 import os
 import math
 from pathlib import Path
 import platform
 import re
 import resource
+import stat
 import subprocess
 import time
 
@@ -25,6 +27,7 @@ from m4_ordered_source import OrderedValidation
 from model.checkpoint_io import load_model_checkpoint
 from model.research_config import digest
 from research_runtime import hash_file
+from transfer.shared_gpu_lease import lease_path
 
 
 JOB_POLICY = "wp12-native-resident-job-v1"
@@ -40,6 +43,23 @@ def canonical_gpu_uuid(value):
     if match is None:
         raise ValueError("Explicit full physical GPU UUID required")
     return "GPU-" + match[1].lower()
+
+
+@contextmanager
+def gpu_measurement_lease(uuid):
+    """Share the project's per-device lock with training and other cost workers."""
+    gpu = canonical_gpu_uuid(uuid)
+    path = lease_path(gpu)
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, "rb") as lock:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise ValueError("Existing regular GPU lease file required")
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise ValueError(f"GPU already leased: {gpu}") from exc
+        admit_gpu({"gpu": {"uuid": gpu}})
+        yield lock
 
 
 def environment(device, arithmetic):

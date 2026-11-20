@@ -12,6 +12,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from transfer.container_runtime import training_container_kind
 VARIANTS = ('absolute', 'relative', 'zero')
 
 
@@ -142,7 +143,7 @@ def main():
     parser.add_argument('--out-root', type=Path, required=True)
     parser.add_argument('--resume', action='store_true')
     args = parser.parse_args()
-    if sys.platform != 'linux' or not Path('/.dockerenv').exists(): parser.error('Run using ssh rmvision in the training container')
+    if not training_container_kind(): parser.error('Use the authorized Linux training container (see docs/guides/remote-validation.md)')
     import torch
     from scipy.io import loadmat
     from loadData.dataset_registry import DATASETS, inspect_dataset

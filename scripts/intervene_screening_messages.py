@@ -13,6 +13,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from transfer.container_runtime import training_container_kind
 from scripts.diagnose_screening_branches import BRANCHES, CORE_PATHS, collect_partition
 
 # Retained messages, fixed before observing intervention outcomes.
@@ -258,7 +259,7 @@ def main():
     parser.add_argument('--focus-class', type=int, default=6)
     parser.add_argument('--confused-as', type=int, default=2)
     args = parser.parse_args()
-    if sys.platform != 'linux' or not Path('/.dockerenv').exists() or sys.flags.optimize:
+    if not training_container_kind() or sys.flags.optimize:
         parser.error('Use the training container with assertions enabled')
     import torch
     from research_runtime import code_snapshot, external_directory, write_json

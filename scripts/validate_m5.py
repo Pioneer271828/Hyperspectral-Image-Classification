@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from transfer.container_runtime import training_container_kind
 BASE = 'b9ef4c98eea3a1df6f4ac4deebc2767fe94050cd'
 
 
@@ -88,8 +89,8 @@ def main():
     parser.add_argument('--data-root', type=Path, required=True)
     parser.add_argument('--out-dir', type=Path, required=True)
     args = parser.parse_args()
-    if sys.platform != 'linux' or not Path('/.dockerenv').exists():
-        parser.error('Use ssh rmvision in the training container')
+    if not training_container_kind():
+        parser.error('Use the authorized Linux training container (see docs/guides/remote-validation.md)')
     if len(args.expected_commit) != 40 or git('rev-parse', 'HEAD') != args.expected_commit:
         parser.error('Full expected SHA must equal HEAD')
     if git('status', '--porcelain', '--untracked-files=all') or sys.flags.optimize or os.environ.get('PYTHONOPTIMIZE'):

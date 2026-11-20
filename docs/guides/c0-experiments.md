@@ -1,6 +1,6 @@
 # C0：配置与可追溯实验
 
-所有 Python 命令均在 `ssh rmvision` 的训练容器执行。使用已同步、已提交且干净的代码，产物必须位于源码目录外。当前解释器可用 `/home/rmvision/venvs/hsi-baseline/bin/python`。
+所有 Python 命令均在[授权 LXC](remote-validation.md) 执行。使用已同步、已提交且干净的代码，产物必须位于源码目录外。当前解释器可用 `/home/lbx/hsi-pioneer271828/envs/hsi/bin/python`。
 
 ## 配置与已有行为
 
@@ -18,7 +18,7 @@
 python run_research_ablation.py \
   --config configs/experiments/c0_example.json \
   --experiments all --seeds 0,2026 \
-  --out-root /workspace/hsi-runs/c0-plan --dry-run
+  --out-root /home/lbx/hsi-pioneer271828/runs/NEW_C0_PLAN --dry-run
 ```
 
 生成完整解析配置、预算、源码指纹及 20 项任务的 `plan.json`，不加载数据、不构造模型、不训练。`configured` 只运行配置本身；指定 `interaction_baseline,interaction_full` 选择两组。命名预设复用已有 10 组定义；每组重置模式开关后独立应用，避免从模板继承已开启的门控。结构宽度、训练预算等仍以输入配置为准；同容量比较需要选择匹配组。

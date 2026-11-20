@@ -77,6 +77,10 @@ class MatchedRetrainingPlan:
     def bank(self, donor, name, *, expected_hash):
         value = self._validate(donor, expected_hash)
         if name not in value['names']: raise ValueError('Unregistered control')
+        return self._materialize(value, name)
+
+    @staticmethod
+    def _materialize(value, name):
         base = deepcopy(value['base_bank'])
         for row in value['contexts']:
             p = row['control_plan']
@@ -87,6 +91,20 @@ class MatchedRetrainingPlan:
             fixed['selected'] = sorted(set(fixed['selected']) - set(removed))
         base['bank_hash'] = digest({k:v for k,v in base.items() if k != 'bank_hash'})
         return RouteContextBank(base, expected_hash=base['bank_hash'])
+
+    def banks(self, donor, *, expected_hash):
+        """Export all feasible arms after a single full-population validation."""
+        value = self._validate(donor, expected_hash)
+        result, unavailable = {}, {}
+        for name in value['names']:
+            reasons = [{"tile_id":row["context"]["tile_id"],**row["control_plan"]["controls"][name]}
+                       for row in value["contexts"] if name in row["control_plan"]["controls"]
+                       and row["control_plan"]["controls"][name]["status"]!="optimal"]
+            if reasons:
+                unavailable[name] = reasons
+            else:
+                result[name] = self._materialize(value,name)
+        return result, unavailable
 
     def start(self, donor, name, *, expected_hash):
         bank = self.bank(donor, name, expected_hash=expected_hash)

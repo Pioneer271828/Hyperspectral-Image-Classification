@@ -23,7 +23,9 @@ logits 是显式调用接口，没有改变当前训练损失或配置默认输�
 
 日志中的原始辅助损失可非零，而其 weighted 值为零。每 epoch 的 total 与六项 weighted 之和允许浮点加法/平均的微小舍入误差，不能用 detach 日志重构训练计算图。没有额外重建或一致性损失。
 
-## 远程验收
+## 历史 M8 验收记录
+
+下方是冻结 M8 checkout 的历史命令。E0a 会核对包括 `scripts/validate_m8.py` 在内的原始 M8 源文件，保留该入口的字节身份。当前整合使用[授权 LXC 的仓库验收入口](remote-validation.md#验收入口)。
 
 ```bash
 OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_m8.py \
@@ -32,6 +34,6 @@ OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_
   --out-dir /home/train/hsi-pioneer271828/runs/m8-<唯一批次>
 ```
 
-所有运行通过 `ssh rmvision`。入口核对容器、SHA、干净工作树和源码指纹，运行完整单元测试、CPU/CUDA smoke，再进行 PaviaU 三组 GPU 两步闭环：默认、关闭辅助监督、alph=.35。K64/embed32、显式 group_norm、原三头/图正则、C1 训练块统计和固定空间划分，验证选模/恢复、分项和 logits/probability 对照、成功后 skipped。产物在 checkout 外，失败保留。
+原验收在旧 Docker 容器完成。入口核对容器、SHA、干净工作树和源码指纹，运行完整单元测试、CPU/CUDA smoke，再进行 PaviaU 三组 GPU 两步闭环：默认、关闭辅助监督、alph=.35。K64/embed32、显式 group_norm、原三头/图正则、C1 训练块统计和固定空间划分，验证选模/恢复、分项和 logits/probability 对照、成功后 skipped。产物在 checkout 外，失败保留。
 
 这些配置是接口与记录检查，不能比较精度或收敛。可选门控融合与 M4 分解四因素研究尚未启动，后续 E0 再完善逐类和分支机制诊断。

@@ -7,6 +7,7 @@ class ContainerRuntimeTests(unittest.TestCase):
     def test_explicit_markers_and_host_rejection(self):
         for platform, files, value, expected in (
             ('linux', {'/.dockerenv'}, '', 'docker'),
+            ('linux', {'/run/.containerenv'}, '', 'podman'),
             ('linux', {'/run/systemd/container'}, 'lxc\n', 'lxc'),
             ('linux', {'/run/systemd/container'}, 'unknown', None),
             ('linux', set(), '', None), ('win32', {'/.dockerenv'}, '', None),

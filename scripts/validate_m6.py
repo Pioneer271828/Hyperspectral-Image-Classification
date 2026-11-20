@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from transfer.container_runtime import training_container_kind
 BASE = '637e21b23481150bc36fb8006c659cc0dc83d021'
 VARIANTS = ('none', 'add', 'gated', 'cnn_to_graph', 'graph_to_cnn', 'global')
 
@@ -232,7 +233,7 @@ def main():
     parser.add_argument('--data-root', type=Path, required=True)
     parser.add_argument('--out-dir', type=Path, required=True)
     args = parser.parse_args()
-    if sys.platform != 'linux' or not Path('/.dockerenv').exists(): parser.error('Use ssh rmvision in the training container')
+    if not training_container_kind(): parser.error('Use the authorized Linux training container (see docs/guides/remote-validation.md)')
     if not re.fullmatch(r'[0-9a-f]{40}', args.expected_commit) or git('rev-parse', 'HEAD') != args.expected_commit:
         parser.error('Expected full SHA differs from HEAD')
     if git('status', '--porcelain', '--untracked-files=all') or sys.flags.optimize or os.environ.get('PYTHONOPTIMIZE'):

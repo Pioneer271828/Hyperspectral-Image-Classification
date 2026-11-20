@@ -1,12 +1,14 @@
 """Fresh native-model cost worker or complete cohort receipt assembly (no labels)."""
 
 import argparse
+from contextlib import nullcontext
 import json
+import os
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from evaluation.wp12_resident_cost import assemble, environment, measure
+from evaluation.wp12_resident_cost import assemble, environment, gpu_measurement_lease, measure
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code
 from scripts.summarize_unified_cohort import read_pinned
 
@@ -44,7 +46,11 @@ def main(argv=None):
     if args.operation == "environment":
         result = environment(args.device, args.arithmetic)
     elif args.operation == "measure":
-        result = measure(read(args.job, args.job_sha256))
+        job = read(args.job, args.job_sha256)
+        lease = (gpu_measurement_lease(os.environ.get("CUDA_VISIBLE_DEVICES", ""))
+                 if job["timing"]["device"] == "cuda" else nullcontext())
+        with lease:
+            result = measure(job)
         result.update(job_sha256=args.job_sha256, producer_commit=code["commit"], fresh_process=True)
     else:
         plan = read(args.plan, args.plan_sha256)

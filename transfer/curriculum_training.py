@@ -69,6 +69,7 @@ class CurriculumRun:
     def _validate_history_extensions(self, row): pass
     def _evaluate(self, model): return evaluate_validation(model, self.scene, self.record)
     def _training_forward(self, tile, step, extra): return _forward(self.model, self.scene, tile, **extra)
+    def _backward(self, loss): loss.backward()
 
     def _restore_model(self, state):
         ref = self.model.state_dict()
@@ -215,7 +216,7 @@ class CurriculumRun:
                 loss = curriculum_loss(outputs, self.scene, self.record, tile, policy=self.policy,
                                        step=None if self.policy is None else n, class_balance=True)['total']
                 if not torch.isfinite(loss): raise ValueError('Nonfinite loss')
-                loss.backward()
+                self._backward(loss)
                 names, gradient = [], dict.fromkeys(('adapter', 'cnn', 'graph', 'heads'), 0.)
                 for name, p in self.model.named_parameters():
                     if p.grad is not None:

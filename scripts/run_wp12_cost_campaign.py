@@ -13,8 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from evaluation.wp12_cost_preparation import POLICY as PREPARATION
 from evaluation.wp12_cost_primitives import fields, read_pinned
 from evaluation.wp12_evidence import COST_POLICY, accuracy_records, join_hardware
-from evaluation.wp12_resident_cost import (JOB_POLICY, MEMORY, admit_gpu, assemble, canonical_gpu_uuid,
-                                           pinned_path, validate_job)
+from evaluation.wp12_resident_cost import (JOB_POLICY, MEMORY, assemble, canonical_gpu_uuid,
+                                           gpu_measurement_lease, pinned_path, validate_job)
 from model.research_config import digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, write_json
 from scripts.measure_wp12_historical_cost import preserved_runtime
@@ -175,10 +175,10 @@ def run_campaign(args, out, code):
                OPENBLAS_NUM_THREADS="1", PYTHONDONTWRITEBYTECODE="1", PYTHONPATH="")
 
     def invoke(path, operation):
-        admit_gpu({"gpu": {"uuid": gpu_uuid}})
-        with (path.parent / "worker.log").open("xb") as log:
+        with gpu_measurement_lease(gpu_uuid) as device, (path.parent / "worker.log").open("xb") as log:
             subprocess.run(command + ["--out", str(path)] + operation, cwd=worker, env=env,
                            stdout=log, stderr=subprocess.STDOUT, check=True,
+                           pass_fds=(device.fileno(),),
                            timeout=registration["case_timeout_seconds"])
 
     with (out / ".campaign.lock").open("a") as lock:

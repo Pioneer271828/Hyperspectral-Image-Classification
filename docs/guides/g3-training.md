@@ -16,20 +16,20 @@ After all three target final-step checkpoints are saved, the campaign writes tar
 
 ```bash
 # Engineering fixture; no real-data accuracy claim.
-OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python train_cross_sensor.py smoke \
-  --expected-commit FULL_COMMIT_SHA --out-dir /home/train/hsi-pioneer271828/runs/NEW_G3_SMOKE
+OMP_NUM_THREADS=1 /home/lbx/hsi-pioneer271828/envs/hsi/bin/python train_cross_sensor.py smoke \
+  --expected-commit FULL_COMMIT_SHA --out-dir /home/lbx/hsi-pioneer271828/runs/NEW_G3_SMOKE
 # Validate actual frozen inputs/statistics, without optimization or scoring.
-OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python train_cross_sensor.py preflight \
+OMP_NUM_THREADS=1 /home/lbx/hsi-pioneer271828/envs/hsi/bin/python train_cross_sensor.py preflight \
   --expected-commit FULL_COMMIT_SHA \
-  --protocol-root /home/train/hsi-pioneer271828/runs/transfer-protocol-20261031-02 \
-  --data-root /home/train/hsi-pioneer271828/datasets/current \
-  --out-dir /home/train/hsi-pioneer271828/runs/NEW_G3_PREFLIGHT
+  --protocol-root "$REGISTERED_PROTOCOL_ROOT" \
+  --data-root "$REGISTERED_DATA_ROOT" \
+  --out-dir /home/lbx/hsi-pioneer271828/runs/NEW_G3_PREFLIGHT
 # Full declared pilot; execute only as a separately scheduled experiment.
-OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python train_cross_sensor.py run \
+OMP_NUM_THREADS=1 /home/lbx/hsi-pioneer271828/envs/hsi/bin/python train_cross_sensor.py run \
   --expected-commit FULL_COMMIT_SHA \
-  --protocol-root /home/train/hsi-pioneer271828/runs/transfer-protocol-20261031-02 \
-  --data-root /home/train/hsi-pioneer271828/datasets/current \
-  --out-dir /home/train/hsi-pioneer271828/runs/NEW_G3_PILOT
+  --protocol-root "$REGISTERED_PROTOCOL_ROOT" \
+  --data-root "$REGISTERED_DATA_ROOT" \
+  --out-dir /home/lbx/hsi-pioneer271828/runs/NEW_G3_PILOT
 ```
 
 The CLI requires a clean exact SHA and training container; smoke/run require CUDA with no fallback. It verifies frozen task/plan/support identities and raw input-file hashes, preserves frozen inputs, rejects an existing output directory and writes running/passed/failed manifests and progress outside the checkout. Failed runs are retained; there is no skip/resume or optimizer-continuation support in this first entry point. A resumed full campaign is not implied by the independent MASK-2 checkpoint module.

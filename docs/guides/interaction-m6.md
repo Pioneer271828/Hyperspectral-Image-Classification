@@ -16,13 +16,13 @@ add 是现有的归一化＋线性投影残差交换，不是原特征直接相�
 
 `configs/experiments/m6_spatial_{none,add,gated,cnn_to_graph,graph_to_cnn,global}.json` 六组只变交互条件，全部关闭 M7 图重加权；固定 PaviaU、tile32/gap2/split_seed2026、group_norm、模型种子2026及相同两步工程预算。global 组为双向 gated/global，其余为 region。不要将这些工程配置直接当完整精度实验预算。
 
-通过 `ssh rmvision` 在独立 checkout 执行：
+在[授权 LXC](remote-validation.md) 的独立 checkout 执行：
 
 ```bash
-OMP_NUM_THREADS=1 /home/rmvision/venvs/hsi-baseline/bin/python scripts/validate_m6.py \
+OMP_NUM_THREADS=1 /home/lbx/hsi-pioneer271828/envs/hsi/bin/python scripts/validate_m6.py \
   --expected-commit <完整已同步SHA> \
-  --data-root /home/train/hsi-pioneer271828/datasets/current \
-  --out-dir /home/train/hsi-pioneer271828/runs/m6-validation-<唯一批次>
+  --data-root "$REGISTERED_DATA_ROOT" \
+  --out-dir /home/lbx/hsi-pioneer271828/runs/m6-validation-<唯一批次>
 ```
 
 入口要求容器、CUDA、完整SHA及干净工作树，执行全量回归和 CPU/CUDA smoke；六组各2步，记录消息/方向对齐实际调用、参数梯度与门范围，严格恢复并验证成功运行跳过优化器；全 test 块冻结预测通过 E0a 导出器核对混淆矩阵和指标，输入与模型指纹不得改变。原始日志/权重/数组在 checkout 外，不进 Git。失败保留，重试新目录。

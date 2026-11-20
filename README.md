@@ -18,15 +18,17 @@ Primary Windows workspace: **`F:/E2E_VCA`**, branch **`codex/f-drive-primary`**.
 - [Remaining scope and acceptance principles](research/研究内容整合与详细搭建测试计划_2026-10-28.md#remaining-scope-20261110) and [12 work packages](research/模块化搭建与测试消融实施计划_2026-10-28.md#remaining-plan-20261110): the 2026-11-10 planning revision. This documentation update does not resume implementation or training; execution state remains in the current status JSON.
 - [Contributing](CONTRIBUTING.md) and [execution rules](AGENTS.md).
 
-## Obtain the development integration
+## Obtain the reviewed integration
 
 ```bash
-git clone --branch codex/f-drive-primary https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git hsi-development
-cd hsi-development
+git clone --branch main https://github.com/Pioneer271828/Hyperspectral-Image-Classification.git hsi
+cd hsi
 git status --short --branch
 git rev-parse HEAD
 ```
 
+Use `main` for reviewed batches after they merge. `codex/f-drive-primary` is
+the retained day-to-day development branch and can have work in progress.
 Use full history: several regression fixtures read immutable historical commits.
 For a reported result, pin its tested SHA or immutable experiment tag instead of
 using the latest branch tip. Branch and merge status must be read from the current
@@ -66,10 +68,10 @@ are separate claims. Dataset identities, label budgets, graph context, source
 checkpoints, seeds, selection rules and numerical amendments belong to each
 frozen experiment record.
 
-This delivery integrates accepted G4I, MON-2/3C, the activation-snapshot repair and
-NUM-1 provenance. It preserves the accepted G4I model/training/data configuration
-files. Frozen running checkouts and experiment tags are not updated by this work.
-The newer M4-G4A development branch is outside this acceptance scope.
+Read the [current status JSON](docs/architecture/current-status.json) and the
+corresponding integration PR for the scope, tested commit and evidence of each
+delivery. Frozen experiment tags, producer checkouts and baseline model,
+training and data defaults retain their registered identities.
 
 Datasets, weights and raw run artifacts are stored outside checkouts and are not
 shipped in Git. No compression or speed improvement follows merely from masks,
