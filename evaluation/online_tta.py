@@ -170,8 +170,16 @@ def _runs(request, admission, label_path):
         runs[key] = (reg, predictions, replay)
         proofs.append(proof)
     for mode, reset, order in runs:
-        if ('frozen', reset, order) not in runs or any((mode, reset, variant) not in runs for variant in ORDERS):
+        key = (mode, reset, order)
+        frozen_key = ('frozen', reset, order)
+        if frozen_key not in runs or any((mode, reset, variant) not in runs for variant in ORDERS):
             raise ValueError('Each comparison needs all registered orders and matching frozen controls')
+        frozen = runs[frozen_key][1]
+        reg, pre_update, replay = runs[key]
+        first = reg.frames[0]['frame_id']
+        for frame, packet in (*replay['initial'].items(), (first, pre_update[first])):
+            if any(not np.array_equal(packet[head], frozen[frame][head]) for head in HEADS):
+                raise ValueError('Paired run does not start from its matching frozen predictions')
     return runs, sorted(proofs, key=lambda row: row['registration_sha256'])
 
 
@@ -267,6 +275,7 @@ def score(plan, *, authority=None, admission=None, source_receipt=None):
         result[f'{mode}/{reset}/{order}'] = dict(
             metrics=metrics, versus_frozen=_paired(metrics, online[frozen], small),
             versus_original_order=_paired(metrics, online[original], small), trajectory=trajectory,
+            committed_counts=runs[mode, reset, order][0].value['budget'],
             first_frame_id=trajectory[0]['frame_id'], last_frame_id=trajectory[-1]['frame_id'],
             worst_frame_versus_frozen=_worst(trajectory, 'versus_frozen', small),
             worst_frame_versus_original_order=_worst(trajectory, 'versus_original_order', small))

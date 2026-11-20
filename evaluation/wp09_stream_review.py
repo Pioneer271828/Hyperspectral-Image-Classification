@@ -7,7 +7,10 @@ import sys
 import numpy as np
 
 from evaluate_tta import HEADS, MODES
+from evaluation.classification_metrics import classification_metrics
 from evaluation.online_tta import _frozen_run, score
+from evaluation.open_set import _labels
+from evaluation.registered_open_set import _load
 from research_runtime import code_snapshot, external_directory, require_frozen_code
 from transfer.online_tta_run import _json
 from transfer.online_tta_stream import ORDERS, optional_pin, parse_json, read_pin
@@ -74,7 +77,7 @@ def _read_cases(campaign, execution, audit, root):
                 or reg.value['commit'] != campaign['commit'] or reg.value['source_hash'] != campaign['source_hash']
                 or reg.value['provenance'] != campaign['provenance']
                 or (reg.value['order'], reg.settings['mode'], reg.settings['reset']) != (order, mode, reset)
-                or list(packets) != campaign['orders'][order]
+                or reg.frames != campaign['orders'][order]
                 or proof['tip'] != accepted['full']['tip'] or proof['tip'] != accepted['split']['tip']
                 or proof['tip'] != stages['full']['receipt']['tip']
                 or accepted['identical_events'] != len(packets) or not accepted['complete_zero']):
@@ -121,11 +124,28 @@ def _open_set(audit):
     approval = parse_json(read_pin(audit['approvals']))
     export = parse_json(read_pin(audit['original_export']))
     freeze = parse_json(read_pin(approval['frozen']))
+    producer = parse_json(read_pin(approval['producer']))
     if (approval['authority'] != audit['authority'] or export['freeze'] != approval['frozen']
             or approval['label_reads'] != 0 or freeze['evaluation_labels_read'] is not False
             or export['threshold_retuning'] is not False or export['model_selection'] is not False
-            or export['producer_truth_verified'] is not True or export['label_role'] != 'development_evaluation'):
+            or export['label_role'] != 'development_evaluation'
+            or producer['arrays_registration'] != freeze['registration']
+            or producer['network_output_verified'] is not True or producer['evaluation_labels_read'] is not False):
         raise ValueError('Open-set source calibration and pre-release freeze differ')
+    registration, _, _, _, target, pins = _load(freeze['registration'])
+    ids = freeze['development_ids']
+    label_pin = approval['released_labels']
+    if (registration['labels'] != label_pin or freeze['deferred_labels'] != label_pin
+            or target['sample_ids'].tolist() != ids or pins != freeze['inputs']):
+        raise ValueError('The synthetic open-set label release does not match the frozen sample IDs')
+    labels = parse_json(read_pin(label_pin))
+    if labels['role'] != 'development_evaluation' or labels['sample_ids'] != ids:
+        raise ValueError('The synthetic open-set label release role differs')
+    truth = _labels(labels['labels'], len(ids))
+    known = approval['columns']
+    keep = np.isin(truth, known)
+    closed = {head: classification_metrics(
+        truth[keep], np.asarray(known)[target[f'logits_{head}'][keep].argmax(1)], known) for head in HEADS}
     methods = []
     for independent, frozen, receipt in zip(audit['methods'], freeze['rows'], export['reports'], strict=True):
         for name in ('head', 'method'):
@@ -135,12 +155,26 @@ def _open_set(audit):
         if (calibration['role'] != 'source_validation'
                 or set(calibration['sample_ids']) & set(freeze['development_ids'])):
             raise ValueError('Open-set calibration must use the separate known source role')
+        baseline = closed[independent['head']]
+        matrix = np.asarray(independent['metrics']['confusion'])
+        if matrix[:-1].sum() != baseline['count']:
+            raise ValueError('Frozen open-set scores and closed-set control have different known support')
+        known_recall = []
+        for index, row in enumerate(baseline['per_class']):
+            support = row['support']
+            if matrix[index].sum() != support:
+                raise ValueError('Frozen open-set scores and closed-set control have different class support')
+            delta = int(matrix[index, index]) - baseline['confusion_matrix'][index][index]
+            known_recall.append(dict(class_id=row['class_id'], support=support,
+                                     recall_delta=delta / support if support else None))
         methods.append(dict(independent, released_report_sha256=receipt['report']['sha256'],
                             calibration_sha256=frozen['calibration_sha256'],
                             source_known_coverage=calibration['known_coverage'],
-                            reject_rule=calibration['comparator'], threshold=calibration['threshold']))
+                            reject_rule=calibration['comparator'], threshold=calibration['threshold'],
+                            known_recall_versus_closed=known_recall))
     return dict(
         scope='synthetic_frozen_openood_oracle', methods=methods, excluded_unlabeled_id=0,
+        closed_reference_known_only=closed,
         freeze_sha256=approval['frozen']['sha256'],
         calibration_role='source_validation', label_role='development_evaluation',
         thresholds_retuned=False, real=None,
@@ -154,7 +188,8 @@ def review(pins):
     records = {key: parse_json(read_pin(pin)) for key, pin in pins.items()}
     campaign, execution, audit = (records[key] for key in ('campaign', 'execution', 'audit'))
     if (execution['campaign_sha256'] != HISTORY['campaign'] or audit['campaign_sha256'] != HISTORY['campaign']
-            or audit['execution_sha256'] != HISTORY['execution'] or audit['status'] != 'passed'
+            or audit['execution_sha256'] != HISTORY['execution']
+            or audit['status'] != 'passed_known_scene_online_tta_custody'
             or execution['commit'] != campaign['commit'] or audit['commit'] != campaign['commit']
             or execution['actual'] != campaign['budget'] or audit['query'] or audit['raw_gt']
             or audit['independent_optimizer_updates'] or audit['independent_statistics_updates']):
