@@ -9,6 +9,7 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp05_wp06_support_head_deployment_candidate": "9102a9632e13c688d68739019936c571fc243612",
     "wp05_honghu_p4_mechanism_candidate": "7e0386e3fa5686392dfc45f2b415b420036e200a",
     "wp05_honghu_p4_short_review_candidate": "fa8905aa313280db3b7181c4dcfab36702e34c38",
     "wp05_wp06_gpu_recovery_integration_candidate": "65ef959fc3dcf63c5f4fa65142dc21b0280ab4f6",
@@ -1676,6 +1677,13 @@
       "evidence": "冻结两景四窗20点148次新前向；徐州类5/6图头明显分差下降的10点最早在VCA全带注入响应，类6恢复5/5、类5仍0/5。洪湖15/21全带融合均0/5。72合成格10368次更新和完全恢复通过；可恢复6/6、物理缺失6/6、噪声6/6、远程6/6。主入口全仓1122通过、7跳过；GPU0冻态前向、梯度和载入短测通过。",
       "remaining": "全带特征注入仅为反事实，真实修复与新独立空间待验。近期缺带删边、远程供体和原生尺度实验枝条未整批合入；无真实优化、query、原GT或WP04。",
       "report": "research/reports/WP05_WP06_冻结表征定位与残差修复预登记_20261119.md"
+    },
+    {
+      "id": "WP05/WP06/WP12 冻结骨干支持集分类头部署",
+      "state": "原生三头、固定全带拟合头、同视图拟合头已连通无标签部署、逐点独审与 CPU 成本",
+      "evidence": "徐州 347 和洪湖 24 步档案的三视图及 37 个去重支持集合，13,110 次独立 primal 核验。实际四个部署组合在 198 条同点配对对照五头共 990 决策，完整支持两景重载字节一致。徐州中央缺带 OA 5/45→25/45，新增四错。洪湖中央缺带 5/110→34/110，类6新增四错。44 项远程回归通过。",
+      "remaining": "两景每类仅5个开发点且普通类保护失败。GPU显存与新独立确认待验，不放行后续真实训练。P4 余10例1200步仍待原资源门槛。",
+      "report": "research/reports/WP05_WP06_WP12_冻结骨干支持集分类头部署与复核_20261120.md"
     },
     {
       "id": "WP12 CPU与GPU整合回归",
