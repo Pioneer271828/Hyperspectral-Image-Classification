@@ -13,7 +13,11 @@
 
 参数定义见本页后面的原命令。输出包含 `classification-review.md`、`classification-review.json` 和 `native-real/`。在有正式合并验收时附 `--combined-acceptance PATH SHA256`，指向已获准 GPU 4 迁移控制的最终接受回执。否则报告显示已接受案例和缺失的组合。
 
-历史冻结头的 `deploy` 计划及 `review` 成本回执可通过 `--execution-commit` 指定其完整原生产提交。当前检出仍通过 `--expected-commit` 固定。输入来源、运行文件变动和现有输出均在正常入口检查。[当前用户报告](../../research/reports/WP12_完整配对精度与部署成本主线审阅_20261120.md)
+历史冻结头采用 `--plan-commit` 指定原观测计划的完整提交，`--execution-commit` 保留为旧参数别名。`--expected-commit` 指定本次实际运行的干净检出。成本 v2 同时记录计划制作、实际执行、Git 运行文件指纹和实测设备。旧 v1 只有记录中的生产者及逻辑设备，实际执行 SHA 与实体卡身份留空。旧回执原件可继续审阅。
+
+不同提交复用计划必须处于同一 Git 祖先链，且部署运行树相同。唯一的历史桥接固定了原部署入口和 v2 执行入口两个完整运行树，原登记不可重写。公开部署入口、模型、视图、标签访问和计时依赖都参与检查。[已核定运行树](../architecture/wp12-support-head-runtime-bridge.json)
+
+在统一报告命令附 `--support-review PATH SHA256` 可读取一个分类头复核回执。用多次参数保留各自实测执行和设备，程序重新核对回执与原成本，而后另列历史未知身份。附表 `paired-scene-seed.csv` 按场景、种子、精度、输出头及成对配置给出 OA/AA 与百分点差。`deployment-cost-evidence.csv` 保留各测时边界、来源、已有执行、设备与未测项。[当前用户报告](../../research/reports/WP12_完整配对精度与部署成本主线审阅_20261120.md)
 
 ## 汇总原始真实回执
 

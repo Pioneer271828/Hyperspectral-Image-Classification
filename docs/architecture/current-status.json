@@ -9,6 +9,7 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp12_support_head_provenance_candidate": "1ad34d1ab8baec153d8580ba74517d21dd0f4ed0",
     "wp12_classification_cost_main_review_candidate": "6559cba3a8f5239df7fc41185be79420562693ad",
     "wp05_wp06_support_head_deployment_candidate": "9102a9632e13c688d68739019936c571fc243612",
     "wp05_honghu_p4_mechanism_candidate": "7e0386e3fa5686392dfc45f2b415b420036e200a",
@@ -1689,7 +1690,7 @@
     {
       "id": "WP05/WP06→WP12 主线分类与成本审阅",
       "state": "完整联合组合、已发布冻结54、真实短训和冻结分类头通过同入口复盘",
-      "evidence": "完整 M4-S2三种子FP32三景等权OA 95.8778、96.4201、96.7179、97.1152%，144头/1920逐类项从两种精度的原混淆复算。旧冻结54及原生六表逐字节一致，P4仅接已独审10例，冻结头逐类未通过。历史部署重载与拒绝回放通过。",
+      "evidence": "完整 M4-S2三种子FP32三景等权OA 95.8778、96.4201、96.7179、97.1152%，144头/1920逐类项从两种精度的原混淆复算。旧冻结54及原生六表逐字节一致，P4仅接已独审10例，冻结头逐类未通过。历史部署重载与拒绝回放通过。PR500回执v2区分计划制作、实际执行和实测设备，旧格式执行身份保留未知。四种路径在LXC复演，新增234条成对论文表及122条成本行。",
       "remaining": "P4两格合计1200步待原GPU1/4。生产模型沿用原默认。独立空间保护、全新query与跨协议排名无新证据。",
       "report": "research/reports/WP12_完整配对精度与部署成本主线审阅_20261120.md"
     },
