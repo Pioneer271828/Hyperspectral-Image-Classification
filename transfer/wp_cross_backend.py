@@ -16,8 +16,8 @@ from transfer.region_message_attention import RegionMessageVCASAHGCN, profile_re
 from transfer import wp_coverage_release as coverage, wp_region_graph as regional
 
 
-BACKENDS = ("native", "multiscale", "aligned", "region_message", coverage.BACKEND)
-TRAIN_BACKENDS = (*BACKENDS,regional.BACKEND)
+BACKENDS = ("native", "multiscale", "aligned", "region_message")
+TRAIN_BACKENDS = (*BACKENDS,regional.BACKEND,coverage.BACKEND)
 
 
 def make_model(architecture, backend):
@@ -36,7 +36,7 @@ def make_model(architecture, backend):
         return model
     require(set(architecture) in ({"format_version", "class_counts", "backbone_kwargs"},
                                  {"format_version", "class_counts", "backbone_kwargs", "training_config"})
-            and architecture["format_version"] == 1 and backend in BACKENDS,
+            and architecture["format_version"] == 1 and backend in (*BACKENDS,coverage.BACKEND),
             "An exact registered architecture and supported backend are required")
     counts, kwargs = architecture["class_counts"], architecture["backbone_kwargs"]
     require(counts and all(type(value) is int and value > 1 for value in counts.values()),
