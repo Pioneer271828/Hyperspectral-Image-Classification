@@ -117,8 +117,10 @@ class StableSparseWeightTests(unittest.TestCase):
         gpu = 'GPU-11111111-1111-1111-1111-111111111111'
         props = SimpleNamespace(name='mocked', major=8, minor=9)
         initial = qual.runtime_settings()
+        admission = {'physical_uuid': gpu, 'free_mib': device.MIN_FREE_MIB,
+                     'utilization': device.MAX_UTILIZATION, 'driver': 'test'}
         with patch.dict(os.environ,{'CUDA_VISIBLE_DEVICES':gpu,'CUBLAS_WORKSPACE_CONFIG':device.WORKSPACE}), \
-                patch.object(device,'gate',return_value={'driver':'test'}), \
+                patch.object(device,'gate',return_value=admission), \
                 patch.multiple(torch.cuda,is_available=lambda:True,device_count=lambda:1,
                                set_device=lambda index:None,get_device_properties=lambda index:props):
             with self.assertRaisesRegex(RuntimeError,'leave the worker'):
