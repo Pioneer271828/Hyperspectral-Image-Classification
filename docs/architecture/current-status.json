@@ -9,6 +9,7 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp12_classification_cost_main_review_candidate": "6559cba3a8f5239df7fc41185be79420562693ad",
     "wp05_wp06_support_head_deployment_candidate": "9102a9632e13c688d68739019936c571fc243612",
     "wp05_honghu_p4_mechanism_candidate": "7e0386e3fa5686392dfc45f2b415b420036e200a",
     "wp05_honghu_p4_short_review_candidate": "fa8905aa313280db3b7181c4dcfab36702e34c38",
@@ -1684,6 +1685,13 @@
       "evidence": "徐州 347 和洪湖 24 步档案的三视图及 37 个去重支持集合，13,110 次独立 primal 核验。实际四个部署组合在 198 条同点配对对照五头共 990 决策，完整支持两景重载字节一致。徐州中央缺带 OA 5/45→25/45，新增四错。洪湖中央缺带 5/110→34/110，类6新增四错。44 项远程回归通过。",
       "remaining": "两景每类仅5个开发点且普通类保护失败。GPU显存与新独立确认待验，不放行后续真实训练。P4 余10例1200步仍待原资源门槛。",
       "report": "research/reports/WP05_WP06_WP12_冻结骨干支持集分类头部署与复核_20261120.md"
+    },
+    {
+      "id": "WP05/WP06→WP12 主线分类与成本审阅",
+      "state": "完整联合组合、已发布冻结54、真实短训和冻结分类头通过同入口复盘",
+      "evidence": "完整 M4-S2三种子FP32三景等权OA 95.8778、96.4201、96.7179、97.1152%，144头/1920逐类项从两种精度的原混淆复算。旧冻结54及原生六表逐字节一致，P4仅接已独审10例，冻结头逐类未通过。历史部署重载与拒绝回放通过。",
+      "remaining": "P4两格合计1200步待原GPU1/4。生产模型沿用原默认。独立空间保护、全新query与跨协议排名无新证据。",
+      "report": "research/reports/WP12_完整配对精度与部署成本主线审阅_20261120.md"
     },
     {
       "id": "WP12 CPU与GPU整合回归",

@@ -2,6 +2,19 @@
 
 运行入口使用同一个干净的授权 LXC 检出。环境与源码导入方法见[原生覆盖发布指南](native-coverage-release.md)。输出目录放在已授权的 `runs` 以下。所有读取使用已登记的 SHA-256，产物目录须未创建。
 
+## 分类精度与成本联合审阅
+
+使用 `--classification-cost-review` 从完整联合训练、独审、冻结 54、真实短训和冻结头回执生成共同索引。它核实 M4-S2 四组合三种子 OA/AA、双精度登记保护及逐类混淆。每份输入沿用原登记 SHA，封存 query 沿用已发布统计。
+
+```bash
+"$python_bin" -B scripts/ingest_wp12_evidence.py --classification-cost-review \
+  --expected-commit "$sha" --runs "$runs" --out "$runs/wp12-classification-review"
+```
+
+参数定义见本页后面的原命令。输出包含 `classification-review.md`、`classification-review.json` 和 `native-real/`。在有正式合并验收时附 `--combined-acceptance PATH SHA256`，指向已获准 GPU 4 迁移控制的最终接受回执。否则报告显示已接受案例和缺失的组合。
+
+历史冻结头的 `deploy` 计划及 `review` 成本回执可通过 `--execution-commit` 指定其完整原生产提交。当前检出仍通过 `--expected-commit` 固定。输入来源、运行文件变动和现有输出均在正常入口检查。[当前用户报告](../../research/reports/WP12_完整配对精度与部署成本主线审阅_20261120.md)
+
 ## 汇总原始真实回执
 
 ```bash
