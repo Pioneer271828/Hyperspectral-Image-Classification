@@ -27,6 +27,8 @@ def main(argv=None):
         return native_pathways(argv)
     if "--real-attribution-review" in argv:
         return real_attribution(argv)
+    if "--real-readiness-review" in argv:
+        return real_readiness(argv)
     if "--m1-e1-history" in argv:
         return m1_e1_history(argv)
     if "--external-paired-history" in argv:
@@ -178,6 +180,42 @@ def real_attribution(argv):
     result = review(root,out,code,sources,producers,floor_pin,rival_pin)
     require_frozen_code(code)
     print(json.dumps(result),flush=True)
+
+
+def real_readiness(argv):
+    import re
+    import subprocess
+
+    from evaluation.frozen_training_stages import require
+    from evaluation.wp12_real_readiness import index
+    from research_runtime import write_json
+
+    parser = argparse.ArgumentParser(description="Verify released real readiness and equal-capacity evidence")
+    parser.add_argument("--real-readiness-review", action="store_true", required=True)
+    parser.add_argument("--runs", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--producer", required=True)
+    parser.add_argument("--capacity-case", action="append", nargs=3, required=True,
+                        metavar=("CASE", "PATH", "SHA256"))
+    args = parser.parse_args(argv)
+    root, out = args.runs.resolve(strict=True), external_directory(args.out)
+    incoming = root.parent / "datasets" / "incoming"
+    code = code_snapshot()
+    require(sys.platform == "linux" and code["commit"] == args.expected_commit and root in out.parents
+            and incoming.resolve(strict=True) == incoming and incoming.is_dir()
+            and re.fullmatch("[0-9a-f]{40}", args.producer) and not out.exists(),
+            "Use the expected Linux checkout, the registered runs and intake roots, and a fresh output")
+    require_frozen_code(code)
+    subprocess.run(["git", "merge-base", "--is-ancestor", args.producer, code["commit"]],
+                   cwd=Path(__file__).resolve().parents[1], check=True)
+    pins = {case: dict(path=path, sha256=sha) for case, path, sha in args.capacity_case}
+    require(len(pins) == len(args.capacity_case), "Repeated capacity endpoint")
+    result = index(root, incoming, pins, args.producer)
+    require_frozen_code(code)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    write_json(out, dict(**result, reviewer=code["commit"], capacity_producer=args.producer))
+    print(out, flush=True)
 
 
 def m1_e1_history(argv):
