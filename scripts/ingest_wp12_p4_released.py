@@ -10,7 +10,36 @@ from research_runtime import code_snapshot, external_directory, require_frozen_c
 from transfer import registered_development as dev
 
 
+def short_science(argv):
+    from evaluation.wp12_p4_short_review import require, run
+    from research_runtime import write_json
+
+    parser = argparse.ArgumentParser(description="Confirm P4 archived and migrated released-point outcomes")
+    parser.add_argument("--short-science",action="store_true",required=True)
+    parser.add_argument("--expected-commit",required=True)
+    parser.add_argument("--runs",type=Path,required=True)
+    parser.add_argument("--out",type=Path,required=True)
+    for name in ("migration","migration-approval","combined-acceptance"):
+        parser.add_argument("--"+name,nargs=2,metavar=("PATH","SHA256"),required=name!="combined-acceptance")
+    a = parser.parse_args(argv)
+    code = code_snapshot()
+    require_frozen_code(code)
+    root = a.runs.resolve(strict=True)
+    out = external_directory(a.out)
+    require(sys.platform=="linux" and code["commit"]==a.expected_commit and root in out.parents
+            and not out.exists(), "Use the expected clean checkout and a fresh authorized output")
+    def pin(pair):
+        return dict(zip(("path","sha256"),pair,strict=True)) if pair else None
+    result = run(root,pin(a.migration),pin(a.migration_approval),pin(a.combined_acceptance))
+    require_frozen_code(code)
+    out.parent.mkdir(parents=True,exist_ok=True)
+    write_json(out,dict(**result,producer=code["commit"]))
+    print(dev._pin(out),flush=True)
+
+
 def main():
+    if "--short-science" in sys.argv[1:]:
+        return short_science(sys.argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     for name in ("runs", "p4-scope", "fit-template", "sparse", "queue-receipt", "out"):
