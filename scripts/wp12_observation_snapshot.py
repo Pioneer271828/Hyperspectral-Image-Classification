@@ -12,7 +12,7 @@ from .wp12_frozen54_deployment_contract import source
 
 
 @contextmanager
-def verified_snapshot(root, pin):
+def verified_snapshot(root, pin, *, max_bytes=None):
     """Yield a path to the sealed bytes that passed the original file digest."""
     path = source(root, pin)
     snapshot = os.memfd_create("wp12-observation", os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING)
@@ -23,6 +23,8 @@ def verified_snapshot(root, pin):
             if (not stat.S_ISREG(status.st_mode) or status.st_size <= 0
                     or Path(f"/proc/self/fd/{original}").readlink() != path):
                 raise ValueError("Expected the pinned regular observation file")
+            if max_bytes is not None and status.st_size > max_bytes:
+                raise ValueError("Observation exceeds the registered snapshot size ceiling")
             offset = 0
             while offset < status.st_size:
                 copied = os.sendfile(snapshot, original, offset, status.st_size - offset)
