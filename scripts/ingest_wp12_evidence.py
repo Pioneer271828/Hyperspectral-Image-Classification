@@ -49,6 +49,10 @@ def main(argv=None):
         return publish_cli(argv)
     if "--classification-cost-review" in argv:
         return classification_cost_review(argv)
+    if "--wp09-review" in argv:
+        from evaluation.wp09_stream_review import main as wp09_review
+
+        return wp09_review([arg for arg in argv if arg != "--wp09-review"])
     if "--native-real" in argv:
         native_real(argv)
         return

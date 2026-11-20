@@ -13,7 +13,8 @@ import numpy as np
 import torch
 
 from evaluate_tta import HEADS, MODES, _Session, run_online
-from evaluation.online_tta import score
+from evaluation.online_tta import _runs, score
+from evaluation.wp09_stream_review import _drift, review
 from loadData.observation_sampling import BandMetadata
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.checkpoint_io import save_model_checkpoint
@@ -85,6 +86,55 @@ def child(reg, out, stop=None):
 
 
 class PersistentOnlineTTATests(unittest.TestCase):
+    def test_scene_reset_crosses_segments_and_resumes_through_cli(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'fixture'
+            _, _, spec = fixture(root, 9)
+            spec['frames'] = [dict(frame, scene=scene) for frame, scene in zip(
+                spec['frames'], ('first', 'first', 'first', 'second', 'second', 'first'), strict=True)]
+            expected = dict(scene=[True, False, False, True, False, True],
+                            episodic=[True, False, True, True, False, True],
+                            continual=[True, False, False, False, False, False])
+            for reset, boundaries in expected.items():
+                reg = registration(root, spec, 'statistics', reset)
+                output = root / reset
+                if reset == 'scene':
+                    self.assertEqual(child(reg, output, 3)['actual']['statistics_updates'], 3)
+                    self.assertEqual(child(reg, output)['actual']['statistics_updates'], 3)
+                    self.assertEqual(child(reg, output)['added'], 0)
+                    separate = root / 'scene-full'
+                    execute(reg, separate)
+                    self.assertEqual(committed_history(StreamRegistration(reg), output, complete=True),
+                                     committed_history(StreamRegistration(reg), separate, complete=True))
+                else:
+                    execute(reg, output)
+                events, _ = committed_history(StreamRegistration(reg), output, complete=True)
+                self.assertEqual([row['reset'] for row in events], boundaries)
+                self.assertEqual([row['before'] == events[0]['before'] for row in events], boundaries)
+
+    def test_paired_run_rejects_permuted_canonical_registration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'fixture'
+            _, _, spec = fixture(root, 9)
+            a = StreamRegistration(registration(root, spec, 'frozen'))
+            b = StreamRegistration(registration(root, dict(spec, frames=spec['frames'][::-1]), 'frozen',
+                                                order='reverse'))
+            self.assertEqual(a.population, b.population)
+            self.assertEqual([row['frame_id'] for row in a.frames], [row['frame_id'] for row in b.frames])
+            with patch('evaluation.online_tta._frozen_run', side_effect=[(r, {}, {}, {}) for r in (a, b)]):
+                with self.assertRaisesRegex(ValueError, 'incompatible paired'):
+                    _runs({'runs': ['first', 'second']}, None, None)
+
+    def test_drift_oracle_and_history_requires_published_pins(self):
+        a = np.array([[.75, .25], [.25, .75]])
+        b = np.array([[.5, .5], [.5, .5]])
+        result = _drift(dict.fromkeys(HEADS, a), dict.fromkeys(HEADS, b))
+        self.assertEqual(result, dict.fromkeys(HEADS, dict(
+            pixels=2, decision_changes=1, max_abs_probability=.25, mean_total_variation=.25)))
+        with patch('evaluation.wp09_stream_review.read_pin', side_effect=AssertionError('unapproved read')):
+            with self.assertRaisesRegex(ValueError, 'exact published'):
+                review({})
+
     def test_four_modes_legacy_oracle_and_multiboundary_recovery(self):
         with tempfile.TemporaryDirectory() as tmp:
             for classes in (9, 22):
@@ -289,6 +339,31 @@ class PersistentOnlineTTATests(unittest.TestCase):
             forgetting = result['zero_update_anchor_replay']['adapter/continual/original']
             self.assertEqual(forgetting['initial']['fused']['count'], 32)
             self.assertNotEqual(forgetting['final_minus_initial']['fused']['metrics']['nll'], 0)
+            for mode in ('frozen', 'adapter'):
+                for order in ORDERS:
+                    value = online[f'{mode}/continual/{order}']
+                    spec_pin = next(row['registration'] for row in runs
+                                    if f'{mode}-continual-{order}.json' == Path(row['registration']['path']).name)
+                    order_ids = [row['frame_id'] for row in StreamRegistration(spec_pin).frames]
+                    self.assertEqual([row['frame_id'] for row in value['trajectory']], order_ids)
+                    self.assertEqual((value['first_frame_id'], value['last_frame_id']), (order_ids[0], order_ids[-1]))
+                    for head in HEADS:
+                        observed = []
+                        for position, frame_id in enumerate(order_ids, 1):
+                            guesses = read_predictions(root / f'{mode}-{order}' /
+                                                       f'frame-{position:06d}' / 'prediction.npz')[head]
+                            base = read_predictions(root / f'frozen-{order}' /
+                                                    f'frame-{position:06d}' / 'prediction.npz')[head]
+                            label = int(frame_id[1:]) % 3
+                            area = np.arange(64).reshape(8, 8)[:4, :4].ravel()
+                            delta = ((guesses.argmax(1)[area] == label).sum()
+                                     - (base.argmax(1)[area] == label).sum()) / 16
+                            observed.append((delta, frame_id))
+                        delta, frame_id = min(observed)
+                        self.assertEqual(value['worst_frame_versus_frozen'][head]['oa'],
+                                         dict(delta=delta, frame_id=frame_id))
+                        self.assertIsNone(value['worst_frame_versus_frozen'][head]['recall']['9'])
+                        self.assertIsNone(forgetting['worst_anchor'][head]['recall_protected_at_2pp']['9'])
             (Path(runs[-1]['directory']) / 'completion.json').unlink()
             Path(release['path']).unlink()
             with self.assertRaisesRegex(ValueError, 'before scoring'):
