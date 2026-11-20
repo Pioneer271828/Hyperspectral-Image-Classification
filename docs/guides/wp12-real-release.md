@@ -145,3 +145,20 @@ export PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1
 ## 缺带与小类保护的配对生产
 
 [原生训练、冻结和确认](wp12-paired-structure.md)在同一释放点优化器接入多尺度、对齐和定向消息。WP12 使用 `--paired-structure-review` 消费完整训练和冻结发布。
+
+## WP09 在线适配与开放集复核
+
+在授权 LXC 使用批准的观察和源准入。运行命令接收观察登记和独立准入，标签只进入后置离线评价。
+
+~~~bash
+"$python_bin" -m run_online_tta --registration "$registration" --registration-sha256 "$registration_sha" \
+  --admission "$admission" --admission-sha256 "$admission_sha" --out "$stream" --to-frame 3
+"$python_bin" -m run_online_tta --registration "$registration" --registration-sha256 "$registration_sha" \
+  --admission "$admission" --admission-sha256 "$admission_sha" --out "$stream"
+"$python_bin" -m transfer.online_tta_replay --registration "$registration" --registration-sha256 "$registration_sha" \
+  --admission "$admission" --admission-sha256 "$admission_sha" --run "$stream" --out "$anchors"
+~~~
+
+`settings.reset` 可用 `scene`（随相邻帧的场景切换）、`episodic`（原场景或段切换）或 `continual`（跨段保持）。对照沿用同源、原始帧列表及 `original`、`reverse`、`seed64`。可信离线标签由 `python -m evaluation.online_tta --freeze-release` 固定已完成输出及样本后独立释放。评分供应计划、授权根、源回执和准入的固定路径与 SHA。
+
+WP12 汇总提供 `--wp09-review`、精确的 `--expected-commit` 和新的仓外 `--out`。依次为 `--campaign`、`--execution`、`--audit`、`--tent-receipt`、`--tent-cost`、`--openood-audit` 提供归档原路径和 SHA-256。可附 `--closed-set-plan PATH SHA --authority PATH SHA --source-receipt PATH SHA --admission PATH SHA` 复核单独批准的闭集评价。每条历史流输出逐帧和最差漂移、锚点与原计时。开放集固定沿用归档源阈值。真实无标签回执只产生预测诊断。[已验档案和限制](../../research/reports/WP09_流顺序逐类保护与开放集统一复核_20261120.md)

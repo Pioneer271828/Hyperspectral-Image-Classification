@@ -247,7 +247,10 @@ def main(argv=None):
     result = review(pins)
     if args.closed_set_plan is not None:
         closed_pin = optional_pin(*args.closed_set_plan)
-        result['released_closed_set'] = dict(plan_sha256=closed_pin['sha256'], results=score(closed_pin, **trust))
+        scored = score(closed_pin, **trust)
+        if 'label_release' in scored:
+            scored['label_release'] = {'sha256': scored['label_release']['sha256']}
+        result['released_closed_set'] = dict(plan_sha256=closed_pin['sha256'], results=scored)
     result['consumer_commit'] = code['commit']
     require_frozen_code(code)
     _json(out, result)
