@@ -38,7 +38,7 @@ def registration(producer):
                 formal_class_floor=MINIMUM_CLASS_N, real_optimizer_updates=0, query_accessed=False)
 
 
-def validate_observations(views):
+def validate_observations(views, native_receipts=None):
     """Check the retained normalized pixels against the ordered full view."""
     require(set(views) == set(VIEWS), "The three previously approved views are required")
     full = views["full"]
@@ -50,14 +50,24 @@ def validate_observations(views):
         require(set(ids) <= indices.keys(), "The retained view includes a foreign column")
         positions = [indices[band] for band in ids]
         src, dst = full.observation, view.observation
+        same_geometry = src.plan_hash == dst.plan_hash
+        if native_receipts is not None:
+            expected, actual = native_receipts["full"], native_receipts[name]
+            same_geometry = (dst.plan_hash == actual["namespace"] and expected["role"] == "devval"
+                             and all(expected[key] == actual[key] for key in
+                                     ("role", "factor", "box", "original_boxes", "membership", "coords", "local_ids"))
+                             and expected["factor"] == 1 and actual["source"]["band_ids"] == list(ids)
+                             and expected["source"]["statistics"]["parent_statistics_hash"]
+                                 == actual["source"]["statistics"]["parent_statistics_hash"])
         require(positions == sorted(set(positions))
-                and src.plan_hash == dst.plan_hash and src.partition == dst.partition
+                and same_geometry and src.partition == dst.partition
                 and np.array_equal(src.global_ids, dst.global_ids)
                 and np.array_equal(src.coordinates, dst.coordinates)
                 and np.array_equal(src.spectral[..., positions], dst.spectral),
                 "The spectrum, frozen normalization, or native point order differs")
         require(tuple(full.bands.wavelengths[i] for i in positions) == tuple(view.bands.wavelengths)
-                and full.bands.wavelength_quality == view.bands.wavelength_quality,
+                and full.bands.wavelength_quality == view.bands.wavelength_quality
+                and (None if full.bands.fwhm is None else tuple(full.bands.fwhm[i] for i in positions)) == view.bands.fwhm,
                 "Retained metadata does not match the original registered columns")
         columns[name] = list(ids)
     require(len(columns["central_gap"]) == len(columns[ANCHOR]) < len(columns["full"])
@@ -77,6 +87,11 @@ def audited_probe(model, invoke, view, *, graph_action=None):
         require(torch.is_tensor(wavelengths) and np.array_equal(
             wavelengths.detach().cpu().numpy(), np.asarray(view.bands.wavelengths, dtype=np.float32)),
             "The adapter used a different wavelength axis")
+        widths = kwargs.get("fwhm")
+        require((widths is None and view.bands.fwhm is None) or (
+                torch.is_tensor(widths) and np.array_equal(widths.detach().cpu().numpy(),
+                                                         np.asarray(view.bands.fwhm, dtype=np.float32))),
+                "The adapter used bandwidths from a different axis")
         trace["adapter"] = args[0]
 
     def denoiser_input(_module, args):
@@ -100,7 +115,7 @@ def audited_probe(model, invoke, view, *, graph_action=None):
             "The graph stage used a different assignment, edge matrix, or input")
     proof = {k: tensor_hash(trace[k]) for k in ("adapter", "denoiser", "builder_input", "cnn_input", "pooled")}
     proof.update(q=tensor_hash(used.Q), adjacency=tensor_hash(used.A0),
-                 normalized_coordinates=tensor_hash(obs.coordinates))
+                 normalized_coordinates=tensor_hash(obs.coordinates.copy()))
     return output, natural, proof
 
 
@@ -260,7 +275,7 @@ def run(root, case, producer, device, *, reference=None):
         enrolled = (set(block.truth) & set(focus)) - prior_focus
         if enrolled:
             prior_focus.update(enrolled)
-            columns = validate_observations(block.views)
+            columns = validate_observations(block.views, block.native_receipts)
             bases, states, proofs = {}, {}, {}
             for band in VIEWS:
                 outputs, states[band], proofs[band] = audited_probe(model, block.callbacks[band], block.views[band])
@@ -367,10 +382,23 @@ def score_interaction(blocks, left, right, reference, altered, classes):
     return interaction_counts(aligned, left, right, reference, altered, classes)
 
 
-def reduction(receipt, producer):
+def reduction(root, receipt, producer):
     audited = checked_receipt(receipt, producer)
     blocks = [block for block, _ in audited]
     classes = receipt["classes"]
+    archived = real.locked_history(root, receipt["case"], receipt["checkpoint"])["result"]
+    require(archived["authority"] == receipt["authority"] and archived["state"] == receipt["state"],
+            "Independent review must bind the same frozen authority and numerical state")
+    for block in blocks:
+        window = slice(block["offset"], block["offset"]+len(block["truth"]))
+        for band in VIEWS:
+            expected = archived["views"][band]
+            require(block["columns"][band] == expected["band_ids"] and block["truth"] == expected["truth"][window],
+                    "Point or column order differs from the pinned development baseline")
+            for head in HEADS:
+                scores = [row[head] for row in expected["native_probabilities"][window]]
+                hard = (probabilities(scores, len(block["truth"]), classes).argmax(1)+1).tolist()
+                require(hard == decisions(block, band, "native", head), "Native head differs from the pinned baseline")
     identity = {k:receipt[k] for k in ("scene","case","step","checkpoint","authority","state","release","focus")}
     status = [dict(ordinal=block["ordinal"], parent=block["parent"], points=len(block["truth"]),
                    counts={str(y):block["truth"].count(y) for y in receipt["focus"]},

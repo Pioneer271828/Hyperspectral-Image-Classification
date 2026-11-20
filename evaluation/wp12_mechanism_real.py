@@ -53,6 +53,7 @@ class ReleasedBlock:
     parent: int
     views: dict
     point_order: str
+    native_receipts: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -237,7 +238,8 @@ def load(root,case,producer,device):
                 focus_ordinal+=1
             result.append(ReleasedBlock(truth, selected.cells, callbacks, historical, row["id"], row["parent_tile"],
                                         {band: item[0].view for band, item in observations.items()},
-                                        digest([i for i, _ in selected.points])))
+                                        digest([i for i, _ in selected.points]),
+                                        {band: item[0].receipt for band, item in observations.items()}))
     REQUIRE(result,"No released development point roster")
     model.to(device).eval().requires_grad_(False)
     model.backbone.adapter.cache_attention=False

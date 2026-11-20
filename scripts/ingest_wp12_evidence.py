@@ -175,7 +175,7 @@ def shared_edge_interaction_review(argv):
         require(row["reference"] == [cpu_pins[case]["path"], cpu_pins[case]["sha256"]],
                 "The GPU receipt did not reuse the pinned CPU plan")
         parity[case] = shared.device_parity(cpu[case], row, code["commit"])
-    groups = {case:shared.reduction(row, code["commit"]) for case,row in cpu.items()}
+    groups = {case:shared.reduction(root, row, code["commit"]) for case,row in cpu.items()}
     require_frozen_code(code)
     result = _write(out, dict(policy=shared.SCHEMA, producer=code["commit"], cpu=cpu_pins, cuda=cuda_pins,
                              results=groups, device_parity=parity, real_optimizer_updates=0,

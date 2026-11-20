@@ -4,9 +4,11 @@ from copy import deepcopy
 from types import SimpleNamespace
 import unittest
 
+import numpy as np
 import torch
 
 from evaluation import wp12_shared_edge_interaction as experiment
+from loadData.observation_sampling import BandMetadata
 
 
 def grid(shape, *, weights=None):
@@ -23,6 +25,22 @@ def grid(shape, *, weights=None):
 
 
 class SharedEdgeBandTests(unittest.TestCase):
+    def test_native_views_bind_the_same_original_footprint_not_the_view_namespace(self):
+        axis = BandMetadata("fixture", tuple(range(6)), tuple(range(400,406)), "nm", "verified", (True,)*6)
+        spectra = np.arange(24, dtype=np.float32).reshape(2,2,6)
+        views, receipts = {}, {}
+        for band, columns in (("full", (0,1,2,3,4,5)), ("central_gap",(0,4,5)), ("matched_dispersed",(0,2,5))):
+            views[band] = SimpleNamespace(bands=axis.subset(columns), observation=SimpleNamespace(
+                spectral=spectra[..., columns], plan_hash=band, partition="val",
+                global_ids=np.arange(4).reshape(2,2), coordinates=np.zeros((2,2,2))))
+            receipts[band] = dict(namespace=band, role="devval", factor=1, box=[0,2,0,2],
+                                  original_boxes="physical", membership="membership", coords="coords", local_ids="ids",
+                                  source=dict(band_ids=list(columns), statistics=dict(parent_statistics_hash="train_stats")))
+        self.assertEqual(experiment.validate_observations(views, receipts)["central_gap"], [0,4,5])
+        receipts["central_gap"]["membership"] = "another_grid"
+        with self.assertRaisesRegex(ValueError, "point order"):
+            experiment.validate_observations(views, receipts)
+
     def test_mask_is_exact_and_each_view_reuses_it_with_its_own_weights(self):
         dense = torch.full((4,4), .2)
         dense[torch.arange(4), torch.tensor([1,0,3,2])] = .4
