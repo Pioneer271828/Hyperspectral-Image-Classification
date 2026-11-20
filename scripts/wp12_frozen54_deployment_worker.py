@@ -12,7 +12,7 @@ import sys
 from time import perf_counter_ns
 
 from wp12_frozen54_deployment_contract import (
-    COLD, WARM, COUNT, WARMUPS, PHASES, SETUP, approval, digest_text, read, source,
+    PLAN, WARM, COUNT, WARMUPS, PHASES, SETUP, TIMING, approval, digest_text, read, worker_binding,
 )
 
 
@@ -24,8 +24,9 @@ def main():
     fixture = commands.add_parser("fixture")
     fixture.add_argument("--out", type=Path, required=True)
     execute = commands.add_parser("measure")
-    for field in ("plan", "plan-sha", "case", "scope", "device"):
+    for field in ("plan", "plan-sha", "case", "scope", "device", "attempt"):
         execute.add_argument("--" + field, required=True)
+    execute.add_argument("--invocation", type=int, required=True)
     execute.add_argument("--approval", nargs=2)
     execute.add_argument("--lease", type=int)
     execute.add_argument("--lease-path", type=Path)
@@ -92,7 +93,8 @@ def measure(root, args, code):
     plan = json.loads(read(root, pin))
     permit = dict(zip(("path", "sha256"), args.approval, strict=True)) if args.approval else None
     approval(root, plan, pin, permit, args.device)
-    if args.scope not in COUNT or plan["adapter_sha256"] != digest_text(Path(__file__).read_bytes()):
+    if (plan["schema"] != PLAN or args.scope not in COUNT or plan["timing"] != TIMING
+            or plan["adapter_sha256"] != digest_text(Path(__file__).read_bytes())):
         raise ValueError("Worker, plan or timing boundary changed")
     if not plan["engineering"]:
         if preserved_runtime(json.loads(read(root, plan["freeze"])), code) != plan["runtime"]:
@@ -109,6 +111,9 @@ def measure(root, args, code):
     elif args.lease is not None or args.lease_path is not None:
         raise ValueError("CPU requests cannot inherit a GPU lock")
     env = environment("cuda" if cuda else "cpu", "ordered")
+    # The original helper describes the resident benchmark. Keep its device and software identity.
+    env.pop("scope")
+    env.pop("excluded")
     if cuda and (os.environ.get("CUDA_VISIBLE_DEVICES") != args.device or env["gpu"]["uuid"] != args.device):
         raise ValueError("Physical CUDA device differs from the registered lease")
     sync = (lambda: torch.cuda.synchronize(0)) if cuda else (lambda: None)
@@ -121,7 +126,8 @@ def measure(root, args, code):
         start = perf_counter_ns()
         value = fn()
         sync()
-        table[name] = dict(wall_ms=(perf_counter_ns()-start)/1e6,
+        stop = perf_counter_ns()
+        table[name] = dict(start_ns=start, finish_ns=stop, wall_ms=(stop-start)/1e6,
                            cuda_peak_bytes=torch.cuda.max_memory_allocated(0) if cuda else None)
         return value
 
@@ -149,7 +155,7 @@ def measure(root, args, code):
             raise ValueError("Frozen workload or graph differs")
         return item
 
-    def trial():
+    def trial(sequence, role):
         phases = {}
         sync()
         start = perf_counter_ns()
@@ -160,7 +166,7 @@ def measure(root, args, code):
             k: v.to(device) if torch.is_tensor(v) else v for k, v in item.items()})
         scores = operation(phases, PHASES[3], lambda: forward(model, job["scene"], request)[:3])
         predictions = operation(phases, PHASES[4], lambda: [v.argmax(1).cpu() for v in scores])
-        stop = perf_counter_ns()
+        stop = phases[PHASES[-1]]["finish_ns"]
         if (len(scores) != 3 or any(tuple(v.shape) != (workload["work_items"], classes) or
                                     not torch.isfinite(v).all() for v in scores)):
             raise ValueError("The three frozen score heads must be finite and complete")
@@ -168,7 +174,8 @@ def measure(root, args, code):
         identity = _tree_fingerprint(scores)
         if job["legacy_output"] is not None and identity != job["legacy_output"]:
             raise ValueError("Ordered probabilities differ from the accepted resident baseline")
-        return dict(phases=phases, request_ms=(stop-start)/1e6, first_prediction_ns=stop,
+        return dict(sequence=sequence, role=role, phases=phases, request_started_ns=start,
+                    first_prediction_ns=stop,
                     prediction=_tree_fingerprint(predictions), probability_state=identity,
                     checkpoint=job["checkpoint"]["sha256"], observation=workload["file"]["sha256"],
                     workload=workload["tensor_sha256"], pixels=workload["work_items"], batch=1,
@@ -176,16 +183,16 @@ def measure(root, args, code):
                     rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
     with torch.inference_mode(), OrderedValidation():
-        for _ in range(WARMUPS[args.scope]):
-            trial()
-        samples = [trial() for _ in range(COUNT[WARM] if args.scope == WARM else 1)]
+        warmups = WARMUPS[args.scope]
+        measured = COUNT[WARM] if args.scope == WARM else 1
+        requests = [trial(i, "warmup" if i < warmups else "measured") for i in range(warmups + measured)]
     if _tree_fingerprint(model.state_dict()) != state:
         raise ValueError("Frozen model state changed during measurement")
-    source(root, pin)
     if json.loads(read(root, pin)) != plan:
         raise ValueError("Plan changed during the worker run")
-    return dict(samples=samples, setup=setup, pid=os.getpid(), environment=env,
-                scope=args.scope, device=args.device, optimizer_updates=0, query_accessed=False)
+    return dict(binding=worker_binding(args.plan_sha, args.case, args.scope, args.device, args.attempt, args.invocation),
+                timing=TIMING[args.scope], requests=requests, setup=setup, pid=os.getpid(), environment=env,
+                optimizer_updates=0, query_accessed=False)
 
 
 if __name__ == "__main__":

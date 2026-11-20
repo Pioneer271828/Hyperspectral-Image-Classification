@@ -6,30 +6,51 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from evaluation.wp12_frozen54_deployment import audit_stage, stagesummary
+from evaluation.wp12_frozen54_deployment import audit_stage, rebuild_stage, stagesummary
 from scripts.wp12_frozen54_deployment_contract import (
-    APPROVAL, COLD, COUNT, PHASES, SETUP, WARM, WARMUPS, approval, digest_text,
+    APPROVAL, COLD, COUNT, PHASES, SETUP, TIMING, WARM, WARMUPS, approval, digest_text, worker_binding,
 )
 
 
-def accepted(scope):
+def write(path, content):
+    raw = json.dumps(content).encode()
+    path.write_bytes(raw)
+    return dict(path=str(path), sha256=digest_text(raw))
+
+
+def phase(names, start):
+    return {name: dict(start_ns=start+i*1000, finish_ns=start+(i+1)*1000, wall_ms=.001, cuda_peak_bytes=None)
+            for i, name in enumerate(names)}
+
+
+def fixture(root, scope, change=None):
     job = dict(checkpoint={"sha256": "a"*64}, workload=dict(
         file={"sha256": "b"*64}, tensor_sha256="c"*64, work_items=36), legacy_output="d"*64)
-    lineage = dict(case="fixture", scope=scope, device="cpu")
-    samples = []
-    for i in range(COUNT[scope]):
-        wall = 20 if scope == COLD else 6
-        samples.append(dict(scope=scope, device="cpu", batch=1, observation_reads=1, graph_builds=0,
-            skip_count=None, pid=i+1 if scope == COLD else 1, wall_ms=wall, request_ms=6,
-            unattributed_ms=wall-len(PHASES)-(len(SETUP) if scope == COLD else 0),
-            process_exit_ms=25, cuda_peak_bytes=None, rss_kib=100, checkpoint="a"*64,
-            observation="b"*64, workload="c"*64, pixels=36, prediction="e"*64, probability_state="d"*64,
-            phases={p:dict(wall_ms=1, cuda_peak_bytes=None) for p in PHASES},
-            setup={p:dict(wall_ms=1, cuda_peak_bytes=None) for p in SETUP}))
-    record = dict(lineage=lineage, samples=samples, warmups=WARMUPS[scope], batch=1, optimizer_updates=0,
-                  query_accessed=False, environment=dict(arithmetic="ordered", threads=1, device="cpu"),
-                  summary=stagesummary(samples))
-    return record, lineage, job
+    lineage = dict(case="fixture", scope=scope, device="cpu", plan={"sha256":"f"*64})
+    stage = root/scope
+    attempt = stage/"attempt-fixture"
+    attempt.mkdir(parents=True, exist_ok=True)
+    sources = []
+    for worker in range(COUNT[COLD] if scope == COLD else 1):
+        spawn = worker*100_000+1000
+        requests = []
+        for i in range(1 if scope == COLD else WARMUPS[WARM]+COUNT[WARM]):
+            start = spawn+(i+1)*10_000
+            requests.append(dict(sequence=i, role="warmup" if i < WARMUPS[scope] else "measured",
+                request_started_ns=start-100, first_prediction_ns=start+5000, phases=phase(PHASES,start),
+                batch=1, observation_reads=1, graph_builds=0, skip_count=None, rss_kib=100, checkpoint="a"*64,
+                observation="b"*64, workload="c"*64, pixels=36, prediction="e"*64, probability_state="d"*64))
+        raw = dict(binding=worker_binding("f"*64, "fixture", scope, "cpu", attempt.name, worker),
+                   timing=TIMING[scope], requests=requests, setup=phase(SETUP,spawn+100),
+                   pid=worker+1, environment=dict(arithmetic="ordered", threads=1, device="cpu"),
+                   optimizer_updates=0, query_accessed=False)
+        if change is not None:
+            change(raw, worker)
+        content = write(attempt/f"worker-{worker}.json", raw)
+        sources.append(write(attempt/f"worker-{worker}-invocation.json",
+                             dict(stdout=content, process_started_ns=spawn, process_exited_ns=spawn+98_000)))
+    item = rebuild_stage(root, stage, lineage, job, attempt.name, sources)
+    return stage, item, lineage, job
 
 
 class FrozenDeploymentTests(unittest.TestCase):
@@ -61,28 +82,39 @@ class FrozenDeploymentTests(unittest.TestCase):
                 approval(root, plan | {"engineering":True}, plan_pin, permit(body), device)
 
     def test_independent_audit_rejects_substituted_weights_observation_and_clocks(self):
-        for scope in (COLD, WARM):
-            record, lineage, job = accepted(scope)
-            self.assertEqual(audit_stage(record, lineage, job), ("e"*64, "d"*64))
-            for label, values, error in (
-                ("checkpoint", {"checkpoint":"f"*64}, "checkpoint or observation"),
-                ("observation", {"observation":"f"*64}, "checkpoint or observation"),
-                ("scope", {"scope":"resident_forward"}, "timing boundary"),
-                ("read", {"observation_reads":0}, "timing boundary"),
-                ("NaN", {"unattributed_ms":float("nan")}, "timing boundary"),
-                ("impossible deadline", {"process_exit_ms":1}, "Stage wall clock"),
-            ):
-                changed = deepcopy(record)
-                changed["samples"][0].update(values)
-                with self.subTest(scope=scope,label=label), self.assertRaisesRegex(ValueError, error):
-                    audit_stage(changed, lineage, job)
+        for fields, error in (({"checkpoint":"f"*64}, "checkpoint or observation"),
+                              ({"observation":"f"*64}, "checkpoint or observation"),
+                              ({"observation_reads":0}, "timing boundary"),
+                              ({"first_prediction_ns":17000}, "host materialization"),
+                              ({"role":"warmup"}, "sequence, role")):
+            with self.subTest(fields=fields), TemporaryDirectory() as tmp, self.assertRaisesRegex(ValueError, error):
+                fixture(Path(tmp), COLD, lambda raw, _: raw["requests"][0].update(fields))
 
     def test_cold_and_warm_process_counts_and_repeat_budgets_are_frozen(self):
-        record, lineage, job = accepted(COLD)
-        record["samples"][-1]["pid"] = record["samples"][0]["pid"]
-        with self.assertRaisesRegex(ValueError, "fresh processes"):
-            audit_stage(record, lineage, job)
-        record, lineage, job = accepted(WARM)
-        record["samples"].pop()
-        with self.assertRaisesRegex(ValueError, "repetition count"):
-            audit_stage(record, lineage, job)
+        with TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "process was reused"):
+                fixture(Path(tmp), COLD, lambda raw, _: raw.update(pid=1))
+            with self.assertRaisesRegex(ValueError, "repetition count"):
+                fixture(Path(tmp), WARM, lambda raw, _: raw["requests"].pop())
+
+    def test_six_copied_rows_fail_even_with_recomputed_percentiles(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            stage, record, lineage, job = fixture(root, WARM)
+            self.assertEqual(audit_stage(root, stage, record, lineage, job), ("e"*64, "d"*64))
+            self.assertEqual([row["sequence"] for row in record["samples"]], list(range(2,8)))
+            altered = deepcopy(record)
+            altered["samples"] = [altered["samples"][0]]*6
+            altered["summary"] = stagesummary(altered["samples"], WARM)
+            with self.assertRaisesRegex(ValueError, "pinned original worker requests"):
+                audit_stage(root, stage, altered, lineage, job)
+
+    def test_rehashed_worker_rejects_wrong_scope_device_or_timing(self):
+        for target, fields, error in (
+            ("binding", {"scope":COLD}, "attempt, scope or device"),
+            ("binding", {"device":"GPU-2cbff259-d7db-32cf-b267-8f296e34b1d5"}, "attempt, scope or device"),
+            ("environment", {"scope":"resident_forward"}, "timing boundary"),
+            ("timing", {"start":"resident_forward"}, "timing boundary"),
+        ):
+            with self.subTest(fields=fields), TemporaryDirectory() as tmp, self.assertRaisesRegex(ValueError, error):
+                fixture(Path(tmp), WARM, lambda raw, _: raw[target].update(fields))

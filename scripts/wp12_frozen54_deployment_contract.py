@@ -6,8 +6,8 @@ from pathlib import Path
 import re
 
 
-PLAN = "wp12_frozen54_end_to_end_plan_v1"
-APPROVAL = "wp12_frozen54_end_to_end_approval_v1"
+PLAN = "wp12_frozen54_end_to_end_plan_v2"
+APPROVAL = "wp12_frozen54_end_to_end_approval_v2"
 COLD, WARM = "cold_process_first_prediction", "warm_end_to_end"
 COUNT = {COLD: 3, WARM: 6}
 WARMUPS = {COLD: 0, WARM: 2}
@@ -16,6 +16,20 @@ PHASES = ("observation_read_and_verify", "observation_decode", "input_and_graph_
           "synchronized_forward", "three_head_host_decisions")
 SETUP = ("weights_and_sidecar_cpu_load", "model_transfer")
 GPU = re.compile(r"GPU-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}")
+EXCLUDED = ["coordinator_admission_and_lock_wait", "upstream_raw_observation_preparation",
+            "construction_of_sealed_Q_A", "post_prediction_validation_and_persistence"]
+TIMING = {
+    COLD: dict(scope=COLD, start="coordinator_before_worker_spawn", stop="synchronized_three_head_host_materialization",
+               excluded=EXCLUDED),
+    WARM: dict(scope=WARM, start="before_observation_read_with_model_resident",
+               stop="synchronized_three_head_host_materialization",
+               excluded=[*EXCLUDED, "worker_startup_and_model_loading", "warmup_requests"]),
+}
+
+
+def worker_binding(plan_sha, case, scope, device, attempt, invocation):
+    return dict(plan_sha256=plan_sha, case=case, scope=scope, device=device,
+                attempt=attempt, invocation=invocation)
 
 
 def digest_text(value):

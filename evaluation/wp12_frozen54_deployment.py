@@ -2,7 +2,6 @@
 
 from contextlib import nullcontext
 import json
-import math
 import os
 from pathlib import Path
 import subprocess
@@ -18,7 +17,7 @@ from research_runtime import code_snapshot, hash_file, require_frozen_code
 from scripts.measure_wp12_historical_cost import preserved_runtime
 from scripts.run_frozen_band_region import _write, pin
 from scripts.wp12_frozen54_deployment_contract import (
-    APPROVAL, COLD, WARM, COUNT, WARMUPS, TIMEOUT, PHASES, SETUP, PLAN, GPU, approval, read,
+    APPROVAL, COLD, WARM, COUNT, WARMUPS, TIMEOUT, PHASES, SETUP, PLAN, TIMING, approval, read, worker_binding,
 )
 from transfer.native_coverage_queue import case_lock
 from transfer.shared_gpu_lease import lease_path
@@ -87,12 +86,19 @@ def launch(root, worker, operation, *, gpu="cpu", lease=None, attempt=None, labe
         if attempt is not None:
             (attempt / f"{label}.log").write_text(str(error))
         raise
-    elapsed = (perf_counter_ns()-start)/1e6
+    stop = perf_counter_ns()
     if attempt is not None:
         (attempt / f"{label}.log").write_text(process.stderr + process.stdout)
     if process.returncode:
         raise RuntimeError(f"Frozen deployment worker failed ({process.returncode}): {process.stderr[-1600:]}")
-    return json.loads(process.stdout.strip().splitlines()[-1]), start, elapsed
+    output = process.stdout.splitlines(keepends=True)[-1]
+    if attempt is None:
+        return json.loads(output)
+    payload = attempt/f"{label}.json"
+    with payload.open("x", encoding="utf-8", newline="") as stream:
+        stream.write(output)
+    return _write(attempt/f"{label}-invocation.json",
+                  dict(stdout=pin(payload), process_started_ns=start, process_exited_ns=stop))
 
 
 def prepare(root, out, code, worker, execution, engineering):
@@ -105,7 +111,7 @@ def prepare(root, out, code, worker, execution, engineering):
     fixture = None
     if engineering:
         out.mkdir()
-        fixture, _, _ = launch(root, worker, ["fixture", "--out", str(out/"fixture")])
+        fixture = launch(root, worker, ["fixture", "--out", str(out/"fixture")])
     plan = draft(root, code, worker, execution, fixture=fixture)
     require_frozen_code(code)
     if not engineering:
@@ -149,94 +155,143 @@ def header(code, worker, execution, cases, freeze, identity):
     """Compare a real plan to the independently rebuilt immutable registration."""
     return dict(schema=PLAN, producer=code["commit"], engineering=freeze is None, boundary=BOUNDARY,
                 execution=str(execution), worker=str(worker), worker_commit=LEGACY,
-                adapter_sha256=hash_file(ADAPTER), runtime=identity, freeze=freeze, cases=cases,
+                adapter_sha256=hash_file(ADAPTER), runtime=identity, freeze=freeze, cases=cases, timing=TIMING,
                 repetitions=COUNT, warmups=WARMUPS, timeout_per_process_seconds=TIMEOUT,
                 paired_execution="single_physical_device_serial_whole_campaign")
 
 
-def stagesummary(samples):
+def stagesummary(samples, scope):
     return dict(wall=timing_summary([s["wall_ms"] for s in samples], repeats=len(samples), blocks=1),
                 by_phase={key: timing_summary([s["phases"][key]["wall_ms"] for s in samples],
                                                  repeats=len(samples), blocks=1) for key in PHASES},
                 model_setup_by_phase={key: timing_summary([s["setup"][key]["wall_ms"] for s in samples],
                                                  repeats=len(samples), blocks=1) for key in SETUP}
-                       if len({s["pid"] for s in samples}) == len(samples) else None,
+                       if scope == COLD else None,
                 host_process_peak_rss_kib=max(s["rss_kib"] for s in samples),
                 peak_allocated_cuda_bytes=max((s["cuda_peak_bytes"] for s in samples
                                                if s["cuda_peak_bytes"] is not None), default=None),
                 graph_construction_ms=None, measured_skips=None)
 
 
-def bound_time(value):
-    return type(value) in (int, float) and math.isfinite(value) and value >= 0
+def elapsed(start, stop):
+    need(type(start) is int and type(stop) is int and 0 <= start < stop, "Invalid monotonic clock interval")
+    return (stop-start)/1e6
 
 
-def audit_stage(record, lineage, job):
-    scope, device = lineage["scope"], lineage["device"]
-    samples = record["samples"]
-    environment = record["environment"]
-    need(record["lineage"] == lineage and len(samples) == COUNT[scope]
-         and record["warmups"] == WARMUPS[scope] and record["batch"] == 1
-         and record["optimizer_updates"] == 0 and record["query_accessed"] is False
-         and environment["arithmetic"] == "ordered" and environment["threads"] == 1
-         and (environment["device"] == "cpu" if device == "cpu" else
+def phase_end(phases, names, previous, deadline, device):
+    need(set(phases) == set(names), "Worker timing phases differ")
+    for name in names:
+        item = phases[name]
+        start, stop, peak = item["start_ns"], item["finish_ns"], item["cuda_peak_bytes"]
+        need(elapsed(start, stop) == item["wall_ms"] and previous <= start < stop <= deadline
+             and (peak is None if device == "cpu" else type(peak) is int and peak >= 0),
+             "Worker phase clock or device peak differs")
+        previous = stop
+    return previous
+
+
+def worker_rows(raw, binding, spawned, exited, job):
+    scope, device = binding["scope"], binding["device"]
+    environment = raw["environment"]
+    need(raw["binding"] == binding and type(raw["pid"]) is int and raw["pid"] > 0
+         and raw["optimizer_updates"] == 0 and raw["query_accessed"] is False,
+         "Worker plan, attempt, scope or device binding differs")
+    need(raw["timing"] == TIMING[scope] and not {"scope","excluded"}.intersection(environment),
+         "Cold or warm timing boundary differs from the plan")
+    need(environment["arithmetic"] == "ordered" and environment["threads"] == 1
+         and (environment["device"] == "cpu" and "gpu" not in environment if device == "cpu" else
               environment["device"] == "cuda" and environment["gpu"]["uuid"] == device),
-         "Stage scope, device or repetition count differs")
-    need(len({s["pid"] for s in samples}) == (COUNT[COLD] if scope == COLD else 1),
-         "Cold fresh processes or warm resident-model scope differs")
+         "Worker hardware or arithmetic differs")
+    warmups = WARMUPS[scope]
+    timed = 1 if scope == COLD else COUNT[WARM]
+    need(len(raw["requests"]) == warmups+timed, "Worker warmup or measured repetition count differs")
+    lifetime = elapsed(spawned, exited)
+    previous = phase_end(raw["setup"], SETUP, spawned, exited, device)
     expected = (job["checkpoint"]["sha256"], job["workload"]["file"]["sha256"],
                 job["workload"]["tensor_sha256"], job["workload"]["work_items"])
-    for sample in samples:
+    outputs, samples = set(), []
+    for i, sample in enumerate(raw["requests"]):
+        role = "warmup" if i < warmups else "measured"
+        start, stop = sample["request_started_ns"], sample["first_prediction_ns"]
+        request = elapsed(start, stop)
+        need(type(sample["sequence"]) is int and sample["sequence"] == i and sample["role"] == role
+             and previous <= start < stop <= exited, "Worker request sequence, role or interval overlaps")
+        need(phase_end(sample["phases"], PHASES, start, stop, device) == stop,
+             "Request did not stop at synchronized host materialization")
         need(tuple(sample[k] for k in ("checkpoint","observation","workload","pixels")) == expected,
              "Measured checkpoint or observation differs")
-        need(sample["scope"] == scope and sample["device"] == device and sample["batch"] == 1
-             and sample["observation_reads"] == 1 and sample["graph_builds"] == 0 and sample["skip_count"] is None
-             and set(sample["phases"]) == set(PHASES) and set(sample["setup"]) == set(SETUP)
-             and all(bound_time(sample[k]) for k in ("wall_ms","request_ms","process_exit_ms","unattributed_ms"))
-             and (device == "cpu") == (sample["cuda_peak_bytes"] is None),
+        need(sample["batch"] == sample["observation_reads"] == 1 and sample["graph_builds"] == 0
+             and sample["skip_count"] is None and type(sample["rss_kib"]) is int and sample["rss_kib"] > 0,
              "Measurement operations do not match the registered timing boundary")
-        phase = list(sample["phases"].values()) + (list(sample["setup"].values()) if scope == COLD else [])
-        need(all(bound_time(x["wall_ms"]) and ((device == "cpu" and x["cuda_peak_bytes"] is None)
-                      or (device != "cpu" and type(x["cuda_peak_bytes"]) is int and x["cuda_peak_bytes"] >= 0)) for x in phase)
-             and math.isclose(sum(x["wall_ms"] for x in phase) + sample["unattributed_ms"], sample["wall_ms"])
-             and sample["process_exit_ms"] >= sample["wall_ms"] >= sample["request_ms"] > 0
-             and (scope == COLD or sample["wall_ms"] == sample["request_ms"])
-             and sample["cuda_peak_bytes"] == max((x["cuda_peak_bytes"] for x in phase
-                                                  if x["cuda_peak_bytes"] is not None), default=None),
-             "Stage wall clock, component times or peak memory differ")
-    need(len({s["prediction"] for s in samples}) == len({s["probability_state"] for s in samples}) == 1
-         and (job["legacy_output"] is None or samples[0]["probability_state"] == job["legacy_output"])
-         and record["summary"] == stagesummary(samples),
-         "Prediction lineage or independently recomputed statistics differ")
-    return samples[0]["prediction"], samples[0]["probability_state"]
+        previous = stop
+        outputs.add((sample["prediction"], sample["probability_state"]))
+        if role == "measured":
+            wall_start = spawned if scope == COLD else start
+            phases = [sample["phases"][k] for k in PHASES]
+            if scope == COLD:
+                phases += [raw["setup"][k] for k in SETUP]
+            remainder_ns = stop-wall_start-sum(p["finish_ns"]-p["start_ns"] for p in phases)
+            samples.append(dict(**sample, wall_ms=elapsed(wall_start, stop), request_ms=request,
+                                process_started_ns=spawned, process_exited_ns=exited, process_exit_ms=lifetime,
+                                pid=raw["pid"], setup=raw["setup"], scope=scope, device=device,
+                                invocation=binding["invocation"], unattributed_ms=remainder_ns/1e6,
+                                cuda_peak_bytes=max((p["cuda_peak_bytes"] for p in phases
+                                                    if p["cuda_peak_bytes"] is not None), default=None)))
+    need(len(outputs) == 1 and (job["legacy_output"] is None
+                               or next(iter(outputs))[1] == job["legacy_output"]),
+         "Worker prediction lineage differs from the ordered workload")
+    return samples
 
 
-def capture(root, worker, plan_pin, permit, lineage, attempt, lease):
+def rebuild_stage(root, stage, lineage, job, attempt, invocations):
+    scope, device = lineage["scope"], lineage["device"]
+    count = COUNT[COLD] if scope == COLD else 1
+    need(isinstance(attempt, str) and Path(attempt).name == attempt and attempt.startswith("attempt-")
+         and len(invocations) == count, "Missing or foreign worker attempt")
+    directory = stage/attempt
+    samples, environments, pids = [], [], set()
+    previous_exit = 0
+    for i, link in enumerate(invocations):
+        need(link["path"] == str(directory/f"worker-{i}-invocation.json"), "Foreign worker invocation path")
+        envelope = json.loads(read(root, link))
+        content = envelope["stdout"]
+        need(content["path"] == str(directory/f"worker-{i}.json"), "Foreign worker stdout path")
+        raw = json.loads(read(root, content))
+        spawned, exited = envelope["process_started_ns"], envelope["process_exited_ns"]
+        need(previous_exit <= spawned and raw["pid"] not in pids, "Cold worker process was reused or overlapped")
+        binding = worker_binding(lineage["plan"]["sha256"], lineage["case"], scope, device, attempt, i)
+        samples.extend(worker_rows(raw, binding, spawned, exited, job))
+        environments.append(raw["environment"])
+        previous_exit = exited
+        pids.add(raw["pid"])
+    need(all(v == environments[0] for v in environments)
+         and len({(s["prediction"],s["probability_state"]) for s in samples}) == 1,
+         "Worker environment or ordered outputs changed across subprocesses")
+    return dict(lineage=lineage, attempt=attempt, invocations=invocations, samples=samples,
+                warmups=WARMUPS[scope], batch=1, timing=TIMING[scope], environment=environments[0],
+                query_accessed=False, optimizer_updates=0, summary=stagesummary(samples, scope))
+
+
+def audit_stage(root, stage, record, lineage, job):
+    need(record["lineage"] == lineage and record["timing"] == TIMING[lineage["scope"]],
+         "Accepted scope or timing boundary differs from the plan")
+    expected = rebuild_stage(root, stage, lineage, job, record["attempt"], record["invocations"])
+    need(record == expected, "Accepted rows or summary differ from pinned original worker requests")
+    sample = expected["samples"][0]
+    return sample["prediction"], sample["probability_state"]
+
+
+def capture(root, worker, plan_pin, permit, lineage, job, attempt, lease):
     scope, device = lineage["scope"], lineage["device"]
     args = ["measure", "--plan", plan_pin["path"], "--plan-sha", plan_pin["sha256"],
-            "--case", lineage["case"], "--scope", scope, "--device", device]
+            "--case", lineage["case"], "--scope", scope, "--device", device, "--attempt", attempt.name]
     if permit is not None:
         args += ["--approval", permit["path"], permit["sha256"]]
     if lease is not None:
         args += ["--lease", str(lease.fileno()), "--lease-path", str(lease_path(device))]
-    samples, environments = [], []
-    for i in range(COUNT[COLD] if scope == COLD else 1):
-        result, start, spent = launch(root, worker, args, gpu=device, lease=lease, attempt=attempt, label=f"worker-{i}")
-        need(result["scope"] == scope and result["device"] == device and result["optimizer_updates"] == 0
-             and result["query_accessed"] is False, "Worker escapes the approved scope")
-        environments.append(result["environment"])
-        for sample in result["samples"]:
-            wall = (sample.pop("first_prediction_ns")-start)/1e6 if scope == COLD else sample["request_ms"]
-            phases = list(sample["phases"].values()) + (list(result["setup"].values()) if scope == COLD else [])
-            samples.append(dict(**sample, wall_ms=wall, process_exit_ms=spent, pid=result["pid"],
-                                setup=result["setup"], scope=scope, device=device,
-                                unattributed_ms=wall-sum(x["wall_ms"] for x in phases),
-                                cuda_peak_bytes=max((x["cuda_peak_bytes"] for x in phases if x["cuda_peak_bytes"] is not None),
-                                                    default=None)))
-    need(all(v == environments[0] for v in environments), "Cold worker environment changed")
-    return dict(lineage=lineage, samples=samples, warmups=WARMUPS[scope], batch=1,
-                environment=environments[0], query_accessed=False, optimizer_updates=0,
-                summary=stagesummary(samples))
+    invocations = [launch(root, worker, [*args, "--invocation", str(i)], gpu=device, lease=lease,
+                          attempt=attempt, label=f"worker-{i}") for i in range(COUNT[COLD] if scope == COLD else 1)]
+    return rebuild_stage(root, attempt.parent, lineage, job, attempt.name, invocations)
 
 
 def campaign(root, out, code, sha, permit, device, *, limit=None, report=None):
@@ -271,8 +326,7 @@ def campaign(root, out, code, sha, permit, device, *, limit=None, report=None):
                     attempt = Path(mkdtemp(prefix="attempt-", dir=stage))
                     try:
                         with (nullcontext() if device == "cpu" else gpu_measurement_lease(device)) as fd:
-                            value = capture(root, worker, ref, permit, lineage, attempt, fd)
-                        audit_stage(value, lineage, job)
+                            value = capture(root, worker, ref, permit, lineage, job, attempt, fd)
                         require_frozen_code(code)
                         _write(accepted, value)
                     except Exception as error:
@@ -281,9 +335,9 @@ def campaign(root, out, code, sha, permit, device, *, limit=None, report=None):
                     completed += 1
                 proof = pin(accepted)
                 value = document(root, proof)
-                outputs.append(audit_stage(value, lineage, job))
+                outputs.append(audit_stage(root, stage, value, lineage, job))
                 environments.append(value["environment"])
-                record["scopes"][scope] = dict(receipt=proof, statistics=value["summary"])
+                record["scopes"][scope] = dict(receipt=proof, timing=value["timing"], statistics=value["summary"])
             need(outputs[0] == outputs[1] and environments[0] == environments[1],
                  "Cold and warm used different environments or returned different ordered outputs")
         require_frozen_code(code)
