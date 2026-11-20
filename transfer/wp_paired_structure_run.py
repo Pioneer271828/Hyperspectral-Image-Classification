@@ -76,7 +76,8 @@ def execute(root, out, code, group, arm, execution, *, test, until=None, referen
     until = budget if until is None else until
     require(type(until) is int and 0 < until <= budget and (execution.numeric["physical_uuid"] or "cpu")==expected["device"],
             "Drain cursor or physical assignment differs")
-    require(not reference or test and expected["purpose"]=="recovery" and until==budget,
+    require(not reference or test and expected["purpose"]=="recovery" and until==budget
+            and arm in expected.get("recovery_arms", [arm]),
             "Only an engineering recovery arm may run a continuous reference")
     place = arm_dir(out,group,arm,reference=reference)
     place.parent.mkdir(parents=True,exist_ok=True)
@@ -125,6 +126,23 @@ def execute(root, out, code, group, arm, execution, *, test, until=None, referen
         if cursor==budget:
             return dict(status="complete",updates=cursor-first,receipt=receipt(root,place,group,arm,link,spec,rows))
         return dict(status="drained",updates=cursor-first,cursor=cursor,signal=drain["requested"],checkpoint=rows[-1]["pin"])
+
+
+def group(root,out,code,name,execution,*,test):
+    plan,link = open_plan(root,out,code,test=test)
+    require(name in plan["groups"], "Unknown registered physical group")
+    group_spec = plan["groups"][name]
+    require((execution.numeric["physical_uuid"] or "cpu")==group_spec["device"], "Physical assignment differs")
+    arms = {}
+    for arm in group_spec["arms"]:
+        if (arm_dir(out,name,arm)/"receipt.json").exists():
+            record = completed(root,out,name,arm,link,group_spec)[0]
+            arms[arm] = dict(status="complete",updates=0,receipt=record)
+        else:
+            arms[arm] = execute(root,out,code,name,arm,execution,test=test)
+        if arms[arm]["status"]=="drained":
+            return dict(status="drained",arms=arms,updates=sum(r["updates"] for r in arms.values()))
+    return dict(status="complete",arms=arms,updates=sum(r["updates"] for r in arms.values()))
 
 
 def completed(root,out,group,arm,plan_pin,g,*,reference=False):

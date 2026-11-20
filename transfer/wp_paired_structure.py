@@ -40,7 +40,7 @@ def named(key):
 
 def validate_group(group, releases, *, test):
     fields = {"release","seed","factor","steps","clock","arms","pairs","device","purpose"}
-    require(set(group)==fields and group["release"] in releases and type(group["seed"]) is int
+    require(fields<=group.keys()<=fields|{"recovery_arms"} and group["release"] in releases and type(group["seed"]) is int
             and 0<=group["seed"]<2**32 and type(group["factor"]) is int and group["factor"] in (1,2,4)
             and type(group["steps"]) is int and 1<=group["steps"]<=9999
             and group["purpose"] in (("science","recovery") if test else ("science",))
@@ -53,6 +53,11 @@ def validate_group(group, releases, *, test):
     arms,pairs = group["arms"],group["pairs"]
     require(isinstance(arms,dict) and len(arms)>=2 and all(named(k) and isinstance(v,dict)
             and v.get("backend") in backend.TRAIN_BACKENDS for k,v in arms.items()), "Unknown paired model inventory")
+    if "recovery_arms" in group:
+        references = group["recovery_arms"]
+        require(test and group["purpose"]=="recovery" and isinstance(references,list) and references
+                and all(isinstance(arm,str) and arm in arms for arm in references)
+                and references==sorted(set(references)), "Explicit engineering continuous reference roster required")
     require(isinstance(pairs,list) and len(pairs)>0 and all(
         isinstance(p,dict) and set(p)=={"baseline","candidate","comparison"}
         and p["baseline"]!=p["candidate"] and p["comparison"] in MATCHES

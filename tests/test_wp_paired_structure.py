@@ -11,6 +11,7 @@ from evaluation.wp12_cross_backend_history import archive_alias_rosters
 from model.research_config import digest
 from scripts.run_frozen_band_region import _write
 from scripts.run_native_released_points import arithmetic
+from scripts import run_wp_paired_structure as queue_cli
 from transfer import wp_paired_structure as structure, wp_paired_structure_fixture as fixture, wp_paired_structure_run as run
 from transfer.xuzhou_multiscale_audit import _exact
 
@@ -82,6 +83,33 @@ class PairedStructureTests(unittest.TestCase):
             b = run.completed(self.root,self.campaign,group,arm,link,profile,reference=True)
             self.assertTrue(_exact(a[3],b[3]))
             self.assertGreater(a[1]["groups"]["messages"]["updated"],0)
+
+    def test_queue_skips_checked_terminal_groups_and_drains_only_its_device_lane(self):
+        a, b = "GPU-first", "GPU-other"
+        groups = {name: dict(device=device, arms={"one": {}, "two": {}})
+                  for name, device in (("complete", a), ("interrupted", a), ("pending", a), ("other", b))}
+        for arm in groups["complete"]["arms"]:
+            place = run.arm_dir(self.campaign, "complete", arm)
+            place.mkdir(parents=True)
+            (place / "receipt.json").touch()
+        called = {}
+
+        def spawn(repo, python, script, args, log, gpu):
+            name = args[args.index("--group") + 1]
+            called[name] = gpu
+            status = "drained" if name == "interrupted" else "complete"
+            return dict(status=status, arms={"one": {"status": status}}, updates=3)
+
+        with patch.object(structure, "open_plan", return_value=({"groups": groups}, "registered")), (
+            patch.object(queue_cli, "invoke", side_effect=spawn)
+        ), patch.object(run, "completed", return_value=("checked",)) as completed:
+            report = queue_cli.queue(self.root, self.campaign, self.code, test=True, workers=2)
+        self.assertEqual(called, {"interrupted": a, "other": b})
+        self.assertEqual(completed.call_count, 2)
+        self.assertEqual((report["status"], report["updates"]), ("drained", 6))
+        self.assertEqual(report["skipped"], ["complete"])
+        self.assertEqual(report["remaining"], ["interrupted", "pending"])
+        self.assertEqual(report["groups"]["complete"]["one"]["updates"], 0)
 
     def test_mismatched_budget_approval_and_missing_roles_refused(self):
         body = json_pin(self.root,self.input["approval"])

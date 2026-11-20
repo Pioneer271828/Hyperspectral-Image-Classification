@@ -10,9 +10,10 @@ from evaluation.frozen_training_stages import file_pin, json_pin, require
 from model.research_config import digest
 from research_runtime import require_frozen_code
 from scripts.run_frozen_band_region import _write
-from transfer import native_independent_release as independent, wp_cross_backend as model_io
+from transfer import native_independent_release as independent, native_long_run as journal
+from transfer import wp_cross_backend as model_io
 from transfer.wp_paired_structure import StructuralProvider, open_plan
-from transfer.wp_paired_structure_run import PUBLICATION, completed
+from transfer.wp_paired_structure_run import PUBLICATION, arm_dir, completed
 from transfer.xuzhou_multiscale_audit import _exact
 
 SCHEMA = "wp12_paired_structure_acceptance_v1"
@@ -92,11 +93,25 @@ def review(root,campaign,out,code,captures,execution,*,test):
                                                           execution,test=test)
             reference_arm = {"xz-recovery":"combined","xz-column-recovery":"combined",
                              "region-recovery":"spectral_bounded","causal-recovery":"evolving","coverage-recovery":"continuous"}.get(name)
-            if test and arm==reference_arm:
+            references = group.get("recovery_arms", [reference_arm])
+            if test and arm in references:
                 other = completed(root,campaign,name,arm,reg,group,reference=True)
-                require(_exact(packet,other[3]) and len(record["timings"])>0,"Full state differed after process recovery")
-                recovery[f"{name}/{arm}"] = dict(reference=other[0],recovered=link,
-                                                exact=["model","adam","rng","history","first_minimum","selected_state"])
+                require(_exact(packet,other[3]) and len(record["timings"])>0,
+                        f"Full state differed after process recovery: {name}/{arm}")
+                check = dict(reference=other[0],recovered=link,
+                             exact=["model","adam","rng","history","first_minimum","selected_state"])
+                if "recovery_arms" in group:
+                    segments = journal.checkpoints(root,arm_dir(campaign,name,arm),digest(spec),
+                                                    steps=group["steps"],read_all=True)
+                    require(len(segments)>=3 and any(row["reason"]=="SIGTERM" and 0<row["step"]<group["steps"]
+                                                    for row in segments), "Expected an actual interrupted worker")
+                    check.update(physical_uuid=spec["numeric"]["physical_uuid"],exposure=record["class_exposure"],
+                                 optimizer_clock=packet["cursor"],calibration_clock=spec["events"],
+                                 segments=[{key:row[key] for key in ("start","step","updates","reason")}
+                                           for row in segments],
+                                 reference_heads=observed_parity(root,campaign,plan,code,name,arm,spec,other[3],
+                                                               frozen_raw,execution,test=test))
+                recovery[f"{name}/{arm}"] = check
             if test:
                 require(record["weights_changed"]>0,"Engineering optimization did not change any registered weights")
             proofs[arm] = record

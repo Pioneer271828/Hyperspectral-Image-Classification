@@ -18,7 +18,7 @@ from research_runtime import code_snapshot, external_directory, require_frozen_c
 from scripts.run_native_long_coverage import invoke
 from scripts.run_native_released_points import arithmetic
 from transfer import wp_paired_structure as structure, wp_paired_structure_run as run
-from transfer.p4_runtime_device import UUID
+from transfer.p4_runtime_device import UUID, lease
 
 
 def pin(value):
@@ -27,28 +27,42 @@ def pin(value):
 
 
 def queue(root,out,code,*,test,workers):
-    plan,_ = structure.open_plan(root,out,code,test=test)
-    jobs = defaultdict(list)
-    for name,group in plan["groups"].items():
-        jobs[group["device"] if group["device"]!="cpu" else "cpu/"+name].append(name)
+    plan,registration = structure.open_plan(root,out,code,test=test)
     logs = out/"commands"
     logs.mkdir(exist_ok=True)
+    with lease(logs/".queue.lock"):
+        jobs, skipped = defaultdict(list), {}
+        for name,group in plan["groups"].items():
+            if all((run.arm_dir(out,name,arm)/"receipt.json").exists() for arm in group["arms"]):
+                skipped[name] = {arm:dict(status="complete",updates=0,
+                    receipt=run.completed(root,out,name,arm,registration,group)[0]) for arm in group["arms"]}
+            else:
+                key = group["device"] if group["device"]!="cpu" else "cpu/"+name
+                jobs[key].append(name)
 
-    def train(task):
-        device, groups = task
-        gpu = None if device.startswith("cpu/") else device
-        receipts = {}
-        for name in groups:
-            result = invoke(ROOT,sys.executable,"scripts/run_wp_paired_structure.py",
-                ["group","--runs",root,"--campaign",out,"--expected-commit",code["commit"],
-                 "--group",name,*(["--synthetic"] if test else [])],logs/name,gpu)
-            require(result["status"]=="complete","A paired group is not ready for publication; continue its durable path")
-            receipts[name] = result["arms"]
-        return receipts
+        def train(task):
+            device,groups = task
+            gpu = None if device.startswith("cpu/") else device
+            progress = {}
+            for name in groups:
+                result = invoke(ROOT,sys.executable,"scripts/run_wp_paired_structure.py",
+                    ["group","--runs",root,"--campaign",out,"--expected-commit",code["commit"],
+                     "--group",name,*(["--synthetic"] if test else [])],logs/name,gpu)
+                require(result["status"] in ("complete","drained"), "Unknown queue worker outcome")
+                progress[name] = result
+                if result["status"]=="drained":
+                    break
+            return progress
 
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        parts = list(pool.map(train,jobs.items()))
-    return dict(status="complete",groups={k:v for part in parts for k,v in part.items()})
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            parts = list(pool.map(train,jobs.items()))
+        ran = {name:result for part in parts for name,result in part.items()}
+        remaining = [name for name in plan["groups"] if name not in skipped
+                     and (name not in ran or ran[name]["status"]=="drained")]
+        return dict(status="drained" if remaining else "complete",
+                    groups={**skipped,**{name:result["arms"] for name,result in ran.items()}},
+                    skipped=list(skipped), launched=list(ran), remaining=remaining,
+                    updates=sum(result["updates"] for result in ran.values()))
 
 
 def marker(root,out,code,*,test):
@@ -78,6 +92,7 @@ def main(argv=None):
     suite.add_argument("--regional",action="store_true")
     suite.add_argument("--causal",action="store_true")
     suite.add_argument("--coverage",action="store_true")
+    suite.add_argument("--coverage-recovery",action="store_true")
     p.add_argument("--devices",nargs="+",default=[])
     p.add_argument("--gpu")
     p.add_argument("--group")
@@ -95,7 +110,7 @@ def main(argv=None):
     require(code["commit"]==a.expected_commit and root in campaign.parents
             and (out is None or root in out.parents),"Use the exact clean checkout and authorized output root")
     require_frozen_code(code)
-    require(1<=a.workers<=8 and (a.action=="fixture" or not (a.qualification or a.scientific or a.regional or a.causal or a.coverage or a.devices))
+    require(1<=a.workers<=8 and (a.action=="fixture" or not (a.qualification or a.scientific or a.regional or a.causal or a.coverage or a.coverage_recovery or a.devices))
             and (a.action in ("arm","group","capture") or a.gpu is None),"Unexpected execution or device flags")
     torch.set_num_threads(1)
     if a.action=="fixture":
@@ -109,8 +124,8 @@ def main(argv=None):
             from transfer.wp_causal_graph_fixture import generate as generate_causal
 
             value = generate_causal(out,campaign,code,a.devices)
-        elif a.coverage:
-            value = generate_coverage(out,campaign,code,a.devices)
+        elif a.coverage or a.coverage_recovery:
+            value = generate_coverage(out,campaign,code,a.devices,recovery_matrix=a.coverage_recovery)
         elif a.regional:
             value = generate_regions(out,campaign,code,a.devices)
         elif a.scientific:
@@ -126,14 +141,7 @@ def main(argv=None):
             if a.action=="arm":
                 value = run.execute(root,campaign,code,a.group,a.arm,execution,test=a.synthetic,until=a.until,reference=a.reference)
             else:
-                plan,_ = structure.open_plan(root,campaign,code,test=a.synthetic)
-                require(a.group in plan["groups"], "Unknown registered physical group")
-                arms = {}
-                for arm in plan["groups"][a.group]["arms"]:
-                    arms[arm] = run.execute(root,campaign,code,a.group,arm,execution,test=a.synthetic)
-                    if arms[arm]["status"]!="complete":
-                        break
-                value = dict(status="complete" if all(r["status"]=="complete" for r in arms.values()) else "drained",arms=arms)
+                value = run.group(root,campaign,code,a.group,execution,test=a.synthetic)
     elif a.action=="queue":
         value = queue(root,campaign,code,test=a.synthetic,workers=a.workers)
     elif a.action=="freeze":

@@ -339,7 +339,7 @@ def generate_regions(out, campaign, code, devices):
 
 
 
-def generate_coverage(out, campaign, code, devices):
+def generate_coverage(out, campaign, code, devices, *, recovery_matrix=False):
     """Use the existing Bank and erased-signal fixture with separate observation roles."""
     from transfer import wp_coverage_release as coverage
 
@@ -349,6 +349,9 @@ def generate_coverage(out, campaign, code, devices):
     column_history,_,_ = bank_at(out/"column-history",scene,"h",None,columns=True)
     variants = {"physical-a":("a",512,False), "physical-draw":("a",2048,False),
                 "physical-layout":("b",512,False), "delivered-columns":("a",512,True)}
+    if recovery_matrix:
+        require(len(devices)<=2, "The coverage recovery matrix binds up to two devices")
+        variants = {key:variants[key] for key in ("physical-a","delivered-columns")}
     arms = {name:dict(backend=coverage.BACKEND,condition=name) for name in coverage.MODES}
     links = [pair("none","continuous"), *(pair(name,"continuous",equal=True)
               for name in ("anchor_only","binary","shuffled"))]
@@ -379,6 +382,21 @@ def generate_coverage(out, campaign, code, devices):
                                   "arms":{name:arms[name] for name in ("none","continuous")},"pairs":links[:1]}
     contrasts = {key:dict(baseline="physical-a",comparison=key,factor=factor) for key,factor in
                  (("physical-draw","support_seed"),("physical-layout","spatial_layout"))}
+    if recovery_matrix:
+        physical = groups["physical-a"]
+        column = groups["delivered-columns"]
+        column["device"] = devices[-1] if len(devices)==2 else "cpu"
+
+        def recovery(group,seed,references):
+            return {**group,"seed":seed,"purpose":"recovery","steps":36,"clock":[0,6,12,18,24,30,36],
+                    "arms":{name:arms[name] for name in ("none","continuous")},"pairs":links[:1],
+                    "recovery_arms":references}
+
+        groups = {"a-completed":physical,
+                  "b-physical-recovery":recovery(physical,512,["continuous","none"]),
+                  "c-column-recovery":recovery(column,2048,["continuous"]),
+                  "z-column-followup":column}
+        contrasts = {}
     data = dict(schema=SCHEMA,scope=SYNTHETIC,releases=releases,groups=groups,support_contrasts=contrasts)
     request = _write(out/"request.json",data)
     approval = _write(out/"engineering-only.json",expected_approval(data,request,campaign,code,test=True))
