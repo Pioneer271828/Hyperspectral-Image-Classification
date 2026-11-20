@@ -23,6 +23,8 @@ def main(argv=None):
         return paired_structure(["review",*(arg for arg in argv if arg!="--paired-structure-review")])
     if "--cross-backend-review" in argv:
         return cross_backend_review(argv)
+    if "--shared-edge-interaction-review" in argv:
+        return shared_edge_interaction_review(argv)
     if "--native-pathways-review" in argv:
         return native_pathways(argv)
     if "--real-attribution-review" in argv:
@@ -134,6 +136,39 @@ def cross_backend_review(argv):
         result = review_case(root, dict(path=args.capture[0], sha256=args.capture[1]), out, code,
                              test_history=[] if args.synthetic else None, reference=reference)
     print(json.dumps(result), flush=True)
+
+
+def shared_edge_interaction_review(argv):
+    from evaluation import wp12_shared_edge_interaction as shared
+    from evaluation.frozen_training_stages import require
+    from scripts.run_frozen_band_region import _write
+
+    parser = argparse.ArgumentParser(description="Recompute frozen same-mask band and edge contrasts")
+    parser.add_argument("--shared-edge-interaction-review", action="store_true", required=True)
+    parser.add_argument("--runs", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--cpu", action="append", nargs=3, required=True, metavar=("CASE", "PATH", "SHA256"))
+    parser.add_argument("--cuda", action="append", nargs=3, default=[], metavar=("CASE", "PATH", "SHA256"))
+    parser.add_argument("--capture-commit", help="Explicit reviewed frozen producer, if different from this checkout")
+    args = parser.parse_args(argv)
+    root, out = args.runs.resolve(strict=True), external_directory(args.out)
+    code = code_snapshot()
+    require(sys.platform == "linux" and root in out.parents and not out.exists()
+            and code["commit"] == args.expected_commit, "Expected a clean review checkout and fresh authorized result")
+    require_frozen_code(code)
+
+    def distinct_pins(items):
+        pins = {}
+        for case, path, sha in items:
+            require(case in shared.CASES and case not in pins, "Expected distinct registered focal cases")
+            pins[case] = dict(path=path, sha256=sha)
+        return pins
+
+    result = shared.review(root, distinct_pins(args.cpu), distinct_pins(args.cuda), code["commit"],
+                           args.capture_commit or code["commit"])
+    require_frozen_code(code)
+    print(json.dumps(_write(out, result)), flush=True)
 
 
 def native_pathways(argv):
@@ -331,6 +366,7 @@ def native_real(argv):
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--shared-edge-review", nargs=2, metavar=("PATH", "SHA256"))
     args = parser.parse_args(argv)
     code = code_snapshot()
     if sys.platform != "linux" or not __debug__ or code["dirty"] or code["commit"] != args.expected_commit:
@@ -338,7 +374,8 @@ def native_real(argv):
     root, out = external_directory(args.runs), external_directory(args.out)
     if not root.is_dir() or root not in out.parents:
         raise ValueError("Real evidence source and output must be in the authorized runs")
-    print(json.dumps(publish(root,out,code)),flush=True)
+    shared = dict(zip(("path", "sha256"), args.shared_edge_review, strict=True)) if args.shared_edge_review else None
+    print(json.dumps(publish(root, out, code, shared_edge=shared)), flush=True)
 
 
 if __name__ == "__main__":

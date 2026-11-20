@@ -95,9 +95,43 @@ def edge_campaign(root,out,code,args):
         print(f"accepted {args.case} {execution.device}",flush=True)
 
 
+def shared_edges(root, out, code, args):
+    from evaluation import wp12_shared_edge_interaction as experiment
+
+    require(args.producer is args.capture is None, "Use the original frozen localizations")
+    rule = experiment.registration(code["commit"])
+    path = out / "shared-edge-registration.json"
+    if args.action == "shared-edge-register":
+        require(args.case is args.gpu is args.interaction_reference is None and not out.exists(),
+                "The preregistration requires a fresh directory without inference")
+        out.mkdir(parents=True)
+        write_json(path, rule)
+        print(json.dumps(file_pin(path)), flush=True)
+        return
+    require(args.case in experiment.CASES and json_pin(root, file_pin(path)) == rule
+            and (args.gpu is None or args.gpu == os.environ.get("CUDA_VISIBLE_DEVICES"))
+            and bool(args.interaction_reference) == bool(args.gpu),
+            "Use the exact preregistration and a pinned CPU mask for GPU replay")
+    reference = None
+    if args.interaction_reference:
+        reference = json_pin(root, dict(zip(("path", "sha256"), args.interaction_reference, strict=True)))
+        experiment.checked_receipt(reference, code["commit"])
+    mode = "cuda" if args.gpu else "cpu"
+    destination = out / f"shared-edge-{mode}-{args.case}.json"
+    require(not destination.exists(), "Use a fresh receipt; retain the original shared-edge observations")
+    torch.set_num_threads(1)
+    with (gpu_scope(args.gpu) if args.gpu else nullcontext((None, None, None))) as (admission, numeric, _):
+        value = experiment.run(root, args.case, code["commit"], torch.device(mode), reference=reference)
+    value.update(admission=admission, numeric=numeric, reference=args.interaction_reference)
+    require_frozen_code(code)
+    write_json(destination, value)
+    print(json.dumps(file_pin(destination)), flush=True)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action",choices=("register","real","factorial","coverage","edge-register","edge-run","edge-confirm"))
+    parser.add_argument("action",choices=("register","real","factorial","coverage","edge-register","edge-run","edge-confirm",
+                                         "shared-edge-register","shared-edge-run"))
     parser.add_argument("--runs",type=Path,required=True)
     parser.add_argument("--out",type=Path,required=True)
     parser.add_argument("--expected-commit",required=True)
@@ -105,6 +139,7 @@ def main():
     parser.add_argument("--gpu")
     parser.add_argument("--producer")
     parser.add_argument("--capture",type=Path)
+    parser.add_argument("--interaction-reference",nargs=2,metavar=("PATH","SHA256"))
     args=parser.parse_args()
     root=args.runs.resolve(strict=True)
     out=external_directory(args.out)
@@ -112,6 +147,9 @@ def main():
     code=code_snapshot()
     require(code["commit"] == args.expected_commit, "Expected exact source commit")
     require_frozen_code(code)
+    if args.action in ("shared-edge-register", "shared-edge-run"):
+        return shared_edges(root, out, code, args)
+    require(args.interaction_reference is None, "Only the shared-edge replay accepts a fixed CPU mask")
     if args.action.startswith("edge-"):
         return edge_campaign(root,out,code,args)
     if args.action in ("factorial","coverage"):
