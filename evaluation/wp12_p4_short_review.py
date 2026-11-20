@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from evaluation import wp12_p4_migration as migration
-from evaluation.frozen_training_stages import pinned
+from evaluation.frozen_training_stages import json_pin, pinned
 from evaluation.wp12_cross_backend import FORMAL_FLOOR
 from evaluation.wp12_p4_progress import case_stages, observe_lock
 from evaluation.wp12_real_readiness import transition
@@ -28,7 +28,7 @@ CONTEXT = {
     "paviaU": ("wp07-paviau-real-results-20261118.TC3eXtC5/aggregate/results/comparison-audit.json",
                "728076ffe4751662cea2580e66c3b915d3fc5b30cecc1308ff1d761a3b8cc1bb"),
     "xuzhou": ("wp07-xuzhou-multiscale-real01/audit.json",
-               "29ed4f67bf08f13070c20fec21ecb77ff834a55778c5a090121737dcba0705a32"),
+               "29ed4f67bf08f13070c20fec21ecb77f834a55778c5a090121737dcba0705a32"),
     "honghu": ("wp05-coverage-real-summary01/overview.json",
                "50d51d93d8b42b45276d903be510322db578dbe988b92034ca432f83a333a22f9"),
 }
@@ -36,7 +36,7 @@ CONTEXT = {
 
 def scene_context(root):
     pins = {tag: dict(path=str(root / name), sha256=sha) for tag, (name, sha) in CONTEXT.items()}
-    pavia, xuzhou, honghu = (migration.read(pins[key],root) for key in ("paviaU","xuzhou","honghu"))
+    pavia, xuzhou, honghu = (json_pin(root,pins[key]) for key in ("paviaU","xuzhou","honghu"))
     require(pavia["status"] == xuzhou["status"] == "passed" and pavia["synthetic"] is False
             and pavia["query_accessed"] is pavia["raw_gt_loaded"] is False
             and xuzhou["raw_gt"] == xuzhou["query"] == xuzhou["independent_optimizer_updates"] == 0,
@@ -127,17 +127,51 @@ def accepted_scores(root, row, labels, audit):
     return best,nll
 
 
-def focus_readout(labels, probabilities, label):
+def nearest_other_labels(layout, truth):
+    """Only spatial neighbours among differently labelled points in the same released block."""
+    result = []
+    offset = 0
+    for tile,cells in layout:
+        n = len(cells)
+        labels = truth[offset:offset+n]
+        width = tile["box"][3] - tile["box"][2]
+        xy = np.stack(np.divmod(cells,width),axis=1)
+        delta = xy[:,None,:]-xy[None,:,:]
+        squared = (delta*delta).sum(2)
+        for i,label in enumerate(labels):
+            allowed = labels != label
+            if allowed.any():
+                nearest = int(squared[i][allowed].min())
+                tied = allowed & (squared[i] == nearest)
+                result.append((sorted(set(map(int,labels[tied]))),nearest))
+            else:
+                result.append(([],None))
+        offset += n
+    require(offset == len(truth), "Neighbour geometry and validation roles differ")
+    return result
+
+
+def focus_readout(labels, probabilities, label, neighbours=None):
     block = probabilities[labels == label].astype(np.float64)
     rivals = block.copy()
     rivals[:,label-1] = -np.inf
     best_other = rivals.argmax(1)
     predicted = block.argmax(1) + 1
     wrong = Counter(int(i) for i in predicted if i!=label)
-    return dict(n=len(block),correct=int((predicted==label).sum()),
-                misclassified_into=dict(sorted(wrong.items())),
-                largest_competing_class=dict(sorted(Counter(int(i)+1 for i in best_other).items())),
-                mean_signed_probability_margin=float((block[:,label-1]-rivals[np.arange(len(block)),best_other]).mean()))
+    result = dict(n=len(block),correct=int((predicted==label).sum()),
+                  misclassified_into=dict(sorted(wrong.items())),
+                  largest_competing_class=dict(sorted(Counter(int(i)+1 for i in best_other).items())),
+                  mean_signed_probability_margin=float((block[:,label-1]-rivals[np.arange(len(block)),best_other]).mean()))
+    if neighbours is not None:
+        comparable = [(classes,distance,int(pred)) for j,pred in zip(np.flatnonzero(labels==label),predicted,strict=True)
+                      for classes,distance in (neighbours[j],) if classes]
+        errors = [pred in classes for classes,_,pred in comparable if pred != label]
+        result["nearest_released_other_class"] = dict(points_with_neighbour=len(comparable),
+            wrong_with_neighbour=len(errors),wrong_predicted_one_of_nearest=int(sum(errors)),
+            ties=sum(len(classes)>1 for classes,_,_ in comparable),
+            median_distance_pixels=None if not comparable else float(np.median(
+                [np.sqrt(distance) for _,distance,_ in comparable])))
+    return result
 
 
 def threshold_comparison(labels, baseline, candidate, base_metrics, candidate_metrics):
@@ -269,8 +303,9 @@ def run(root, plan_pin, authority, acceptance=None):
         key = (row["scope"]["sha256"],case["index"])
         budget = scope["exposure"][f's{case["support_seed"]}-k{case["k"]}']
         if key not in roster:
-            roster[key] = case_labels(reg,case,budget)
-        truth = roster[key]
+            layout, truth = case_labels(reg,case,budget,with_layout=True)
+            roster[key] = truth, nearest_other_labels(layout,truth)
+        truth,neighbours = roster[key]
         audit = migration.read(row["audit"],root)
         require(audit["populations"] == budget["populations"] and len(truth) == 110
                 and np.bincount(truth,minlength=23).tolist() == [0]+[5]*22,
@@ -282,7 +317,7 @@ def run(root, plan_pin, authority, acceptance=None):
             pair_sha256=case["pair_sha256"],observation=case["observation_sha256"],
             support=audit["populations"]["train"],validation=audit["populations"]["val"],
             heads=row["heads"],exposure=audit["exposure"],audit_seconds=row["audit_seconds"],
-            paths=cost(audit,row["paths"]),focus={h:{str(label):focus_readout(truth,scores[h],label)
+            paths=cost(audit,row["paths"]),focus={h:{str(label):focus_readout(truth,scores[h],label,neighbours)
                                                 for label in FOCUS} for h in HEADS})
         result[case["id"]] = summary
         by_cohort[cohort_key(case)][case["arm"]] = summary

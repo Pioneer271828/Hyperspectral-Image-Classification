@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 
 from evaluation.wp12_p4_short_review import (
-    CLASSES, HEADS, descriptive_cross_cohorts, focus_readout, roster_pair, threshold_comparison,
+    CLASSES, HEADS, descriptive_cross_cohorts, focus_readout, nearest_other_labels, roster_pair,
+    threshold_comparison,
 )
 from transfer import p4_frozen_diagnostic_metrics as metrics
 
@@ -26,6 +27,18 @@ class P4ShortReviewTests(unittest.TestCase):
         lost = threshold_comparison(truth,baseline,candidate,first,metrics.recompute(candidate,truth))
         self.assertEqual(lost["recall_loss_classes_gt_2pp"], [15])
         self.assertFalse(lost["oa_aa_limits_passed"])
+
+    def test_spatial_neighbours_stay_inside_the_released_block_and_record_ties(self):
+        layout = [({"box":[0,3,0,4]},np.array([1,4,6])),
+                  ({"box":[3,5,0,4]},np.array([2]))]
+        truth = np.array([15,3,4,21])
+        actual = nearest_other_labels(layout,truth)
+        self.assertEqual(actual[0],([3,4],2))
+        self.assertEqual(actual[3],([],None))
+        scores = np.eye(22)[[2,2,3,20]]
+        checked = focus_readout(truth,scores,15,actual)["nearest_released_other_class"]
+        self.assertEqual(checked["wrong_predicted_one_of_nearest"],1)
+        self.assertEqual(checked["ties"],1)
 
     def test_validation_signature_and_support_cannot_be_exchanged(self):
         sample = dict(pair_sha256="paired",validation={"sha256":"val"},support={"sha256":"train"},
