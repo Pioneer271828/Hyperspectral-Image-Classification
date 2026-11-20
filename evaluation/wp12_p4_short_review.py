@@ -30,7 +30,7 @@ CONTEXT = {
     "xuzhou": ("wp07-xuzhou-multiscale-real01/audit.json",
                "29ed4f67bf08f13070c20fec21ecb77f834a55778c5a090121737dcba0705a32"),
     "honghu": ("wp05-coverage-real-summary01/overview.json",
-               "50d51d93d8b42b45276d903be510322db578dbe988b92034ca432f83a333a22f9"),
+               "50d51d93d8b42b45276d903be51032db578dbe988b92034ca432f83a333a22f9"),
 }
 
 
@@ -39,12 +39,12 @@ def scene_context(root):
     pavia, xuzhou, honghu = (json_pin(root,pins[key]) for key in ("paviaU","xuzhou","honghu"))
     require(pavia["status"] == xuzhou["status"] == "passed" and pavia["synthetic"] is False
             and pavia["query_accessed"] is pavia["raw_gt_loaded"] is False
-            and xuzhou["raw_gt"] == xuzhou["query"] == xuzhou["independent_optimizer_updates"] == 0,
+            and xuzhou["raw_gt"] == xuzhou["query"] == xuzhou["independent_updates"] == 0,
             "Historical scene scope is not approved or still requires a sealed read")
     require(pavia["scope"] == "released_development_only" and pavia["denominators"] == [5]*9
             and pavia["case_count"] == 39 and honghu["optimizer_updates"] == 1920,
             "Prior PaviaU or HongHu case scope changed")
-    xuzhou_baseline = xuzhou["results"]["off"]["endpoints"]["selected"]["metrics"]["fused"]["confusion"]
+    xuzhou_baseline = xuzhou["results"]["off"]["endpoints"]["selected"]["metrics"]["fused"]["confusion_matrix"]
     xuzhou_counts = np.asarray(xuzhou_baseline,dtype=np.int64).sum(1).tolist()
     require(len(xuzhou_counts)==9 and all(n>0 for n in xuzhou_counts),
             "Historical Xuzhou archive is missing supported development classes")

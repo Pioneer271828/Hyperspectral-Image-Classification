@@ -3,13 +3,17 @@ import unittest
 import numpy as np
 
 from evaluation.wp12_p4_short_review import (
-    CLASSES, HEADS, descriptive_cross_cohorts, focus_readout, nearest_other_labels, roster_pair,
+    CLASSES, CONTEXT, HEADS, descriptive_cross_cohorts, focus_readout, nearest_other_labels, roster_pair,
     threshold_comparison,
 )
 from transfer import p4_frozen_diagnostic_metrics as metrics
 
 
 class P4ShortReviewTests(unittest.TestCase):
+    def test_scene_archive_pins_are_full_sha256(self):
+        for _,sha in CONTEXT.values():
+            self.assertRegex(sha,r"^[0-9a-f]{64}$")
+
     def test_same_point_wrong_to_wrong_differs_from_marginal_recall(self):
         truth = np.repeat(CLASSES, 5)
         baseline = np.eye(22)[truth-1]
