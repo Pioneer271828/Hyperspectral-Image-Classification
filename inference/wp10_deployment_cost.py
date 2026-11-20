@@ -20,6 +20,7 @@ from transfer import matched_route_admission as admission, registered_developmen
 
 REFERENCE_CPU_COST = "2d4b0618e6c5548f68ce1b3a9c3b8076ba4b2688512a8211482264f1882c2e9d"
 SCOPE = "warm_authenticated_observation_to_three_head_cpu_probabilities"
+PLAN = "wp10_label_free_warm_plan_v1"
 SEEDS = (64, 512, 2048)
 WARMUPS = 2
 REPEATS = 8
@@ -118,7 +119,7 @@ def _summary(samples, pixels):
                 max_rss_kib=max(row["rss_peak_kib"] for row in samples))
 
 
-def measure(pin, reference_pin, code, out):
+def prepare(pin, reference_pin, code, out):
     if reference_pin["sha256"] != REFERENCE_CPU_COST:
         raise ValueError("Use the independently accepted WP10 CPU cost receipt")
     reference = admission.read(reference_pin)
@@ -128,20 +129,57 @@ def measure(pin, reference_pin, code, out):
             or any(reference[key] != 0 for key in ("query", "gt", "optimizer_updates"))):
         raise ValueError("CPU proof, release and audit must identify the same deployment")
     registration, audited = (admission.read(reg[key]) for key in ("registration", "audit"))
-    out = external_directory(out)
     protected = [pin, reference_pin, reg["resident_inputs"], reg["registration"], reg["audit"]]
-    if out.exists() or any(out == Path(item["path"]) or out in Path(item["path"]).parents for item in protected):
-        raise ValueError("New independent warm deployment output directory required")
     pixels = sum(row["pixels"] for row in reg["tiles"])
     if reg["data_protocol"] != "wp10_xuzhou_k5_v5" or (len(tiles), pixels) != (5, 3920):
         raise ValueError("Expected the same five frozen Xuzhou blocks and 3,920 pixels")
+    cases, proofs = {}, {}
+    for seed in SEEDS:
+        dense = f"s{seed}-dense"
+        for name in (dense, f"s{seed}-svd-r16"):
+            cases[name] = entry = reg["cases"][name]
+            protected.extend(entry["package"][key] for key in ("weights", "sidecar"))
+            guards = protection(reg, name, dense, audited, registration["protection"]["limits"])
+            proofs[name] = dict(
+                guards=guards, output_hashes=reference_hashes(reference, name, entry, reg))
+    admission.check_pins(protected)
+    require_frozen_code(code)
+    out = external_directory(out)
+    if out.exists() or any(out == Path(item["path"]) or out in Path(item["path"]).parents for item in protected):
+        raise ValueError("New independent warm deployment plan directory required")
+    out.mkdir()
+    fields = ("dataset", "data_protocol", "class_ids", "resident_inputs", "tiles", "runtime", "audit")
+    return dev._json_new(out / "plan.json", dict(
+        **{key: reg[key] for key in fields}, kind=frozen.KIND, policy=PLAN, commit=code["commit"],
+        source_hash=code["source_hash"], source_manifest=pin, manifest_producer=reg["commit"],
+        baseline_evidence=reference_pin, cases=cases, proofs=proofs, seeds=list(SEEDS),
+        small_classes=audited["small_classes"], observation_role="devval_image_only"))
+
+
+def measure(pin, code, out):
+    require_frozen_code(code)
+    reg = admission.read(pin)
+    if (reg["kind"] != frozen.KIND or reg["policy"] != PLAN or reg["commit"] != code["commit"]
+            or reg["source_hash"] != code["source_hash"] or reg["seeds"] != list(SEEDS)
+            or reg["observation_role"] != "devval_image_only" or reg["runtime"] != frozen.runtime()
+            or reg["source_manifest"]["sha256"] != frozen.PUBLISHED_MANIFEST
+            or reg["baseline_evidence"]["sha256"] != REFERENCE_CPU_COST):
+        raise ValueError("Sealed label-free warm plan for the actual deployment code required")
+    tiles = frozen.load_tiles(reg)
+    pixels = sum(row["pixels"] for row in reg["tiles"])
+    if reg["data_protocol"] != "wp10_xuzhou_k5_v5" or (len(tiles), pixels) != (5, 3920):
+        raise ValueError("Expected the released WP10 observation geometry")
+    protected = [pin, reg["resident_inputs"], *[
+        entry["package"][key] for entry in reg["cases"].values() for key in ("weights", "sidecar")]]
+    out = external_directory(out)
+    if out.exists() or any(out == Path(item["path"]) or out in Path(item["path"]).parents for item in protected):
+        raise ValueError("New independent warm deployment output directory required")
     out.mkdir()
     cases, fallbacks, orderings = {}, {}, {}
     for seed in SEEDS:
         dense, low_rank = names = (f"s{seed}-dense", f"s{seed}-svd-r16")
-        guards = {name: protection(reg, name, dense, audited, registration["protection"]["limits"])
-                  for name in names}
-        expected = {name: reference_hashes(reference, name, reg["cases"][name], reg) for name in names}
+        guards = {name: reg["proofs"][name]["guards"] for name in names}
+        expected = {name: reg["proofs"][name]["output_hashes"] for name in names}
         models = {name: Runtime(device="cpu", full=frozen.package(reg["cases"][name]),
                                 identity={"full": reg["cases"][name]["package"]["state"]}) for name in names}
         samples = {name: [] for name in names}
@@ -156,12 +194,10 @@ def measure(pin, reference_pin, code, out):
                 samples[name].append(_sample(models[name], reg, expected[name]))
         for name in names:
             package = reg["cases"][name]["package"]
-            protected.extend(package[key] for key in ("weights", "sidecar"))
-            scores = audited["report"][name]["selected"]["metrics"]
             cases[name] = dict(
                 case=reg["cases"][name]["case"], package_state=package["state"],
                 package_bytes=package["bytes"], package_sha256=package["weights"]["sha256"],
-                parameters=package["parameters"], guard=guards[name], metrics=scores,
+                parameters=package["parameters"], guard=guards[name],
                 output_hashes=expected[name], operator_evidence=_operator_evidence(models[name], reg, expected[name]),
                 samples=samples[name], summary=_summary(samples[name], pixels))
         effective = low_rank if all(r["passes_metric_guards"] for r in guards[low_rank].values()) else dense
@@ -174,10 +210,11 @@ def measure(pin, reference_pin, code, out):
     require_frozen_code(code)
     return dev._json_new(out / "receipt.json", dict(
         status="passed", schema="wp10_warm_native_cost_v1", scope=SCOPE,
-        execution_commit=code["commit"], manifest=pin, manifest_producer=reg["commit"],
-        baseline_evidence=reference_pin, audit=reg["audit"], data_protocol=reg["data_protocol"],
+        execution_commit=code["commit"], plan=pin, manifest=reg["source_manifest"],
+        manifest_producer=reg["manifest_producer"], baseline_evidence=reg["baseline_evidence"],
+        audit=reg["audit"], data_protocol=reg["data_protocol"],
         resident_input_sha256=reg["resident_inputs"]["sha256"], pixels=pixels, blocks=len(tiles),
-        class_ids=reg["class_ids"], small_classes=audited["small_classes"],
+        class_ids=reg["class_ids"], small_classes=reg["small_classes"],
         device=dict(kind="cpu", torch=str(torch.__version__), host_arch=platform.machine(),
                     threads=torch.get_num_threads(), affinity=sorted(os.sched_getaffinity(0)), engine=torch.backends.quantized.engine),
         warmups=WARMUPS, repeats=REPEATS, orderings=orderings, cases=cases, fallbacks=fallbacks,

@@ -49,6 +49,10 @@ def main(argv=None):
         return publish_cli(argv)
     if "--classification-cost-review" in argv:
         return classification_cost_review(argv)
+    if "--wp10-deployment-review" in argv:
+        from evaluation.wp12_wp10_deployment import main as wp10_deployment
+
+        return wp10_deployment([arg for arg in argv if arg != "--wp10-deployment-review"])
     if "--native-real" in argv:
         native_real(argv)
         return
