@@ -23,6 +23,8 @@ def main(argv=None):
         return paired_structure(["review",*(arg for arg in argv if arg!="--paired-structure-review")])
     if "--cross-backend-review" in argv:
         return cross_backend_review(argv)
+    if "--shared-edge-interaction-review" in argv:
+        return shared_edge_interaction_review(argv)
     if "--native-pathways-review" in argv:
         return native_pathways(argv)
     if "--real-attribution-review" in argv:
@@ -133,6 +135,51 @@ def cross_backend_review(argv):
     with arithmetic(root,None):
         result = review_case(root, dict(path=args.capture[0], sha256=args.capture[1]), out, code,
                              test_history=[] if args.synthetic else None, reference=reference)
+    print(json.dumps(result), flush=True)
+
+
+def shared_edge_interaction_review(argv):
+    from evaluation import wp12_shared_edge_interaction as shared
+    from evaluation.frozen_training_stages import json_pin, require
+    from scripts.run_frozen_band_region import _write
+
+    parser = argparse.ArgumentParser(description="Recompute frozen same-mask band and edge contrasts")
+    parser.add_argument("--shared-edge-interaction-review", action="store_true", required=True)
+    parser.add_argument("--runs", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--cpu", action="append", nargs=3, required=True, metavar=("CASE", "PATH", "SHA256"))
+    parser.add_argument("--cuda", action="append", nargs=3, default=[], metavar=("CASE", "PATH", "SHA256"))
+    args = parser.parse_args(argv)
+    root, out = args.runs.resolve(strict=True), external_directory(args.out)
+    code = code_snapshot()
+    require(sys.platform == "linux" and root in out.parents and not out.exists()
+            and code["commit"] == args.expected_commit, "Expected a clean review checkout and fresh authorized result")
+    require_frozen_code(code)
+
+    def open_pins(items, device):
+        pins, sources = {}, {}
+        for case, path, sha in items:
+            require(case in shared.CASES and case not in pins, "Expected distinct registered focal cases")
+            pins[case] = dict(path=path, sha256=sha)
+            sources[case] = json_pin(root, pins[case])
+            require(sources[case]["case"] == case and sources[case]["device"] == device,
+                    "Receipt device or case is foreign")
+        return pins, sources
+
+    cpu_pins, cpu = open_pins(args.cpu, "cpu")
+    cuda_pins, cuda = open_pins(args.cuda, "cuda")
+    require(cuda.keys() <= cpu.keys(), "Every GPU receipt needs its exact CPU baseline")
+    parity = {}
+    for case, row in cuda.items():
+        require(row["reference"] == [cpu_pins[case]["path"], cpu_pins[case]["sha256"]],
+                "The GPU receipt did not reuse the pinned CPU plan")
+        parity[case] = shared.device_parity(cpu[case], row, code["commit"])
+    groups = {case:shared.reduction(row, code["commit"]) for case,row in cpu.items()}
+    require_frozen_code(code)
+    result = _write(out, dict(policy=shared.SCHEMA, producer=code["commit"], cpu=cpu_pins, cuda=cuda_pins,
+                             results=groups, device_parity=parity, real_optimizer_updates=0,
+                             raw_gt_loaded=False, query_accessed=False, independent_confirmation=False))
     print(json.dumps(result), flush=True)
 
 

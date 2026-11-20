@@ -1,6 +1,7 @@
 """Offline single-tensor exchanges on published, frozen development points."""
 
 from contextlib import ExitStack
+from dataclasses import dataclass
 from time import perf_counter
 from unittest.mock import patch
 
@@ -12,6 +13,7 @@ from evaluation.matched_edge_controls import freeze as match_edges, verify as ve
 from evaluation.graph_edge_intervention import delete_support
 from evaluation.wp12_release_results import BAND, BAND_PINS
 from loadData.spatial_tiles import tile_slice
+from model.research_config import digest
 from research_runtime import tensor_hash
 from scripts import run_frozen_band_region as archived
 from scripts.run_wp12_retained_evidence import RELEASE, PREVIOUS, pin, compare_probabilities
@@ -41,6 +43,30 @@ LOCKED_PINS = {
 REQUIRE = frozen.require
 
 
+@dataclass(frozen=True)
+class ReleasedBlock:
+    truth: list
+    cells: object
+    callbacks: dict
+    historical: dict
+    tile: int
+    parent: int
+    views: dict
+    point_order: str
+
+
+@dataclass(frozen=True)
+class ReleasedEndpoint:
+    scene: str
+    classes: int
+    step: int
+    checkpoint: str
+    authority: str
+    model: object
+    blocks: list
+    release: dict
+
+
 def switch(base, donor):
     REQUIRE(base.layout==donor.layout==torch.strided and base.shape==donor.shape
             and base.dtype==donor.dtype and base.device==donor.device and torch.isfinite(donor).all(),
@@ -49,7 +75,7 @@ def switch(base, donor):
 
 
 @torch.inference_mode()
-def probe(model, invoke, *, site=None, donor=None, graph_action=None, collect=False):
+def probe(model, invoke, *, site=None, donor=None, graph_action=None, collect=False, trace=None):
     REQUIRE(not model.training and ((site is None)==(donor is None)), "Single-site interventions require a frozen model")
     owner = model.backbone
     result, states, hits = {}, [], []
@@ -71,6 +97,8 @@ def probe(model, invoke, *, site=None, donor=None, graph_action=None, collect=Fa
         return at("pre_pool",value)
 
     def stages(cnn_input, regions, q, adjacency, *args, **kwargs):
+        if trace is not None:
+            trace.update(cnn_input=cnn_input, pooled=regions, used_q=q, used_adjacency=adjacency)
         cnn,graph,info=stage(cnn_input,at("pooled",regions),q,adjacency,*args,**kwargs)
         return at("cnn",cnn),at("graph",graph),info
 
@@ -80,6 +108,8 @@ def probe(model, invoke, *, site=None, donor=None, graph_action=None, collect=Fa
     def builder(*args,**kwargs):
         state=build(*args,**kwargs)
         states.append(state)
+        if trace is not None:
+            trace["builder_input"] = args[0]
         if graph_action is not None:
             REQUIRE(tensor_hash(state.Q)==tensor_hash(graph_action.Q), "Matched edge arm changed assignment")
             return graph_action
@@ -90,11 +120,11 @@ def probe(model, invoke, *, site=None, donor=None, graph_action=None, collect=Fa
             hooks.callback(owner.adapter.register_forward_hook(vca).remove)
         if collect or site=="pre_pool":
             hooks.callback(owner.CNN_denoise[-1].register_forward_hook(pre_pool).remove)
-        if collect or site in ("pooled","cnn","graph"):
+        if collect or trace is not None or site in ("pooled","cnn","graph"):
             hooks.enter_context(patch.object(owner,"forward_stages",new=stages))
         if collect or site=="fused":
             hooks.enter_context(patch.object(owner,"fuse_features",new=fusion))
-        prediction=invoke(builder if graph_action is not None or collect else None)
+        prediction=invoke(builder if graph_action is not None or collect or trace is not None else None)
     REQUIRE((not collect or set(result)==set(SITES)) and len(hits)==int(site is not None),
             "Native model did not traverse the declared frozen site")
     return prediction[:3],result,states[0] if states else None
@@ -132,6 +162,19 @@ def load(root,case,producer,device):
         scene,record,_=load_development(plan["development"])
         target=sparse_labels(record,scene.plan,"validation_support")
         authority=plan["development"]["sha256"]
+        record_train, record_val = record["train_support"], record["validation_support"]
+        support_map = sparse_labels(record, scene.plan, "train_support")
+        overlapping_parents = sum(bool(support_map[tile_slice(tile)].any() and target[tile_slice(tile)].any())
+                                  for tile in scene.plan["tiles"])
+        config = frozen.json_pin(root, release["full_metadata"])["training_config"]
+        release_info = dict(support_seed=record_train["seed"], validation_seed=record_val["seed"],
+            support_sha256=plan["identities"]["support"], validation_sha256=plan["identities"]["validation"],
+            space_sha256=plan["identities"]["space"], statistics_sha256=plan["statistics"],
+            support_per_class=np.bincount(record_train["labels"], minlength=scene.classes+1)[1:].tolist(),
+            evaluation_per_class=np.bincount(record_val["labels"], minlength=scene.classes+1)[1:].tolist(),
+            support_evaluation_overlap=len(set(record_train["indices"]) & set(record_val["indices"])),
+            support_evaluation_parent_overlap=overlapping_parents, model_seed=config.get("model_seed"),
+            original_sampler_seed=config.get("sampler_seed"), space_seed=scene.plan.get("seed"))
         result=[]
         for tile,binding in zip(scene.plan["tiles"],record["roles"],strict=True):
             if binding["role"]!="devval": continue
@@ -141,7 +184,9 @@ def load(root,case,producer,device):
             views={band:frozen.checked_view(scene,tile,band,plan["bands"][band]) for band in VIEWS}
             callbacks={band:(lambda operation,view=view,tile=tile:invoke_xuzhou(model,scene,tile,view,operation))
                        for band,view in views.items()}
-            result.append((labels[cells].tolist(),cells,callbacks,None))
+            points = views["full"].observation.global_ids.reshape(-1)[cells].tolist()
+            result.append(ReleasedBlock(labels[cells].tolist(), cells, callbacks, {}, tile["id"], tile["id"],
+                                        views, digest(points)))
         name,classes,step,state=scene.dataset,scene.classes,spec["step"],spec["state"]["sha256"]
     else:
         archive=frozen.json_pin(root,pin(root,(f"{BAND}/{case}.json",BAND_PINS[case])))
@@ -155,6 +200,20 @@ def load(root,case,producer,device):
                 and archive["raw_gt_loaded"] is archive["query_accessed"] is False,"Archived role or endpoint differs")
         classes=model.heads[name].out_features
         authority,state=bank.pin["sha256"],checkpoint
+        support = [row for row in bank.role_rows("devtrain") if row["samples"]]
+        evaluation = [row for row in bank.role_rows("devval") if row["samples"]]
+        support_points = [point for row in support for point in row["samples"]]
+        evaluation_points = [point for row in evaluation for point in row["samples"]]
+        release_info = dict(support_seed=bank.release.custody.get("release_seed"),
+            validation_seed=bank.release.custody.get("validation_seed"),
+            support_sha256=digest(support_points), validation_sha256=digest(evaluation_points),
+            space_sha256=bank.release.plan_hash, statistics_sha256=bank.release.statistics["statistics_hash"],
+            support_per_class=np.bincount([v for _, v in support_points], minlength=classes+1)[1:].tolist(),
+            evaluation_per_class=np.bincount([v for _, v in evaluation_points], minlength=classes+1)[1:].tolist(),
+            support_evaluation_overlap=len({i for i, _ in support_points} & {i for i, _ in evaluation_points}),
+            support_evaluation_parent_overlap=len({r["parent_tile"] for r in support}
+                                                 & {r["parent_tile"] for r in evaluation}),
+            model_seed=seed)
         result=[]
         focus_ordinal=0
         for row in bank.role_rows("devval"):
@@ -176,12 +235,14 @@ def load(root,case,producer,device):
                             and prior["labels"]==[truth[i] for i in focus],"Historical retained source differs")
                     historical[band]=(focus,prior["probabilities"])
                 focus_ordinal+=1
-            result.append((truth,selected.cells,callbacks,historical))
+            result.append(ReleasedBlock(truth, selected.cells, callbacks, historical, row["id"], row["parent_tile"],
+                                        {band: item[0].view for band, item in observations.items()},
+                                        digest([i for i, _ in selected.points])))
     REQUIRE(result,"No released development point roster")
     model.to(device).eval().requires_grad_(False)
     model.backbone.adapter.cache_attention=False
     model.backbone.adapter.clear_attention_cache()
-    return name,classes,step,state,authority,model,result
+    return ReleasedEndpoint(name, classes, step, state, authority, model, result, release_info)
 
 
 def output_rows(probabilities,truth,rivals):
@@ -226,31 +287,43 @@ def graph_probe(model,invoke,base,truth,cells,rivals):
                 plan_sha256=plan["plan_hash"],scores=stages)
 
 
+def locked_history(root, case, checkpoint):
+    if case not in LOCKED_PINS:
+        return None
+    old=frozen.json_pin(root,pin(root,(f"wp05-wp06-production-20261119-qa/locked-v2/{case}.json",LOCKED_PINS[case])))
+    REQUIRE(old["result"]["checkpoint"]==checkpoint and old["optimizer_updates"]==0,"Locked view history binding differs")
+    return old
+
+
+def verify_baselines(block, originals, old, offset, exact):
+    if old is not None:
+        for band, values in originals.items():
+            previous = old["result"]["views"][band]
+            sl = slice(offset, offset+len(block.truth))
+            REQUIRE(previous["truth"][sl] == block.truth, "Published point identities differ")
+            for head, value in values.items():
+                compare_probabilities([row[head] for row in previous["native_probabilities"][sl]], value, exact)
+    for band, (indices, previous) in block.historical.items():
+        for head in HEADS:
+            compare_probabilities(previous[head], originals[band][head][indices], exact)
+
+
 def run_case(root,case,producer,device):
     start=perf_counter()
-    scene,classes,step,checkpoint,authority,model,blocks=load(root,case,producer,device)
+    endpoint=load(root,case,producer,device)
+    scene, classes, model = endpoint.scene, endpoint.classes, endpoint.model
     before=state_hash(model)
-    old=None
-    if case in LOCKED_PINS:
-        old=frozen.json_pin(root,pin(root,(f"wp05-wp06-production-20261119-qa/locked-v2/{case}.json",LOCKED_PINS[case])))
-        REQUIRE(old["result"]["checkpoint"]==checkpoint and old["optimizer_updates"]==0,"Locked view history binding differs")
+    old=locked_history(root,case,endpoint.checkpoint)
     exact=device.type=="cpu"
     groups=[]
     offset=0
     first_focus=set()
-    for ordinal,(truth,cells,callbacks,historical) in enumerate(blocks,1):
+    for ordinal,block in enumerate(endpoint.blocks,1):
+        truth,cells,callbacks=block.truth,block.cells,block.callbacks
         base={band:probe(model,invoke,collect=True) for band,invoke in callbacks.items()}
         orig={band:get_points(result[0],cells) for band,result in base.items()}
         size=len(truth)
-        if old is not None:
-            for band,values in orig.items():
-                previous=old["result"]["views"][band]
-                REQUIRE(previous["truth"][offset:offset+size]==truth,"Published point identities differ")
-                for head,value in values.items():
-                    compare_probabilities([row[head] for row in previous["native_probabilities"][offset:offset+size]],value,exact)
-        for band,(idx,previous) in (historical or {}).items():
-            for head in HEADS:
-                compare_probabilities(previous[head],orig[band][head][idx],exact)
+        verify_baselines(block,orig,old,offset,exact)
         variants={}
         for target, donor in (("full","full"),("central_gap","full"),("full","central_gap"),
                               ("matched_dispersed","full"),("full","matched_dispersed")):
@@ -285,7 +358,7 @@ def run_case(root,case,producer,device):
     REQUIRE(state_hash(model)==before and (old is None or offset==len(old["result"]["views"]["full"]["truth"])),
             "Frozen checkpoint or published point denominator changed")
     return dict(schema=SCHEMA,scope="released_development_offline_only",producer=producer,scene=scene,
-                case=case,step=step,checkpoint=checkpoint,authority=authority,state=before,roles=["devval"],
+                case=case,step=endpoint.step,checkpoint=endpoint.checkpoint,authority=endpoint.authority,state=before,roles=["devval"],
                 classes=classes,focus=FOCUS[scene],locked_rivals=RIVALS[scene],groups=groups,
                 seconds=perf_counter()-start,raw_gt_loaded=False,query_accessed=False,optimizer_updates=0,
                 independent_accuracy=None,full_donor_available_to_training_or_deployment=False)
