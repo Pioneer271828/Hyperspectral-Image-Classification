@@ -161,8 +161,8 @@ def _runs(request, admission, label_path):
         reg, predictions, replay, proof = _frozen_run(item, admission, label_path)
         order = reg.value['order']
         key = (reg.settings['mode'], reg.settings['reset'], order)
-        identity = (reg.population, reg.value['source_hash'], reg.value['source'],
-                    reg.value['provenance'], reg.value['class_ids'],
+        identity = (reg.population, reg.value['frames'], reg.value['commit'], reg.value['source_hash'],
+                    reg.value['runtime'], reg.value['source'], reg.value['provenance'], reg.value['class_ids'],
                     {k: v for k, v in reg.settings.items() if k not in ('mode', 'reset')})
         if key in runs or (reference is not None and identity != reference):
             raise ValueError('Duplicate run or incompatible paired population/source')
@@ -170,8 +170,16 @@ def _runs(request, admission, label_path):
         runs[key] = (reg, predictions, replay)
         proofs.append(proof)
     for mode, reset, order in runs:
-        if ('frozen', reset, order) not in runs or any((mode, reset, variant) not in runs for variant in ORDERS):
+        key = (mode, reset, order)
+        frozen_key = ('frozen', reset, order)
+        if frozen_key not in runs or any((mode, reset, variant) not in runs for variant in ORDERS):
             raise ValueError('Each comparison needs all registered orders and matching frozen controls')
+        frozen = runs[frozen_key][1]
+        reg, pre_update, replay = runs[key]
+        first = reg.frames[0]['frame_id']
+        for frame, packet in (*replay['initial'].items(), (first, pre_update[first])):
+            if any(not np.array_equal(packet[head], frozen[frame][head]) for head in HEADS):
+                raise ValueError('Paired run does not start from its matching frozen predictions')
     return runs, sorted(proofs, key=lambda row: row['registration_sha256'])
 
 
@@ -206,6 +214,30 @@ def prepare_release(plan, *, authority, admission, source_receipt):
     return _request(plan, authority, admission, source_receipt, release=True)[-1]
 
 
+def _worst(rows, comparison, small):
+    def minimum(items):
+        measured = [(value, frame) for frame, value in items if value is not None]
+        if not measured:
+            return None
+        value, frame = min(measured)
+        return dict(frame_id=frame, delta=value)
+
+    result = {}
+    for head in HEADS:
+        paired = [(row['frame_id'], row[comparison][head]) for row in rows]
+        recalls = {class_id: minimum((frame, values['recall'][class_id]) for frame, values in paired)
+                   for class_id in paired[0][1]['recall']}
+        gates = {class_id: None if item is None else all(
+            values['recall_protected_at_2pp'][class_id] is not False for _, values in paired)
+                 for class_id, item in recalls.items()}
+        result[head] = dict(
+            oa=minimum((frame, v['metrics']['oa']) for frame, v in paired),
+            macro_f1=minimum((frame, v['metrics']['macro_f1']) for frame, v in paired),
+            recall=recalls, recall_protected_at_2pp=gates,
+            small_class_protected_at_2pp={str(class_id): gates[str(class_id)] for class_id in small})
+    return result
+
+
 def score(plan, *, authority=None, admission=None, source_receipt=None):
     """Open label inputs only after every registered run and anchor packet has been verified."""
     request, runs, reg, expected = _request(plan, authority, admission, source_receipt, release=False)
@@ -216,18 +248,37 @@ def score(plan, *, authority=None, admission=None, source_receipt=None):
         labels = released_labels(request['label_release'], expected, reg)
         small = [c for c, n in zip(expected['class_ids'], expected['training_class_counts'], strict=True) if n <= 25]
         scope = expected['scope']
-    online, forgetting = {}, {}
+    online, forgetting, frame_scores = {}, {}, {}
     for key, (reg, predictions, replay) in runs.items():
         classes = reg.value['class_ids']
         online[key] = _metrics(predictions, labels, classes)
+        frame_scores[key] = {frame: _metrics({frame: probs}, labels, classes)
+                             for frame, probs in predictions.items()}
         initial = _metrics(replay['initial'], labels, classes)
         final = _metrics(replay['final'], labels, classes)
-        forgetting['/'.join(key)] = dict(initial=initial, final=final, final_minus_initial=_paired(final, initial, small))
+        anchors = []
+        for frame in replay['initial']:
+            baseline = _metrics({frame: replay['initial'][frame]}, labels, classes)
+            endpoint = _metrics({frame: replay['final'][frame]}, labels, classes)
+            anchors.append(dict(frame_id=frame, initial=baseline, final=endpoint,
+                                final_minus_initial=_paired(endpoint, baseline, small)))
+        forgetting['/'.join(key)] = dict(
+            initial=initial, final=final, final_minus_initial=_paired(final, initial, small),
+            anchors=anchors, worst_anchor=_worst(anchors, 'final_minus_initial', small))
     result = {}
     for (mode, reset, order), metrics in online.items():
-        result[f'{mode}/{reset}/{order}'] = dict(metrics=metrics,
-            versus_frozen=_paired(metrics, online[('frozen', reset, order)], small),
-            versus_original_order=_paired(metrics, online[(mode, reset, 'original')], small))
+        frozen, original = ('frozen', reset, order), (mode, reset, 'original')
+        trajectory = [
+            dict(frame_id=frame, metrics=value, versus_frozen=_paired(value, frame_scores[frozen][frame], small),
+                 versus_original_order=_paired(value, frame_scores[original][frame], small))
+            for frame, value in frame_scores[mode, reset, order].items()]
+        result[f'{mode}/{reset}/{order}'] = dict(
+            metrics=metrics, versus_frozen=_paired(metrics, online[frozen], small),
+            versus_original_order=_paired(metrics, online[original], small), trajectory=trajectory,
+            committed_counts=runs[mode, reset, order][0].value['budget'],
+            first_frame_id=trajectory[0]['frame_id'], last_frame_id=trajectory[-1]['frame_id'],
+            worst_frame_versus_frozen=_worst(trajectory, 'versus_frozen', small),
+            worst_frame_versus_original_order=_worst(trajectory, 'versus_original_order', small))
     result = dict(version=request['version'], population=reg.population, label_scope=scope, small_classes=small,
                 online_pre_update=result, zero_update_anchor_replay=forgetting)
     if expected is not None:

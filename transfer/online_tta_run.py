@@ -166,8 +166,10 @@ def restore(session, checkpoint):
 
 
 def _is_reset(reg, index):
-    return index == 0 or (reg.settings['reset'] == 'episodic'
-                          and reg.frames[index]['episode'] != reg.frames[index - 1]['episode'])
+    if index == 0:
+        return True
+    boundary = {'episodic': 'episode', 'scene': 'scene'}.get(reg.settings['reset'])
+    return boundary is not None and reg.frames[index][boundary] != reg.frames[index - 1][boundary]
 
 
 def _binding(reg):
