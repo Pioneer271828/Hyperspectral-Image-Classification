@@ -76,6 +76,12 @@ def xuzhou(root, source, producer):
             yield model,request,obs.global_ids
 
 
+def original_pixel_ids(lattice):
+    require(lattice.factor==1,"Deployment overlap requires the original native pixel grid")
+    width = lattice.scene_shape[1]
+    return np.asarray([y*width+x for y,_,x,_ in lattice.cells],dtype=np.int64).reshape(lattice.shape)
+
+
 def honghu(root, source, producer):
     from evaluation.wp11_deployment_cost import context
 
@@ -90,7 +96,7 @@ def honghu(root, source, producer):
             actual = bank_observation(bank,observed_row,producer,view,observation_only=True)
             request = prepare(actual,producer,key=f"{slot}:{view}",device="cpu",
                               original_band_count=len(source["bands"]["full"]))
-            yield model,request,actual.view.observation.global_ids
+            yield model,request,original_pixel_ids(actual.lattice)
 
 
 def save_packet(path, value):
@@ -144,6 +150,8 @@ def load_inputs(root, plan, device):
         require(expected==dict(key=request.key,view=request.band,identity=request.identity,
                              shape=list(request.x.shape[:2]),band_ids=list(request.meta.band_ids))
                 and packet["pixel_ids"].shape==request.x.shape[:2] and request.x.ndim==3
+                and packet["pixel_ids"].dtype==torch.int64 and (packet["pixel_ids"]>=0).all().item()
+                and packet["pixel_ids"].unique().numel()==packet["pixel_ids"].numel()
                 and request.x.shape[-1]==len(request.meta.band_ids)+2,
                 "Foreign deployment request data or geometry")
         args = {**vars(request),"x":request.x.to(device),"waves":request.waves.to(device)}

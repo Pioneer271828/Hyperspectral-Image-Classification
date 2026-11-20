@@ -8,11 +8,13 @@ from evaluation import wp06_capacity_released as old
 from evaluation.frozen_training_stages import file_pin
 from evaluation.wp11_deployment_synthetic import models
 from evaluation.wp12_support_head import comparison
+from evaluation.wp12_support_head_cost import original_pixel_ids
 from inference import support_readout as readout
 from inference.native_deployment import Runtime, prepare
 from research_runtime import write_json
 from transfer.native_independent_release import synthetic_bank
 from transfer.spatial_coverage_protocol import bank_observation
+from transfer.native_scale_observation import Lattice
 
 
 def test_portable_affine_matches_independent_solver_and_has_no_fit_examples():
@@ -76,6 +78,13 @@ def test_block_runtime_preserves_native_heads_and_rejects_foreign_requests(tmp_p
     with pytest.raises(ValueError,match="retained columns"):
         adapted.run(replace(req,band="central_gap"),"same_view")
     assert not model.heads["xuzhou"]._forward_pre_hooks
+
+
+def test_native_block_pixel_mapping_keeps_original_ids_and_refuses_coarsened_cells():
+    grid = Lattice.make((2,4,3,6),(8,10),1)
+    assert original_pixel_ids(grid).tolist()==[[23,24,25],[33,34,35]]
+    with pytest.raises(ValueError,match="original native pixel grid"):
+        original_pixel_ids(Lattice.make((2,4,3,6),(8,10),2))
 
 
 def test_focus_gain_can_hide_other_class_loss_below_confirmation_floor():
