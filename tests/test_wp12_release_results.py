@@ -1,6 +1,10 @@
+from copy import deepcopy
+
 import pytest
 
+from evaluation import wp12_release_results as release
 from evaluation.wp12_release_results import HEADS, cohorts, cost_missing, metrics, select
+from scripts.wp12_frozen54_deployment_contract import COLD, WARM, TIMING
 
 
 def sample(seed, device, workload, matrix):
@@ -24,3 +28,30 @@ def test_aggregate_requires_matched_scope_and_keeps_undefined_recall():
         select(rows,protocol_family="foreign")
     with pytest.raises(ValueError,match="duplicates"):
         cohorts([rows[0],rows[0]])
+
+
+def test_end_to_end_publication_preserves_the_exact_historical_case(tmp_path, monkeypatch):
+    historical = [sample(seed, "GPU-resident", "ordered-tensors", [[5, 0], [0, 0]]) for seed in range(54)]
+    cases = {}
+    for original in historical:
+        seed = original["seed"]
+        cases[str(seed)] = dict(scene=original["scene"], seed=seed, arm="native/none",
+                                historical=deepcopy(original), checkpoint=original["model"],
+                                evaluation=original["protocol"], workload=original["workload"],
+                                scopes={scope: {"timing": TIMING[scope]} for scope in (COLD, WARM)})
+    audit = dict(status="audited", engineering=False, query_accessed=False, new_optimizer_updates=0,
+                 new_resident_measurements=0, source="measurement-sha", device="GPU-measured",
+                 plan={"sha256": "plan-sha"}, approval={"sha256": "approval-sha"}, cases=cases)
+    summary = dict(audit=release.proof(tmp_path, "frozen54_e2e_audit"), new_resident_measurements=0,
+                   source=audit["source"], device=audit["device"], plan_sha256=audit["plan"]["sha256"],
+                   approval_sha256=audit["approval"]["sha256"], legacy_probability_identity_all_54=True)
+    documents = {summary["audit"]["path"]: audit, release.proof(tmp_path, "frozen54_e2e_summary")["path"]: summary}
+    monkeypatch.setattr(release, "document", lambda root, pin: documents[pin["path"]])
+
+    result, receipt = release.frozen54_end_to_end(tmp_path, historical)
+    assert result == {"audit": audit, "scene_summary": summary}
+    assert receipt["cases"] == 54 and receipt["scopes"] == [COLD, WARM]
+
+    cases["0"]["historical"]["heads"]["fused"]["per_class"][0]["recall"] = 0.4
+    with pytest.raises(ValueError, match="paired historical accuracy"):
+        release.frozen54_end_to_end(tmp_path, historical)

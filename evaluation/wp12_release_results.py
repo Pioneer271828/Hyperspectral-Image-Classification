@@ -26,6 +26,7 @@ from transfer.native_coverage_replay import EXPECTED_ARCHIVES
 SCHEMA = "wp12_native_real_release_results_v1"
 HEADS = ("fused", "graph", "cnn")
 FROZEN = "wp12-cost-frozen54-campaign02"
+FROZEN_E2E = "wp12-frozen54-end-to-end-20261121/package31-results"
 NATIVE = "wp07-paviau-real-results-20261118.TC3eXtC5/aggregate/results"
 BAND = "wp05-wp06-wp07-band-scale-20261119"
 P4_REVIEW = "wp05-independent-queue-real-authority01"
@@ -37,6 +38,8 @@ PROOFS = {
     "old_combined": (FROZEN+"/combined-report.json", "342af1b6f9e83c1022f563156d1f1541d1862ccce0da1c7050a8d5ff1adda1cf"),
     "hardware": (FROZEN+"/hardware-receipt.json", "364ebda4801f9864a8177abc47950b8cbde77721fa68a5cc7ff4d97cecaea170"),
     "independent": ("wp12-cost-frozen54-independent01/receipt.json", "efa741072cfeed09e69345181cac9a8ec39b3e042bc12aac8ad8e9a3bd216e35"),
+    "frozen54_e2e_audit": (FROZEN_E2E+"/frozen54-e2e-audit.json", "0279e3e8b6c0358e0148979eec654906e780ef47ad69b54d334b7074244f4495"),
+    "frozen54_e2e_summary": (FROZEN_E2E+"/scene-summary.json", "5e52bdfffd6e1caa7ab01c8a0cc997f2b5aae0c660b2084ebc62f363c1435cd5"),
     "pavia": (NATIVE+"/comparison-audit.json", "728076ffe4751662cea2580e66c3b915d3fc5b30cecc1308ff1d761a3b8cc1bb"),
     "p4_supplement": ("wp12-p4-real-intake02/published/supplement.json", "c73fcb8dce2d9880b20bafd4c7a5f6cd22e7b148a497c6ff934352ab31bae678"),
     "p4_earlier": (P4_REVIEW+"/partial-audit02/review.json", "a60134e6447550ce1d0455199a9b70f1f42648b860c61e87c72fe9ec0b8fa0fb"),
@@ -377,7 +380,42 @@ def cohorts(rows):
     return output
 
 
-def publish(root, out, code, *, shared_edge=None):
+def frozen54_end_to_end(root, frozen):
+    from scripts.wp12_frozen54_deployment_contract import COLD, WARM, TIMING
+
+    audit_pin = proof(root, "frozen54_e2e_audit")
+    summary_pin = proof(root, "frozen54_e2e_summary")
+    audit = document(root, audit_pin)
+    summary = document(root, summary_pin)
+    require(audit["status"] == "audited" and audit["engineering"] is False
+            and audit["query_accessed"] is False and audit["new_optimizer_updates"] == 0
+            and audit["new_resident_measurements"] == summary["new_resident_measurements"] == 0
+            and summary["audit"] == audit_pin
+            and summary["source"] == audit["source"] and summary["device"] == audit["device"]
+            and summary["plan_sha256"] == audit["plan"]["sha256"]
+            and summary["approval_sha256"] == audit["approval"]["sha256"]
+            and summary["legacy_probability_identity_all_54"] is True,
+            "Frozen54 end-to-end audit and scene summary have different evidence bindings")
+    historical = {(row["scene"], row["seed"], f'{row["method"]}/{row["arm"]}'): row for row in frozen}
+    paired = {}
+    for case in audit["cases"].values():
+        key = (case["scene"], case["seed"], case["arm"])
+        original = historical.get(key)
+        require(original is not None and key not in paired and case["historical"] == original
+                and (case["checkpoint"], case["evaluation"], case["workload"])
+                == (original["model"], original["protocol"], original["workload"])
+                and set(case["scopes"]) == {COLD, WARM}
+                and all(case["scopes"][scope]["timing"] == TIMING[scope] for scope in (COLD, WARM)),
+                "Frozen54 end-to-end case differs from its paired historical accuracy or timing scope")
+        paired[key] = case
+    require(paired.keys() == historical.keys() and len(paired) == 54,
+            "Frozen54 end-to-end case roster is incomplete")
+    receipt = dict(audit=audit_pin, scene_summary=summary_pin, source=audit["source"], device=audit["device"],
+                   scopes=[COLD, WARM], cases=len(paired))
+    return dict(audit=audit, scene_summary=summary), receipt
+
+
+def publish(root, out, code, *, shared_edge=None, include_frozen54_end_to_end=False):
     frozen, lifecycle = frozen54(root)
     sparse = native_pavia(root)
     diagnostics = band_diagnostics(root)
@@ -390,6 +428,9 @@ def publish(root, out, code, *, shared_edge=None):
         from evaluation.wp12_shared_edge_interaction import publication
 
         mechanism = publication(root, shared_edge, code["commit"])
+    deployment = deployment_proof = None
+    if include_frozen54_end_to_end:
+        deployment, deployment_proof = frozen54_end_to_end(root, frozen)
     require(not out.exists(),"Use a fresh output directory")
     with TemporaryDirectory(dir=out.parent,prefix=".unified-real-") as tmp:
         stage = Path(tmp)/"publication"
@@ -398,6 +439,8 @@ def publish(root, out, code, *, shared_edge=None):
         _write(stage/"cohorts.json",summary)
         if mechanism is not None:
             _write(stage/"shared-edge-development.json", mechanism)
+        if deployment is not None:
+            _write(stage/"frozen54-end-to-end.json", deployment)
         with (stage/"real-per-class.csv").open("x",encoding="utf-8",newline="") as file:
             w=csv.writer(file)
             w.writerow(("source","protocol","scene","seed","support","k","method","arm","role","band","factor",
@@ -419,12 +462,13 @@ def publish(root, out, code, *, shared_edge=None):
                             "cases": len(mechanism["results"]),
                             "sampled_points": sum(row["total_sampled_points"] for row in mechanism["results"].values()),
                             "independent_confirmation": False}})
+        deployment_fields = {} if deployment_proof is None else {"frozen54_end_to_end": deployment_proof}
         receipt=_write(stage/"receipt.json",dict(schema=SCHEMA,status="published",producer=code["commit"],
             files=files,qualified_historical_joint_cases=len(frozen),native_development_rows=len(sparse),
             bounded_diagnostic_rows=len(diagnostics),layer_replay_rows=sum(bool(r["layers"]) for r in diagnostics),
             partial_five_arm_rows=len(partial),coverage=gaps,
             cost_lifecycle=lifecycle,formal_independent_accuracy_rows=0,new_query_reads=0,new_optimizer_updates=0,
-            **mechanism_proof))
+            **mechanism_proof, **deployment_fields))
         os.rename(stage,out)
     return dict(path=str(out/"receipt.json"),sha256=receipt["sha256"])
 

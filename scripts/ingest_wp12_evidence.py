@@ -367,6 +367,8 @@ def native_real(argv):
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--shared-edge-review", nargs=2, metavar=("PATH", "SHA256"))
+    parser.add_argument("--frozen54-end-to-end", action="store_true",
+                        help="Include the admitted frozen54 cold and warm measurements")
     args = parser.parse_args(argv)
     code = code_snapshot()
     if sys.platform != "linux" or not __debug__ or code["dirty"] or code["commit"] != args.expected_commit:
@@ -375,7 +377,8 @@ def native_real(argv):
     if not root.is_dir() or root not in out.parents:
         raise ValueError("Real evidence source and output must be in the authorized runs")
     shared = dict(zip(("path", "sha256"), args.shared_edge_review, strict=True)) if args.shared_edge_review else None
-    print(json.dumps(publish(root, out, code, shared_edge=shared)), flush=True)
+    print(json.dumps(publish(root, out, code, shared_edge=shared,
+                             include_frozen54_end_to_end=args.frozen54_end_to_end)), flush=True)
 
 
 if __name__ == "__main__":
