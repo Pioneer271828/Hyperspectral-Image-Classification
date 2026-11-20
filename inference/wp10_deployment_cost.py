@@ -1,0 +1,189 @@
+"""Measure the missing warm end-to-end scope on the frozen WP10 release."""
+
+import os
+from pathlib import Path
+import platform
+import resource
+from time import perf_counter_ns
+
+import torch
+
+from compression.low_rank_recovery import TARGET
+from evaluation.wp12_cost_primitives import timing_summary
+from evaluation.wp12_low_rank_evidence import verify_guard
+from inference import wp10_low_rank_execution as frozen
+from inference.native_deployment import Request, Runtime, clock_ms
+from research_runtime import external_directory, require_frozen_code
+from transfer import matched_route_admission as admission, registered_development as dev
+
+
+REFERENCE_CPU_COST = "2d4b0618e6c5548f68ce1b3a9c3b8076ba4b2688512a8211482264f1882c2e9d"
+SCOPE = "warm_authenticated_observation_to_three_head_cpu_probabilities"
+SEEDS = (64, 512, 2048)
+WARMUPS = 2
+REPEATS = 8
+
+
+def reference_hashes(reference, name, entry, reg):
+    rows = reference["startup"][name]
+    expected = rows[0]["output_hashes"]
+    if len(rows) != 3 or any(
+            row["output_hashes"] != expected or row["tiles"] != reg["tiles"]
+            or row["state"] != entry["package"]["state"] or row["package_bytes"] != entry["package"]["bytes"]
+            for row in rows):
+        raise ValueError("Original CPU acceptance does not bind this package and observation")
+    return expected
+
+
+def protection(reg, name, dense, audited, limits):
+    base = audited["report"][dense]["selected"]
+    recorded = audited["report"][name]["selected"]
+    guard = verify_guard(base, recorded, reg["class_ids"], audited["small_classes"], limits)
+    if guard != audited["guards"][name]["selected"]:
+        raise ValueError("Archived all-head protection does not match its independent audit")
+    return guard
+
+
+def _requests(reg):
+    return [
+        Request(str(tile.tile_id), reg["dataset"], observation["image_sha256"],
+                reg["resident_inputs"]["sha256"], "original_full", tile.image, tile.wavelengths,
+                None, None, 100, 1.0, True)
+        for tile, observation in zip(frozen.load_tiles(reg), reg["tiles"], strict=True)
+    ]
+
+
+def _sample(runtime, reg, expected):
+    start = perf_counter_ns()
+    inputs = _requests(reg)
+    prep = clock_ms(start)
+    result = runtime.run(inputs, "full")
+    materialization = perf_counter_ns()
+    outputs = frozen._outputs(result["predictions"], reg)
+    hash_ms = clock_ms(materialization)
+    wall = clock_ms(start)
+    if (outputs != expected or result["counts"]["full_calls"] != len(inputs)
+            or result["counts"]["graph_builds"] != len(inputs) or result["counts"]["graph_reuses"]):
+        raise ValueError("Warm inference disagrees with the independently accepted three-head output or graph count")
+    return dict(
+        wall_ms=wall, read_verify_decode_ms=prep, forward_ms=result["elapsed_ms"],
+        graph_ms=result["graph_ms"], forward_excluding_graph_ms=result["elapsed_ms"] - result["graph_ms"],
+        output_materialization_and_hash_ms=hash_ms, host_to_device_ms=None,
+        graph_calls=result["counts"]["graph_builds"], blocks=len(inputs),
+        rss_peak_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss, cuda_peak_allocated_bytes=None)
+
+
+def _operator_evidence(runtime, reg, expected):
+    layer = runtime.full.get_submodule(TARGET)
+    factor = hasattr(layer, "right") and hasattr(layer, "left")
+    leaves = {"right": layer.right, "left": layer.left} if factor else {"dense": layer}
+    evidence = {}
+    handles = []
+
+    def record(part):
+        def observe(module, arguments, output):
+            actual = dict(
+                kind=type(module).__name__, input_dtype=str(arguments[0].dtype),
+                weight_dtype=str(module.weight.dtype), output_dtype=str(output.dtype),
+                device=str(output.device), kernel_size=list(module.kernel_size))
+            previous = evidence.setdefault(part, dict(actual, calls=0))
+            if any(previous[key] != value for key, value in actual.items()):
+                raise ValueError("Point-convolution runtime changed dtype or device")
+            previous["calls"] += 1
+        return observe
+
+    for part, module in leaves.items():
+        handles.append(module.register_forward_hook(record(part)))
+    try:
+        with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profile:
+            _sample(runtime, reg, expected)
+    finally:
+        for handle in handles:
+            handle.remove()
+    kernels = {event.key: event.count for event in profile.key_averages()
+               if "convolution" in event.key or "conv2d" in event.key or "quantized::" in event.key}
+    if not kernels or evidence.keys() != leaves.keys() or any(
+            row["calls"] != len(reg["tiles"]) or row["kind"] != "Conv2d" or row["kernel_size"] != [1, 1]
+            or row["device"] != "cpu"
+            or any(row[key] != "torch.float32" for key in ("input_dtype", "weight_dtype", "output_dtype"))
+            for row in evidence.values()):
+        raise ValueError("Expected actual native CPU FP32 point convolutions")
+    return dict(path="two_factor_fp32" if factor else "dense_fp32",
+                point_convolutions=evidence, full_forward_convolution_events=kernels)
+
+
+def _summary(samples, pixels):
+    phases = ("wall_ms", "read_verify_decode_ms", "forward_ms", "graph_ms",
+              "forward_excluding_graph_ms", "output_materialization_and_hash_ms")
+    result = {name: timing_summary([sample[name] for sample in samples], repeats=len(samples),
+                                   blocks=samples[0]["blocks"]) for name in phases}
+    active_seconds = sum(row["wall_ms"] for row in samples) / 1000
+    return dict(phases=result, sequential_pixels_per_second=pixels * len(samples) / active_seconds,
+                sequential_blocks_per_second=sum(row["blocks"] for row in samples) / active_seconds,
+                max_rss_kib=max(row["rss_peak_kib"] for row in samples))
+
+
+def measure(pin, reference_pin, code, out):
+    if reference_pin["sha256"] != REFERENCE_CPU_COST:
+        raise ValueError("Use the independently accepted WP10 CPU cost receipt")
+    reference = admission.read(reference_pin)
+    reg, tiles = frozen.load_manifest(pin, code, archived=True)
+    if (reference["manifest"] != pin or reference["registration"] != reg["registration"]
+            or reference["audit"] != reg["audit"] or reference["status"] != "passed_low_rank_cpu_cost"
+            or any(reference[key] != 0 for key in ("query", "gt", "optimizer_updates"))):
+        raise ValueError("CPU proof, release and audit must identify the same deployment")
+    registration, audited = (admission.read(reg[key]) for key in ("registration", "audit"))
+    out = external_directory(out)
+    protected = [pin, reference_pin, reg["resident_inputs"], reg["registration"], reg["audit"]]
+    if out.exists() or any(out == Path(item["path"]) or out in Path(item["path"]).parents for item in protected):
+        raise ValueError("New independent warm deployment output directory required")
+    pixels = sum(row["pixels"] for row in reg["tiles"])
+    if reg["data_protocol"] != "wp10_xuzhou_k5_v5" or (len(tiles), pixels) != (5, 3920):
+        raise ValueError("Expected the same five frozen Xuzhou blocks and 3,920 pixels")
+    out.mkdir()
+    cases, fallbacks, orderings = {}, {}, {}
+    for seed in SEEDS:
+        dense, low_rank = names = (f"s{seed}-dense", f"s{seed}-svd-r16")
+        guards = {name: protection(reg, name, dense, audited, registration["protection"]["limits"])
+                  for name in names}
+        expected = {name: reference_hashes(reference, name, reg["cases"][name], reg) for name in names}
+        models = {name: Runtime(device="cpu", full=frozen.package(reg["cases"][name]),
+                                identity={"full": reg["cases"][name]["package"]["state"]}) for name in names}
+        samples = {name: [] for name in names}
+        for _ in range(WARMUPS):
+            for name in names:
+                _sample(models[name], reg, expected[name])
+        orderings[str(seed)] = []
+        for i in range(REPEATS):
+            order = names if i % 2 == 0 else names[::-1]
+            orderings[str(seed)].append(list(order))
+            for name in order:
+                samples[name].append(_sample(models[name], reg, expected[name]))
+        for name in names:
+            package = reg["cases"][name]["package"]
+            protected.extend(package[key] for key in ("weights", "sidecar"))
+            scores = audited["report"][name]["selected"]["metrics"]
+            cases[name] = dict(
+                case=reg["cases"][name]["case"], package_state=package["state"],
+                package_bytes=package["bytes"], package_sha256=package["weights"]["sha256"],
+                parameters=package["parameters"], guard=guards[name], metrics=scores,
+                output_hashes=expected[name], operator_evidence=_operator_evidence(models[name], reg, expected[name]),
+                samples=samples[name], summary=_summary(samples[name], pixels))
+        effective = low_rank if all(r["passes_metric_guards"] for r in guards[low_rank].values()) else dense
+        _sample(models[effective], reg, expected[effective])
+        fallbacks[str(seed)] = dict(
+            requested=low_rank, executed=effective, state=reg["cases"][effective]["package"]["state"],
+            output_hashes=expected[effective],
+            failed_heads=[head for head, values in guards[low_rank].items() if not values["passes_metric_guards"]])
+    admission.check_pins(protected)
+    require_frozen_code(code)
+    return dev._json_new(out / "receipt.json", dict(
+        status="passed", schema="wp10_warm_native_cost_v1", scope=SCOPE,
+        execution_commit=code["commit"], manifest=pin, manifest_producer=reg["commit"],
+        baseline_evidence=reference_pin, audit=reg["audit"], data_protocol=reg["data_protocol"],
+        resident_input_sha256=reg["resident_inputs"]["sha256"], pixels=pixels, blocks=len(tiles),
+        class_ids=reg["class_ids"], small_classes=audited["small_classes"],
+        device=dict(kind="cpu", torch=str(torch.__version__), host_arch=platform.machine(),
+                    threads=torch.get_num_threads(), affinity=sorted(os.sched_getaffinity(0)), engine=torch.backends.quantized.engine),
+        warmups=WARMUPS, repeats=REPEATS, orderings=orderings, cases=cases, fallbacks=fallbacks,
+        optimizer_updates=0, calibration_updates=0, gt=0, query=0, predictive_label_reads=0))

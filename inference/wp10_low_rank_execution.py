@@ -23,6 +23,8 @@ from transfer.g3_training import state_hash
 KIND = "wp10-low-rank"
 POLICY = "wp10-low-rank-frozen-execution-v1"
 WORKER_SCOPE = "authenticated_package_load_and_first_resident_full_sweep"
+PUBLISHED_MANIFEST = "a0cae3f8723902555820964e88184f476b11da5a4a01e19e92d67f0a1a7dae6b"
+PUBLISHED_MANIFEST_COMMIT = "2e5807e46d1c37163fbe8aed4fe54cd62eed139c"
 RUNTIME_PATHS = ("model", "loadData", "configs", "transfer/curriculum_training.py", "transfer/g3_training.py",
                  "compression/low_rank.py", "compression/low_rank_checkpoint.py", "compression/low_rank_recovery.py",
                  "compression/low_rank_recovery_audit.py", "compression/registered_low_rank_recovery.py")
@@ -114,11 +116,20 @@ def freeze(request_pin, code, out):
         observation_role="devval_image_only", query=0, gt=0, optimizer_updates=0))
 
 
-def load_manifest(pin, code):
+def load_manifest(pin, code, *, archived=False):
     require_frozen_code(code)
     reg = admission.read(pin)
-    if (reg["kind"] != KIND or reg["policy"] != POLICY or reg["commit"] != code["commit"]
-            or reg["source_hash"] != code["source_hash"] or reg["runtime"] != runtime()
+    if archived:
+        if pin["sha256"] != PUBLISHED_MANIFEST or reg["commit"] != PUBLISHED_MANIFEST_COMMIT:
+            raise ValueError("Use the exact published WP10 manifest for archived deployment")
+        subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor",
+                        reg["commit"], code["commit"]], check=True)
+        subprocess.run(["git", "-C", str(ROOT), "diff", "--exit-code", reg["commit"], code["commit"], "--",
+                        *RUNTIME_PATHS, "compression/precision_cost.py", "transfer/registered_development.py",
+                        "transfer/matched_route_admission.py"], check=True)
+    elif reg["commit"] != code["commit"] or reg["source_hash"] != code["source_hash"]:
+        raise ValueError("Low-rank manifest code differs from the current checkout")
+    if (reg["kind"] != KIND or reg["policy"] != POLICY or reg["runtime"] != runtime()
             or reg["observation_role"] != "devval_image_only"
             or reg["resident_inputs"]["path"] != str(Path(pin["path"]).parent / "resident-inputs.pt")
             or any(reg[k] != 0 for k in ("query", "gt", "optimizer_updates"))):
@@ -133,13 +144,18 @@ def load_manifest(pin, code):
             or reg["default"] != "original_full_fp32" or reg["selection"] != registration["selection"]
             or reg["budget"] != registration["budget"]):
         raise ValueError("Frozen manifest differs from its audited recovery case or source")
+    return reg, load_tiles(reg)
+
+
+def load_tiles(reg):
+    """Read only the hash-bound, observation-only packet."""
     rows = torch.load(io.BytesIO(dev._read(reg["resident_inputs"])), map_location="cpu", weights_only=True)
     if any(set(row) != {"tile_id", "image", "wavelengths"} for row in rows):
         raise ValueError("Registered image-only input required")
     tiles = [ResidentPrecisionTile(**row) for row in rows]
     if not tiles or _tile_identity(tiles) != reg["tiles"]:
         raise ValueError("Resident observation bytes or identities differ")
-    return reg, tiles
+    return tiles
 
 
 def _scan(model, reg, tiles, *, evidence=False):

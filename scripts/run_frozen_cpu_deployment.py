@@ -20,7 +20,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("register", "run", "startup", "cost"):
+    for name in ("register", "run", "startup", "cost", "warm-cost"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--input", nargs=2, required=True, metavar=("PATH", "SHA256"))
         if name != "startup":
@@ -29,6 +29,8 @@ def main():
             cmd.add_argument("--mode", required=True)
         if name == "run":
             cmd.add_argument("--save-predictions", action="store_true")
+        if name == "warm-cost":
+            cmd.add_argument("--reference", nargs=2, required=True, metavar=("PATH", "SHA256"))
     args = parser.parse_args()
     code = code_snapshot()
     torch.set_num_threads(1)
@@ -59,6 +61,11 @@ def main():
         raise ValueError("Startup and cost require a registered low-rank manifest")
     elif args.command == "startup":
         result = lr.startup(pin, code, args.mode)
+    elif args.command == "warm-cost":
+        from inference.wp10_deployment_cost import measure
+
+        reference = dict(zip(("path", "sha256"), args.reference, strict=True))
+        result = measure(pin, reference, code, args.out)
     else:
         result = cost(pin, code, args.out)
     print(json.dumps(result, sort_keys=True))
