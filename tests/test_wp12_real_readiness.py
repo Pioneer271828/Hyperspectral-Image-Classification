@@ -26,9 +26,9 @@ def test_nested_support_and_parent_control_use_equal_per_class_counts():
     selections, draws, controls = sample_design(labels, parent, (1, 2))
     assert controls["1"]["missing_classes"] == [2]
     assert controls["2"]["status"] == "paired"
-    for record in (controls["2"], controls["3"]):
-        a, b = (selections[record[key]] for key in ("spatial", "count_control"))
-        assert np.bincount(labels[list(a)]).tolist() == np.bincount(labels[list(b)]).tolist()
+    assert controls["3"]["other_parent_control_impossible"] == [3]
+    a, b = (selections[controls["2"][key]] for key in ("spatial", "count_control"))
+    assert np.bincount(labels[list(a)]).tolist() == np.bincount(labels[list(b)]).tolist()
     assert all(value == "all" for key, value in draws.items() if key.startswith("k5"))
     assert all(len(set(labels[list(selections[value])])) == 3 for key, value in draws.items()
                if key.startswith("k1"))
