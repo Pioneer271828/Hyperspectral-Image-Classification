@@ -22,18 +22,24 @@ DEVICE=os.environ.get('G4G_DEVICE','cpu');torch.set_num_threads(1)
 
 
 def fixture(root):
-    side=18;bands=7;classes=9;pixels=side*side;regions=6
+    return observation_fixture(root, "xuzhou")
+
+
+def observation_fixture(root, target):
+    from loadData.dataset_registry import DATASETS
+
+    classes=DATASETS[target][2];side=18 if classes==9 else 20;bands=7;pixels=side*side;regions=6
     rng=torch.Generator().manual_seed(125)
-    item={'name':'xuzhou','height':side,'width':side,'bands':bands,'class_num':classes,'superpixel_scale':50,
+    item={'name':target,'height':side,'width':side,'bands':bands,'class_num':classes,'superpixel_scale':50,
         'Q':torch.nn.functional.one_hot(torch.arange(pixels)%regions,regions).float().to_sparse().coalesce(),
         'A':torch.eye(regions)+torch.ones(regions,regions)/regions,
         'net_input':torch.rand(side,side,bands+2,generator=rng),'wavelengths':torch.linspace(450,950,bands),'fwhm':None}
     obs=root/'observation.pt';torch.save(item,obs)
-    record=root/'record.json';write_json(record,{'policy':GRAPH_POLICY,'target':'xuzhou','graph_fit_labels':0,
+    record=root/'record.json';write_json(record,{'policy':GRAPH_POLICY,'target':target,'graph_fit_labels':0,
         'observation_sha256':file_hash(obs),'prepared_fields':_item_fingerprint(item)})
     labels=(torch.arange(pixels)%classes+1).reshape(side,side).numpy()
-    family=root/'family.json';write_json(family,make_target_family(labels,'xuzhou',64))
-    return load_target_context('xuzhou',obs,record,file_hash(record),family,file_hash(family),per_class=10,support_seed=64), (obs,record,family)
+    family=root/'family.json';write_json(family,make_target_family(labels,target,64))
+    return load_target_context(target,obs,record,file_hash(record),family,file_hash(family),per_class=10,support_seed=64), (obs,record,family)
 
 
 class TargetTrainingTests(unittest.TestCase):

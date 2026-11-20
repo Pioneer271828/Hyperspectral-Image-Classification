@@ -8,6 +8,7 @@ import sys
 import time
 
 from g4_light_full_audit import audit_schedule
+from g4_light_full_target import MEMORY_FIELD
 from g4_light_ordered_query import REVIEW_POLICY, light_inputs
 from g4_matched_target_evaluation import new_output
 from g4_matched_target_review import HEADS, group_summary, metric_record, plot_case
@@ -42,7 +43,9 @@ def derive_case(model, result, audit, history, trace, cost):
                          for metric in ("oa", "aa", "nll")}})
         if event["step"] == selected["step"]:
             heads = phases
-    if cost["settings_sha256"] != digest(settings) or cost["deployment_speedup_claim"] is not False:
+    if (cost["settings_sha256"] != digest(settings) or cost["deployment_speedup_claim"] is not False
+            or cost.get(MEMORY_FIELD) != settings.get(MEMORY_FIELD)
+            or audit.get(MEMORY_FIELD) != settings.get(MEMORY_FIELD)):
         raise ValueError("Recorded cost settings or scope differs")
     seconds = {phase: [] for phase in sorted(COST_PHASES)}
     for event in cost["events"]:
@@ -66,6 +69,7 @@ def derive_case(model, result, audit, history, trace, cost):
             "adapter_changed_steps": changed, "trainable_changed_steps": sum(r["changed_trainable_elements"] > 0 for r in trace),
             "recorded_cost": {k: {"events": len(v), "seconds": math.fsum(v)} for k, v in seconds.items()},
             "recorded_cost_scope": cost["scope"], "recorded_cost_excludes": cost["excludes"],
+            **({MEMORY_FIELD: settings[MEMORY_FIELD]} if MEMORY_FIELD in settings else {}),
             "heads": heads, "curve": curve}
 
 

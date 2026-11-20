@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import patch
 
 import torch
+from g4_light_adapter_memory import RECOMPUTE
 import g4_light_full_target as full
 from g4_light_target import ADAPTER_HEADS, CONTROLS, HEAD_ONLY, LightTargetRuntime
 from g4_matched_target_study import METHODS, initialize
@@ -64,6 +65,29 @@ def registration_fixture(root):
 
 
 class FullLightTargetTests(unittest.TestCase):
+    def test_old_proof_format_cannot_authorize_new_real_recomputation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path, registration, code = registration_fixture(Path(temp))
+            policy = full.MEMORY_FIELD
+            old_reference = registration["reference_launch"]["sha256"]
+            active = {**registration, policy: RECOMPUTE}
+            with patch.object(full, "REFERENCE_LAUNCH_SHA256", old_reference):
+                write_json(path, active)
+                with self.assertRaisesRegex(ValueError, "new registered experiment"):
+                    full.read_registration(path, file_hash(path), code)
+                active["experiment_issue"] = 250
+                write_json(path, active)
+                with self.assertRaisesRegex(ValueError, "acceptance does not cover"):
+                    full.read_registration(path, file_hash(path), code)
+                engineering = Path(active["engineering_acceptance"]["path"])
+                proof = full.read(engineering)
+                write_json(engineering, {**proof, policy: RECOMPUTE})
+                active["engineering_acceptance"]["sha256"] = file_hash(engineering)
+                write_json(path, active)
+                with self.assertRaisesRegex(ValueError, "Legacy worker proofs"):
+                    full.read_registration(path, file_hash(path), code)
+                self.assertFalse(Path(active["out_dir"]).exists())
+
     def test_registration_budget_resources_owner_and_reference_rejections(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
