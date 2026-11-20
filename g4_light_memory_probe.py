@@ -53,7 +53,8 @@ probe["isolated_recompute"](json.loads(sys.argv[2]), sys.argv[3])
 """
 
 
-def backward_snapshot(runtime, model, item, config, *, offload, recompute=False, capture_projection=False):
+def backward_snapshot(runtime, model, item, config, *, offload, recompute=False, capture_projection=False,
+                      capture=None):
     if runtime.settings["method"] != ADAPTER_HEADS:
         raise ValueError("VCA plus heads is the only profiled optimizer phase")
     if offload and (recompute or capture_projection):
@@ -103,10 +104,14 @@ def backward_snapshot(runtime, model, item, config, *, offload, recompute=False,
             if not parameter.requires_grad or parameter.grad is None or not torch.isfinite(parameter.grad).all():
                 raise ValueError("Missing or invalid permitted gradient: " + name)
             gradients[name] = tensor_hash(parameter.grad)
+            if capture is not None:
+                capture["gradients"][name] = parameter.grad.detach().cpu()
         elif parameter.requires_grad or parameter.grad is not None:
             raise ValueError("Frozen parameter received a gradient: " + name)
     if state_id(model) != before or any(m.training for m in model.backbone.modules()):
         raise ValueError("Backward changed model state or frozen backbone mode")
+    if capture is not None:
+        capture["probabilities"] = [value.detach().cpu() for value in outputs]
     return {**({"adapter_backward_policy": RECOMPUTE} if recompute else {}),
             **({"saved_value_hidden_storage_bytes": sum(projection_storages.values()),
                 "saved_value_hidden_storages": len(projection_storages)} if capture_projection else {}),
@@ -117,7 +122,7 @@ def backward_snapshot(runtime, model, item, config, *, offload, recompute=False,
             "peak_process_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}
 
 
-def profile(args, code, *, probe_code=None):
+def frozen_probe(args, code):
     producer = code_snapshot(Path(args.producer_checkout).resolve(strict=True))
     if producer["commit"] != PRODUCER_COMMIT:
         raise ValueError("Exact Issue249 training producer required")
@@ -155,19 +160,27 @@ def profile(args, code, *, probe_code=None):
     if runtime.settings != identity["settings"]:
         raise ValueError("Probe must use the exact failed role settings")
     check_files(pins)
+    def finish():
+        guard()
+        check_files(pins)
+        require_frozen_code(code)
+
+    return runtime, items[target], assigned, out, pins, finish
+
+
+def profile(args, code, *, probe_code=None):
+    runtime, item, assigned, out, _, finish = frozen_probe(args, code)
     require_gpu(args.gpu)
     initial_free, total = torch.cuda.mem_get_info()
     if initial_free < 20 * 1024 ** 3:
         raise RuntimeError("Diagnostic requires at least 20 GiB free on the registered card")
     out.mkdir(exist_ok=False)
     config = ResearchConfig.from_dict(runtime.settings["config"])
-    model = runtime.build_model(config, {target: items[target]["class_num"]})
-    moved = {k: v.to("cuda:0") if torch.is_tensor(v) else v for k, v in items[target].items()}
+    model = runtime.build_model(config, {runtime.settings["target"]: item["class_num"]})
+    moved = {k: v.to("cuda:0") if torch.is_tensor(v) else v for k, v in item.items()}
     recompute = probe_code is not None
     evidence = backward_snapshot(runtime, model, moved, config, offload=not recompute, recompute=recompute)
-    guard()
-    check_files(pins)
-    require_frozen_code(code)
+    finish()
     if recompute and probe_code != checked_probe(args.expected_commit):
         raise RuntimeError("Probe source changed during diagnosis")
     receipt = {"status": "passed", "scope": "one_registered_role_zero_update_probe",

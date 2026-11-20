@@ -35,13 +35,18 @@ def roles():
             for method in CONTROLS for mode in MODES]
 
 
-def read_registration(path, sha256, code):
+def read_registration(path, sha256, code, *, replay_admission=False):
+    import g4_light_real_campaign as admission
+
     path = Path(path).resolve(strict=True)
     pins = {str(path): sha256}
     check_files(pins)
     value = read(path)
     if value.get("policy") == engineering.REGISTRATION:
         return engineering.read_registration(value, path, sha256, code)
+    if value.get("policy") == admission.REGISTRATION:
+        plan, launch, inputs = admission.open_registration(value, code, replay=replay_admission)
+        return {**admission.launch_view(value, plan), "frozen_reference": launch}, {**inputs, **pins}
     fields = {"policy", "experiment_issue", "producer_commit", "planned_optimizer_updates",
               "estimated_seconds", "gpu_ids", "out_dir", "reference_launch", "engineering_acceptance",
               "analysis_plan", "query_labels_during_training", "test_scoring_during_training"}
@@ -118,14 +123,14 @@ class FullLightTargetRuntime(LightTargetRuntime):
 def prepare_case(registration_path, registration_sha256, code, key, *, device):
     registration, pins = read_registration(registration_path, registration_sha256, code)
     target, seed, method, mode = key
-    gpu = registration["gpu_ids"][roles().index(key) % len(registration["gpu_ids"])]
-    synthetic = registration["policy"] == engineering.REGISTRATION
-    if synthetic:
-        ledger = registration["roles"][roles().index(key)]
+    gpu, ledger = assigned_role(registration, key)
+    synthetic = is_synthetic(registration)
+    if ledger is not None:
         if not ledger["scheduled"] or device != device_for(gpu):
-            raise ValueError("Synthetic role is not registered for this device or execution profile")
+            raise ValueError(("Synthetic role" if synthetic else "Role") + " is not registered for this device or execution profile")
     launch = reference_launch(registration)
-    unchanged_producer(launch["code"], code)
+    if "plan" not in registration:
+        unchanged_producer(launch["code"], code)
     reference = select_case(launch, launch["code"], target, seed, METHODS[1], mode,
                             phase=engineering.PHASE if synthetic else "full_campaign")
     root = new_output(registration["out_dir"], launch)
@@ -146,8 +151,8 @@ def prepare_case(registration_path, registration_sha256, code, key, *, device):
                       physical_gpu=gpu, protected_files=pins)
     if MEMORY_FIELD in runtime.settings:
         provenance[MEMORY_FIELD] = runtime.settings[MEMORY_FIELD]
-    if synthetic:
-        provenance.update(scope=engineering.SCOPE, scheduled_role=ledger)
+    if ledger is not None:
+        provenance.update(scope=engineering.SCOPE if synthetic else "real_wp03_full54", scheduled_role=ledger)
 
     def finish():
         guard()
@@ -159,9 +164,36 @@ def prepare_case(registration_path, registration_sha256, code, key, *, device):
 
 
 def reference_launch(registration):
+    if "frozen_reference" in registration:
+        return registration["frozen_reference"]
     if registration["policy"] == engineering.REGISTRATION:
         return engineering.pinned(engineering.pinned(registration["fixture"])["launch"])
     return read(registration["reference_launch"]["path"])
+
+
+def is_synthetic(registration):
+    return registration["policy"] == engineering.REGISTRATION or registration.get("synthetic") is True
+
+
+def assigned_role(registration, key):
+    index = roles().index(key)
+    if "roles" in registration:
+        row = registration["roles"][index]
+        return row["slot"], row
+    return registration["gpu_ids"][index % len(registration["gpu_ids"])], None
+
+
+def registered_worker(registration, gpu):
+    if "devices" in registration:
+        from g4_light_engineering_devices import check_child
+
+        check_child(registration, gpu)
+    require_gpu(gpu)
+    if "plan" in registration and not is_synthetic(registration):
+        from g4_light_real_campaign import check_worker_environment
+
+        row = next(row for row in registration["devices"] if row["slot"] == gpu)
+        check_worker_environment(row)
 
 
 def device_for(slot):
@@ -216,8 +248,10 @@ def main(argv=None):
         raise RuntimeError("Clean registered Linux commit required")
     key = (args.target, args.seed, args.method, args.mode)
     registration, _ = read_registration(args.registration, args.registration_sha256, code)
-    gpu = registration["gpu_ids"][roles().index(key) % len(registration["gpu_ids"])]
+    gpu, _ = assigned_role(registration, key)
     device = device_for(gpu)
+    if "plan" in registration:
+        registered_worker(registration, gpu)
     items, provenance, runtime, finish = prepare_case(args.registration, args.registration_sha256, code, key, device=device)
     gpu = provenance["physical_gpu"]
     import fcntl
@@ -225,11 +259,7 @@ def main(argv=None):
     claim_output(root, args.registration_sha256)
     with (root / f".gpu-{gpu}.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        if registration["policy"] == engineering.REGISTRATION:
-            from g4_light_engineering_devices import check_child
-
-            check_child(registration,gpu)
-        require_gpu(gpu)
+        registered_worker(registration, gpu)
         runtime.directory.parent.mkdir(exist_ok=True)
         with redirect_stdout(sys.stderr):
             result = run_training(runtime.settings, items, runtime.directory, provenance, code,
