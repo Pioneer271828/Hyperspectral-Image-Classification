@@ -137,6 +137,23 @@ class SharedEdgeBandTests(unittest.TestCase):
             with self.subTest(fields=fields):
                 self.assertFalse(experiment.valid_score(score | fields, 1, 2, 3))
 
+    def test_reduction_keeps_the_native_floor_and_counts_fusion_by_branch_pattern(self):
+        views = dict.fromkeys(experiment.VIEWS, {"native": {
+            "fused": [{"predicted": 5}, {"predicted": 1}],
+            "cnn": [{"predicted": 1}, {"predicted": 1}],
+            "graph": [{"predicted": 5}, {"predicted": 1}],
+        }})
+        block = dict(ordinal=1, tile=4, parent=3, offset=0, first_focus=[5, 6], truth=[5, 6],
+                     points_sha256=digest([25, 35]), columns={}, control={"status": "no_matched_arms"}, scores=views)
+        identity = dict(scene="xuzhou", classes=9, focus=[5, 6], rivals={"5": 1, "6": 1},
+                        release={"evaluation_per_class": [0, 0, 0, 0, 1, 1, 0, 0, 0]})
+        result = experiment.reduction([(block, {})], (identity, [], {}), "a"*40)
+        self.assertEqual(result["focal"]["5"]["scope"], "native_only_without_matched_control")
+        self.assertEqual(result["focal"]["6"]["scope"], "native_baseline_floor_without_matched_control")
+        self.assertEqual(result["focal"]["5"]["native"]["full"]["cross_head"]["cnn_only_wrong"]["fused_correct"], 1)
+        self.assertEqual(result["focal"]["6"]["native"]["full"]["cross_head"]["both_wrong"]["fused_to_fixed_rival"], 1)
+        self.assertEqual(result["contrasts"]["placement"]["matched"]["low_weight/important"]["missing_parents"], [3])
+
 
 if __name__ == "__main__":
     unittest.main()

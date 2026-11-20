@@ -477,7 +477,7 @@ def reduction(audited, authority, producer):
     classes = identity["classes"]
     status = [dict(ordinal=block["ordinal"], tile=block["tile"], parent=block["parent"], offset=block["offset"],
                    first_focus=block["first_focus"], points=len(block["truth"]),
-                   counts={str(y):block["truth"].count(y) for y in receipt["focus"]},
+                   counts={str(y):block["truth"].count(y) for y in identity["focus"]},
                    point_identity=block["points_sha256"], columns=block["columns"],
                    status=block["control"]["status"], masks={k:digest(v) for k,v in masks.items()},
                    matching={k:v["status"] for k,v in block["control"].get("anchor_plan", {}).get("controls", {}).items()})
