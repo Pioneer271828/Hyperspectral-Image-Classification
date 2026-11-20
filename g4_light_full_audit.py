@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 
 from evaluation.g4_target import independent_trainval
-from g4_light_engineering_registration import SCOPE, code_identity
+from g4_light_engineering_registration import code_identity
 from g4_light_full_target import MEMORY_FIELD, POLICY, UPDATES, prepare_case
 from g4_light_target import HEAD_ONLY
 from g4_matched_target_audit import REQUIRED, files, read
@@ -111,7 +111,7 @@ def audit_case(registration_path, registration_sha256, code, key, *, device="cud
             "result_sha256": before[str(folder / "result.json")], "primary_sha256": before[str(primary)],
             "sidecar_sha256": before[str(primary) + ".json"], "protected_inputs": provenance["protected_files"],
             **({MEMORY_FIELD: settings[MEMORY_FIELD]} if MEMORY_FIELD in settings else {}),
-            **({"scope": SCOPE, "producer": code_identity(code), "registration_sha256": registration_sha256,
+            **({"scope": provenance["scope"], "producer": code_identity(code), "registration_sha256": registration_sha256,
                 "ledger": provenance["scheduled_role"], "device": str(device)}
-               if provenance.get("scope") == SCOPE else {}),
+               if "scheduled_role" in provenance else {}),
             "artifacts": before, "new_optimizer_updates": 0, "query_labels_accessed": False}

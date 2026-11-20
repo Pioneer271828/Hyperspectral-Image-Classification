@@ -15,8 +15,9 @@ import time
 
 from g4_light_full_audit import audit_case
 import g4_light_engineering_registration as engineering
-from g4_light_engineering_devices import LEASE_FD, check_child, device_admitted, open_lease
-from g4_light_full_target import MEMORY_FIELD, UPDATES, claim_output, device_for, read_registration, reference_launch, require_gpu, roles
+from g4_light_engineering_devices import LEASE_FD, device_admitted, open_lease
+from g4_light_full_target import (MEMORY_FIELD, UPDATES, assigned_role, claim_output, device_for, is_synthetic,
+                                  read_registration, reference_launch, registered_worker, roles)
 from g4_light_target import CONTROLS
 from g4_matched_target_audit import check_files, files, read
 from g4_matched_target_evaluation import new_output
@@ -87,20 +88,22 @@ def invoke(root, folder, gpu, command, stage, lease, *, shared=None):
     return json.loads(lines[-1])
 
 
-def run_role(root, key, gpu, base, stop, publish, lease, *, engineering_role=None, shared=None, uuid=None):
+def run_role(root, key, gpu, base, stop, publish, lease, *, engineering_role=None, shared=None, uuid=None,
+             role_scope=engineering.SCOPE):
     folder = case_directory(root, key)
     role = ["--target", key[0], "--seed", str(key[1]), "--method", key[2], "--mode", key[3]]
     worker = [sys.executable, "scripts/train_g4_light_target_full.py", *base, *role]
     audit = [sys.executable, "-m", "g4_light_full_campaign", "audit", *base, *role]
     options = {"shared":shared} if shared is not None else {}
-    wait_seconds = 30 if engineering_role is None else 5
+    fixture = engineering_role is not None and role_scope == engineering.SCOPE
+    wait_seconds = 5 if fixture else 30
     waiting_since = time.monotonic()
 
     def admitted():
         return device_admitted(gpu,uuid) if uuid else eligible(gpu)
 
     def wait(stage):
-        if engineering_role is not None and time.monotonic()-waiting_since > 300:
+        if fixture and time.monotonic()-waiting_since > 300:
             raise RuntimeError(f"Synthetic resource wait expired for {folder.name} {stage}")
         publish(gpu, "waiting_for_resources", folder.name, stage)
         stop.wait(wait_seconds)
@@ -144,14 +147,15 @@ def run_role(root, key, gpu, base, stop, publish, lease, *, engineering_role=Non
                 or row["query_labels_accessed"] is not False):
             raise ValueError("Independent light case acceptance differs")
         if engineering_role is not None and (row.get("ledger") != engineering_role
-                or row.get("scope") != engineering.SCOPE or row.get(MEMORY_FIELD) != engineering_role["strategy"]):
-            raise ValueError("Independent synthetic role or adapter policy differs")
+                or row.get("scope") != role_scope or row.get(MEMORY_FIELD) != engineering_role["strategy"]):
+            raise ValueError("Independent registered role or adapter policy differs")
         write_json(root / "audits" / (folder.name + ".json"), row)
         return row
     return None
 
 
-def run_queues(root, gpus, base, code, registration_sha256, pins, acceptance_sha256, *, resume, synthetic=None):
+def run_queues(root, gpus, base, code, registration_sha256, pins, acceptance_sha256, *, resume, synthetic=None,
+               admitted=None):
     claim_output(root, registration_sha256)
     with (root / ".coordinator.lock").open("a") as lease:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -163,14 +167,18 @@ def run_queues(root, gpus, base, code, registration_sha256, pins, acceptance_sha
         grid = roles()
         scheduled = {}
         uuid_by_slot = {}
-        if synthetic is not None:
-            scheduled = {tuple(row["role"]):row for row in synthetic["roles"] if row["scheduled"]}
+        registered = admitted if admitted is not None else synthetic
+        role_scope = engineering.SCOPE if synthetic is not None else "real_wp03_full54"
+        if registered is not None:
+            scheduled = {tuple(row["role"]):row for row in registered["roles"] if row["scheduled"]}
             grid = list(scheduled)
-            uuid_by_slot = {row["slot"]:row.get("uuid") for row in synthetic["devices"]}
-            header.update(scope=engineering.SCOPE, producer=engineering.code_identity(code),
-                          planned_cases=len(synthetic["roles"]), planned_optimizer_updates=synthetic["planned_optimizer_updates"],
-                          scheduled_cases=len(grid), scheduled_optimizer_updates=synthetic["scheduled_optimizer_updates"],
-                          real_training_authorized=False)
+            uuid_by_slot = {row["slot"]:row.get("uuid") for row in registered["devices"]}
+            header.update(scope=role_scope, producer=engineering.code_identity(code),
+                          planned_cases=len(registered["roles"]), planned_optimizer_updates=registered["planned_optimizer_updates"],
+                          scheduled_cases=len(grid), scheduled_optimizer_updates=registered["scheduled_optimizer_updates"],
+                          real_training_authorized=synthetic is None)
+        if admitted is not None:
+            header.update(admission_plan=admitted["plan"], admission_authority=admitted["authority"])
         accepted_path = root / ("engineering-acceptance.json" if synthetic is not None else "training-acceptance.json")
         if resume:
             previous = read(status_path)
@@ -233,7 +241,8 @@ def run_queues(root, gpus, base, code, registration_sha256, pins, acceptance_sha
                     for key in owned:
                         if stop.is_set():
                             break
-                        options = {"engineering_role":scheduled[key], "shared":shared, "uuid":uuid} if scheduled else {}
+                        options = {"engineering_role":scheduled[key], "shared":shared, "uuid":uuid,
+                                   "role_scope":role_scope} if scheduled else {}
                         row = run_role(root, key, gpu, base, stop, publish, dispatch, **options)
                         if row is not None:
                             with mutex:
@@ -298,27 +307,36 @@ def main(argv=None):
     code = code_snapshot()
     if sys.platform != "linux" or not __debug__ or code["dirty"] or code["commit"] != args.expected_commit:
         raise RuntimeError("Clean registered Linux commit required")
-    registration, pins = read_registration(args.registration, args.registration_sha256, code)
-    synthetic = registration["policy"] == engineering.REGISTRATION
+    registration, pins = read_registration(args.registration, args.registration_sha256, code,
+                                           replay_admission=args.action == "run")
+    synthetic = is_synthetic(registration)
     launch = reference_launch(registration)
-    unchanged_producer(launch["code"], code)
+    if "plan" not in registration:
+        unchanged_producer(launch["code"], code)
     select_case(launch, launch["code"], NAMES[0], 64, METHODS[1], "none",
                 phase=engineering.PHASE if synthetic else "full_campaign")
     root = new_output(registration["out_dir"], launch)
     gpus = registration["gpu_ids"]
     if args.action == "audit":
         key = (args.target, args.seed, args.method, args.mode)
-        gpu = gpus[roles().index(key) % len(gpus)]
+        gpu, _ = assigned_role(registration, key)
         with (root / f".gpu-{gpu}.lock").open("a") as lease:
             fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            if synthetic:
-                check_child(registration,gpu)
-            require_gpu(gpu)
+            registered_worker(registration, gpu)
             result = audit_case(args.registration, args.registration_sha256, code, key, device=device_for(gpu))
         print(json.dumps(result, allow_nan=False), flush=True)
         return
     base = ["--expected-commit", code["commit"], "--registration", str(Path(args.registration).resolve()),
             "--registration-sha256", args.registration_sha256]
+    if "plan" in registration:
+        if args.campaign_engineering or args.campaign_engineering_sha256:
+            raise ValueError("Fresh full54 registration owns its independent release")
+        if not synthetic and not args.resume and not all(device_admitted(row["slot"], row["uuid"])
+                                                         for row in registration["devices"]):
+            raise RuntimeError("All registered physical cards must qualify at campaign launch")
+        run_queues(root, gpus, base, code, args.registration_sha256, pins, registration["authority"]["sha256"],
+                   resume=args.resume, synthetic=registration if synthetic else None, admitted=registration)
+        return
     if synthetic:
         if args.campaign_engineering or args.campaign_engineering_sha256:
             raise ValueError("Legacy campaign proof cannot be attached to synthetic execution")
