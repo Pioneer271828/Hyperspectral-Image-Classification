@@ -2,6 +2,7 @@
 
 from collections import Counter, defaultdict
 from csv import DictReader
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -49,21 +50,22 @@ def approval_inventory(root, incoming):
                     continue
                 counts["small_json_examined"] += 1
                 try:
-                    record = json.loads(path.read_bytes())
+                    payload = path.read_bytes()
+                    record = json.loads(payload)
                 except (UnicodeError, ValueError, OSError):
                     counts["unreadable"] += 1
                     continue
                 if not isinstance(record, dict) or not isinstance(record.get("schema"), str):
                     continue
                 schema = record["schema"]
-                mode = record.get("source_mode")
+                mode = record.get("source_mode", record.get("mode"))
                 mode = mode if isinstance(mode, str) else "unspecified"
                 if schema.startswith(("wp02_", "wp05_")):
                     schemas[f"{schema}/{mode}"] += 1
                 if schema in ("wp02_independent_development_approval_v1", "wp02_optical_authority_v1"):
                     if mode != "synthetic":
                         candidates.append(dict(schema=schema, source_mode=mode,
-                            metadata_sha256=digest(record), location=path.relative_to(base).as_posix()))
+                            metadata_sha256=sha256(payload).hexdigest(), location=path.relative_to(base).as_posix()))
         result[area] = dict(counts=dict(counts), protocol_schemas=dict(schemas),
                             candidates_requiring_owner_binding=candidates)
     return dict(areas=result, directory_depth=7, maximum_metadata_bytes=65536,
@@ -104,9 +106,9 @@ def archived_points(path, acceptance, archived):
         fields = ("scene", "step", "checkpoint", "authority")
         require(all(source[k] == attested[k] for k in fields) and source["role"] == "archived_devval",
                 "Historical role, checkpoint or development approval differs")
-        views, common = {}, None
+        views, decisions, common = {}, {}, None
         for view in VIEWS:
-            views[view] = {}
+            views[view], decisions[view] = {}, {}
             for head in HEADS:
                 key = f"native_{head}"
                 a, b = by_scope[case, "full", key], by_scope[case, view, key]
@@ -124,9 +126,10 @@ def archived_points(path, acceptance, archived):
                             "Same-point joined integer totals differ from the independently admitted archive")
                     focus[str(label)] = cell
                 views[view][head] = focus
+                decisions[view][head] = digest([b[i][1] for i in sorted(b)])
         outcomes[case] = dict(**{k: source[k] for k in fields}, role=source["role"],
                               archived_population=source["population_order"], n=len(common),
-                              ordinal_truth_sha256=digest(common), views=views)
+                              ordinal_truth_sha256=digest(common), native_decisions=decisions, views=views)
     return outcomes
 
 
@@ -181,8 +184,11 @@ def index(root, incoming, capacity_pins, producer):
                 "Archived transitions and equal-width probe use different frozen cases")
         for view in VIEWS:
             for head in HEADS:
+                native_head = probe["results"]["views"][view]["native"][head]
+                require(native_head["decision"] == archived["native_decisions"][view][head],
+                        "Native logits changed a decision on an actual released development point")
                 for label, row in archived["views"][view][head].items():
-                    result = probe["results"]["views"][view]["native"][head]["focus"][label]
+                    result = native_head["focus"][label]
                     counts = Counter()
                     for _, dst, n in row["destinations"]:
                         if dst != int(label):
