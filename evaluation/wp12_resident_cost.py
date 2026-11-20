@@ -12,7 +12,6 @@ import os
 import math
 from pathlib import Path
 import platform
-import re
 import resource
 import stat
 import subprocess
@@ -27,22 +26,13 @@ from m4_ordered_source import OrderedValidation
 from model.checkpoint_io import load_model_checkpoint
 from model.research_config import digest
 from research_runtime import hash_file
-from transfer.shared_gpu_lease import lease_path
+from transfer.shared_gpu_lease import canonical_gpu_uuid, lease_path
 
 
 JOB_POLICY = "wp12-native-resident-job-v1"
 OBSERVATION = "net_input Q A wavelengths fwhm superpixel_scale"
 MEMORY = {"cpu": "fresh_worker_peak_rss_through_validation_bytes",
           "cuda": "measured_forward_peak_allocated_bytes_including_resident_tensors"}
-
-
-def canonical_gpu_uuid(value):
-    """Normalize the two full physical UUID formats emitted by CUDA and nvidia-smi."""
-    match = re.fullmatch(r"(?:GPU-)?([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})",
-                         value, flags=re.IGNORECASE)
-    if match is None:
-        raise ValueError("Explicit full physical GPU UUID required")
-    return "GPU-" + match[1].lower()
 
 
 @contextmanager

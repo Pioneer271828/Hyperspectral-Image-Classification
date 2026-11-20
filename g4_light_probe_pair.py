@@ -19,12 +19,13 @@ from joint_training import _rng_state, _tree_fingerprint
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, external_directory, require_frozen_code, tensor_hash, write_json
 from transfer import p4_runtime_device as resources
-from transfer.shared_gpu_lease import physical_lease
+from transfer.shared_gpu_lease import dispatch_lease, observed_cuda_device, physical_lease
 
 SAMPLES = ("offload", "offload-repeat", "recompute", "recompute-repeat")
-DEVICE_REQUEST = "wp03_honghu_zero_update_device_request_v1"
-DEVICE_APPROVAL = "wp03_honghu_zero_update_device_approval_v1"
-PROBE_REVIEW = "wp03_honghu_zero_update_comparison_v1"
+DEVICE_REQUEST = "wp03_honghu_zero_update_device_request_v2"
+DEVICE_APPROVAL = "wp03_honghu_zero_update_device_approval_v2"
+PROBE_REVIEW = "wp03_honghu_zero_update_comparison_v2"
+INTENT = "wp03_honghu_zero_update_intent_v2"
 REAL = "frozen_honghu_real_zero_update"
 FIXTURE = "honghu_shape_synthetic_zero_update"
 ARITHMETIC = {
@@ -99,7 +100,8 @@ def device_request(registration, device, engineering, code):
         raise ValueError("Alternate diagnostic request must name a different physical card")
     review = pinned(engineering)
     if (review["policy"] != PROBE_REVIEW or review["scope"] != FIXTURE or review["device"] != device
-            or review["arithmetic"] != ARITHMETIC or review["shape"] != [940, 475, 272]):
+            or review["arithmetic"] != ARITHMETIC or review["shape"] != [940, 475, 272]
+            or pinned(review["request"])["producer"] != code_identity(code)):
         raise ValueError("Same-device full-shape arithmetic engineering review required")
     if review != review_pair(review["request"], review["samples"]):
         raise ValueError("Synthetic engineering comparison did not replay independently")
@@ -136,16 +138,27 @@ def probe_intent(registration, device, code, *, migration=None, authority=None):
         minimum = request["minimum_free_mib"]
     elif migration is not None or authority is not None:
         raise ValueError("Original device must retain the original qualification")
-    return {"scope": REAL, "producer": code_identity(code), "registration": registration,
+    return {"policy": INTENT, "scope": REAL, "producer": code_identity(code), "registration": registration,
             "original_producer": PRODUCER_COMMIT, "device": device, "role": list(FAILED_ROLE),
             "arithmetic": ARITHMETIC, "migration": migration, "authority": authority,
             "minimum_free_mib": minimum, **LIMITS}
 
 
-def sample(runtime, model, item, config, intent, label, observed, output, *, finish=None):
+def sample_device(device, minimum):
+    """Verify the worker before any case inputs, allocator queries or model construction."""
+    admission = hardware_gate(device, minimum)
+    actual = observed_cuda_device(device["uuid"])
+    observed_arithmetic = arithmetic()
+    if observed_arithmetic != ARITHMETIC or actual["gpu_name"] != admission["name"]:
+        raise ValueError("Observed CUDA model or arithmetic diverges from the diagnostic assignment")
+    return admission, {**actual, "arithmetic": observed_arithmetic}
+
+
+def sample(runtime, model, item, config, intent, label, observed, execution, output, *, finish=None):
     """Run one admitted process, saving only what the separate reviewer needs."""
-    if label not in SAMPLES or arithmetic() != ARITHMETIC:
-        raise ValueError("Original arithmetic is required")
+    if label not in SAMPLES or execution != {**observed_cuda_device(intent["device"]["uuid"]),
+                                             "arithmetic": arithmetic()} or execution["arithmetic"] != ARITHMETIC:
+        raise ValueError("Observed device or original arithmetic changed")
     device = next(model.parameters()).device
     random.seed(64)
     np.random.seed(64)
@@ -164,7 +177,8 @@ def sample(runtime, model, item, config, intent, label, observed, output, *, fin
     raw_path = output / "tensors.pt"
     torch.save(raw, raw_path)
     write_json(output / "receipt.json", {
-        "intent": intent, "sample": label, "admission": observed, "shape": list(item["net_input"].shape),
+        "intent": intent, "sample": label, "admission": observed, "execution": execution,
+        "shape": list(item["net_input"].shape),
         "raw": pin(raw_path), "rng_before": before_rng, "rng_after": _tree_fingerprint(_rng_state(device)),
         "buffers_before": before_bn, "buffers_after": after_bn, **LIMITS, **record,
     })
@@ -189,11 +203,11 @@ def isolated_sample(arguments, expected_source_hash):
     if request != args.intent:
         raise ValueError("Zero-update intent changed after dispatch")
     with physical_lease(args.device["uuid"], inherited_fd=args.lease_fd):
-        admitted = hardware_gate(args.device, request["minimum_free_mib"])
+        admitted, execution = sample_device(args.device, request["minimum_free_mib"])
         free, _ = torch.cuda.mem_get_info()
         if free < request["minimum_free_mib"] * 2**20:
             raise resources.ResourceUnavailable("CUDA context free memory no longer qualifies")
-        torch.cuda.set_per_process_memory_fraction((free - 2 * 2**30) / torch.cuda.get_device_properties(0).total_memory, 0)
+        torch.cuda.set_per_process_memory_fraction((free - 2 * 2**30) / execution["total_memory_bytes"], 0)
         parent_args = argparse.Namespace(producer_checkout=frozen, registration=args.registration["path"],
                                          gpu=ORIGINAL["slot"], out=args.out)
         runtime, item, _, out, pins, finish = frozen_probe(parent_args, producer)
@@ -204,7 +218,21 @@ def isolated_sample(arguments, expected_source_hash):
         output.mkdir()
         sample(runtime, model, moved, config,
                {**request, "original_settings": digest(runtime.settings), "protected_files": pins},
-               args.label, admitted, output, finish=finish)
+               args.label, admitted, execution, output, finish=finish)
+
+
+def dispatch_samples(device, minimum, out, cwd, command):
+    """Launch freshly masked CUDA workers while the CUDA-free parent holds the physical lease."""
+    check_device(device)
+    uuid = device["uuid"]
+    env = {**os.environ, "CUDA_VISIBLE_DEVICES": uuid, "CUDA_DEVICE_ORDER": "PCI_BUS_ID"}
+    with dispatch_lease(uuid) as lock:
+        hardware_gate(device, minimum)
+        out.mkdir(exist_ok=False)
+        for label in SAMPLES:
+            with (out / (label + ".log")).open("x") as log:
+                subprocess.run(command(label, lock.fileno()), cwd=cwd, env=env, pass_fds=(lock.fileno(),),
+                               stdout=log, stderr=subprocess.STDOUT, check=True)
 
 
 def execute(intent, producer_root, out, code):
@@ -219,24 +247,32 @@ def execute(intent, producer_root, out, code):
     launch = pinned(registration["reference_launch"])
     out = new_output(out, launch, (registration["out_dir"],))
     require_frozen_code(code)
-    with physical_lease(intent["device"]["uuid"]) as lock:
-        hardware_gate(intent["device"], intent["minimum_free_mib"])
-        out.mkdir(exist_ok=False)
-        for label in SAMPLES:
-            arguments = {"producer_checkout": str(path), "out": str(out), "label": label, "intent": intent,
-                         "device": intent["device"], "registration": intent["registration"],
-                         "migration": intent["migration"], "authority": intent["authority"], "lease_fd": lock.fileno()}
-            with (out / (label + ".log")).open("x") as log:
-                subprocess.run([sys.executable, "-I", "-B", "-c", ISOLATED_PAIR, str(PROBE_ROOT),
-                                json.dumps(arguments), code["source_hash"]], cwd=path, pass_fds=(lock.fileno(),),
-                               stdout=log, stderr=subprocess.STDOUT, check=True)
+    def command(label, lease_fd):
+        arguments = {"producer_checkout": str(path), "out": str(out), "label": label, "intent": intent,
+                     "device": intent["device"], "registration": intent["registration"],
+                     "migration": intent["migration"], "authority": intent["authority"], "lease_fd": lease_fd}
+        return [sys.executable, "-I", "-B", "-c", ISOLATED_PAIR, str(PROBE_ROOT),
+                json.dumps(arguments), code["source_hash"]]
+
+    dispatch_samples(intent["device"], intent["minimum_free_mib"], out, path, command)
 
 
-def load_sample(sample_pin, label):
+def load_sample(sample_pin, label, device):
     report = pinned(sample_pin)
     if (report["sample"] != label or any(report[k] != v for k, v in LIMITS.items())
             or report["raw"]["path"] != str(Path(sample_pin["path"]).with_name("tensors.pt"))):
         raise ValueError("Sample label, scope or owned raw payload differs")
+    execution = report.get("execution")
+    admission = report["admission"]
+    if (not isinstance(execution, dict) or set(execution) != {"physical_uuid", "device", "visible_devices",
+            "device_count", "gpu_name", "total_memory_bytes", "cuda_runtime", "arithmetic"}
+            or execution["physical_uuid"] != device["uuid"] or execution["visible_devices"] != device["uuid"]
+            or execution["device"] != "cuda:0" or type(execution["device_count"]) is not int
+            or execution["device_count"] != 1 or execution["arithmetic"] != ARITHMETIC
+            or execution["gpu_name"] != admission["name"] or admission["physical_uuid"] != device["uuid"]
+            or type(execution["total_memory_bytes"]) is not int or execution["total_memory_bytes"] <= 0
+            or not execution["cuda_runtime"]):
+        raise ValueError("Receipt actual CUDA UUID, visibility, or arithmetic differs from the leased card")
     raw = Path(report["raw"]["path"])
     check_files({str(raw): report["raw"]["sha256"]})
     tensors = torch.load(raw, map_location="cpu", weights_only=True)
@@ -259,14 +295,15 @@ def diff(before, after):
 
 def review_pair(request_pin, samples):
     request = pinned(request_pin)
-    if (request.get("scope") not in (REAL, FIXTURE) or request.get("arithmetic") != ARITHMETIC
+    if (request.get("policy") != INTENT or request.get("scope") not in (REAL, FIXTURE)
+            or request.get("arithmetic") != ARITHMETIC
             or any(request.get(k) != v for k, v in LIMITS.items()) or set(samples) != set(SAMPLES)
             or len({v["path"] for v in samples.values()}) != len(SAMPLES)):
         raise ValueError("Four separate zero-update sample receipts are required")
     check_device(request["device"])
     if request["role"] != list(FAILED_ROLE):
         raise ValueError("Original exact failed role required")
-    sample_data = {label: load_sample(samples[label], label) for label in SAMPLES}
+    sample_data = {label: load_sample(samples[label], label, request["device"]) for label in SAMPLES}
     metadata, ref = sample_data["offload"]
     intent = metadata["intent"]
     if (any(intent.get(k) != v for k, v in request.items()) or metadata["shape"] != [940, 475, 272]
@@ -275,6 +312,7 @@ def review_pair(request_pin, samples):
                    or row["buffers_before"] != row["buffers_after"] or row["buffers_before"] != metadata["buffers_before"]
                    or row["shape"] != metadata["shape"] or row["admission"]["physical_uuid"] != request["device"]["uuid"]
                    or row["admission"]["driver"] != metadata["admission"]["driver"]
+                   or row["execution"] != metadata["execution"]
                    or row["saved_tensors_on_cpu"] != label.startswith("offload")
                    for label,(row,_) in sample_data.items())):
         raise ValueError("Frozen role, BN, RNG, device or saved-tensor treatment differs")
@@ -301,6 +339,7 @@ def review_pair(request_pin, samples):
                  for label,(row,_) in sample_data.items()}
     return {"policy": PROBE_REVIEW, "scope": request["scope"], "device": request["device"], "request": request_pin,
             "samples": samples, "original_role": request["role"], "arithmetic": ARITHMETIC, "shape": metadata["shape"],
+            "observed_cuda": metadata["execution"],
             "tolerance": TOLERANCE, "status": "numeric_failure" if any(r["outside"] or r.get("changed") for r in rows)
             else "within_existing_tolerance", "bitwise_equal": all(r["exact"] for r in rows),
             "measurements": by_sample, "comparisons": comparisons, **LIMITS}
