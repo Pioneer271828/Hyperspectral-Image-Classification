@@ -8,7 +8,8 @@ from time import perf_counter_ns
 
 import torch
 
-from compression.low_rank_recovery import TARGET
+from compression.low_rank import LowRankMatrix
+from compression.low_rank_recovery import TARGET, factor_calls, factor_counts
 from evaluation.wp12_cost_primitives import timing_summary
 from evaluation.wp12_low_rank_evidence import verify_guard
 from inference import wp10_low_rank_execution as frozen
@@ -75,40 +76,34 @@ def _sample(runtime, reg, expected):
 
 def _operator_evidence(runtime, reg, expected):
     layer = runtime.full.get_submodule(TARGET)
-    factor = hasattr(layer, "right") and hasattr(layer, "left")
-    leaves = {"right": layer.right, "left": layer.left} if factor else {"dense": layer}
-    evidence = {}
-    handles = []
+    factor = type(layer) is LowRankMatrix
+    weights = {"right": layer.right, "left": layer.left} if factor else {"dense": layer.weight}
+    outputs = []
 
-    def record(part):
-        def observe(module, arguments, output):
-            actual = dict(
-                kind=type(module).__name__, input_dtype=str(arguments[0].dtype),
-                weight_dtype=str(module.weight.dtype), output_dtype=str(output.dtype),
-                device=str(output.device), kernel_size=list(module.kernel_size))
-            previous = evidence.setdefault(part, dict(actual, calls=0))
-            if any(previous[key] != value for key, value in actual.items()):
-                raise ValueError("Point-convolution runtime changed dtype or device")
-            previous["calls"] += 1
-        return observe
+    def observe(_, arguments, output):
+        if (arguments[0].device.type != "cpu" or output.device.type != "cpu"
+                or arguments[0].dtype != torch.float32 or output.dtype != torch.float32):
+            raise ValueError("Point-convolution runtime changed dtype or device")
+        outputs.append(str(output.dtype))
 
-    for part, module in leaves.items():
-        handles.append(module.register_forward_hook(record(part)))
+    handle = layer.register_forward_hook(observe)
     try:
-        with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profile:
+        with factor_calls(runtime.full) as factors, torch.autograd.profiler.profile(use_cuda=False) as profile:
             _sample(runtime, reg, expected)
     finally:
-        for handle in handles:
-            handle.remove()
+        handle.remove()
     kernels = {event.key: event.count for event in profile.key_averages()
                if "convolution" in event.key or "conv2d" in event.key or "quantized::" in event.key}
-    if not kernels or evidence.keys() != leaves.keys() or any(
-            row["calls"] != len(reg["tiles"]) or row["kind"] != "Conv2d" or row["kernel_size"] != [1, 1]
-            or row["device"] != "cpu"
-            or any(row[key] != "torch.float32" for key in ("input_dtype", "weight_dtype", "output_dtype"))
-            for row in evidence.values()):
+    calls = factor_counts(runtime.full, len(reg["tiles"]))
+    if (not kernels or len(outputs) != len(reg["tiles"]) or factors != calls
+            or any(value.device.type != "cpu" or value.dtype != torch.float32 for value in weights.values())
+            or (not factor and (type(layer) is not torch.nn.Conv2d or layer.kernel_size != (1, 1)))):
         raise ValueError("Expected actual native CPU FP32 point convolutions")
+    evidence = {part: dict(dtype="torch.float32", weight_shape=list(value.shape),
+                           kernel_size=[1, 1], calls=calls.get(part, len(outputs)))
+                for part, value in weights.items()}
     return dict(path="two_factor_fp32" if factor else "dense_fp32",
+                device="cpu", input_dtype="torch.float32", output_dtype="torch.float32",
                 point_convolutions=evidence, full_forward_convolution_events=kernels)
 
 
