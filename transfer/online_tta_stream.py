@@ -20,6 +20,7 @@ from transfer.registered_development import _load_source, _read
 VERSION = 'wp09_online_tta_v1'
 SETTINGS = ('task', 'mode', 'reset', 'scale', 'lr', 'rank', 'seed')
 ORDERS = ('original', 'reverse', 'seed64')
+RESETS = ('episodic', 'continual', 'scene')
 ADMITTED_SOURCE = 'wp09_known_source_admitted_v1'
 ADMISSION_HASHES = ('authority_sha256', 'source_receipt_sha256', 'preparation_sha256',
                     'context_registration_sha256', 'dataset_evidence_sha256')
@@ -150,7 +151,7 @@ class StreamRegistration:
         settings = reg['settings']
         task = settings['task']
         identifier(task)
-        if (settings['mode'] not in MODES or settings['reset'] not in ('episodic', 'continual')
+        if (settings['mode'] not in MODES or settings['reset'] not in RESETS
                 or type(settings['scale']) is not int or settings['scale'] < 1
                 or type(settings['rank']) is not int or settings['rank'] < 1
                 or type(settings['seed']) is not int or not 0 <= settings['seed'] < 2**32
