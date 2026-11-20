@@ -150,9 +150,11 @@ def review_case(root, case, artifact, deployment=None):
             if deployment is not None:
                 from evaluation.wp12_support_head_cost import verify_overlap
 
+                selection = deployment[0]["selection"]
                 views[view]["deployed_point_overlap"] = verify_overlap(
-                    deployment, view, native, x, arrays["devval_ids"], result["selections"]["all"]["heads"])
+                    deployment, view, native, x, arrays["devval_ids"], result["selections"][selection]["heads"])
     return dict(source=source,artifact=artifact,views=views,draw_aliases=draws,support_parents=parents,
                 release=old["results"]["release"],capacity=dict(slopes=classes*64,intercepts=classes),
-                registered_candidate=False,role="historically_exposed_devval",support_counts={
+                registered_candidate=False,role="historically_exposed_devval",
+                deployed_selection=None if deployment is None else deployment[0]["selection"],support_counts={
                     n:x["counts"] for n,x in result["selections"].items()})

@@ -106,7 +106,7 @@ def save_packet(path, value):
     return stages.file_pin(path)
 
 
-def prepare_plan(root, source, artifact, out, producer):
+def prepare_plan(root, source, artifact, out, producer, selection):
     """Seal runtime tensors and geometry, with no fit examples or label arrays."""
     from transfer.g3_training import state_hash
 
@@ -126,7 +126,7 @@ def prepare_plan(root, source, artifact, out, producer):
     write_json(architecture,dict(**model.export_config(),training_config={}))
     inputs = save_packet(out/"observation-only.pt",packets)
     plan = dict(schema=SCHEMA,producer=producer,source=source,head=artifact,weights=weight,
-                architecture=stages.file_pin(architecture),inputs=inputs,requests=requests,
+                architecture=stages.file_pin(architecture),inputs=inputs,requests=requests,selection=selection,
                 workload="two_registered_devval_blocks_three_retained_views",labels_in_requests=False)
     path = out/"plan.json"
     write_json(path,plan)
@@ -174,7 +174,8 @@ def deploy(root, plan_pin, out, code, device):
         stages.pinned(root,pin)
     model = _load_source(plan["weights"],plan["architecture"]).requires_grad_(False).eval()
     runtime = Runtime(device=device,full=model,identity={"full":plan["source"]["state"]})
-    rt = readout.SupportRuntime(runtime,artifact,"all")
+    require(plan["selection"] in artifact["selections"],"Unregistered support subset in deployment plan")
+    rt = readout.SupportRuntime(runtime,artifact,plan["selection"])
     runtime.sync()
     model_and_head_load = perf_counter()-started
     started = perf_counter()
@@ -233,7 +234,8 @@ def deploy(root, plan_pin, out, code, device):
     write_json(receipt,dict(schema=COST,plan=plan_pin,artifact=plan["head"],producer=code["commit"],pid=os.getpid(),
                 model_and_head_load_seconds=model_and_head_load,input_load_seconds=input_load,
                 device=str(runtime.device),rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-                cuda_peak_bytes=peak,source=plan["source"],resident=metrics,decisions=stages.file_pin(output),
+                cuda_peak_bytes=peak,source=plan["source"],resident=metrics,selection=plan["selection"],
+                decisions=stages.file_pin(output),
                 labels_loaded=False,optimizer_updates=0,alternate_block_order_equal=True,repeats=REPEATS))
     return stages.file_pin(receipt)
 
@@ -243,7 +245,8 @@ def evidence(root, pin, producer, source, artifact):
     require(cost["schema"]==COST and cost["producer"]==producer and cost["source"]==source
             and cost["artifact"]==artifact and cost["labels_loaded"] is False,"Unbound deployment evidence")
     plan = open_plan(root,cost["plan"],producer)
-    require(plan["source"]==source and plan["head"]==artifact,"Deployment plan and fit differ")
+    require(plan["source"]==source and plan["head"]==artifact and plan["selection"]==cost["selection"],
+            "Deployment plan and fit differ")
     return plan,stages.pinned(root,cost["decisions"])
 
 

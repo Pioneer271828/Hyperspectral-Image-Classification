@@ -24,10 +24,12 @@ def cli():
     for key in ("artifact","plan","cost"):
         parser.add_argument("--"+key,nargs=2,metavar=("PATH","SHA256"))
     parser.add_argument("--gpu",help="Single authorized physical CUDA UUID for the deployment worker")
+    parser.add_argument("--selection",help="Pinned released support subset for prepare, defaults to all")
     args = parser.parse_args()
     required = {"fit":set(),"prepare":{"artifact"},"deploy":{"plan"},"review":{"artifact","cost"}}
     received = {key for key in ("artifact","plan","cost") if getattr(args,key) is not None}
-    require(required[args.operation]==received and (args.gpu is None or args.operation=="deploy"),
+    require(required[args.operation]==received and (args.gpu is None or args.operation=="deploy")
+            and (args.selection is None or args.operation=="prepare"),
             "The operation requires its specific frozen input receipts")
     code = code_snapshot()
     require_frozen_code(code)
@@ -55,9 +57,11 @@ def cli():
     else:
         _,source = wp12.frozen_case(root,args.case)
         if args.operation=="prepare":
-            support_readout.load(root,pins["artifact"],source)
+            artifact = support_readout.load(root,pins["artifact"],source)
+            selection = args.selection or "all"
+            require(selection in artifact["selections"],"Unknown released support subset")
             out.mkdir()
-            result = cost.prepare_plan(root,source,pins["artifact"],out,code["commit"])
+            result = cost.prepare_plan(root,source,pins["artifact"],out,code["commit"],selection)
         else:
             deployed = cost.evidence(root,pins["cost"],code["commit"],source,pins["artifact"])
             review = wp12.review_case(root,args.case,pins["artifact"],deployed)
