@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import stat
 
-from scripts.wp12_frozen54_deployment_contract import source
+from .wp12_frozen54_deployment_contract import source
 
 
 @contextmanager

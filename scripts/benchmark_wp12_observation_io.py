@@ -16,8 +16,8 @@ from time import perf_counter_ns
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from evaluation.wp12_observation_snapshot import load_snapshot, verified_snapshot
 from scripts.wp12_frozen54_deployment_contract import PHASES, SETUP, read
+from scripts.wp12_observation_snapshot import load_snapshot, verified_snapshot
 
 WORKER = "3ba683439ed6c5ea3ae219bea0840e41b738ffce"
 SCENES = ("paviaU", "xuzhou", "whu-honghu")

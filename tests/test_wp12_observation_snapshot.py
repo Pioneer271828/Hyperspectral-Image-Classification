@@ -7,8 +7,8 @@ import unittest
 
 import torch
 
-from evaluation.wp12_observation_snapshot import load_snapshot, verified_snapshot
 from joint_training import _tree_fingerprint
+from scripts.wp12_observation_snapshot import load_snapshot, verified_snapshot
 
 
 class VerifiedObservationSnapshotTests(unittest.TestCase):
