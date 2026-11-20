@@ -9,6 +9,7 @@
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp02_wp05_wp06_real_readiness_candidate": "58b3ff182668c3fd6bc0d40400748011d619251b",
     "wp05_m1_e1_coverage_wp12_candidate": "1fbbb7e9b4de55ff649540e241b7d89b6b5c815a",
     "wp05_wp06_causal_region_candidate": "dcd1001d3a8204513358ef92b44979f7d4a895f2",
     "wp05_wp06_scientific_candidate": "8d7feca196b4df16cfd5704778406c1dd30e1359",
@@ -50,6 +51,14 @@
     "evaluation/g4_target_verification.py"
   ],
   "modules": [
+    {
+      "id": "WP02/WP05/WP06/WP12 三景真实准入、同点误差和同容量读出",
+      "state": "三景授权盘点、两景真实冻结同容量和 WP12 独立复核完成",
+      "evidence": "五端点 2,610 个原生头点，徐州和洪湖新捕获 1,395 个原生决定无改判。六层等 64 列读出 42,120 个点决定独立复算一致。徐州缺带原生融合类 5/6 为 1/5、0/5，完整支持重拟合均为 5/5。洪湖第 24 步原生三头两类均 0/5，类 21 支持仅一个父块。远程专项 27 通过、3 跳过。",
+      "remaining": "三景没有新增可信持有人发布。独立角色、物理轴、共享真类、洪湖空间隔离仍待核。每焦点类 5 个开发点，只作诊断。真实优化、原 GT、封存 query 和 WP04 为 0。",
+      "report": "research/reports/WP02_WP05_WP06_真实准入同点与等容量复盘_20261120.md",
+      "chat_report": "2026-11-20 第十三包真实准入、同点与等容量诊断"
+    },
     {
       "id": "WP05/WP06/WP12 M1/E1 完整历史与覆盖调制生产接入",
       "state": "历史真实负结果已接入，五模式外部 Bank 和独立 WP12 工程已通过",
