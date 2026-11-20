@@ -40,3 +40,19 @@ CUDA 用同一物理 UUID 映射和资源锁。样本准入需至少 12,288 MiB 
 合成模式复用独立 Bank 的审批接口，以校准角色拟合固定 margin 网格，写入冻结记录后才从独立父块读取确认请求。两组覆盖与回退预算共享相同输入、模型种子和支持种子。达到预算以外仍安全回退并记超额。匹配随机控制在波段、块大小和覆盖分层内匹配实际轻、重调用次数。确认只消费冻结阈值。独立真实校准与确认尚待数据授权方发布，真实动态收益表保持空缺。
 
 WP12 发布包含分设备的真实四范围计时、旧版引用和单独的合成路径质量。探针、温度介入和可变光谱缓存不进入部署计时。源码实例中使用现有常驻语义，没有开真实训练、原始真值或 query。
+
+### WP10 冻结压缩生产暖态
+
+同一授权 LXC 的干净检出，沿用上文 CPU 变量。供给已发布的 WP10 低秩清单和旧独立 CPU 成本回执的绝对路径及 SHA。候选为原三恢复种子各自的 dense 与 r16，端到端暖态每次重新读取已发布的观测包。
+
+~~~bash
+entry=scripts/run_frozen_cpu_deployment.py
+"$python_bin" "$entry" --expected-commit "$repo_sha" warm-register \
+  --input "$manifest" "$manifest_sha" --reference "$cpu_receipt" "$cpu_sha" --out "$runs/wp10-warm-plan"
+plan="$runs/wp10-warm-plan/plan.json"
+plan_sha=$(sha256sum "$plan" | cut -d' ' -f1)
+taskset -c 0 "$python_bin" "$entry" --expected-commit "$repo_sha" warm-cost \
+  --input "$plan" "$plan_sha" --out "$runs/wp10-warm"
+~~~
+
+WP12 的 `scripts/ingest_wp12_evidence.py --wp10-deployment-review` 接收 `--expected-commit`、新仓外 `--out`，以及 `--warm`、`--cold`、`--cuda`、`--cuda-audit`、`--onednn-quality`、`--onednn-cost`、`--wp11-cpu`、`--wp11-cuda` 各自的绝对路径与 SHA。实际暖态工作提交、旧清单生产提交、冷启动或历史 CUDA 的不同计时范围均在结果中保留。[实际数据与护栏](../../research/reports/WP10_WP12_冻结低秩暖态生产与配对成本_20261120.md)

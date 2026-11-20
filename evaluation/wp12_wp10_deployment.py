@@ -197,13 +197,20 @@ def _csv(out, report):
                 oa=quality["oa"], aa=quality["aa"], nll=quality["nll"],
                 guard_passed=row["guard"][head]["passes_metric_guards"],
                 failed_recall_classes=json.dumps(row["guard"][head]["failed_recall_classes"]),
+                per_class_recall_drop=json.dumps(row["guard"][head]["per_class_recall_drop"], sort_keys=True),
                 new_small_class_errors=json.dumps(row["guard"][head]["new_small_class_errors"], sort_keys=True),
                 package_bytes=row["package_bytes"], parameters=row["parameters"],
                 warm_cpu_p50_ms=warm["phases"]["wall_ms"]["p50_ms"],
                 warm_cpu_p95_ms=warm["phases"]["wall_ms"]["p95_ms"],
+                warm_cpu_read_decode_p50_ms=warm["phases"]["read_verify_decode_ms"]["p50_ms"],
+                warm_cpu_graph_p50_ms=warm["phases"]["graph_ms"]["p50_ms"],
+                warm_cpu_remaining_forward_p50_ms=warm["phases"]["forward_excluding_graph_ms"]["p50_ms"],
+                warm_cpu_output_hash_p50_ms=warm["phases"]["output_materialization_and_hash_ms"]["p50_ms"],
                 warm_cpu_pixels_per_second=warm["sequential_pixels_per_second"],
+                warm_cpu_process_peak_rss_kib=warm["max_rss_kib"],
                 reused_cpu_cold_p50_ms=row["reused_cold_cpu"]["median_ms"],
-                reused_cuda_first_resident_ms=row["reused_cuda"]["first_sweep_ms"]))
+                reused_cuda_first_resident_ms=row["reused_cuda"]["first_sweep_ms"],
+                reused_cuda_peak_allocated_delta_bytes=row["reused_cuda"]["peak_allocated_delta_bytes"]))
     with (out / "quality-cost.csv").open("x", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=list(rows[0]))
         writer.writeheader()
