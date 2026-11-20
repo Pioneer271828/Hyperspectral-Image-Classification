@@ -41,7 +41,7 @@ def fixture(root, scope, change=None):
                 batch=1, observation_reads=1, graph_builds=0, skip_count=None, rss_kib=100, checkpoint="a"*64,
                 observation="b"*64, workload="c"*64, pixels=36, prediction="e"*64, probability_state="d"*64))
         raw = dict(binding=worker_binding("f"*64, "fixture", scope, "cpu", attempt.name, worker),
-                   timing=TIMING[scope], requests=requests, setup=phase(SETUP,spawn+100),
+                   timing=deepcopy(TIMING[scope]), requests=requests, setup=phase(SETUP,spawn+100),
                    pid=worker+1, environment=dict(arithmetic="ordered", threads=1, device="cpu"),
                    optimizer_updates=0, query_accessed=False)
         if change is not None:
