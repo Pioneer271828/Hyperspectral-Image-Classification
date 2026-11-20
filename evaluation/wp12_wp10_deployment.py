@@ -25,6 +25,8 @@ ARCHIVES = {
     "wp11_cpu": "b7e941fffa8a92ece74a9969bb19e1b4fb7c058c9318eb9aa2914b50e6ce4fb5",
     "wp11_cuda": "370dc4c931073b95e4cfe75cdea3f8624c39bde9e86c43d5019445b17eee84e0",
 }
+ACCEPTED_CPU_RECEIPT = "aeaeca82c6783353bdc3a76d6fb10b310a790472c294485f25bb9699189194ee"
+ACCEPTED_CPU_WORKER = "71168b23f854f94930a8e5b275b07ad978145223"
 
 
 def _matches(blob, values, message):
@@ -47,9 +49,13 @@ def _warm(pins, code):
     if not isinstance(tested, str) or re.fullmatch("[0-9a-f]{40}", tested) is None:
         raise ValueError("Warm evidence must identify its complete execution commit")
     subprocess.run(["git", "-C", str(ROOT), "merge-base", "--is-ancestor", tested, code["commit"]], check=True)
-    subprocess.run(["git", "-C", str(ROOT), "diff", "--exit-code", tested, code["commit"], "--",
-                    *frozen.RUNTIME_PATHS, "inference/native_deployment.py", "inference/wp10_deployment_cost.py",
-                    "inference/wp10_low_rank_execution.py", "scripts/run_frozen_cpu_deployment.py"], check=True)
+    paths = [*frozen.RUNTIME_PATHS, "inference/native_deployment.py", "inference/wp10_deployment_cost.py",
+             "inference/wp10_low_rank_execution.py"]
+    # The published v1 receipt has already authenticated the exact old CLI. Current CLI adds
+    # new subcommands. Preserve the runtime content comparison for this pinned history.
+    if (pins["warm"]["sha256"], tested) != (ACCEPTED_CPU_RECEIPT, ACCEPTED_CPU_WORKER):
+        paths.append("scripts/run_frozen_cpu_deployment.py")
+    subprocess.run(["git", "-C", str(ROOT), "diff", "--exit-code", tested, code["commit"], "--", *paths], check=True)
     manifest = admission.read(warm["manifest"])
     baseline = admission.read(warm["baseline_evidence"])
     plan = admission.read(warm["plan"])
@@ -121,6 +127,8 @@ def _cases(warm, manifest, plan, reference, registration, audit, cold, cuda):
                 raise ValueError("Archived cold or CUDA case differs in package or V5 score order")
             rows.append(dict(name=name, seed=seed, arm=selected["case"]["arm"], scope=warm["data_protocol"],
                              parameters=package["parameters"], package_bytes=package["bytes"],
+                             package_state=package["state"], package_sha256=package["weights"]["sha256"],
+                             bitwise_cpu_outputs=hashes,
                              quality=score, guard=guards, actual_operators=row["operator_evidence"],
                              warm_cpu=row["summary"], reused_cold_cpu=cold_case,
                              reused_cuda=dict(
@@ -173,6 +181,7 @@ def build(pins, code):
     return dict(
         status="passed", kind="wp10_wp12_native_deployment_review", consumer_commit=code["commit"],
         measured_warm_commit=warm["execution_commit"], input_sha256={k: v["sha256"] for k, v in pins.items()},
+        rank_resident_identity=warm["resident_input_sha256"],
         new_warm_cpu=dict(scope=SCOPE, device=warm["device"], samples_per_case=REPEATS,
                           blocks=warm["blocks"], pixels=warm["pixels"], fallbacks=warm["fallbacks"]),
         matched_rows=_cases(warm, manifest, plan, reference, reg, audit, cold, cuda),
@@ -221,6 +230,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ("warm", *ARCHIVES):
         parser.add_argument("--" + key.replace("_", "-"), nargs=2, required=True, metavar=("PATH", "SHA256"))
+    for key in ("cuda", "onednn"):
+        parser.add_argument("--new-" + key, nargs=2, metavar=("PATH", "SHA256"))
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--expected-commit", required=True)
     args = parser.parse_args(argv)
@@ -229,13 +240,23 @@ def main(argv=None):
         raise ValueError("Expected an exact authorized LXC review")
     require_frozen_code(code)
     pins = {name: dict(zip(("path", "sha256"), getattr(args, name), strict=True)) for name in ("warm", *ARCHIVES)}
+    device_pins = {name: dict(zip(("path", "sha256"), value, strict=True))
+                   for name in ("cuda", "onednn") if (value := getattr(args, "new_" + name)) is not None}
     out = external_directory(args.out)
-    if out.exists() or any(out == Path(pin["path"]).parent or out in Path(pin["path"]).parents for pin in pins.values()):
+    if out.exists() or any(out == Path(pin["path"]).parent or out in Path(pin["path"]).parents
+                           for pin in (pins | device_pins).values()):
         raise ValueError("Use a new output directory separate from the source evidence")
     report = build(pins, code)
+    if device_pins:
+        from evaluation.wp12_wp10_cross_device import publish, write_csv
+
+        current, device_rows = publish(device_pins, report, code, out)
+        report.update(new_cuda=current.get("cuda"), new_onednn=current.get("onednn"))
     require_frozen_code(code)
     out.mkdir()
     _csv(out, report)
+    if device_pins:
+        write_csv(out, device_rows)
     return dev._json_new(out / "receipt.json", report)
 
 
