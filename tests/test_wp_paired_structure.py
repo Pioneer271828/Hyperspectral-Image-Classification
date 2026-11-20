@@ -111,6 +111,16 @@ class PairedStructureTests(unittest.TestCase):
         self.assertEqual(report["remaining"], ["interrupted", "pending"])
         self.assertEqual(report["groups"]["complete"]["one"]["updates"], 0)
 
+    def test_coverage_recovery_fixture_registers_three_declared_reference_cases(self):
+        path = self.root / "coverage"
+        inputs = fixture.generate_coverage(self.root / "coverage-input", path, self.code, [], recovery_matrix=True)
+        with patch.object(structure, "require_frozen_code"):
+            pin = structure.register(self.root, path, self.code, inputs["request"], inputs["approval"], test=True)
+        plan = json_pin(self.root, pin)
+        self.assertNotIn("support_contrasts", plan)
+        self.assertEqual(sum(len(g.get("recovery_arms", [])) for g in plan["groups"].values()), 3)
+        self.assertEqual(plan["optimizer_updates"], 264)
+
     def test_mismatched_budget_approval_and_missing_roles_refused(self):
         body = json_pin(self.root,self.input["approval"])
         body["optimizer_updates"] -= 1

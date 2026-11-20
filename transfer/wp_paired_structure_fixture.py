@@ -397,7 +397,9 @@ def generate_coverage(out, campaign, code, devices, *, recovery_matrix=False):
                   "c-column-recovery":recovery(column,2048,["continuous"]),
                   "z-column-followup":column}
         contrasts = {}
-    data = dict(schema=SCHEMA,scope=SYNTHETIC,releases=releases,groups=groups,support_contrasts=contrasts)
+    data = dict(schema=SCHEMA,scope=SYNTHETIC,releases=releases,groups=groups)
+    if contrasts:
+        data["support_contrasts"] = contrasts
     request = _write(out/"request.json",data)
     approval = _write(out/"engineering-only.json",expected_approval(data,request,campaign,code,test=True))
     return dict(request=request,approval=approval)
