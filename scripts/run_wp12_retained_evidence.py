@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from evaluation import frozen_training_stages as stages, retained_spectral_evidence as probe
+from evaluation import wp06_capacity_released as capacity
 from evaluation.wp12_release_results import BAND, BAND_PINS
 from loadData.spatial_tiles import tile_slice
 from model.research_config import digest
@@ -69,7 +70,7 @@ def collect_xuzhou(model, scene, record, band, bands, layers):
             identifiers = actual.global_ids.ravel()[cells].tolist()
             data = probe.capture(model, actual.spectral,
                                  lambda: (_forward(model, scene, tile, observation_view=view), None), layers=layers)
-            heads = released.add(len(released.q), cells, identifiers, target[cells], data)
+            heads = released.add(len(released.q), cells, identifiers, target[cells], data, parent=tile["id"])
             if role == "devval":
                 native.extend(dict(id=[tile["id"], identifier], truth=int(label),
                                    probabilities={head: value[j].tolist() for head, value in heads.items()})
@@ -90,7 +91,7 @@ def collect_bank(model, bank, producer, band, archive, exact, layers):
             ids, truth = labels[:, 0].tolist(), labels[:, 1].tolist()
             data = probe.capture(model, actual.view.observation.spectral,
                                  lambda: forward(model, actual, producer, role), layers=layers)
-            heads = released.add(ordinal, targets.cells, ids, truth, data)
+            heads = released.add(ordinal, targets.cells, ids, truth, data, parent=row["parent_tile"])
             if role == "devtrain":
                 continue
             native.extend(dict(id=[ordinal, key], truth=label,
@@ -122,9 +123,9 @@ def collect_bank(model, bank, producer, band, archive, exact, layers):
     return views, native, checks
 
 
-def report_case(root, case, producer, device, *, locked=False):
+def report_case(root, case, producer, device, *, locked=False, capacity_readout=False):
     exact = device.type == "cpu"
-    layers = probe.SHARED_LAYERS if locked else probe.LAYERS
+    layers = capacity.LAYERS if capacity_readout else probe.SHARED_LAYERS if locked else probe.LAYERS
     if case in CASES[:4]:
         plan = stages.stage_plan(root, pin(root, RELEASE))
         archive = stages.json_pin(root, pin(root, PREVIOUS))
@@ -196,6 +197,13 @@ def report_case(root, case, producer, device, *, locked=False):
         metrics = {}
         REQUIRE(train.identities == support_reference.identities and train.truth == support_reference.truth,
                 "Support roster changed across retained views")
+        if capacity_readout:
+            predictions = {head: (np.asarray([row["probabilities"][head] for row in native]).argmax(1) + 1).tolist()
+                           for head in stages.HEADS}
+            by_view[band] = dict(band_ids=retained, captured=roles, native=predictions,
+                                 archived_agreement=checked,
+                                 capture_seconds={role: captured.seconds for role, captured in roles.items()})
+            continue
         for head in stages.HEADS:
             p = np.asarray([row["probabilities"][head] for row in native])
             metrics[head] = probe.point_metrics(p, list(range(1, classes+1)), val.truth, rivals)
@@ -227,7 +235,7 @@ def validate_static(root):
                 use="historical_full_band_only", altered_static_q_replay=False)
 
 
-def run(root, directory, expected, device, selected, *, locked=False):
+def run(root, directory, expected, device, selected, *, locked=False, capacity_readout=False):
     from evaluation.wp11_deployment_cost import gpu_scope
 
     code = code_snapshot()
@@ -237,7 +245,10 @@ def run(root, directory, expected, device, selected, *, locked=False):
     REQUIRE(root in directory.parents, "Outputs must stay within authorized runs")
     directory.mkdir(parents=True, exist_ok=True)
     static = validate_static(root)
-    schema = LOCKED if locked else SCHEMA
+    schema = capacity.SCHEMA if capacity_readout else LOCKED if locked else SCHEMA
+    if capacity_readout:
+        REQUIRE(device.type == "cpu" and not locked and set(selected) <= capacity.CASES.keys(),
+                "The equal-capacity readout admits only the registered cases and CPU archive replay")
     missing = []
     for case in selected:
         path = directory/f"{case}.json"
@@ -245,8 +256,10 @@ def run(root, directory, expected, device, selected, *, locked=False):
             data = json.loads(path.read_bytes())
             REQUIRE(data["schema"] == schema and data["producer"] == expected
                     and data["device"] == str(device) and data["result"]["case"] == case
-                    and set(data["result"]["views"]) == set(stages.VIEWS),
+                    and set(data["result"]["capture" if capacity_readout else "views"]) == set(stages.VIEWS),
                     "Existing receipt requires a separate run directory")
+            if capacity_readout:
+                stages.pinned(root, data["result"]["feature_pack"])
         else:
             missing.append(case)
     if not missing:
@@ -255,7 +268,9 @@ def run(root, directory, expected, device, selected, *, locked=False):
     REQUIRE(device.type == "cpu" or uuid is not None and uuid.startswith("GPU-"), "Pin a single physical GPU UUID")
     with (nullcontext((None, None, None)) if device.type == "cpu" else gpu_scope(uuid)) as (admission, numeric, _):
         for case in missing:
-            result = report_case(root, case, expected, device, locked=locked)
+            result = report_case(root, case, expected, device, locked=locked, capacity_readout=capacity_readout)
+            if capacity_readout:
+                result = capacity.production(directory/f"{case}.json", case, result)
             require_frozen_code(code)
             write_json(directory/f"{case}.json", dict(schema=schema, producer=expected, device=str(device),
                        case=case, static=static, result=result, admission=admission, numeric=numeric,
@@ -274,10 +289,13 @@ def main():
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--case", choices=CASES, action="append")
-    parser.add_argument("--locked-readout", action="store_true")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--locked-readout", action="store_true")
+    modes.add_argument("--capacity-readout", action="store_true")
     args = parser.parse_args()
-    run(args.runs.resolve(strict=True), args.out, args.expected_commit, torch.device(args.device), args.case or CASES,
-        locked=args.locked_readout)
+    selected = args.case or (tuple(capacity.CASES) if args.capacity_readout else CASES)
+    run(args.runs.resolve(strict=True), args.out, args.expected_commit, torch.device(args.device), selected,
+        locked=args.locked_readout, capacity_readout=args.capacity_readout)
 
 
 if __name__ == "__main__":

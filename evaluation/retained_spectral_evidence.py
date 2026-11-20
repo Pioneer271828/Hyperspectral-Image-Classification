@@ -129,19 +129,22 @@ class ReleasedBlocks:
         self.role = role
         self.classes = classes
         self.identities = []
+        self.parents = []
         self.truth = []
         self.labels = {layer: [] for layer in layers}
         self.moments = {layer: [] for layer in layers} if layers == LAYERS else {}
         self.q = []
         self.seconds = 0.0
 
-    def add(self, block, cells, identities, truth, data):
+    def add(self, block, cells, identities, truth, data, *, parent=None):
         values, heads, q, _, seconds = data
         cells, truth = np.asarray(cells, dtype=np.int64), np.asarray(truth, dtype=np.int64)
         require(len(cells) == len(identities) == len(truth)
                 and ((cells >= 0) & (cells < q["pixels"])).all()
                 and ((truth >= 1) & (truth <= self.classes)).all(), "Invalid released sample binding")
         self.identities.extend(identities)
+        if parent is not None:
+            self.parents.extend([parent] * len(truth))
         self.truth.extend(truth.tolist())
         for key in self.labels:
             self.labels[key].append(values[key][cells])
