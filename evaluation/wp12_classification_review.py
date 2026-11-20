@@ -4,6 +4,7 @@ import json
 from itertools import product
 from math import isclose
 from pathlib import Path
+from statistics import median
 from tempfile import TemporaryDirectory
 
 from evaluation import wp12_p4_short_review as p4, wp12_release_results as native
@@ -176,6 +177,23 @@ def stage_summary(heads):
     return summary
 
 
+def historical_pairs(cohorts):
+    matched = {}
+    for row in cohorts:
+        if row["source"]!="frozen54" or row["head"]!="fused":
+            continue
+        group = matched.setdefault((row["method"],row["arm"]),{})
+        scene = row["scene"]
+        require(scene in SCENES and scene not in group and tuple(row["model_seeds"])==SEEDS
+                and row["role"]=="historical_frozen_authorized_aggregate",
+                "Frozen54 paired three-scene quality roster differs")
+        group[scene] = {key:row[key] for key in ("oa","aa","protocol","measurement_scope","cost")}
+    require(len(matched)==6 and all(set(group)==set(SCENES) for group in matched.values())
+            and all(len({group[scene]["protocol"] for group in matched.values()})==1 for scene in SCENES),
+            "Frozen54 has no complete common-settings group")
+    return [dict(method=m,arm=a,scenes=group) for (m,a),group in sorted(matched.items())]
+
+
 def text_report(result):
     m4 = result["full_factorial"]
     lines = ["# WP12 分类精度与成本审阅",
@@ -200,7 +218,18 @@ def text_report(result):
         f"{fmt(paired['supervision_residual'])} 个百分点。两项逐类保护在两种精度下均通过。"
         "保护允许在冻结界线内退化。仅融合监督组的图/CNN 辅助头未训练，逐类表仅公布融合头。",
         "",
-        "## 真实短训与固定开发读出",
+        "## 已发布冻结 54 例的同设置三景比较",
+        "",
+        "下表仍为三个种子。每景在相同冻结指标、原发布点及整带观察下配对，场景自身划分与 M4-S2 不同。"
+        "同一训练方式在组内比较无残差、容量对照和区域残差，各头和逐类见统一表。",
+        "",
+        "| 训练方式 / 结构 | PaviaU 融合 OA | 徐州融合 OA | 洪湖融合 OA |",
+        "| --- | ---: | ---: | ---: |"]
+    for row in result["historical_pairs"]:
+        values = [row["scenes"][scene]["oa"] for scene in SCENES]
+        arm = f"`{row['method']}/{row['arm']}`"
+        lines.append("| "+" | ".join([arm,*(f"{x['mean']:.2%} ± {x['sample_sd']:.2%}" for x in values)])+" |")
+    lines += ["", "## 真实短训与固定开发读出",
         "",
         "| 证据 | 成果和角色 |",
         "| --- | --- |",
@@ -215,6 +244,14 @@ def text_report(result):
     cells = {(entry["k"],entry["method"]):len(entry["accepted_arms"]) for entry in p4_result["roster_cells"]}
     for k in (1,5):
         lines.append(f"| K{k} | {cells[k,'scratch']}/5 | {cells[k,'shared_transfer']}/5 |")
+    lines += ["", "| 洪湖 P4 同视图 none 基线 | 融合正确 | 图正确 | CNN 正确 |",
+              "| --- | ---: | ---: | ---: |"]
+    for cell in p4_result["roster_cells"]:
+        prefix = f"s{cell['support_seed']}-k{cell['k']}-{cell['method']}-m{cell['model_seed']}-"
+        baseline = p4_result["cases"].get(prefix+"none")
+        if baseline is not None:
+            values = [f"{round(baseline['heads'][h]['oa']*110)}/110" for h in ("fused","graph","cnn")]
+            lines.append("| "+" | ".join([f"K{cell['k']} {cell['method']}",*values])+" |")
     lines+=["","PaviaU、徐州和洪湖的短训划分、支持量和原生设置不同。现有材料没有共同的三景短训准确率。"
             "同协议三景结果见上表，旧 54 例的同设置记录可在统一主表按 method、arm、scene 和 seed 精确选取。",
             "", "| 冻结开发读出，中央缺带 | 原融合 OA | 固定全带头 OA | 同视图头 OA |",
@@ -233,7 +270,15 @@ def text_report(result):
             "机器回执保留完整联合混淆、逐类保护、短训来源和 P4 两个物理槽、支持头 CPU 成本与既有统一表。"
             "尚未建立可跨场景、跨协议的排行榜，也没有新的生产默认放行。",
             ""]
-    return "\n".join(lines)
+    lines += ["", "| 成本组 | 原测工作量 | 汇总毫秒 |", "| --- | --- | ---: |"]
+    for scene,values in result["historical_cost_ms"].items():
+        lines.append(f"| 冻结 54 · {scene} | 18 例各自 p50，再取中位数 | {values:.2f} |")
+    for scene,readout in result["support_heads"].items():
+        cost = readout["deployment"]["all"]["cost"]
+        per_block = cost["resident_per_block"]
+        samples = " / ".join(f"{per_block[key]['median_ms']:.2f}" for key in ("native","fixed_full","same_view"))
+        lines.append(f"| 冻结头 · {scene} | 两块三视图，原生 / 固定全带 / 同视图 | {samples} |")
+    return "\n".join([*lines,""])
 
 
 def publish(root, out, code, acceptance=None):
@@ -248,7 +293,12 @@ def publish(root, out, code, acceptance=None):
         replay = native.publish(root,folder/"native-real",code)
         receipt_path = Path(replay["path"])
         old = native.document(root,replay)
+        aggregate = json.loads((receipt_path.parent/"cohorts.json").read_bytes())
+        cases = json.loads((receipt_path.parent/"cases.json").read_bytes())
+        durations = {scene:median(row["cost"]["p50_ms"] for row in cases
+                                  if row["source"]=="frozen54" and row["scene"]==scene) for scene in SCENES}
         result = dict(schema=SCHEMA,producer=code["commit"],full_factorial=factorial,p4=p4_result,
+                      historical_pairs=historical_pairs(aggregate),historical_cost_ms=durations,
                       support_heads=heads,native_real=dict(receipt=receipt_path.relative_to(folder).as_posix(),
                                         sha256=replay["sha256"],files=old["files"],frozen_cost=old["cost_lifecycle"]),
                       new_query_reads=0,new_training_updates=0,new_cost_measurements=0)
