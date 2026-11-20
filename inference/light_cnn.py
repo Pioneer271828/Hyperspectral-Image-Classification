@@ -39,9 +39,10 @@ class LightCNN(nn.Module):
         """Detached CNN features; preserve eval normalization and never build a graph."""
         if any(m.training for m in self.modules()):raise ValueError('LightCNN is inference-only')
         if dataset not in self.heads:raise ValueError('Unknown task')
-        if (not torch.is_tensor(x) or x.device.type!='cpu' or x.dtype!=torch.float32 or x.requires_grad
-                or x.ndim!=3 or min(x.shape[:2])<1 or not torch.isfinite(x).all()):raise ValueError('Finite CPU FP32 block required')
-        if (not torch.is_tensor(wavelengths) or wavelengths.device.type!='cpu' or wavelengths.dtype!=torch.float32
+        device = self.heads[dataset].weight.device
+        if (not torch.is_tensor(x) or x.device!=device or x.dtype!=torch.float32 or x.requires_grad
+                or x.ndim!=3 or min(x.shape[:2])<1 or not torch.isfinite(x).all()):raise ValueError('Finite FP32 block must reside with the frozen light model')
+        if (not torch.is_tensor(wavelengths) or wavelengths.device!=device or wavelengths.dtype!=torch.float32
                 or wavelengths.requires_grad or wavelengths.ndim!=1 or wavelengths.numel()<1
                 or not torch.isfinite(wavelengths).all() or (wavelengths<=0).any()
                 or x.shape[2]!=wavelengths.numel()+self.extra_channels):raise ValueError('Explicit finite wavelengths required')

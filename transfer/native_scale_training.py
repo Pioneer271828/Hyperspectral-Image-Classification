@@ -1,6 +1,7 @@
 """Preregistered native-grid training, exact continuation and endpoint replay."""
 
 from copy import deepcopy
+from contextlib import nullcontext
 from itertools import product
 import io
 import random
@@ -122,7 +123,21 @@ class Run:
             from transfer import native_released_training
             from transfer.native_released_real import RealReleasedRun
             if released is not native_released_training and type(released) is not RealReleasedRun:
-                raise ValueError("Unknown released supervision provider")
+                from transfer.spatial_coverage_training import SpatialReleasedFixture
+                from transfer.band_graph_fixture import BandGraphFixture
+                from transfer.band_scale_fixture import BandScaleFixture
+                from transfer.native_coverage_queue import CoverageFixture
+                providers = (SpatialReleasedFixture, BandGraphFixture, BandScaleFixture, CoverageFixture)
+                from transfer.native_long_campaign import MatchedProvider
+                from transfer.native_positive_training import PositiveProvider
+                from transfer.native_production_provider import ProductionProvider
+                from transfer.native_mechanism_edges import EdgeProvider
+                from transfer.native_paired_head import PairedHeadProvider
+                from transfer.native_external_paired import ExternalPairedProvider
+                from transfer.wp_paired_structure import StructuralProvider
+                if (type(released) not in (MatchedProvider, ProductionProvider, ExternalPairedProvider, StructuralProvider)
+                        and (type(released) not in (*providers, PositiveProvider, EdgeProvider, PairedHeadProvider) or not released.is_synthetic)):
+                    raise ValueError("Unknown released supervision provider")
         self._capacity = None
         self._region_action = None
         if released is not None and released is native_released_training:
@@ -166,6 +181,9 @@ class Run:
         self._history, self._validation, self._selected = [], [], None
         self.timing = dict(train_update_seconds=0.,validation_seconds=0.,transform_seconds=0.,
                            forward_seconds=0.,graph_seconds=0.)
+        if clean.get("architecture",{}).get("backend")=="region_support":
+            self.timing.update({key:0. for key in ("region_anchor_seconds","region_selection_seconds",
+                "region_strict_search_seconds","region_cpu_sparse_seconds","region_render_seconds")})
         self._fresh = tuple(clean["initialization"]["fresh"])
 
     @property
@@ -188,6 +206,18 @@ class Run:
         return result
 
     def _forward(self, actual, role, intervention):
+        if hasattr(self._released, "registered_forward"):
+            out, graph, timing = self._released.registered_forward(self.model,actual,role,self.execution)
+            self.timing["forward_seconds"] += timing["forward_seconds"]
+            self.timing["graph_seconds"] += sum(timing["graph_seconds"])
+            if "regional" in timing:
+                details = timing["regional"]
+                self.timing["region_anchor_seconds"] += details["anchor_graph_seconds"]
+                self.timing["region_selection_seconds"] += details["selection_seconds"]
+                self.timing["region_strict_search_seconds"] += details["strict_search_seconds"]
+                self.timing["region_cpu_sparse_seconds"] += details["sparse_build_seconds"]
+                self.timing["region_render_seconds"] += details["render_seconds"]
+            return out, graph, None
         if hasattr(self._released, "selection_condition"):
             condition = self._released.selection_condition(actual, self._contract)
         elif self._capacity is not None:
@@ -197,25 +227,29 @@ class Run:
         timed = {}
         kwargs = dict(condition=condition, timed=timed, execution=self.execution,
                       graph_scale=self._contract.get("registered_graph_scale"))
+        if hasattr(self._released, "graph_override"):
+            kwargs["graph_override"] = self._released.graph_override(actual)
+        graph_context = nullcontext()
         if self._region_action is not None and self._contract["region_operation"] == "zero":
-            with self._region_action.region_action(self.model.backbone, self._region_action.RegionAction("zero")):
-                out, graph = forward(self.model, actual, self.producer, role, **kwargs)
-        else:
+            graph_context = self._region_action.region_action(self.model.backbone, self._region_action.RegionAction("zero"))
+        with graph_context:
             out, graph = forward(self.model, actual, self.producer, role, **kwargs)
         self.timing["forward_seconds"] += timed["forward_seconds"]
         self.timing["graph_seconds"] += sum(timed["graph_seconds"])
         return out,graph,condition
 
-    def evaluate(self, step, *, detailed=False):
+    def evaluate(self, step, *, detailed=False, observe=None):
         started = perf_counter()
         value = evaluate_validation(self.model, self._contract["validation"], step,
             lambda event: self._materialize(self._val, event), self._forward, released=self._released,
-            detailed=detailed)
+            detailed=detailed, observe=observe)
         self.timing["validation_seconds"] += perf_counter()-started
         return value
 
     def _record_validation(self, step):
         value = self.evaluate(step)
+        if self._contract.get("frozen_stage_protocol"):
+            value["state_sha256"] = state_hash(self.model)
         self._validation.append(value)
         if self._selected is None or value["fused_nll"]<self._selected["fused_nll"]:
             self._selected = dict(step=step,fused_nll=value["fused_nll"],state=_state(self.model))
@@ -297,9 +331,12 @@ class Run:
         if any(packet["selected"][key]!=selected[key] for key in ("step","fused_nll")):
             raise ValueError("Native checkpoint selection differs")
         adam = packet["optimizer"]["state"]
-        if not adam or any(int(s["step"])!=cursor for s in adam.values()):
+        if bool(adam) != (cursor > 0) or any(int(s["step"]) != cursor for s in adam.values()):
             raise ValueError("Native Adam cursor differs")
         self.model.load_state_dict(packet["model"],strict=True)
+        if self._contract.get("frozen_stage_protocol") and cursor in self._contract["events"]:
+            if packet["validation"][-1]["state_sha256"] != state_hash(self.model):
+                raise ValueError("Frozen development stage checkpoint differs")
         self.optimizer.load_state_dict(packet["optimizer"])
         self._history, self._validation, self._selected = packet["history"],packet["validation"],packet["selected"]
         _restore_rng(packet["rng"],self.device)

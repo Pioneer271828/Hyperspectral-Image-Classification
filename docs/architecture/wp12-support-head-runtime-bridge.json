@@ -1,0 +1,7 @@
+{
+  "schema": "wp12_support_head_runtime_bridge_v1",
+  "legacy_anchor": "9102a9632e13c688d68739019936c571fc243612",
+  "legacy_runtime_sha256": "cfecc67774474161a01058b6b0f613d256bca3d26e3a6a25cd7d243dbd028c2e",
+  "execution_anchor": "7798e34653c54f0f16ff71c333ea1555210b7b61",
+  "execution_runtime_sha256": "b2a874f9b799a132f622fe8bf530ace1c475a33e4c00da637f5f78d255fef385"
+}

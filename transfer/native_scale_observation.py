@@ -168,7 +168,7 @@ def from_bank(bank, role, tile, band_spec, factor, producer, *, edge=EDGE_POLICY
     return _materialize(scene.dataset,scene.classes,view,lattice,context,role,producer), row
 
 
-def forward(model, actual, producer, role, *, condition=None, timed=None, execution=None, graph_scale=None):
+def forward(model, actual, producer, role, *, condition=None, timed=None, execution=None, graph_scale=None, graph_override=None):
     receipt = actual.verify(producer, role)
     if condition is not None:
         condition.validate(actual, receipt)
@@ -179,29 +179,47 @@ def forward(model, actual, producer, role, *, condition=None, timed=None, execut
     builder = model.backbone.learnable_graph
     graphs, timing = [], {} if timed is None else timed
     bands = actual.view.bands
-    kwargs = coverage_forward_kwargs(model,bands)
-    if bands.fwhm is not None:
-        kwargs["fwhm"] = np.asarray(bands.fwhm,dtype=np.float32)
-        kwargs["fwhm_unit"] = bands.fwhm_unit
+    source_mode = receipt["source"].get("spectral_metadata_mode", "declared")
+    if source_mode not in ("declared", "shuffled", "index", "missing"):
+        raise ValueError("Unknown native spectral metadata mode")
+    if source_mode in ("index", "missing") and bands.wavelength_quality != "index_only":
+        raise ValueError("Index-only observation identity required for this spectral mode")
+    effective = None if source_mode == "missing" else bands
+    wavelengths = None if effective is None else np.asarray(effective.wavelengths, dtype=np.float32)
+    kwargs = coverage_forward_kwargs(model, effective)
+    if effective is not None:
+        kwargs["wavelength_unit"] = effective.wavelength_unit
+        if effective.fwhm is not None:
+            kwargs["fwhm"] = np.asarray(effective.fwhm, dtype=np.float32)
+            kwargs["fwhm_unit"] = effective.fwhm_unit
     if graph_scale is None:
         graph_scale = 16 if condition is not None else (50 if actual.dataset == "paviaU" else 100)
     if type(graph_scale) is not int or graph_scale not in (16, 50, 100):
         raise ValueError("Unknown registered graph scale")
-    args = (model, actual.dataset, actual.view.observation, np.asarray(bands.wavelengths, dtype=np.float32),
+    args = (model, actual.dataset, actual.view.observation, wavelengths,
             graph_scale)
     started = perf_counter()
     partition = forward_partition if execution is None else execution.partition
     capture = (lambda state: graphs.append(dict(**_graph_trace(state), q_shape=list(state.Q.shape)))
                if execution is None else graphs.append(state))
-    measured = (_measure(builder,"build_graph",timing,"graph_seconds",capture) if execution is None
-                else execution.measure_graph(builder,timing,capture))
+    if execution is None:
+        measured = _measure(builder,"build_graph",timing,"graph_seconds",capture,operation=graph_override)
+    elif graph_override is None:
+        measured = execution.measure_graph(builder,timing,capture)
+    else:
+        from transfer.band_graph_control import FixedNativeGraph
+
+        if not isinstance(graph_override, FixedNativeGraph):
+            raise ValueError("Fixed support with alternative arithmetic requires a sealed native graph")
+        graph_override.verify(actual)
+        measured = execution.measure_graph(builder,timing,capture,operation=graph_override)
     with measured:
         if isinstance(model, ConditionalMultiscaleVCASAHGCN):
-            metadata, coverage, gsd = (bands, None, None) if condition is None else condition.values()
+            metadata, coverage, gsd = (effective, None, None) if condition is None else condition.values()
             with model.partition_bands(metadata), model.physical_conditions(coverage,gsd):
-                out = partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
+                out = partition(*args, **kwargs)
         else:
-            out = partition(*args,wavelength_unit=bands.wavelength_unit,**kwargs)
+            out = partition(*args, **kwargs)
     timing["forward_seconds"] = perf_counter()-started
     if execution is not None:
         graphs = [execution.graph_trace(state) for state in graphs]

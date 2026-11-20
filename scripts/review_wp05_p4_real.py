@@ -26,14 +26,14 @@ TIMING_KEYS = ("preparation_seconds", "train_with_hooks_seconds", "trace_evidenc
                "validation_seconds", "checkpoint_seconds", "end_to_end_step_seconds")
 
 
-def case_labels(reg, case, budget):
+def case_labels(reg, case, budget, *, with_layout=False):
     plan, geometry = (scope.read({"path": reg[k], "sha256": reg["pins"][reg[k]]})
                       for k in ("plan", "development"))
     _, allowed = p4_guarded.bind_inputs(reg, plan, geometry)
     released = prior.released_roles(reg, plan, geometry, allowed, case)
-    _, labels, population = registration.fixed_population(released["val"], allowed, "val", plan["shape"][1], 5)
+    layout, labels, population = registration.fixed_population(released["val"], allowed, "val", plan["shape"][1], 5)
     scope.require(population == budget["populations"]["val"], "Original devval support changed")
-    return labels
+    return (layout, labels) if with_layout else labels
 
 
 def recompute_case(folder, science, reg, case, sha, row):

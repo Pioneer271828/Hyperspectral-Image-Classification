@@ -1,14 +1,25 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-18",
-  "issue": 498,
+  "as_of": "2026-11-20",
+  "issue": 463,
   "development_branch": "codex/f-drive-primary",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "26cdca02234e07df720b4253a6b22609b60f31b9",
+  "main_snapshot": "465526c643d03c4ce11dc14a1f68dbf7c79b343d",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
   "required_ancestors": {
+    "wp12_support_head_provenance_candidate": "1ad34d1ab8baec153d8580ba74517d21dd0f4ed0",
+    "wp12_classification_cost_main_review_candidate": "6559cba3a8f5239df7fc41185be79420562693ad",
+    "wp05_wp06_support_head_deployment_candidate": "9102a9632e13c688d68739019936c571fc243612",
+    "wp05_honghu_p4_mechanism_candidate": "7e0386e3fa5686392dfc45f2b415b420036e200a",
+    "wp05_honghu_p4_short_review_candidate": "fa8905aa313280db3b7181c4dcfab36702e34c38",
+    "wp05_wp06_gpu_recovery_integration_candidate": "65ef959fc3dcf63c5f4fa65142dc21b0280ab4f6",
+    "wp02_wp05_wp06_real_readiness_candidate": "58b3ff182668c3fd6bc0d40400748011d619251b",
+    "wp05_m1_e1_coverage_wp12_candidate": "1fbbb7e9b4de55ff649540e241b7d89b6b5c815a",
+    "wp05_wp06_causal_region_candidate": "dcd1001d3a8204513358ef92b44979f7d4a895f2",
+    "wp05_wp06_scientific_candidate": "8d7feca196b4df16cfd5704778406c1dd30e1359",
+    "wp05_wp06_regional_graph_candidate": "b4ae7d8172170e92df6e4804eed108dd7cc0ac96",
     "accepted_g4i": "a0787ca6e3613909a9c7e61636b7b7ed1c0a618b",
     "accepted_g4i_result_docs": "a01aa94be2a6fc162a3d5ac3efa7d1fb55caf779",
     "monitoring_protection": "461c5b806556db15153a6a992963fbe217244123",
@@ -16,7 +27,10 @@
     "numerical_audit": "4358891d74cff51404f51836f887d376d3045b87",
     "main_cache_repair": "b985634b22ba77422bb8c91143bbc0a0337707ff",
     "m4_source_handoff": "0de46ee00946166a84c9ad50fd027bba2c56d679",
-    "tool_integration": "1c40f249e2277a4356d63c8e8db35d6aa9282791"
+    "tool_integration": "1c40f249e2277a4356d63c8e8db35d6aa9282791",
+    "native_coverage_release_candidate": "7f319f2146185575fc96287a44bdbbde091f0c16",
+    "wp12_unified_real_candidate": "11a95837a1dbcbe01218a7847553503f231afeaf",
+    "wp11_deployment_cost_candidate": "e5020e3ef1665802472f60f4875ca4622df44e51"
   },
   "frozen_runtime_reference": "8289e227275eabbafbb1eaea75cf4d6b0c1e8580",
   "frozen_runtime_paths": [
@@ -43,6 +57,182 @@
     "evaluation/g4_target_verification.py"
   ],
   "modules": [
+    {
+      "id": "WP05/WP06/WP12 洪湖 P4 活动登记与同点复盘",
+      "state": "现有真实 10/20 独审完成并接入同点复盘，GPU4 剩余批准等待资源",
+      "evidence": "冻结迁移批准已核实，两槽登记互斥。GPU6 原 1,200 步与 490 份工件保留，4,620 次实际同点头对照零改判。类 15/21 每头 0/5，含同块最近异类错分、原选步、逐类与成本。PaviaU 39 例、徐州 8 臂按各自真实发布范围登记。CPU 20 项和迁移接口兼容负例通过。",
+      "remaining": "登记 GPU4 空闲约 3,208 MiB，低于 12,288 MiB 门槛。余下 10 例 1,200 步未启动。原归属保留，尚无 20 例合并接受，独立确认、13,500 与 180,000 步继续等待原前置。本轮真实优化和模型前向为 0。",
+      "report": "research/reports/WP05_WP06_WP12_洪湖P4剩余登记与同点科学复盘_20261120.md",
+      "chat_report": "2026-11-20 第十五包洪湖P4迁移准入与科学复盘"
+    },
+    {
+      "id": "WP05/WP06/WP12 双卡队列、精确同卡恢复和主线集成",
+      "state": "双实体卡队列、三种同卡恢复、冻结三头及 WP12 工程通过",
+      "evidence": "主线 465526c643d03c4ce11dc14a1f68dbf7c79b343d 合入隔离候选。GPU0/3 实际并行，264 工程更新和 108 连续参照更新。三臂 SIGTERM 各 13+23 步逐位恢复，完成队列重入 0。GPU/CPU 39,690 个冻结点头零改判，420 条无标签成本条件。归档 54/54 核实，仅引用。PaviaU GPU3 已落盘恢复工件复核通过。",
+      "remaining": "独立三角色、可信物理轴或有用途的交付列、逐类独立确认和单独真实优化批准仍待持有人。旧 P4 GPU5 的 22 类同卡恢复待资源，与本轮 GPU0/3 工程资格独立。真实优化、原 GT、query、WP04 为零。",
+      "report": "research/reports/WP05_WP06_WP12_双GPU同卡恢复与主线集成验收_20261120.md",
+      "chat_report": "2026-11-20 第十四包 GPU 恢复与候选集成"
+    },
+    {
+      "id": "WP02/WP05/WP06/WP12 三景真实准入、同点误差和同容量读出",
+      "state": "三景授权盘点、两景真实冻结同容量和 WP12 独立复核完成",
+      "evidence": "五端点 2,610 个原生头点，徐州和洪湖新捕获 1,395 个原生决定无改判。六层等 64 列读出 42,120 个点决定独立复算一致。徐州缺带原生融合类 5/6 为 1/5、0/5，完整支持重拟合均为 5/5。洪湖第 24 步原生三头两类均 0/5，类 21 支持仅一个父块。远程专项 27 通过、3 跳过。",
+      "remaining": "三景没有新增可信持有人发布。独立角色、物理轴、共享真类、洪湖空间隔离仍待核。每焦点类 5 个开发点，只作诊断。真实优化、原 GT、封存 query 和 WP04 为 0。",
+      "report": "research/reports/WP02_WP05_WP06_真实准入同点与等容量复盘_20261120.md",
+      "chat_report": "2026-11-20 第十三包真实准入、同点与等容量诊断"
+    },
+    {
+      "id": "WP05/WP06/WP12 M1/E1 完整历史与覆盖调制生产接入",
+      "state": "历史真实负结果已接入，五模式外部 Bank 和独立 WP12 工程已通过",
+      "evidence": "M1-C 45,000、M1-J2 9,018、E1-C2 75,000 历史步及逐类分母按原协议核对。264 合成步，SIGTERM 5+7 精确恢复，重入 0。复用权重核对 69,174 逐点头、366 无标签成本记录及图。GPU0 对照 23,814 逐点头零改判，GPU 专项 35 通过。",
+      "remaining": "已测配方未达预登记采用门槛。联合固定全谱图没有中央缺带结果。三景正式独立 Bank、实测逐带轴及单独真实优化批准待持有人。新真实训练、原 GT、query、WP04 为零。",
+      "report": "research/reports/WP05_M1E1_完整历史与覆盖调制生产接入_20261120.md",
+      "chat_report": "2026-11-20 第十二包 M1/E1 历史与覆盖调制"
+    },
+    {
+      "id": "WP05/WP06/WP08/WP12 可控区域源首次可达与固定权重盲确认",
+      "state": "合成机制与远程 WP12 已验收，融合与完整小类保护未达到采用门槛",
+      "evidence": "源码 dcd1001d3a8204513358ef92b44979f7d4a895f2。两景两布局，34 臂 816 合成步。同 GPU3 恢复与连续参照精确，重入 0。图头首次可达并依赖真源恢复 143 点次；融合新增正确 25、错误 28。GPU3 与 CPU 对照的 98,400 个逐点头零改判。CPU 1,234 通过、9 跳过，pytest 42 通过。",
+      "remaining": "四个原生探针块中软 Q 原图已可达，固定空间 GroupNorm 统计才消除 CNN 远距响应。真实独立三角色、合法源干预与无旁路条件待核；新真实更新、原 GT、封存 query、WP04 为 0。",
+      "report": "research/reports/WP05_WP06_区域源首次可达与盲确认结项_20261120.md",
+      "chat_report": "2026-11-20 第十一包区域源机制与盲确认"
+    },
+    {
+      "id": "WP05/WP06/WP08/WP12 同少样本缺带协议的区域图结构比较",
+      "state": "原生区域边工程、同设备恢复和独立 WP12 已通过，候选待主审",
+      "evidence": "源码 b4ae7d8172170e92df6e4804eed108dd7cc0ac96。CPU 512、GPU3 192 工程更新，另连续参照各 16；四臂实际 130 边。CPU 1,230 通过、9 跳过，pytest 42 通过。CUDA 9,072 点头零改判及索引变化。工程汇总 SHA256 23d13adc67f13123e7290e1385aba9bed300a9a2d1cf49aa5a52f4c4b424bd65。",
+      "remaining": "36 个严格匹配观测有 18 个预算内未找到，整组未准入。合成全列原图已提供结构路径，当前不建立远区可达增益或正式采纳。两景存量仅开发训练块，真实独立发布和可信发射源待核；新真实更新、原 GT、query、WP04 为 0。",
+      "report": "research/reports/WP05_WP06_WP08_WP12_区域图结构比较与候选整合_20261120.md",
+      "chat_report": "2026-11-20 第十包区域图结构和候选整合"
+    },
+    {
+      "id": "WP05/WP06/WP12 少样本、交付列和科学采用门槛",
+      "state": "工程验收已通过，独立真实发布待持有人，候选待集成",
+      "evidence": "源码 8d7feca196b4df16cfd5704778406c1dd30e1359。三景 30 组、60 臂、2,120 工程更新、15 匹配对照；GPU 3 同卡恢复，最后 GPU 0 4,536 点头零改判。CPU 1,227 通过、9 跳过，pytest 42 通过。最终回执 SHA256 61e79e144ffc41d066d8da520d7606430ece2ec43519ede4d80c5cfe278154ec。",
+      "remaining": "物理 54 模型仍待真实独立三角色和执行批准；列协议仍待真实交付顺序及用途审批，PaviaU 新前瞻 2、6 类保护待主审。原始 GT、query、旧真实重放及新增真实优化均为 0。",
+      "report": "research/reports/WP05_WP06_WP12_科学发布与远程验收_20261120.md",
+      "chat_report": "2026-11-20 第九包科学发布与远程验收"
+    },
+    {
+      "id": "WP05/WP06/WP07/WP08/WP12 缺带与小类保护配对生产",
+      "state": "四后端同协议训练、冻结、WP12 及工程 CUDA 验收通过，独立候选待主审",
+      "evidence": "三景 22 科学臂 528 更新，2 恢复臂 24 更新；GPU3 384，CPU 168。SIGTERM 5+7 与独立 12 步全状态精确，重入 0。15,390 选中逐点头精确，CUDA 8,748 无改判。洪湖每类 21 点的牺牲控制被拒。源码 27c3a5fe6dafd8e2cc759e2dc101d64e55722336。",
+      "remaining": "真实草案 54 模型、11,376 步，缺独立三角色、验证过的物理带轴和单独训练批准。真实更新、额外标签、GT、query、WP04 为零。",
+      "report": "research/reports/WP05_WP06_WP07_WP08_WP12_缺带与小类保护配对生产验收_20261120.md",
+      "chat_report": "2026-11-20 缺带、小类保护、训练恢复与 WP12 工程验收"
+    },
+    {
+      "id": "WP05/WP06/WP07/WP08/WP12 原生跨模型比较",
+      "state": "正式入口、外部工程 CPU/CUDA、WP12 消费和三景存量比较完成，独立候选待主审",
+      "evidence": "徐州全带 15 臂 28 对，原 off 精确；消息 combined 低于同容量 local，类 5/6 由 4/5、1/5 降至均 0/5。PaviaU 60 权重、123 对，720 个头端点矩阵与原 GPU 一致。外部工程 432 CPU、216 CUDA 记录，17496 逐点头决定无改判。历史 8f7f2390c978f40ce9a4cf6ee64f049ac76799cb。",
+      "remaining": "PaviaU 启用结构的原网格学习协议不同；洪湖第 15/21 类尚无匹配空间结构臂。徐州单方向矩阵为工程资格，独立真实发布和联合缺带名单仍待持有人。新真实优化、GT、query和WP04为零。",
+      "report": "research/reports/WP05_WP06_WP07_WP08_WP12_原生跨模型配对与真实短测复核_20261120.md",
+      "chat_report": "2026-11-20 原生跨模型配对、历史短测和 WP12 独立验收"
+    },
+    {
+      "id": "WP06/WP05/WP12 原生传播与分层确认",
+      "state": "原生真实冻结、同容量读出、外部空间工程、CPU/CUDA 和 WP12 独立验收通过",
+      "evidence": "两景六端点 118 块视图、384 点次，192 个归档同容量读出 logits 精确。徐州 347 中央缺带两类的 CNN 投影降幅大于图投影；洪湖 K5 图头类 21 支持 5/5、开发 0/5。外部工程 E0 三分层均不足 20 点/类。运行 2a2c20da3fffd5f172455aae18992c14386979e2。",
+      "remaining": "洪湖类 21 无可用跨区一二跳目标，真实几何和独立发布待持有人。真实优化、原 GT、query 和 WP04 为零。",
+      "report": "research/reports/WP06_WP05_WP12_原生传播与分层确认_20261120.md",
+      "chat_report": "2026-11-20 WP06 原生传播、WP05 空间分层和 WP12 独立验收"
+    },
+    {
+      "id": "WP05/WP06/WP12 两景真实开发误差归因",
+      "state": "冻结三头、真实曝光与 WP12 独立复算通过，正式发布待持有人",
+      "evidence": "洪湖 40 短测及 10 个双 60 步案例，徐州 0/7/347/512，按真实支持和开发角色重构。徐州 347 等量两视图中仅中央缺带导致融合重点类 1/5 与 0/5。洪湖 K5 scratch 图头类 21 支持 25/25、开发 0/25 点次，固定对手 20 的输入投影差跨零。两景 10 个外部格式测试发布的门槛对照通过。",
+      "remaining": "徐州正式本地类名映射、两景逐带校准和独立真实角色发布仍缺。新增真实优化、标签、原 GT、query 和 WP04 为零。",
+      "report": "research/reports/WP05_WP06_WP12_两景真实开发误差归因_20261119.md",
+      "chat_report": "2026-11-19 两景真实开发误差归因与 WP12 验收"
+    },
+    {
+      "id": "WP05/WP06/WP12 两景外部配对与跨协议历史复核",
+      "state": "外部格式两景配对与 WP12 冻结历史复核完成",
+      "evidence": "两景 8 Bank、12 对、24 臂、288 工程更新，物理原检查点只读认证。历史 40 个短测、10 个双 60 步审核、徐州四游标和 Issue 184 整景 54 例按协议记录；旧徐州逐类保护五次失败。运行 102cb333d94ce02973a1818b7247d50fd8cf6075。",
+      "remaining": "独立真实 Bank 和单独真实执行授权尚缺。真实优化、原 GT、query、WP04 为零。",
+      "report": "research/reports/WP05_WP06_WP12_外部配对与历史证据_20261119.md",
+      "chat_report": "2026-11-19 两景外部配对与 WP12 历史复核"
+    },
+    {
+      "id": "WP05/WP06/WP12 配对线性头与交付序缺轴回退",
+      "state": "两景真实只读实查、42合成条件和独立验收通过；三候选均未达采纳门槛",
+      "evidence": "徐州轮换AA60.74→73.70%但逐类门槛1/6，洪湖池化38.72→9.55%且0/6，交付序23.21→29.75%但0/6。4240合成更新，40,959头点跨设备零改判。tested 653f2b5935c73a7af0eb6f2867179cbb820e2415；消费 93d9fa1884122f0783ab9b0d57cee50604cb8912。",
+      "remaining": "真实独立支持/校准/确认和优化授权缺；洪湖同协议仅24步可回放，22步为历史计分。生产默认保持，真实优化、GT、query和WP04为零。",
+      "report": "research/reports/WP05_WP06_WP12_配对线性头与缺轴回退_20261119.md",
+      "chat_report": "2026-11-19 两景配对线性头、缺轴回退和实物核查"
+    },
+    {
+      "id": "WP05/WP06/WP12 单位点、三因素和精确边机制候选",
+      "state": "冻结开发、等量三因素、独立合成图机制和远程验收通过，候选待审核",
+      "evidence": "8 真实端点、50,760 行去坐标同点表；徐州 347 的 VCA 同位/随机全类 35/25 对 5，重点两类均救回。洪湖两类全带错误先于缺带。24 冻结合成端点三因素、36 精确边臂共1776更新，代表三类设备复核零改判。主训练 ff48dbfd08f57babcde0f8ae2debe19439d29361，消费 758fbde5c8e3dd1f8ab018c68be544c96d9b9964。",
+      "remaining": "真实独立发布、可信边界和光学校准仍缺；两景最小真实对照待授权。真实优化、原始 GT、封存 query 和 WP04 均未执行。",
+      "report": "research/reports/WP05_WP06_WP12_单点机制三因素与精确边对照_20261119.md",
+      "chat_report": "2026-11-19 WP05/WP06 单位点、三因素与精确边机制验收"
+    },
+    {
+      "id": "WP05/WP06/WP12 固定支持诊断与原生生产候选",
+      "state": "三景冻结开发、合成生产训练与独立验收通过；中心旁路未获推广证据",
+      "evidence": "原同点表17085行复算；徐州缺带，固定池化读出目标类0/5,0/5，重拟合5/5,5/5；洪湖固定5/5,5/5。合成两源、24个目标、5,694更新，GPU3精确恢复；375 CPU和135 GPU确认视图，零改判。tested dd5cc367a6e0f04cf0278844e95600be8990e2cf；消费 ee3a6327f4657694121042082cef709fac225fbd。",
+      "remaining": "真实独立发布、训练授权和逐带校准缺失；域外缺元数据/粗格联合压力仍失败，中心旁路无稳定额外提升。真实优化、query和WP04为零。",
+      "report": "research/reports/WP05_WP06_WP12_生产候选与固定支持验收_20261119.md",
+      "chat_report": "2026-11-19 WP05/WP06生产候选与固定读出独立验收"
+    },
+    {
+      "id": "WP02/WP05/WP06/WP12 三景真实保留波段同点与准入候选",
+      "state": "六端点 CPU、三景 GPU0、WP12 去身份汇总及合成准入验收通过，候选待审核",
+      "evidence": "CPU 18 视图、GPU0 9 视图、17,085 行同点记录。GPU0 复核原生三头及支持读出零改判。徐州 347/512 中央缺带重点类 1/5 和 0/5。洪湖两小类三视图均 0/5。WP12 组包与 CPU/GPU 工程 tested 624f03fdf4949a57cef5fafac6d3e4a3a78942ab。",
+      "remaining": "缺可绑定真实逐带校准与获授权独立支持/校准/评估；真实旁路未训练，真实更新、query、原始 GT 与 WP04 执行为零。",
+      "report": "research/reports/WP02_WP05_WP06_WP12_真实保留波段同点与准入_20261119.md",
+      "chat_report": "2026-11-19 三景真实只读同点诊断与持有人准入"
+    },
+    {
+      "id": "WP05/WP06/WP12 合成光谱正对照与空间分支失败定位候选",
+      "state": "旧v1只读原因和144例合成确认通过工程验收，候选待审核",
+      "evidence": "旧原谱/加载器可辨，旧图块皆单一区域。新144×240=34560更新，6912个读出，局部正对照24/24与中心旁路23/24达门槛，空信号0/12假阳性。tested fc7f5b83eb6cadeb4c227dd2bafe8120847aa6e0。",
+      "remaining": "真实传感器与空间机制仍待独立发布，真实优化、query和WP04均未启动；原v1负结果保留。",
+      "report": "research/reports/WP05_WP06_WP12_合成正对照与空间分支失败定位_20261119.md",
+      "chat_report": "2026-11-19 旧v1失败定位和合成正阴控独立确认"
+    },
+    {
+      "id": "WP05/WP06/WP12 两景 1500 步匹配原生训练与独立消费候选",
+      "state": "12 条合成 18,000 有效更新和独立阶段重算通过，候选待审核",
+      "evidence": "两景、三个种子、两臂。CPU SIGTERM 633+867 与额外1500连续参考全状态一致，GPU0 713+787、零更新重入，432 个确认读出。预登记合成冗余召回下限0/12。tested be35c7d0eb87bb6a22e980e9f65e5fc410236b1d。",
+      "remaining": "真实独立角色和执行许可待发布，18,000/45,000步只保留计划。十个历史洪湖案例无权重。WP04未开始。",
+      "report": "research/reports/WP05_WP06_WP12_两景18000步匹配训练与独立验收_20261119.md",
+      "chat_report": "2026-11-19 两景18,000步合成完整训练、精确恢复与WP12"
+    },
+    {
+      "id": "WP05/WP06/WP12 跨阶段冻结开发与真实缺带候选",
+      "state": "冻结阶段和独立 WP12 开发复算通过，候选待审核",
+      "evidence": "Issue184 全54四阶段 1296 行混淆和 324 行选中概率复算，每景 GPU 代表共12个冻结阶段。徐州合格512步轨迹四阶段三视图 CPU/GPU 零改判，合成两景30例五臂完整预算及恢复。汇总 tested 6684cac44046c7f2a50449d8cdbc81ea9ffc5726。",
+      "remaining": "洪湖历史五臂20例维持10例独审，另10例等待资源且无阶段或权重。固定全景 Q/A 不用于缺带反事实。真实长期同协议跨景及独立确认待授权，WP04 未启动。",
+      "report": "research/reports/WP05_WP06_WP12_冻结训练阶段与真实缺带验收_20261119.md",
+      "chat_report": "2026-11-19 WP05/WP06/WP12 冻结阶段比较与远程验收"
+    },
+    {
+      "id": "WP11/WP12 冻结部署和四范围成本候选",
+      "state": "固定真实路径在 CPU 和独立 CUDA 设备量测，合成动态闭环验收，候选待审",
+      "evidence": "三景原生完整和徐州已认证轻重共五路径，每设备四范围。CPU exact 395caef57fba8ab6a09223538f748179dab552f2，严格 CUDA 和全仓测试 e5020e3ef1665802472f60f4875ca4622df44e51",
+      "remaining": "真实独立校准与确认仍缺授权发布。动态真实收益保留空，完整 FP32 默认继续。",
+      "report": "research/reports/WP11_WP12_固定路径与动态回退端到端成本验收_20261119.md",
+      "chat_report": "2026-11-19 WP11/WP12 四范围固定路径测量、动态工程与独立导出"
+    },
+    {
+      "id": "WP12 真实分类、成本与独立发布统一候选",
+      "state": "已统一真实历史汇总、成本分层和独立发布入口，候选待审",
+      "evidence": "原 GPU 54/54 已完成并复算。共 240 个真实结果条目，洪湖两组五臂。三景历史发布均拒绝独立准确率，独立合成发布全流程通过。tested 11a95837a1dbcbe01218a7847553503f231afeaf",
+      "remaining": "独立真实支持、校准和评价发布仍缺。冻结全量端到端成本和未接受真实配对保留空项。",
+      "report": "research/reports/WP12_真实分类成本与独立发布统一验收_20261119.md",
+      "chat_report": "2026-11-19 WP12 真实分类、成本与独立发布统一候选"
+    },
+    {
+      "id": "WP02/WP05/WP06/WP12 主开发线原生整合候选",
+      "state": "单检出集成候选和远程验收证据待主开发线审核",
+      "evidence": "三景六个冻结视图历史 FP32 概率和稀疏 Q/A 一致。24 个合成 Bank、120 个 CPU 案例、两张 GPU 同卡恢复和三条跨设备冻结装载完成，WP12 逐类与成本已复算。tested 7f319f2146185575fc96287a44bdbbde091f0c16",
+      "remaining": "真实独立支持、独立空间确认和正式效果继续待验。真实训练保持暂停，query 与 WP04 未启动。",
+      "report": "research/reports/WP02_WP05_WP06_WP12_主线原生整合验收_20261119.md",
+      "chat_report": "2026-11-19 主开发线原生整合发布候选"
+    },
     {
       "id": "M4",
       "state": "首轮效果完成",
@@ -887,7 +1077,7 @@
       "id": "WP01 CUR外部登记与认证恢复CLI",
       "state": "CPU工程通过；真实课程与GPU未完成",
       "evidence": "Issue335/PR336；tested89463f5a11c66acd001cdf1f93f0fef8daa3a125，LXC组合38/38 393.826s，checker538Python174JSON/help；独立9合成案例288更新/54头10332混淆612召回/9完成0，114输入不变47.216251s；原3类24步曝光拒绝和审计角色对象误接失败保留",
-      "remaining": "WP01 GPU/真实S与O等预算多种子及后续S×O仍待；按WP02继续核真实协议准入和缺失G2依赖，真实更新/query0，未启长训练值守",
+      "remaining": "本条为早期CLI工程。后续固定开发真实S见432、真实O见438、真实S×O见443；独立空间、GPU与部署待验，缺失G2依赖另见WP02",
       "report": "research/reports/CURCLI_外部登记与认证恢复工程验收_20261110.md",
       "chat_report": "2026-11-10本聊天完整模块报告，完成交付后连续推进WP02"
     },
@@ -898,229 +1088,6 @@
       "remaining": "真实发布绑定/带号/波长SRF/辐射单位、HongHu新开发几何、GPU与真实效果未完成；继续WP02及WP03原249只读诊断，不重启旧训练",
       "report": "research/reports/WP02G2_已验协议链主线整合与准入复核_20261110.md",
       "chat_report": "2026-11-10本聊天完整整合模块报告，随后继续计划"
-    },
-    {
-      "id": "WP03 失败轻量批次证据清点",
-      "state": "只读清点工程通过；恢复与全批实验未完成",
-      "evidence": "Issue339；tested a66081740361c8bdcccafc73eafb71311bac69d6，LXC CPU25/25 88.397s；4432文件前后哈希一致21.320823s，35控制器+1外部回执/54000更新、1失败17未运行；新更新/query/GPU重载0；初版NONE字段误读与回执SHA转录拒绝日志保留",
-      "remaining": "显存修复/原合同数值与恢复兼容尚未证明，旧failed批次不续跑；全54独立审计与冻结query未完成，vca实际PAUSED。继续WP04 I7/I9组合工程",
-      "report": "research/reports/WP03LightInventory_失败批次证据与恢复边界_20261110.md",
-      "chat_report": "2026-11-10本聊天完整证据清点模块报告，随后连续推进；不作完整WP03实验交付"
-    },
-    {
-      "id": "WP04-I7/I9",
-      "state": "组合目标接入CPU工程验收完成",
-      "evidence": "Issue341；tested07b448a355fc38cc6342f7d35c076b23af625237，LXC CPU17+42=59通过；独立4合成例48更新、24头1944混淆216召回、12精确重载、完成恢复0；54输入/138复盘文件不变；旧六组配置与训练恢复不变",
-      "remaining": "GPU、真实三场景多种子等预算训练及全R/I矩阵仍待验；I9同时改变消息与联合边权的CNN对齐，不能解释为只改变消息；下一项补R4/R5残差与位置融合组合",
-      "report": "research/reports/WP04I7I9_联合边权组合目标接入验收_20261110.md",
-      "chat_report": "2026-11-10本聊天完整CPU工程报告，完成后连续推进；不作全WP04实验交付"
-    },
-    {
-      "id": "WP04残差与位置融合组合",
-      "state": "CPU有界组合接入验收通过",
-      "evidence": "Issue343；tested94d96ce3e55a1cba2d9a2bd1846efa471afbfaba，LXC CPU5+20+17=42通过；容量/残差×固定/门控×scratch/FT八例合成96更新，48头3888混淆432召回，24精确重载/完成0，59输入227复盘文件不变，总29.865956s；全部选12且三头均有零召回",
-      "remaining": "GPU、真实多场景多种子/完整预算与逐类收益未验；FT跨模式使用不同源权重，不作纯目标因果解释；WP05真实重复资源受限，继续WP06同容量逐层线性探针接口",
-      "report": "research/reports/WP04ResidualPosition_残差与位置融合组合接入验收_20261110.md",
-      "chat_report": "2026-11-10本聊天组合接入CPU工程报告，随后连续推进，不作全WP04完成声明"
-    },
-    {
-      "id": "WP06 同容量冻结逐层线性探针",
-      "state": "CPU工程通过；跨后端严格决策一致性未通过",
-      "evidence": "Issue345/PR346；tested b620ac1f69771400653e82938f4f7185b383d2f6，LXC CPU23/23 27.786s；10合成探针连续120+恢复120更新，完成0；权威概率NumPy复算2944格208召回/11输入不变；初始化图分支跨后端分类差异保留，未放宽门槛",
-      "remaining": "真实冻结模型与标签权限接入、真实逐层机制/空间重复/GPU/丰度仍待；并列分数不能当可靠语义证据；继续WP06删边控制的度数与距离匹配",
-      "report": "research/reports/WP06LinearProbe_同容量冻结逐层探针工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程与数值负结果报告；不作全WP06完成声明"
-    },
-    {
-      "id": "WP06 度数与距离匹配删边控制",
-      "state": "局部图控制规划CPU工程通过",
-      "evidence": "Issue347/PR348；tested5ba61748cbf6d499346aaca0077de5b3452e215b，LXC CPU19/19 11.339s；7小图计划独立穷举32058候选，24最优控制与4不可行控制核实，14文件/3.158860s；神经网络更新/query0",
-      "remaining": "真实冻结模型绑定、三头逐类复盘、删边后等预算重训/GPU未完成；距离分箱非精确距离，随机目标非均匀抽样；继续GraphRouteRun选中态接入",
-      "report": "research/reports/WP06MatchedEdges_度数与距离匹配删边控制工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天局部图控制规划CPU报告；不作全WP06完成声明"
-    },
-    {
-      "id": "WP06 冻结模型匹配删边复盘",
-      "state": "完整验证人口绑定与三头复盘CPU工程通过",
-      "evidence": "Issue349/PR350；tested bfcd14c04662bf57a1ce1388fb4185a9aa1fe42c，LXC CPU15/15 8.911s；1合成实际网络24步，6组对照独立1458格162召回48约束，完整重载精确；复盘更新/query0",
-      "remaining": "真实场景/小类/独立确认、删边等预算重训与GPU仍待；复用选模验证集不作因果或真实收益；下一项等预算恢复训练接入",
-      "report": "research/reports/WP06MatchedEdgeReview_冻结模型匹配删边复盘工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
-    },
-    {
-      "id": "WP06 匹配删边等预算重训与恢复",
-      "state": "原始初始化及等预算恢复CPU工程通过",
-      "evidence": "Issue351/PR352；tested c9ddaa68db6ecafedf96a6e90310e375c13f9959，LXC CPU13/13 73.264s；六臂24与7+17精确/完成0；独立合成donor24+六模型144，1458格162召回/19.975431s，query0",
-      "remaining": "真实多场景/模型种子/GPU成本与效果仍待；合成短测三头零召回7/8/7，random64/2048掩码相同；下一项已训练静态模型探针的输入/标签权限绑定",
-      "report": "research/reports/WP06MatchedRetraining_等预算固定图重训与恢复工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
-    },
-    {
-      "id": "WP06 冻结特征与探针标签权限绑定",
-      "state": "历史产物与K10/V5标签身份CPU工程通过",
-      "evidence": "Issue353/PR354；tested4320d40a8a4f15a51d11b7698cbe54b3d221b64e，CPU16/16 54.416s；独立51840特征格/648混淆格/72召回/175输入不变，四探针32步+恢复32步/完成0，骨干0/query0",
-      "remaining": "真实特征采集/逐层机制、源初始化与空间重复/GPU未完成；合成零召回6/6/6/4；全54摘要不能替代逐像素特征；下一项受控长程信号与瓶颈干预",
-      "report": "research/reports/WP06AuthenticatedProbes_冻结特征与标签权限工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
-    },
-    {
-      "id": "WP06 受控区域图信号与中间屏蔽诊断",
-      "state": "现有两阶段图路径CPU工程通过",
-      "evidence": "Issue355/PR356；tested c6db02760ab2150c2bc6ab1826d6717c57052e2a，CPU17/17 41.838s；9初始化支路432独立雅可比/882调用/0更新，312不可达零/44可达零",
-      "remaining": "已训练选中模型/输入身份待绑定，完整模型Q/CNN/交互、学习式远程任务/真实HSI/GPU未完成；不作过挤压已缓解结论",
-      "report": "research/reports/WP06ControlledSignal_受控区域信号与瓶颈干预工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
-    },
-    {
-      "id": "WP06 选中模型全网络信号诊断",
-      "state": "完整网络开发块诊断CPU工程通过",
-      "evidence": "Issue357/PR358；tested 2cba7cfc198efd231d676c12d24ba1bd7882b9b5，CPU14/14 8.512s；7旧合成训练模型14块，168独立概率核对/84雅可比条目，10输入不变，新增更新0/query0",
-      "remaining": "有限差分差异5.014570311332565e-05保留，不作严格梯度匹配声明；真实HSI/GPU/学习式长程恢复与独立空间确认未完成",
-      "report": "research/reports/WP06SelectedSignals_选中模型全网络信号诊断工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
-    },
-    {
-      "id": "WP09 开放集完整已知区域与源预处理隔离",
-      "state": "严格完整标注子协议CPU工程通过",
-      "evidence": "Issue359/PR360；tested 5d12d81ed77ab6a85d9bbabfdcbfdf0db57c6477，CPU31/31 32.248s；3合成场景1512归一化/432坐标独立精确，初始化M8接入27评分报告，33输入不变，优化0/query0",
-      "remaining": "完整区域标注额外预算、真实语义/传感器与可行性待核；现有模型训练历史未认证；GPU/真实开放集精度和未知排除训练未完成；首审计输出隔离拒绝保留",
-      "report": "research/reports/WP09KnownContext_开放集完整已知区域预处理工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP09完成声明"
-    },
-    {
-      "id": "WP12 CPU与GPU整合回归",
-      "state": "工程回归通过",
-      "evidence": "Issue361；tested 5d12d81ed77ab6a85d9bbabfdcbfdf0db57c6477；CPU1118通过/7跳过/0失败/0错误，GPU25/25；2项GPU专用跳过另测通过，5项历史兼容用例沿用固定历史提交验证；原中断记录保留",
-      "remaining": "真实联合评价、独立重复与精度成本证据待验",
-      "report": "research/reports/WP12CPUIntegration_CPU与GPU整合回归验收_20261110.md",
-      "chat_report": "2026-11-10本聊天工程回归验收"
-    },
-    {
-      "id": "WP12 配对精度与成本汇总",
-      "state": "报告消费者CPU工程通过",
-      "evidence": "Issue362；tested 28b0b68efc8094b4499d5d3cdf46b53e02002f3f；CPU36/36，17.192秒；完整三种子配对、三头逐类、成本口径、输入身份和输出保护通过",
-      "remaining": "接入经过验收的真实统一精度、校准与同硬件成本证据；WP04四组真实短测后补",
-      "report": "research/reports/WP12UnifiedCohort_配对精度与成本汇总工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天工程模块验收"
-    },
-    {
-      "id": "WP12 真实精度与硬件成本证据接入",
-      "state": "接入CPU工程与真实产物只读核验通过",
-      "evidence": "Issue363；tested 38d735e89a2e4f36e4467289a59a9c7275da3e1b；CPU28通过/2历史跳过，34.126秒；真实54模型162头、旧CPU两臂各12读数；合成54行18摘要完整CLI通过",
-      "remaining": "旧成本与真实精度检查点重合0，缺峰值与包大小；待同检查点同硬件成本采集；WP04真实短测后补",
-      "report": "research/reports/WP12EvidenceIngest_真实精度与硬件成本证据接入_20261110.md",
-      "chat_report": "2026-11-10本聊天证据接入工程验收"
-    },
-    {
-      "id": "WP12 冻结模型常驻推理成本采集",
-      "state": "CPU工程验收通过，GPU与真实全批次待验",
-      "evidence": "Issue364；tested e13dd9514a38d9e4b91a6fd859c635c6741ca927；CPU24通过/1GPU跳过，39.207秒；原生模型独立CLI实测与全54合成汇总、身份/无标签/不变性/资源门槛负例通过；checker582Python198JSON",
-      "remaining": "真实54观测准备与历史加载兼容性，CUDA实测及同模型全批次成本；常驻前向不替代端到端成本，WP04真实短测继续后补",
-      "report": "research/reports/WP12ResidentCost_冻结模型常驻推理成本采集工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天CPU工程模块交付；随即推进真实观测与兼容性准备"
-    },
-    {
-      "id": "WP12 冻结54成本观测准备与运行时准入",
-      "state": "工程与真实观测准备通过，历史推理等价性待验",
-      "evidence": "Issue365；tested e9a091b27498c386323643d97df57ba2c62e882a；CPU22/22，19.606秒；真实54案例/3场景无标签观测17.797秒，6源文件不变；preparation c32ff8865bfce91c40a3c19305e9d3f5c454568f6556a9b93cbb12a4ffa86ee4；checker585Python198JSON",
-      "remaining": "原生产8文件不同含模型默认关闭图路由，保留compatibility_pending，不生成执行作业；需固定历史推理或独立等价性核验，再补GPU/全54成本；WP04真实短测后补",
-      "report": "research/reports/WP12CostPreparation_冻结54成本观测准备与运行时准入_20261110.md",
-      "chat_report": "2026-11-10本聊天模块交付：工程通过与真实测量准入待补分别报告"
-    },
-    {
-      "id": "WP12 原始冻结推理运行时隔离采集",
-      "state": "CPU隔离工程通过，真实硬件测量待验",
-      "evidence": "Issue368；现代tested a4b4408d993bfd9a93eb7ead4ce933974c58f543，历史worker ad107501595f9b9cb625086e8457a852d7a60789；CPU32通过/1GPU跳过43.334秒；原392文件一致，独立同一原生合成模型三头/状态精确一致；comparison5f1623797d2fa14faad60b1748fd7437b8dfa1116f4c46150aa18f8e1244d319",
-      "remaining": "8卡均不满足显存门槛，未跑GPU或真实54成本；CPU峰值已修订为收尾校验后读取，旧记录保留；WP04真实短测后补",
-      "report": "research/reports/WP12HistoricalCost_原始冻结推理运行时隔离采集验收_20261110.md",
-      "chat_report": "2026-11-10本聊天第三项连续模块交付；真实测量与工程分别验收"
-    },
-    {
-      "id": "WP12 冻结54成本批次登记与汇总",
-      "state": "CPU工程与真实登记通过，GPU实际测量待验",
-      "evidence": "Issue370；tested 8327b0f94a7e1fa86f9c42c459e28e578f6d202a；CPU28通过/1GPU跳过，28.686秒；实际54登记 e373b6648314e3e0514506ecf78fa8dcb582791a24f98fa23d2060f89a84c978；全54合成续跑与联合汇总通过",
-      "remaining": "GPU达到既定门槛后执行原54常驻成本；端到端成本与WP04真实短测待补",
-      "report": "research/reports/WP12CostCampaign_冻结54成本批次登记与汇总验收_20261110.md",
-      "chat_report": "2026-11-10本聊天交付后继续WP11固定路径同成本比较"
-    },
-    {
-      "id": "WP12 GPU身份修复与冻结54成本实测",
-      "state": "UUID修复通过真实GPU，51/54接受；同卡资源等待",
-      "evidence": "协调d96e30b42a6567b17456b88345fd4299dcfa2d74，worker 3ba683439ed6c5ea3ae219bea0840e41b738ffce；CPU23通过1跳过和worker2/2。原登记0例因UUID前缀拒绝；新登记仅改worker身份，GPU7 51例612样本独立核对，273文件一致",
-      "remaining": "GPU7恢复12288MiB/60%门槛后同登记补Xuzhou种子2048三例，完成硬件回执与联合汇总。优化与query读取0，端到端成本待验",
-      "report": "research/reports/WP12Frozen54_GPU身份修复与实测进度_20261111.md",
-      "chat_report": "2026-11-11本聊天报告51/54与同卡恢复条件"
-    },
-    {
-      "id": "WP12 冻结54同卡GPU成本完整实测",
-      "state": "真实54/54常驻成本与冻结精度联合证据通过",
-      "evidence": "Issue370；协调d96e30b42a6567b17456b88345fd4299dcfa2d74、worker 3ba683439ed6c5ea3ae219bea0840e41b738ffce；GPU7同卡续补3例，前51项哈希不变，648计时样本与286文件独立核对；最小空闲16494MiB/最大35%",
-      "remaining": "冻结主要收益门槛未通过的结论保留；最终版本统一回归、端到端成本与其他协议待验",
-      "report": "research/reports/WP12Frozen54_GPU常驻前向完整实测与独立复核_20261111.md",
-      "chat_report": "2026-11-11本聊天冻结54成本完成报告"
-    },
-    {
-      "id": "WP11 动态与固定路径同成本比较",
-      "state": "CPU工程验收通过，真实对照待验",
-      "evidence": "Issue371；tested 28d1272294994b03aa9b36220c2dc3923471365f；CPU38/38，2.861秒；checker593Python198JSON；同一p50与p95超限、缺对、错控制、计时篡改负例通过，合成CLI报告已留存",
-      "remaining": "真实独立确认、同成本固定路径与部署成本待验；真实GPU成本当前空闲最高4004MiB，WP04真实短测后补",
-      "report": "research/reports/WP11MatchedCost_动态与固定路径同成本比较工程验收_20261110.md",
-      "chat_report": "2026-11-10本聊天接续WP12成本计划后交付"
-    },
-    {
-      "id": "WP11 独立确认准入与固定路径执行",
-      "state": "CPU工程通过，真实确认待准入",
-      "evidence": "Issue373；tested 9817916b94624c8fce889760ccb757252e571c48；40/40 CPU；冻结门控、独立块和授权标签、实际固定分支调用、五臂配对计时与曲线入口通过；徐州25候选块",
-      "remaining": "徐州完整模型祖先已另案审计；同划分真实轻模型、两套授权标签及真实成本待验",
-      "report": "research/reports/WP11IndependentConfirmation_独立确认准入与固定路径执行_20261110.md",
-      "chat_report": "2026-11-10本聊天继续推进留出观测准备"
-    },
-    {
-      "id": "WP11 徐州无标签留出候选观测",
-      "state": "真实候选观测准备通过",
-      "evidence": "Issue375；tested 8c95cf57892be8470687044a5687419194d5f1f8；CPU41/41、checker598Python198JSON；徐州25块8399104值独立回读一致、5输入不变",
-      "remaining": "实际角色与授权标签、模型历史和真实确认待验；54成本GPU空闲最高6000MiB，WP04真实短测后补",
-      "report": "research/reports/WP11HeldAside_徐州无标签留出候选观测准备_20261110.md",
-      "chat_report": "2026-11-10本聊天交付实际影像候选"
-    },
-    {
-      "id": "WP11 真实模型复用与独立标签托管",
-      "state": "完整模型历史与标签托管工程通过，真实标签授权待齐",
-      "evidence": "Issue377；tested 6d17d001d7c396de5f20305f1893fbe379bd59fe；CPU32/32；徐州5000步采样重放、50次历史开发验证、严格CPU加载；78开发块26076288值回读；真实12校准与13确认块无交叠",
-      "remaining": "等待两角色各自的授权稀疏标签及同划分训练轻模型，确认逐类支持后进入校准和独立确认；冻结54成本GPU待资源，WP04真实短测后补",
-      "report": "research/reports/WP11RealReuse_真实模型复用与独立标签托管_20261110.md",
-      "chat_report": "2026-11-10本聊天交付完整模型审计与真实标签托管准备"
-    },
-    {
-      "id": "WP11 同划分轻模型登记与恢复",
-      "state": "CPU工程与真实输入零步核查通过",
-      "evidence": "Issue379；tested 17f08da3d3e97080a9b992034ac3107a8417e5d9；CPU51/51；合成整跑3对1+2、完成恢复0及发布严格回读；徐州真实开发包和完整模型已通过零步登记",
-      "remaining": "真实轻模型学习与保护待验；真实校准/确认标签分别授权后才可进入门控；WP12冻结54成本待GPU，WP04真实短测后补",
-      "report": "research/reports/WP11RegisteredLight_同划分轻模型登记恢复与发布_20261110.md",
-      "chat_report": "2026-11-10本聊天接续真实模型复用后交付"
-    },
-    {
-      "id": "WP11 校准冻结与独立确认隔离",
-      "state": "CPU工程及徐州候选请求准备通过",
-      "evidence": "Issue381；tested 93926301cf3d94dafc4d6fae31bff8362591fb56；CPU64/64，13.765秒；确认文件缺席时完成校准冻结，恢复后确认和同成本曲线通过；实际徐州25候选块、107个输入复核、8399104个原始光谱值，无新标签或模型前向",
-      "remaining": "待同划分真实轻模型与两套独立托管标签，按逐类门槛执行真实校准与确认；WP12冻结54成本待GPU；WP04真实短测后补",
-      "report": "research/reports/WP11CalibrationFreeze_校准冻结与独立确认隔离_20261110.md",
-      "chat_report": "2026-11-10本聊天接续轻模型登记恢复后交付"
-    },
-    {
-      "id": "WP11 独立标签托管与盲登记接入",
-      "state": "CPU工程通过，真实托管授权待齐",
-      "evidence": "Issue383；tested e92c8c2e075a65ecf1dc7a6ca5a92a9c53970d21；CPU66/66，15.601秒；合成托管至盲登记至冻结通过，登记时两套标签及类别统计均缺席，跨角色、标签与回执哈希不符拒绝",
-      "remaining": "同划分真实轻模型、双角色托管签发和真实校准/确认；WP12冻结54成本待GPU；WP04真实短测后补",
-      "report": "research/reports/WP11CustodyRegistration_独立标签托管盲登记验收_20261110.md",
-      "chat_report": "按2026-11-10最新用户指令持续推进，阶段性汇总"
-    },
-    {
-      "id": "WP11 冻结后独立确认登记",
-      "state": "预承诺设计至独立确认的CPU链路通过",
-      "evidence": "tested 662075e15532087102e1dd171f4b0395dae7b118，CPU69/69，四个合成CLI全通；先冻结固定路径与计时判据，校准与最终登记阶段确认标签缺席，改规则或缺绑定在读取前拒绝",
-      "remaining": "真实同划分训练轻模型、分别授权的校准/确认包及真实效果。WP12已登记54例成本批次等待GPU资源门槛",
-      "report": "research/reports/WP11ConfirmationBinding_冻结后独立确认登记_20261111.md"
     },
     {
       "id": "WP02 HongHu带缓冲空间几何与开发标签",
@@ -1203,6 +1170,78 @@
       "chat_report": "原91份CPU证据及历史失败保留，两张实体卡后续证据见WP05META公共接口与P4v4真实准入复核。"
     },
     {
+      "id": "WP03 失败轻量批次证据清点",
+      "state": "只读清点工程通过；恢复与全批实验未完成",
+      "evidence": "Issue339；tested a66081740361c8bdcccafc73eafb71311bac69d6，LXC CPU25/25 88.397s；4432文件前后哈希一致21.320823s，35控制器+1外部回执/54000更新、1失败17未运行；新更新/query/GPU重载0；初版NONE字段误读与回执SHA转录拒绝日志保留",
+      "remaining": "显存修复/原合同数值与恢复兼容尚未证明，旧failed批次不续跑；全54独立审计与冻结query未完成，vca实际PAUSED。继续WP04 I7/I9组合工程",
+      "report": "research/reports/WP03LightInventory_失败批次证据与恢复边界_20261110.md",
+      "chat_report": "2026-11-10本聊天完整证据清点模块报告，随后连续推进；不作完整WP03实验交付"
+    },
+    {
+      "id": "WP04-I7/I9",
+      "state": "组合目标接入CPU工程验收完成",
+      "evidence": "Issue341；tested07b448a355fc38cc6342f7d35c076b23af625237，LXC CPU17+42=59通过；独立4合成例48更新、24头1944混淆216召回、12精确重载、完成恢复0；54输入/138复盘文件不变；旧六组配置与训练恢复不变",
+      "remaining": "GPU、真实三场景多种子等预算训练及全R/I矩阵仍待验；I9同时改变消息与联合边权的CNN对齐，不能解释为只改变消息；下一项补R4/R5残差与位置融合组合",
+      "report": "research/reports/WP04I7I9_联合边权组合目标接入验收_20261110.md",
+      "chat_report": "2026-11-10本聊天完整CPU工程报告，完成后连续推进；不作全WP04实验交付"
+    },
+    {
+      "id": "WP04残差与位置融合组合",
+      "state": "CPU有界组合接入验收通过",
+      "evidence": "Issue343；tested94d96ce3e55a1cba2d9a2bd1846efa471afbfaba，LXC CPU5+20+17=42通过；容量/残差×固定/门控×scratch/FT八例合成96更新，48头3888混淆432召回，24精确重载/完成0，59输入227复盘文件不变，总29.865956s；全部选12且三头均有零召回",
+      "remaining": "GPU、真实多场景多种子/完整预算与逐类收益未验；FT跨模式使用不同源权重，不作纯目标因果解释；WP05真实重复资源受限，继续WP06同容量逐层线性探针接口",
+      "report": "research/reports/WP04ResidualPosition_残差与位置融合组合接入验收_20261110.md",
+      "chat_report": "2026-11-10本聊天组合接入CPU工程报告，随后连续推进，不作全WP04完成声明"
+    },
+    {
+      "id": "WP06 同容量冻结逐层线性探针",
+      "state": "CPU工程通过；跨后端严格决策一致性未通过",
+      "evidence": "Issue345/PR346；tested b620ac1f69771400653e82938f4f7185b383d2f6，LXC CPU23/23 27.786s；10合成探针连续120+恢复120更新，完成0；权威概率NumPy复算2944格208召回/11输入不变；初始化图分支跨后端分类差异保留，未放宽门槛",
+      "remaining": "真实冻结模型与标签权限已接入，见Issue401/PR402三景全54初终v2复核；独立空间重复/GPU/丰度待验，并列分数不能当可靠语义证据",
+      "report": "research/reports/WP06LinearProbe_同容量冻结逐层探针工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程与数值负结果报告；不作全WP06完成声明"
+    },
+    {
+      "id": "WP06 度数与距离匹配删边控制",
+      "state": "局部图控制规划CPU工程通过",
+      "evidence": "Issue347/PR348；tested5ba61748cbf6d499346aaca0077de5b3452e215b，LXC CPU19/19 11.339s；7小图计划独立穷举32058候选，24最优控制与4不可行控制核实，14文件/3.158860s；神经网络更新/query0",
+      "remaining": "GraphRouteRun选中态、三头与固定bank的外部工程接入见Issue403/PR404；合格真实动态donor、真实逐类复盘/等预算重训/GPU待验。距离分箱非精确距离，随机目标非均匀抽样",
+      "report": "research/reports/WP06MatchedEdges_度数与距离匹配删边控制工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天局部图控制规划CPU报告；不作全WP06完成声明"
+    },
+    {
+      "id": "WP06 冻结模型匹配删边复盘",
+      "state": "完整验证人口绑定与三头复盘CPU工程通过",
+      "evidence": "Issue349/PR350；tested bfcd14c04662bf57a1ce1388fb4185a9aa1fe42c，LXC CPU15/15 8.911s；1合成实际网络24步，6组对照独立1458格162召回48约束，完整重载精确；复盘更新/query0",
+      "remaining": "Issue403/PR404补全外部准入和9/22类合成复盘，真实动态donor与真实小类/独立确认/重训/GPU仍待；复用选模验证集不作因果或真实收益",
+      "report": "research/reports/WP06MatchedEdgeReview_冻结模型匹配删边复盘工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
+    },
+    {
+      "id": "WP06 匹配删边等预算重训与恢复",
+      "state": "原始初始化及等预算恢复CPU工程通过",
+      "evidence": "Issue351/PR352；tested c9ddaa68db6ecafedf96a6e90310e375c13f9959，LXC CPU13/13 73.264s；六臂24与7+17精确/完成0；独立合成donor24+六模型144，1458格162召回/19.975431s，query0",
+      "remaining": "Issue403/PR404完成9/22类外部跨进程工程；真实多场景/模型种子/GPU成本与效果仍待。保留本包合成三头零召回7/8/7和random64/2048同掩码",
+      "report": "research/reports/WP06MatchedRetraining_等预算固定图重训与恢复工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
+    },
+    {
+      "id": "WP06 冻结特征与探针标签权限绑定",
+      "state": "历史产物与K10/V5标签身份CPU工程通过",
+      "evidence": "Issue353/PR354；tested4320d40a8a4f15a51d11b7698cbe54b3d221b64e，CPU16/16 54.416s；独立51840特征格/648混淆格/72召回/175输入不变，四探针32步+恢复32步/完成0，骨干0/query0",
+      "remaining": "后续Issue401/PR402已复核三景全54真实初终特征及认证逐层探针（含源初始化）；独立空间重复/GPU与机制因果仍待。保留本包合成零召回6/6/6/4；全54摘要不能替代逐像素特征",
+      "report": "research/reports/WP06AuthenticatedProbes_冻结特征与标签权限工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
+    },
+    {
+      "id": "WP06 受控区域图信号与中间屏蔽诊断",
+      "state": "现有两阶段图路径CPU工程通过",
+      "evidence": "Issue355/PR356；tested c6db02760ab2150c2bc6ab1826d6717c57052e2a，CPU17/17 41.838s；9初始化支路432独立雅可比/882调用/0更新，312不可达零/44可达零",
+      "remaining": "已训练选中模型/输入身份待绑定，完整模型Q/CNN/交互、学习式远程任务/真实HSI/GPU未完成；不作过挤压已缓解结论",
+      "report": "research/reports/WP06ControlledSignal_受控区域信号与瓶颈干预工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
+    },
+    {
       "id": "WP06 PaviaU真实冻结逐层探针与配对复核",
       "state": "主对话接受PaviaU真实冻结18例与72探针CPU独立复核",
       "evidence": "Issue390；tested 0c512c3019088fe8b2c616cb2ee8db55c7cb2331，CPU6+30及仓库检查通过；18冻结前向、36000+36000更新、完成重载0；144角色分类精确、933120特征值复核、14640文件不变，骨干/BN/GT/query0",
@@ -1267,6 +1306,14 @@
       "chat_report": "主审接受真实donor模型/Adam/RNG/history逐位与独立选步核验、零更新匹配结果与重训阻塞；Issue407已关闭，PR408 ready未合并"
     },
     {
+      "id": "WP06 选中模型全网络信号诊断",
+      "state": "完整网络开发块诊断CPU工程通过",
+      "evidence": "Issue357/PR358；tested 2cba7cfc198efd231d676c12d24ba1bd7882b9b5，CPU14/14 8.512s；7旧合成训练模型14块，168独立概率核对/84雅可比条目，10输入不变，新增更新0/query0",
+      "remaining": "原合成有限差分差异5.014570311332565e-05保留；真实Xuzhou短诊断见Issue409/PR410，GPU、学习式长程恢复与独立空间确认待完成",
+      "report": "research/reports/WP06SelectedSignals_选中模型全网络信号诊断工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP06完成声明"
+    },
+    {
       "id": "WP06 Xuzhou 真实选中模型全网络光谱敏感度",
       "state": "授权LXC完成真实开发块CPU诊断与独立原生路径复算",
       "evidence": "Issue409/PR410；原生产723b1afe43f6408ece6f34d461af8ef3c0a87365恢复选中246，诊断a0089412932e5d6bf3a5bf0e9c76464fe8f535d2专项4/4、回归14/14。78块1404请求；21626前向、4212输入梯度调用、真实优化/GT/query为0。50544两向概率与25272有限差分独立精确复算；1950次原生两阶段用不同图。1872去重扰动均改Q/A0/路由后图值，路由边集变化0",
@@ -1305,6 +1352,14 @@
       "remaining": "真实数据需要可信授权根、完整已知源和校准矩形、v2训练回执及独立开发标签释放；历史PaviaU仅可作无标签诊断。真实精度、跨景跨传感器、开放集效果和独立阈值待验",
       "report": "research/reports/WP09_可信源训练与开发标签准入_20261112.md",
       "chat_report": "主审接受合成工程闭环和可信根范围，Issue415 已按范围完成，PR416 ready、未合并。探针失败保留，修复后沿原执行产物复核，无额外更新"
+    },
+    {
+      "id": "WP09 开放集完整已知区域与源预处理隔离",
+      "state": "严格完整标注子协议CPU工程通过",
+      "evidence": "Issue359/PR360；tested 5d12d81ed77ab6a85d9bbabfdcbfdf0db57c6477，CPU31/31 32.248s；3合成场景1512归一化/432坐标独立精确，初始化M8接入27评分报告，33输入不变，优化0/query0",
+      "remaining": "完整区域标注额外预算、真实语义/传感器与可行性待核；现有模型训练历史未认证；GPU/真实开放集精度和未知排除训练未完成；首审计输出隔离拒绝保留",
+      "report": "research/reports/WP09KnownContext_开放集完整已知区域预处理工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块报告；不作全WP09完成声明"
     },
     {
       "id": "WP10 INT8 QAT、三值等预算恢复与 CPU 部署",
@@ -1515,6 +1570,30 @@
       "chat_report": "主审接受Draft 464/465的资源调度、108更新与162矩阵独立复算；12步结论限于有界筛选，保留原生VCA，旧180000暂停。"
     },
     {
+      "id": "WP05-META 可信光谱元数据接入与真实只读核对",
+      "state": "独立可信表入口、真实裁剪与检查点绑定完成；三景历史近似路径只读核对通过",
+      "evidence": "Issue466，tested 754c9b97ecd5a86f0c2900632deb9d51ab938fa5；CPU 4/GPU 7/回归69；三景12个train/val视图同设备旧路径逐位一致，新增真实更新0。",
+      "remaining": "逐带中心、FWHM与发布映射证据缺失。公共接口和候选冻结已主审接受，见后续WP05-META复核记录。",
+      "report": "research/reports/WP05META_可信光谱元数据与真实只读核对_20261113.md",
+      "chat_report": "继续原固定全局坐标与历史近似默认。新草案等待独立登记，未读取原GT或留出。"
+    },
+    {
+      "id": "WP05-META 公共接口兼容与冻结源复核",
+      "state": "完整 CPU 1,122 通过、7 原条件跳过；CUDA 常规 66 和严格专项 19 通过；候选冻结参考通过仓库检查",
+      "evidence": "候选 5bebbe1bc8db93d6e7b3a96d3d168abd60dc9811，旧基线清单核对 446 个继承差异，十条守卫路径保持。真实字节和固定单观测绑定，三景只读，12 个真实元数据视图同设备逐位相同，旧 checkpoint CPU 18 个三头读数逐位同，原生 CUDA 误差上界 2.98e-8 且分类一致。",
+      "remaining": "候选冻结源与有界公共接口已主审接受。三景逐带校准、FWHM和发布映射仍缺。HongHu三臂执行工程及真实前置见新条目。",
+      "report": "research/reports/WP05META_公共接口与P4v4真实准入复核_20261113.md",
+      "chat_report": "关联 Issue466；主入口仅同步报告、草案和状态，保留历史 OSS-C-R 与 21 仓库结论。"
+    },
+    {
+      "id": "WP05 P4 v4 两个物理 UUID 资格与真实准入",
+      "state": "两个实体 CUDA 数值及合成恢复通过，20 例真实范围完成登记，实际 0/2400 步",
+      "evidence": "GPU 1 与 GPU 6 各 52 个夹具、438 项通过。第二 UUID 的 9/22 类连续与分段恢复共 240 次合成更新，审计新增 0。真实 scope a827dec0a6087d1eaf990ca086f1c28dd27e501ba0ae81c3b2c18434672e9ce5，验证步 30/60。",
+      "remaining": "原控制器首派与接受均要求登记双卡同快照达到门槛，原真实0/2400；独立资源方案已获单独放行，执行与部分审计见后续条目。",
+      "report": "research/reports/WP05META_公共接口与P4v4真实准入复核_20261113.md",
+      "chat_report": "原 P4 学习图空间协议。13500 和 180000 未在本包启动。"
+    },
+    {
       "id": "WP05 HongHu 固定缺带三臂拟合执行与接受",
       "state": "主审接受九例有界拟合执行与独审工程；两轮9/22类CPU、22类1500步及CUDA同卡九例通过",
       "evidence": "测试 65dd7864ad2d54e658b1efb91e408bb99e687c04，预检 0676d13736c0c6be4106171205e873fde9d81e9124245a9d0fe5dbb62244b2ca8，九例和50事件，P4 v4算术，七条件、三头/逐类、实际更新、LR/RNG/断点和成本。迭代03和04各1770次新三臂合成更新，旧回归各54通过+1跳过。最终证据02共649项，主审核对四份checker；已接受发布eb0206657842922c5a97e75c76b330157fc56558。",
@@ -1533,9 +1612,9 @@
     {
       "id": "WP05 P4 物理 UUID 独立资源与三臂前置",
       "state": "真实独立队列已提交1200/2400步，GPU6的10/20例通过独立复算",
-      "evidence": "PR475。生产worker冻结3a6381。CPU两队列20例2400合成步，完结重入0，故障时另一worker保留60步。主审接受6f59b7a637478804ff9a47cb8acef596f93d9d54的490文件原十例保留链与15项最小回归及合并拒绝工程。读原独审30bafc44496bff71174a789e1b15b53f7cdcd581637396933a115be6e4c67e2a和冻结轨迹，十臂均在第30步选中，同组五臂三头OA和逐类召回相同，新增优化和前向0。两条路径仅用于恢复验证。",
-      "remaining": "GPU6独立槽10/10、1200/1200完成，原GPU1两组10例仍0/1200。9de32c37f77826675a59884cd1f1ffa494458278已封存GPU4单卡串行新登记。仍为两组完整五臂、单物理槽1200步，复用GPU4完整资格。原双卡登记模式有效。真实发布待审核，接管未发生。13500和180000暂停。",
-      "report": "research/reports/WP05_WP07_WP12_短训练与释放点生产验收_20261114.md",
+      "evidence": "PR475。生产worker冻结3a6381。CPU两队列20例2400合成步，完结重入0，故障时另一worker保留60步。主审接受6f59b7a637478804ff9a47cb8acef596f93d9d54的490文件原十例保留链与15项最小回归及合并拒绝工程。读原独审30bafc44496bff71174a789e1b15b53f7cdcd581637396933a115be6e4c67e2a和冻结轨迹，十臂均在第30步选中，同组五臂三头OA和逐类召回相同，新增优化和前向0。两条路径仅用于恢复验证。WP12归档增量：270→135偶数列，活跃臂57个锚点无回退，8个实例194参数参与，4620次同点分数全部变化、0改类，4602次满足原赢家差大于最大分数变化两倍的充分条件。",
+      "remaining": "GPU6独立槽10/10、1200/1200完成，原GPU1两组10例仍0/1200。9de32c37f77826675a59884cd1f1ffa494458278 的 GPU4 单卡串行两组五臂、1200 步已有批准且本轮复核有效。GPU1和GPU4未达原显存门槛，均未续跑。GPU3通过生产算术数值资格，同卡9类合成60+2/120步后待资源，22类未启，只有未签署的串行范围草案。13500和180000暂停。",
+      "report": "research/reports/WP05_WP06_WP12_洪湖P4资源复核与决策归因_20261120.md",
       "chat_report": "外部报告更正版在授权容器 runs/wp05-honghu-fit-existing-ten-erratum01/review.md，包SHA-256 90ca34f0818c724431e365aa05ddfa3ca02e74d807e6a1d2ad2e1ca243a3f34a。GPU4串行scope与待审release位于 runs/wp05-resource-migration-serial-control01。"
     },
     {
@@ -1595,6 +1674,162 @@
       "chat_report": "冻结开发影像五块3920像素，CPU0单线程。新首结果、失败和复算在授权容器 runs/wp10-cpu-first-result02，原54例硬件成本与WP11独立确认是不同工作。"
     },
     {
+      "id": "WP05/WP06/WP12 主入口冻结表征定位与残差保留",
+      "state": "F盘主入口独立候选，CPU、有限CUDA及WP12通过",
+      "evidence": "冻结两景四窗20点148次新前向；徐州类5/6图头明显分差下降的10点最早在VCA全带注入响应，类6恢复5/5、类5仍0/5。洪湖15/21全带融合均0/5。72合成格10368次更新和完全恢复通过；可恢复6/6、物理缺失6/6、噪声6/6、远程6/6。主入口全仓1122通过、7跳过；GPU0冻态前向、梯度和载入短测通过。",
+      "remaining": "全带特征注入仅为反事实，真实修复与新独立空间待验。近期缺带删边、远程供体和原生尺度实验枝条未整批合入；无真实优化、query、原GT或WP04。",
+      "report": "research/reports/WP05_WP06_冻结表征定位与残差修复预登记_20261119.md"
+    },
+    {
+      "id": "WP05/WP06/WP12 冻结骨干支持集分类头部署",
+      "state": "原生三头、固定全带拟合头、同视图拟合头已连通无标签部署、逐点独审与 CPU 成本",
+      "evidence": "徐州 347 和洪湖 24 步档案的三视图及 37 个去重支持集合，13,110 次独立 primal 核验。实际四个部署组合在 198 条同点配对对照五头共 990 决策，完整支持两景重载字节一致。徐州中央缺带 OA 5/45→25/45，新增四错。洪湖中央缺带 5/110→34/110，类6新增四错。44 项远程回归通过。",
+      "remaining": "两景每类仅5个开发点且普通类保护失败。GPU显存与新独立确认待验，不放行后续真实训练。P4 余10例1200步仍待原资源门槛。",
+      "report": "research/reports/WP05_WP06_WP12_冻结骨干支持集分类头部署与复核_20261120.md"
+    },
+    {
+      "id": "WP05/WP06→WP12 主线分类与成本审阅",
+      "state": "完整联合组合、已发布冻结54、真实短训和冻结分类头通过同入口复盘",
+      "evidence": "完整 M4-S2三种子FP32三景等权OA 95.8778、96.4201、96.7179、97.1152%，144头/1920逐类项从两种精度的原混淆复算。旧冻结54及原生六表逐字节一致，P4仅接已独审10例，冻结头逐类未通过。历史部署重载与拒绝回放通过。PR500回执v2区分计划制作、实际执行和实测设备，旧格式执行身份保留未知。四种路径在LXC复演，新增234条成对论文表及122条成本行。",
+      "remaining": "P4两格合计1200步待原GPU1/4。生产模型沿用原默认。独立空间保护、全新query与跨协议排名无新证据。",
+      "report": "research/reports/WP12_完整配对精度与部署成本主线审阅_20261120.md"
+    },
+    {
+      "id": "WP12 CPU与GPU整合回归",
+      "state": "工程回归通过",
+      "evidence": "Issue361；tested 5d12d81ed77ab6a85d9bbabfdcbfdf0db57c6477；CPU1118通过/7跳过/0失败/0错误，GPU25/25；2项GPU专用跳过另测通过，5项历史兼容用例沿用固定历史提交验证；原中断记录保留",
+      "remaining": "真实联合评价、独立重复与精度成本证据待验",
+      "report": "research/reports/WP12CPUIntegration_CPU与GPU整合回归验收_20261110.md",
+      "chat_report": "2026-11-10本聊天工程回归验收"
+    },
+    {
+      "id": "WP12 配对精度与成本汇总",
+      "state": "报告消费者CPU工程通过",
+      "evidence": "Issue362；tested 28b0b68efc8094b4499d5d3cdf46b53e02002f3f；CPU36/36，17.192秒；完整三种子配对、三头逐类、成本口径、输入身份和输出保护通过",
+      "remaining": "接入经过验收的真实统一精度、校准与同硬件成本证据；WP04四组真实短测后补",
+      "report": "research/reports/WP12UnifiedCohort_配对精度与成本汇总工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天工程模块验收"
+    },
+    {
+      "id": "WP12 真实精度与硬件成本证据接入",
+      "state": "接入CPU工程与真实产物只读核验通过",
+      "evidence": "Issue363；tested 38d735e89a2e4f36e4467289a59a9c7275da3e1b；CPU28通过/2历史跳过，34.126秒；真实54模型162头、旧CPU两臂各12读数；合成54行18摘要完整CLI通过",
+      "remaining": "旧成本与真实精度检查点重合0，缺峰值与包大小；待同检查点同硬件成本采集；WP04真实短测后补",
+      "report": "research/reports/WP12EvidenceIngest_真实精度与硬件成本证据接入_20261110.md",
+      "chat_report": "2026-11-10本聊天证据接入工程验收"
+    },
+    {
+      "id": "WP12 冻结模型常驻推理成本采集",
+      "state": "CPU工程验收通过，GPU与真实全批次待验",
+      "evidence": "Issue364；tested e13dd9514a38d9e4b91a6fd859c635c6741ca927；CPU24通过/1GPU跳过，39.207秒；原生模型独立CLI实测与全54合成汇总、身份/无标签/不变性/资源门槛负例通过；checker582Python198JSON",
+      "remaining": "真实54观测准备与历史加载兼容性，CUDA实测及同模型全批次成本；常驻前向不替代端到端成本，WP04真实短测继续后补",
+      "report": "research/reports/WP12ResidentCost_冻结模型常驻推理成本采集工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天CPU工程模块交付；随即推进真实观测与兼容性准备"
+    },
+    {
+      "id": "WP12 冻结54成本观测准备与运行时准入",
+      "state": "工程与真实观测准备通过，历史推理等价性待验",
+      "evidence": "Issue365；tested e9a091b27498c386323643d97df57ba2c62e882a；CPU22/22，19.606秒；真实54案例/3场景无标签观测17.797秒，6源文件不变；preparation c32ff8865bfce91c40a3c19305e9d3f5c454568f6556a9b93cbb12a4ffa86ee4；checker585Python198JSON",
+      "remaining": "原生产8文件不同含模型默认关闭图路由，保留compatibility_pending，不生成执行作业；需固定历史推理或独立等价性核验，再补GPU/全54成本；WP04真实短测后补",
+      "report": "research/reports/WP12CostPreparation_冻结54成本观测准备与运行时准入_20261110.md",
+      "chat_report": "2026-11-10本聊天模块交付：工程通过与真实测量准入待补分别报告"
+    },
+    {
+      "id": "WP12 原始冻结推理运行时隔离采集",
+      "state": "CPU隔离工程通过，真实硬件测量待验",
+      "evidence": "Issue368；现代tested a4b4408d993bfd9a93eb7ead4ce933974c58f543，历史worker ad107501595f9b9cb625086e8457a852d7a60789；CPU32通过/1GPU跳过43.334秒；原392文件一致，独立同一原生合成模型三头/状态精确一致；comparison5f1623797d2fa14faad60b1748fd7437b8dfa1116f4c46150aa18f8e1244d319",
+      "remaining": "8卡均不满足显存门槛，未跑GPU或真实54成本；CPU峰值已修订为收尾校验后读取，旧记录保留；WP04真实短测后补",
+      "report": "research/reports/WP12HistoricalCost_原始冻结推理运行时隔离采集验收_20261110.md",
+      "chat_report": "2026-11-10本聊天第三项连续模块交付；真实测量与工程分别验收"
+    },
+    {
+      "id": "WP12 冻结54成本批次登记与汇总",
+      "state": "CPU工程与真实登记通过，GPU实际测量待验",
+      "evidence": "Issue370；tested 8327b0f94a7e1fa86f9c42c459e28e578f6d202a；CPU28通过/1GPU跳过，28.686秒；实际54登记 e373b6648314e3e0514506ecf78fa8dcb582791a24f98fa23d2060f89a84c978；全54合成续跑与联合汇总通过",
+      "remaining": "GPU达到既定门槛后执行原54常驻成本；端到端成本与WP04真实短测待补",
+      "report": "research/reports/WP12CostCampaign_冻结54成本批次登记与汇总验收_20261110.md",
+      "chat_report": "2026-11-10本聊天交付后继续WP11固定路径同成本比较"
+    },
+    {
+      "id": "WP12 GPU身份修复与冻结54成本实测",
+      "state": "UUID修复通过真实GPU，51/54接受；同卡资源等待",
+      "evidence": "协调d96e30b42a6567b17456b88345fd4299dcfa2d74，worker 3ba683439ed6c5ea3ae219bea0840e41b738ffce；CPU23通过1跳过和worker2/2。原登记0例因UUID前缀拒绝；新登记仅改worker身份，GPU7 51例612样本独立核对，273文件一致",
+      "remaining": "GPU7恢复12288MiB/60%门槛后同登记补Xuzhou种子2048三例，完成硬件回执与联合汇总。优化与query读取0，端到端成本待验",
+      "report": "research/reports/WP12Frozen54_GPU身份修复与实测进度_20261111.md",
+      "chat_report": "2026-11-11本聊天报告51/54与同卡恢复条件"
+    },
+    {
+      "id": "WP12 冻结54同卡GPU成本完整实测",
+      "state": "真实54/54常驻成本与冻结精度联合证据通过",
+      "evidence": "Issue370；协调d96e30b42a6567b17456b88345fd4299dcfa2d74、worker 3ba683439ed6c5ea3ae219bea0840e41b738ffce；GPU7同卡续补3例，前51项哈希不变，648计时样本与286文件独立核对；最小空闲16494MiB/最大35%",
+      "remaining": "冻结主要收益门槛未通过的结论保留；最终版本统一回归、端到端成本与其他协议待验",
+      "report": "research/reports/WP12Frozen54_GPU常驻前向完整实测与独立复核_20261111.md",
+      "chat_report": "2026-11-11本聊天冻结54成本完成报告"
+    },
+    {
+      "id": "WP11 动态与固定路径同成本比较",
+      "state": "CPU工程验收通过，真实对照待验",
+      "evidence": "Issue371；tested 28d1272294994b03aa9b36220c2dc3923471365f；CPU38/38，2.861秒；checker593Python198JSON；同一p50与p95超限、缺对、错控制、计时篡改负例通过，合成CLI报告已留存",
+      "remaining": "真实独立确认、同成本固定路径与部署成本待验；真实GPU成本当前空闲最高4004MiB，WP04真实短测后补",
+      "report": "research/reports/WP11MatchedCost_动态与固定路径同成本比较工程验收_20261110.md",
+      "chat_report": "2026-11-10本聊天接续WP12成本计划后交付"
+    },
+    {
+      "id": "WP11 独立确认准入与固定路径执行",
+      "state": "CPU工程通过，真实确认待准入",
+      "evidence": "Issue373；tested 9817916b94624c8fce889760ccb757252e571c48；40/40 CPU；冻结门控、独立块和授权标签、实际固定分支调用、五臂配对计时与曲线入口通过；徐州25候选块",
+      "remaining": "徐州完整模型祖先已另案审计；同划分真实轻模型、两套授权标签及真实成本待验",
+      "report": "research/reports/WP11IndependentConfirmation_独立确认准入与固定路径执行_20261110.md",
+      "chat_report": "2026-11-10本聊天继续推进留出观测准备"
+    },
+    {
+      "id": "WP11 徐州无标签留出候选观测",
+      "state": "真实候选观测准备通过",
+      "evidence": "Issue375；tested 8c95cf57892be8470687044a5687419194d5f1f8；CPU41/41、checker598Python198JSON；徐州25块8399104值独立回读一致、5输入不变",
+      "remaining": "实际角色与授权标签、模型历史和真实确认待验；54成本GPU空闲最高6000MiB，WP04真实短测后补",
+      "report": "research/reports/WP11HeldAside_徐州无标签留出候选观测准备_20261110.md",
+      "chat_report": "2026-11-10本聊天交付实际影像候选"
+    },
+    {
+      "id": "WP11 真实模型复用与独立标签托管",
+      "state": "完整模型历史与标签托管工程通过，真实标签授权待齐",
+      "evidence": "Issue377；tested 6d17d001d7c396de5f20305f1893fbe379bd59fe；CPU32/32；徐州5000步采样重放、50次历史开发验证、严格CPU加载；78开发块26076288值回读；真实12校准与13确认块无交叠",
+      "remaining": "等待两角色各自的授权稀疏标签及同划分训练轻模型，确认逐类支持后进入校准和独立确认；冻结54成本GPU待资源，WP04真实短测后补",
+      "report": "research/reports/WP11RealReuse_真实模型复用与独立标签托管_20261110.md",
+      "chat_report": "2026-11-10本聊天交付完整模型审计与真实标签托管准备"
+    },
+    {
+      "id": "WP11 同划分轻模型登记与恢复",
+      "state": "CPU工程与真实输入零步核查通过",
+      "evidence": "Issue379；tested 17f08da3d3e97080a9b992034ac3107a8417e5d9；CPU51/51；合成整跑3对1+2、完成恢复0及发布严格回读；徐州真实开发包和完整模型已通过零步登记",
+      "remaining": "真实轻模型学习与保护待验；真实校准/确认标签分别授权后才可进入门控；WP12冻结54成本待GPU，WP04真实短测后补",
+      "report": "research/reports/WP11RegisteredLight_同划分轻模型登记恢复与发布_20261110.md",
+      "chat_report": "2026-11-10本聊天接续真实模型复用后交付"
+    },
+    {
+      "id": "WP11 校准冻结与独立确认隔离",
+      "state": "CPU工程及徐州候选请求准备通过",
+      "evidence": "Issue381；tested 93926301cf3d94dafc4d6fae31bff8362591fb56；CPU64/64，13.765秒；确认文件缺席时完成校准冻结，恢复后确认和同成本曲线通过；实际徐州25候选块、107个输入复核、8399104个原始光谱值，无新标签或模型前向",
+      "remaining": "待同划分真实轻模型与两套独立托管标签，按逐类门槛执行真实校准与确认；WP12冻结54成本待GPU；WP04真实短测后补",
+      "report": "research/reports/WP11CalibrationFreeze_校准冻结与独立确认隔离_20261110.md",
+      "chat_report": "2026-11-10本聊天接续轻模型登记恢复后交付"
+    },
+    {
+      "id": "WP11 独立标签托管与盲登记接入",
+      "state": "CPU工程通过，真实托管授权待齐",
+      "evidence": "Issue383；tested e92c8c2e075a65ecf1dc7a6ca5a92a9c53970d21；CPU66/66，15.601秒；合成托管至盲登记至冻结通过，登记时两套标签及类别统计均缺席，跨角色、标签与回执哈希不符拒绝",
+      "remaining": "同划分真实轻模型、双角色托管签发和真实校准/确认；WP12冻结54成本待GPU；WP04真实短测后补",
+      "report": "research/reports/WP11CustodyRegistration_独立标签托管盲登记验收_20261110.md",
+      "chat_report": "按2026-11-10最新用户指令持续推进，阶段性汇总"
+    },
+    {
+      "id": "WP11 冻结后独立确认登记",
+      "state": "预承诺设计至独立确认的CPU链路通过",
+      "evidence": "tested 662075e15532087102e1dd171f4b0395dae7b118，CPU69/69，四个合成CLI全通；先冻结固定路径与计时判据，校准与最终登记阶段确认标签缺席，改规则或缺绑定在读取前拒绝",
+      "remaining": "真实同划分训练轻模型、分别授权的校准/确认包及真实效果。WP12已登记54例成本批次等待GPU资源门槛",
+      "report": "research/reports/WP11ConfirmationBinding_冻结后独立确认登记_20261111.md"
+    },
+    {
       "id": "WP05-META 逐带元数据激活",
       "state": "可选登记入口已合 main；真实标定待验",
       "evidence": "#496 替代 #467 和 #468；32 项 CPU、4 项 CUDA 短测通过。专用 checkpoint 绑定像素、分区、空间计划、图尺度及 coverage 范围。三个既有场景仅做 train/val 只读审查。",
@@ -1610,15 +1845,15 @@
     },
     {
       "id": "WP02/WP05/WP07/WP12 PaviaU 固定空间开发",
-      "state": "开发银行已发布；生产验证和恢复通过",
+      "state": "开发银行、GPU3 代表性同卡恢复与后续真实 39 例发布点验收已有回执",
       "evidence": "127训练、41开发验证块，各角色9类各5点。真实生产初态13配置各82视图含48空视图，两带各45点，三头逐点复算与预检一致。39例合成走生产全程和分段共312步，完成重入0；WP12接入合成审计并保有旧表。",
-      "remaining": "GPU3复查69%超资源门槛，CUDA未升级验收。PaviaU真实39例2340步未放行；真实校准、独立确认与完整研究待验，P4和Issue #249维持原进度。",
+      "remaining": "早期 GPU3 69% 资源拒绝保留。后续落盘的 factor4/joint 连续 4 步、分段 2+2 步和完成态零更新经第十四包只读逐位验收。后续签收的真实 39 例 2340 步见第十五包按原已发布开发点复核，独立确认、可信物理轴与完整研究待验。",
       "report": "research/reports/WP02_WP05_WP07_WP12_PaviaU固定空间发布与原生接入_20261118.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "module_engineering_resumed_real_training_paused",
-  "long_training_policy": "工程开发与验收已恢复。真实长训练、P4/Issue #249 原队列和 query 仍暂停；PaviaU 固定空间只读预检和合成优化单列。",
+  "execution_state": "wp11_deployment_cost_candidate_pending_review_wp05_long_training_paused",
+  "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {
       "tested_sha": "b985634b22ba77422bb8c91143bbc0a0337707ff",
@@ -1857,27 +2092,284 @@
       "tested_sha": "50f757476689af69bbd158efc3c50156852309af",
       "merge_sha": "ffb88163a3952cd04760471e8843904f0c97aedc",
       "scope": "P4/E3 CPU6+44;16new synthetic models384updates24old0updates120heads16110cells1242recalls212pins;2ineligible exposure cases retained"
-    },
-    {
-      "pr_number": 494,
-      "head_sha": "3df9c70aad1842da2e3f0f8718355c5b7378d08c",
-      "tested_sha": "3df9c70aad1842da2e3f0f8718355c5b7378d08c",
-      "merge_sha": "9bc7fbfb51fd17b0df7f214fc2d407e2d8b901ee",
-      "scope": "Opt-in low-rank code only; LXC 7 targeted passes and 1125 full-suite passes with 7 skips; exact merge tree matched tested tree"
-    },
-    {
-      "pr_number": 495,
-      "head_sha": "36eb43eb530378fbe9af19f4ecf59614530175db",
-      "tested_sha": "f95c2a120948b3a085f3c7b05adaf5c32e9ebf7b",
-      "merge_sha": "eb7e5f20882551b6c879b1ba1a5931dc78ec2838",
-      "scope": "75 reviewed replacement scopes; LXC CPU 1499 passed, 39 skipped, 0 failures and 3 bounded CUDA passes. Merge tree matches the tested tree. P4 and WP07 strict CUDA checks remained resource-gated."
-    },
-    {
-      "pr_number": 496,
-      "head_sha": "60804913568165c50e54d80b70070e851117be52",
-      "tested_sha": "eeb5b3f1807bb1ed95d01ee41ad5bb6723984d7b",
-      "merge_sha": "d00aeea1744a0e627ef3a1c24108ee02666ab100",
-      "scope": "Opt-in spectral metadata and spatial checkpoint binding replaces PRs 467 and 468; LXC CPU 32 and CUDA 4 passed. Merge tree matches the tested tree. Real per-band calibration remains pending."
     }
-  ]
+  ],
+  "primary_status_sync": {
+    "scope": "pinned_reports_status_and_projection_only",
+    "primary_source_head": "542268edc88b3936747dee76b83741cb3a5d25c6",
+    "delivery_status_commit": "8a37c001df00415639462a1520e7fe76bef26527",
+    "candidate_runtime_integrated": false,
+    "report_roster": [
+      {
+        "id": "WP02 HongHu带缓冲空间几何与开发标签",
+        "report": "research/reports/WP02HongHu_带缓冲空间几何与开发标签_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "68f60807237a03b2a514a67cf266093bd608dc4d"
+      },
+      {
+        "id": "WP05 HongHu带缓冲空间训练与恢复短测",
+        "report": "research/reports/WP05HongHu_带缓冲空间训练与恢复短测_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "5dd9b1033d92e3f6e8c87cdc0c155d20fc76e5a4"
+      },
+      {
+        "id": "WP05 HongHu冻结缺带与逐类曝光下界",
+        "report": "research/reports/WP05HongHu_真实缺带与逐类曝光下界_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "7f6b32a73870c31ed39431787f2d322ca9e1e0be"
+      },
+      {
+        "id": "WP05 HongHu逐类曝光配对计划与恢复短测",
+        "report": "research/reports/WP05HongHu_逐类曝光配对计划与恢复验收_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "9257f15cf7c5019a7c9b6d491393c03c0ebf6151"
+      },
+      {
+        "id": "WP05 HongHu覆盖调制五组曝光接入",
+        "report": "research/reports/WP05HongHu_覆盖调制五组曝光配对工程_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "ea9abf863cf0796e5c761b26e88dd35018df4dd9"
+      },
+      {
+        "id": "WP05 HongHu真实五组曝光配对短测",
+        "report": "research/reports/WP05HongHu_真实五组曝光配对短测与逐类复盘_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "63459c9a4f43dc700ea08c23dde1063768d7c2ca"
+      },
+      {
+        "id": "WP05/WP06 HongHu冻结拟合与未见观测诊断",
+        "report": "research/reports/WP05WP06_HongHu冻结拟合与未见观测诊断_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "5abb1b748ba66595f9219ed27cc68a45edb04982"
+      },
+      {
+        "id": "WP05 HongHu完整预算、多模型种子与批次接受",
+        "report": "research/reports/WP05HongHu_完整预算多种子与批次接受工程_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "773806411cb69cc00060980970f6999012a6895d"
+      },
+      {
+        "id": "WP05 HongHu逐参数Adam审计与CUDA生产准入",
+        "report": "research/reports/WP05HongHu_CUDA生产准入与逐参数更新审计_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "3f9df808b9a25b6e262656f8cf6c16b3beb46c41"
+      },
+      {
+        "id": "WP05 HongHu稀疏边权梯度FP64累加与准入复核",
+        "report": "research/reports/WP05_HongHu稀疏边权梯度FP64累加与准入复核_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "cbdd418ed738f097dc1e37afa641665e187e2c7f"
+      },
+      {
+        "id": "WP06 PaviaU真实冻结逐层探针与配对复核",
+        "report": "research/reports/WP06PaviaU_真实冻结逐层探针与配对复核_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "a36be76bec61111577161fd540c612d29e60a45e"
+      },
+      {
+        "id": "WP06 全54冻结逐层探针与跨场景独立复核",
+        "report": "research/reports/WP06全54_冻结逐层探针与跨场景独立复核_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "aad301571496a5c419a73a3c98f0017b50c21257"
+      },
+      {
+        "id": "WP06 全54目标适配前初始化与选中终态配对探针",
+        "report": "research/reports/WP06全54_适配前初始化与选中终态配对探针_20261111.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "725b085f38f520927a01ff024755b402a15e4ca7"
+      },
+      {
+        "id": "WP06 初态探针标准差故障定位与稳定标准化 v2",
+        "report": "research/reports/WP06_探针数值故障定位与稳定标准化v2_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "d7d19da22737c5f51b4a2d05a0a959d9985a6f28"
+      },
+      {
+        "id": "WP06 全54初终同v2真实冻结探针",
+        "report": "research/reports/WP06_全54同v2初终真实冻结探针_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "0135a38433c91c3d7d150e45900ca617a8b4c242"
+      },
+      {
+        "id": "WP06 真实动态路由donor准入与匹配删边外部复盘",
+        "report": "research/reports/WP06_真实动态路由donor准入与匹配删边外部复盘_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "d7c7356b25a1f85824b14f6670da57375fb36881"
+      },
+      {
+        "id": "WP02/WP06 Xuzhou真实开发桥接与动态路由曝光",
+        "report": "research/reports/WP02WP06_Xuzhou真实开发桥接与24步曝光门槛_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "c95f8989469e7b128802e025a6380cc78d74c998"
+      },
+      {
+        "id": "WP06 Xuzhou 固定曝光真实动态donor与匹配删边",
+        "report": "research/reports/WP06_Xuzhou真实动态路由与匹配删边_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "055cc084c3ebc69fe3a23021cf74f184ec1d0e29"
+      },
+      {
+        "id": "WP06 Xuzhou 真实选中模型全网络光谱敏感度",
+        "report": "research/reports/WP06_Xuzhou选中模型全网络光谱敏感度_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "17c97faeb1627bb38106f895d85ac00069ba4490"
+      },
+      {
+        "id": "WP07 Xuzhou 条件多尺度训练恢复与八臂短测",
+        "report": "research/reports/WP07_Xuzhou条件多尺度训练恢复与八臂短测_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "6f5867e934b4ace6c8c71cd3149f630ec4f9b056"
+      },
+      {
+        "id": "WP08 Xuzhou 区域跨支路消息训练恢复与七臂短测",
+        "report": "research/reports/WP08_Xuzhou区域跨支路消息训练恢复与七臂短测_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "48ccd71f9bd93ee6c1841b04cd4402c79f07fbd7"
+      },
+      {
+        "id": "WP09 在线无标签适配帧级恢复、流隔离与顺序遗忘接口",
+        "report": "research/reports/WP09_在线无标签适配恢复与顺序遗忘_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "3ef0928b6d0c2d589a399eb21492b982494a855d"
+      },
+      {
+        "id": "WP09 可信源训练和独立开发标签准入",
+        "report": "research/reports/WP09_可信源训练与开发标签准入_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "b6ba7d0240fd82690f43c3c9622c3d3fca5e6e4a"
+      },
+      {
+        "id": "WP10 INT8 QAT、三值等预算恢复与 CPU 部署",
+        "report": "research/reports/WP10_INT8QAT三值等预算恢复与部署_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "9c07c053d200b397c7e638c8e3dc41903daf258a"
+      },
+      {
+        "id": "WP11 徐州轻重模型等预算恢复与冻结发布",
+        "report": "research/reports/WP11_Xuzhou轻重等预算恢复与冻结发布_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "a5304aab5303c5cd2c1db52d3cd6228cbe76a451"
+      },
+      {
+        "id": "WP11 冻结轻重模型统一执行与完整成本",
+        "report": "research/reports/WP11_冻结模型统一执行与成本接入_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "82c9ac5d9ae7f6105708cacd9fc69281a9417223"
+      },
+      {
+        "id": "WP12 WP10与WP11真实生产质量和CPU成本统一适配",
+        "report": "research/reports/WP12_WP10与WP11真实生产证据适配_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "fb329a90ae1292c71e87cd838684264f9e7b0b2a"
+      },
+      {
+        "id": "WP10 Xuzhou 首层低秩秩阶梯与三组等预算恢复",
+        "report": "research/reports/WP10_Xuzhou真实低秩秩阶梯与三种子恢复_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "a5c37dd0ee7f751d35ad1586d129a8f1f14e18cf"
+      },
+      {
+        "id": "WP10 低秩冻结部署 CPU 实测与两因子 INT8 组合",
+        "report": "research/reports/WP10_低秩部署CPU实测与两因子INT8组合_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "8f11b68aaca86c8e514629f60bb3b5dd7114f627"
+      },
+      {
+        "id": "WP12 真实低秩逐种子三头及 CPU 证据接入",
+        "report": "research/reports/WP12_真实低秩三头证据与部署成本接入_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "cd817de5223cace00cde30c5dea71a63742680fd"
+      },
+      {
+        "id": "WP01 Xuzhou K5/V5 真实样本课程六臂恢复",
+        "report": "research/reports/WP01_Xuzhou_K5V5真实样本课程六臂恢复_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "2c48e7401d19d8c7d511d55a39f5f789aa7c3c2b"
+      },
+      {
+        "id": "WP06 课程逐支持机制复盘与 CUR-O 真实零更新准入",
+        "report": "research/reports/WP06_课程逐支持复盘与观测课程真实准入_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "e23772219cf2e761e7af8305af78210986119d54"
+      },
+      {
+        "id": "WP12 真实课程质量、教师和有效监督证据接入",
+        "report": "research/reports/WP12_真实课程质量教师与有效曝光证据_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "092d306b7a79ab41215c8febc963009c3fef24bb"
+      },
+      {
+        "id": "WP01 Xuzhou K5/V5 真实观测课程四排列",
+        "report": "research/reports/WP01_Xuzhou_K5V5真实观测课程四排列_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "4a39a3cd7d5e4676f109528a45a50c0fe50df58a"
+      },
+      {
+        "id": "WP01 样本与观测课程双因素合成恢复",
+        "report": "research/reports/WP01_样本与观测课程双因素合成恢复_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "d865cb337d7bb541936319288136f80bfc17f154"
+      },
+      {
+        "id": "WP12 真实观测课程与双因素工程证据",
+        "report": "research/reports/WP12_真实观测课程与双因素工程证据_20261112.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "ccff03ba8d15f0c081e5557036442f7454ed3d1a"
+      },
+      {
+        "id": "WP01/WP06/WP12 真实样本与观测课程组合验收",
+        "report": "research/reports/WP01_WP06_WP12_真实样本观测课程组合验收_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "e12119504e8119d0a7f0348169bf25e17c982383"
+      },
+      {
+        "id": "WP06/WP08/WP12 受控信号学习与有界区域支持演化",
+        "report": "research/reports/WP06_WP08_WP12_受控信号学习与区域支持演化_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "95350e16272c2ba8b7c6a0e92d813a0d8d370d13"
+      },
+      {
+        "id": "WP08/WP07/WP12 原生区域支持演化与多尺度补充",
+        "report": "research/reports/WP08_WP07_WP12_原生区域支持演化与多尺度补充_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "c97eb628ba2fa502571a13066409dd4ae054447d"
+      },
+      {
+        "id": "WP06/WP08/WP12 度数与距离受控的原生区域支持干预",
+        "report": "research/reports/WP06_WP08_WP12_度数距离受控区域支持干预与固定图恢复_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "3d457555f14fc9387154579429a4699f148d0ea6"
+      },
+      {
+        "id": "WP02 真实开发块认证与 WP05/WP07/WP08/WP12 原生零更新接入",
+        "report": "research/reports/WP02_WP05_WP07_WP08_WP12_真实开发块认证与零更新接入_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "e364e229a0051c9135a1f5b4e8ba15ac018b8e6d"
+      },
+      {
+        "id": "WP02 完整授权开发块银行与 WP05/WP07/WP08 可恢复消费",
+        "report": "research/reports/WP02_WP05_WP07_WP08_完整授权开发块银行与恢复_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "c39828d54a07ecd4a9fedbb84b135ccd2423914c"
+      },
+      {
+        "id": "WP05/WP06/WP07/WP12 块内空间退化、条件多尺度与恢复",
+        "report": "research/reports/WP05_WP06_WP07_WP12_块内空间退化与条件多尺度恢复_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "ce6401ab1a9bf00e5c42e13d09da4d6ac381643b"
+      },
+      {
+        "id": "WP02/WP05/WP06/WP07/WP12 原生尺度观测与冻结留出",
+        "report": "research/reports/WP02_WP05_WP06_WP07_WP12_原生尺度监督与冻结留出条件_20261113.md",
+        "commit": "ff7fa3466c6cf86bee6efcccfcc1655ed16db1bf",
+        "blob": "d1634510e983f63ed847de1ec7f956916390c379"
+      },
+      {
+        "id": "WP05/WP07/WP12 原生尺度严格设备执行与成本",
+        "report": "research/reports/WP05_WP07_WP12_原生尺度设备恢复与成本_20261113.md",
+        "commit": "8a37c001df00415639462a1520e7fe76bef26527",
+        "blob": "de1eacccad5b90a37ba7c45fcfd59b4b6def374c"
+      }
+    ]
+  }
 }

@@ -1,0 +1,139 @@
+{
+  "schema": "wp05_two_scene_version_class_and_calibration_review_v1",
+  "reuses": "docs/references/wp05-scene-provenance-20261119.json",
+  "scenes": {
+    "xuzhou": {
+      "local_shape": [
+        500,
+        260,
+        436
+      ],
+      "local_numeric_class_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "local_delivered_columns": 436,
+      "declared_endpoints_nm": [
+        415,
+        2508
+      ],
+      "local_axis": "approximate_equal_spacing_over_public_endpoints",
+      "per_band_measured_or_mapping_verified": false,
+      "manufacturer_detector_mapping": null,
+      "fwhm_srf_radiometry": null,
+      "publisher_figure_7_display_order_zh": [
+        "裸地一",
+        "湖泊",
+        "煤",
+        "水泥",
+        "作物一",
+        "树木",
+        "裸地二",
+        "作物",
+        "红瓦"
+      ],
+      "publisher_numeric_key_verified": false,
+      "local_semantic_match": "unresolved_legacy_reporting_aliases_disagree_with_figure_display_order",
+      "note": "The authors' Figure 7 shows a legend sequence with no integer keys. Agreement of scene dimensions and band count cannot bind the local label IDs or detector ordering. The authors also used a narrower 368-band variant in a different paper.",
+      "sources": [
+        {
+          "url": "https://doi.org/10.21227/t3c9-h862",
+          "role": "author dataset deposit, multiple listed editions"
+        },
+        {
+          "url": "https://explore.openaire.eu/search/dataset?pid=10.21227%2Ft3c9-h862",
+          "role": "preserved deposit records and scene description"
+        },
+        {
+          "url": "https://www.3sobs.cn/share",
+          "role": "author group inventory distinguishes image and label headers and the MATLAB distribution"
+        },
+        {
+          "url": "https://s3.3sobs.cn/paper/2019/Wang%20et%20al_2019_Caps-TripleGAN.pdf",
+          "role": "publisher-author PDF inspected locally, page 7238 Figure 7, 436-band variant",
+          "sha256": "bbdb5c0dc285e917e6af1102677618fca38f99c48dff04ea657c9ae47fdf0d9e"
+        },
+        {
+          "url": "https://s3.3sobs.cn/paper/2020/Wang%20et%20al_2020_CVA%20sup2-sup%20E.pdf",
+          "role": "author experimental 368-band variant, prior review; no local column correspondence"
+        }
+      ]
+    },
+    "whu-honghu": {
+      "local_shape": [
+        940,
+        475,
+        270
+      ],
+      "local_numeric_class_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "local_delivered_columns": 270,
+      "declared_endpoints_nm": [
+        400,
+        1000
+      ],
+      "local_axis": "approximate_equal_spacing_over_public_endpoints",
+      "per_band_measured_or_mapping_verified": false,
+      "manufacturer_detector_mapping": null,
+      "fwhm_srf_radiometry": null,
+      "publisher_numeric_key_verified": true,
+      "publisher_table_spot_checks": {
+        "1": "Red roof",
+        "3": "Bare soil",
+        "15": "Celtuce",
+        "18": "Carrot",
+        "21": "Broad bean",
+        "22": "Tree"
+      },
+      "public_focus_counts": {
+        "15": 1002,
+        "21": 1328
+      },
+      "local_semantic_match": "named_publisher_table_agrees_with_complete_honghu_reporting_aliases_exact_local_transform_unverified",
+      "note": "The numbered source table matches the local complete 22-class registry. The legacy cropped WHU alias has a different index space. The publisher's DN to radiance account does not bind units or measured center/SRF to this stored payload.",
+      "sources": [
+        {
+          "url": "https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm",
+          "role": "authors, Table 3 numbered labels, nominal scene specification and academic-use statement"
+        },
+        {
+          "url": "https://arxiv.org/pdf/2012.13920v2",
+          "role": "authors, flight setup and processing specification"
+        },
+        {
+          "url": "https://www.polytec.com/fileadmin/website/optical-systems/spezialkameras/pdf/datasheet-headwall-nano-hyperspec-2017.pdf",
+          "role": "manufacturer model-level sheet; no sample-specific response"
+        }
+      ]
+    }
+  }
+}

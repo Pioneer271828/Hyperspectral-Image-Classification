@@ -44,14 +44,14 @@ class Execution:
             raise ValueError("Model does not reside on its registered device")
         start = perf_counter()
         host = torch.from_numpy(np.concatenate((observation.spectral,observation.coordinates),axis=-1))
-        centers = torch.from_numpy(wavelengths)
+        centers = None if wavelengths is None else torch.from_numpy(wavelengths)
         widths = kwargs.pop("fwhm",None)
         widths = None if widths is None else torch.from_numpy(widths)
         prepared = perf_counter()-start
         self.sync()
         start = perf_counter()
         value = host.to(self.device)
-        centers = centers.to(self.device)
+        centers = None if centers is None else centers.to(self.device)
         widths = None if widths is None else widths.to(self.device)
         self.sync()
         transfer = perf_counter()-start
@@ -64,10 +64,10 @@ class Execution:
         return output
 
     @contextmanager
-    def measure_graph(self, builder, timing, capture):
+    def measure_graph(self, builder, timing, capture, *, operation=None):
         if "build_graph" in vars(builder):
             raise ValueError("Native graph recorder already attached")
-        original = builder.build_graph
+        original = builder.build_graph if operation is None else operation
 
         def build(*args,**kwargs):
             self.sync()

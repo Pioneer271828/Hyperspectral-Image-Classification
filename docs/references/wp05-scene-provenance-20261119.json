@@ -1,0 +1,124 @@
+{
+  "schema": "wp05_scene_provenance_review_v1",
+  "review_date": "2026-11-19",
+  "issue": 466,
+  "previous_inventory": "wp05-spectral-metadata-sources.json",
+  "approved_real_sidecars": [],
+  "scenes": {
+    "paviaU": {
+      "distribution": "Paolo Gamba contributed GIC public catalog; installed image and prepared payload fingerprints recorded in the prior inventory",
+      "sensor": "ROSIS-03",
+      "instrument_nominal": {
+        "bands": 115,
+        "range_nm": [
+          430,
+          860
+        ],
+        "sampling_nm": 4
+      },
+      "delivered_bands": 103,
+      "spatial_m": 1.3,
+      "installed_shape": [
+        610,
+        340
+      ],
+      "public_notes": "University catalog describes the discarded blank strip in the original 610x610 acquisition geometry",
+      "local_detector_assumption": "11..113 zero-based; used only to reconstruct the historical nominal axis",
+      "scene_detector_ids": null,
+      "removed_detector_ids": null,
+      "per_band_centers": null,
+      "per_band_fwhm": null,
+      "per_band_srf": null,
+      "scene_radiometric_unit": null,
+      "data_label_terms": "Explicit terms for the exact imagery/labels and calibration payload were not located in the inspected publisher listing",
+      "sources": [
+        {
+          "url": "https://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes#Pavia_Centre_and_University",
+          "role": "GIC distributor scene listing"
+        },
+        {
+          "url": "https://elib.dlr.de/8810/",
+          "role": "Gege et al. instrument team, 1998, pp. 29–35 nominal ROSIS specifications"
+        }
+      ]
+    },
+    "xuzhou": {
+      "distribution": "Tan, Wu, Wang dataset deposit 10.21227/t3c9-h862; dated DOI record and local file fingerprints recorded in the prior inventory",
+      "acquisition": "2014-11 (author lab listing)",
+      "sensor": "HySpex airborne family; exact model/pair unconfirmed",
+      "spatial_m": 0.73,
+      "installed_shape": [
+        500,
+        260
+      ],
+      "delivered_bands": 436,
+      "published_endpoints_nm": [
+        415,
+        2508
+      ],
+      "scene_detector_ids": null,
+      "removed_detector_ids": null,
+      "per_band_centers": null,
+      "per_band_fwhm": null,
+      "per_band_srf": null,
+      "scene_radiometric_unit": null,
+      "data_label_terms": "Deposited DOI record declares CC BY 4.0. Exact binding to the installed imagery, labels and separately documented image header remains unverified.",
+      "sources": [
+        {
+          "url": "https://api.datacite.org/dois/10.21227/t3c9-h862",
+          "role": "publisher-deposited DataCite metadata with the exact previously pinned bytes",
+          "sha256": "2b557937c24111886b83fabeacca91ddf9620938d256fde039b77317281a94b4"
+        },
+        {
+          "url": "https://www.3sobs.cn/share",
+          "role": "authors’ laboratory listing confirms separate image and label files",
+          "sha256": "32711f59804eee271e0466e35cad53ad77041ca3c094e99278337badc1c32db8"
+        },
+        {
+          "url": "https://www.hyspex.com/hyspex-turnkey-solutions/airborne",
+          "role": "instrument family; current catalog does not identify the 2014 setup"
+        }
+      ]
+    },
+    "whu-honghu": {
+      "distribution": "WHU-Hi authors paper v2 and RSIDEA project; installed payload fingerprint in prior inventory",
+      "acquisition": "2017-11-20",
+      "sensor": "Headwall Nano-Hyperspec with 17 mm focal-length lens on DJI Matrice 600 Pro",
+      "spatial_m": 0.043,
+      "installed_shape": [
+        940,
+        475
+      ],
+      "delivered_bands": 270,
+      "published_endpoints_nm": [
+        400,
+        1000
+      ],
+      "radiometry": "Original paper describes conversion from DN to radiance and geometric correction. Exact installed transport physical units unverified.",
+      "scene_detector_ids": null,
+      "removed_detector_ids": null,
+      "per_band_centers": null,
+      "per_band_fwhm": null,
+      "per_band_srf": null,
+      "data_label_terms": "Author benchmark describes random per-class splits. No exact-file license for the installed imagery/labels or independent spatial-role publication was established.",
+      "sources": [
+        {
+          "url": "https://arxiv.org/pdf/2012.13920v2",
+          "role": "WHU authors, sections 2–3 and Table 1"
+        },
+        {
+          "url": "https://rsidea.whu.edu.cn/e-resources.html",
+          "role": "publishers’ project resource, returned HTTP 444 during this review"
+        },
+        {
+          "url": "https://www.polytec.com/fileadmin/website/optical-systems/spezialkameras/pdf/datasheet-headwall-nano-hyperspec-2017.pdf",
+          "role": "Headwall 2017 manufacturer sheet mirrored by distributor; model-level nominal 2.2 nm sampling and 6 nm slit specification only"
+        },
+        {
+          "url": "https://github.com/RSIDEA-WHU2020/FreeNet/tree/2cbfcd8216f1aa8a55720cf064a8b7475ccc993f",
+          "role": "authors’ pinned repository, GPL-3.0 source scope only; no source code incorporated"
+        }
+      ]
+    }
+  }
+}

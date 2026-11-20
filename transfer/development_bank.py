@@ -400,7 +400,16 @@ class Bank:
             raise ValueError("Observation escapes its registered bank context")
         return self._materialize(expected, deepcopy(condition))
 
-    def _materialize(self, authority, condition):
+    def observation_row(self, role, tile):
+        return deepcopy({k: v for k, v in self._role_row(role, tile).items() if k != "samples"})
+
+    def observe(self, row, condition):
+        expected = self.observation_row(row["role"], row["id"])
+        if canonical_json(expected) != canonical_json(row):
+            raise ValueError("Observation escapes its registered bank context")
+        return self._materialize(expected, deepcopy(condition), observation_only=True)
+
+    def _materialize(self, authority, condition, *, observation_only=False):
         row = deepcopy(authority)
         entry = self._members[row["id"]]
         release = self._release
@@ -431,5 +440,7 @@ class Bank:
             source=release.source["shared_state"], raw=array_hash(actual), normalized=array_hash(observed.observation.spectral),
             original=entry["content"]["array_sha256"], coordinates=array_hash(coords), ids=array_hash(ids),
             band_order=observed.bands.fingerprint, positions=selection["selected_positions"], statistics=stats,
-            representation=row["representation"], samples=sample_identity(row, release.shape, release.classes))
+            representation=row["representation"])
+        if not observation_only:
+            context["samples"] = sample_identity(row, release.shape, release.classes)
         return scene, tile, observed, context

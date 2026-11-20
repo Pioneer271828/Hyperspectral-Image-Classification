@@ -102,7 +102,8 @@ class SupportEvolution:
     """
     VERSION=1
 
-    def __init__(self, adjacency, spectra, graph_features, *, context, mandatory, schedule, mode, seed):
+    def __init__(self, adjacency, spectra, graph_features, *, context, mandatory, schedule, mode, seed,
+                 eligible=None):
         if (mode not in MODES or type(seed) is not int or not 0<=seed<2**63
                 or not isinstance(schedule,Schedule) or not isinstance(context,dict)
                 or set(context)!={"role","block","node_ids","partitions"}):
@@ -111,15 +112,22 @@ class SupportEvolution:
         self.n=len(context["node_ids"])
         self.base=_graph(adjacency,context["partitions"])
         self.local=set(_keys(self.base))
+        self.eligible=None if eligible is None else set(_tensor_pairs(eligible,self.n))
+        if self.eligible is not None and any((i,j) in self.local or context['partitions'][i]!=context['partitions'][j]
+                                             for i,j in self.eligible):
+            raise ValueError('Candidate eligibility must be remote and within partition')
         self.spectra=_features(spectra,self.n).detach().clone()
         self.features=_features(graph_features,self.n).detach().clone()
         self.mandatory=set(_tensor_pairs(mandatory,self.n)) | {(i,i) for i in range(self.n)}
         if (not self.mandatory<=self.local or max(sum(i==r for i,_ in self.mandatory) for r in range(self.n))>schedule.end_budget):
             raise ValueError("Mandatory local support conflicts with final budget")
         self.schedule,self.mode,self.seed=schedule,mode,seed
-        self.contract=digest(dict(version=self.VERSION,context=self.context,graph=tensor_hash(self.base),
+        identity=dict(version=self.VERSION,context=self.context,graph=tensor_hash(self.base),
             spectra=tensor_hash(self.spectra),features=tensor_hash(self.features),mandatory=sorted(self.mandatory),
-            schedule=asdict(schedule),mode=mode,seed=seed))
+            schedule=asdict(schedule),mode=mode,seed=seed)
+        if self.eligible is not None:
+            identity['eligible']=sorted(self.eligible)
+        self.contract=digest(identity)
         self._rng=np.random.default_rng(seed)
         self.step=0
         self.pool=[]
@@ -144,7 +152,8 @@ class SupportEvolution:
                 cos=(spectra[block]@spectra.T) if self.mode in ("spectral","joint") else None
                 graph=(features[block]@features.T) if self.mode in ("graph","joint") else None
                 for offset,i in enumerate(block):
-                    eligible=sorted((j for j in range(self.n) if (i,j) not in self.local and groups[i]==groups[j]),key=ids.__getitem__)
+                    eligible=sorted((j for j in range(self.n) if (i,j) not in self.local and groups[i]==groups[j]
+                                     and (self.eligible is None or (i,j) in self.eligible)),key=ids.__getitem__)
                     tested+=len(eligible)
                     jitter={j:float(self._rng.random()) for j in eligible}
                     def score(j):
@@ -221,7 +230,8 @@ class SupportEvolution:
             raise ValueError("Support resume contract, features or cursor differs")
         # Validate a detached replay before mutating the live instance.
         shadow=SupportEvolution(self.base,self.spectra,self.features,context=self.context,
-             mandatory=[list(p) for p in sorted(self.mandatory)],schedule=self.schedule,mode=self.mode,seed=self.seed)
+             mandatory=[list(p) for p in sorted(self.mandatory)],schedule=self.schedule,mode=self.mode,seed=self.seed,
+             eligible=None if self.eligible is None else sorted(self.eligible))
         for step in range(1,receipt["step"]+1):
             shadow.advance(step)
         if shadow.receipt()!=receipt:
