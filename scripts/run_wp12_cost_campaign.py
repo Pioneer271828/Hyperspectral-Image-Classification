@@ -219,12 +219,45 @@ def main():
     for name in ("registration-sha256", "worker-root", "gpu-uuid"):
         run.add_argument(f"--{name}", required=True)
     run.add_argument("--max-cases", type=int)
+    for name in ("prepare", "fixture", "run", "audit"):
+        stage = sub.add_parser(f"e2e-{name}")
+        stage.add_argument("--runs", required=True, type=Path)
+        if name in ("prepare", "fixture"):
+            stage.add_argument("--worker-root", required=True, type=Path)
+            stage.add_argument("--execution", required=True, type=Path)
+        else:
+            stage.add_argument("--plan-sha", required=True)
+            stage.add_argument("--approval", nargs=2, metavar=("PATH", "SHA256"))
+            stage.add_argument("--gpu-uuid")
+            if name == "audit":
+                stage.add_argument("--report", required=True, type=Path)
+            else:
+                stage.add_argument("--limit", type=int)
     args = parser.parse_args()
     code = code_snapshot()
     if sys.platform != "linux" or not __debug__ or code["dirty"] or code["commit"] != args.expected_commit:
         raise ValueError("Clean expected Linux campaign checkout required")
     out = external_directory(args.out)
-    if args.operation == "register":
+    if args.operation.startswith("e2e-"):
+        from evaluation import wp12_frozen54_deployment as e2e
+        from transfer.container_runtime import training_container_kind
+
+        if not training_container_kind():
+            raise ValueError("Use the authorized Linux training container")
+        root = args.runs.resolve(strict=True)
+        action = args.operation.removeprefix("e2e-")
+        if action in ("prepare", "fixture"):
+            result = e2e.prepare(root, out, code, args.worker_root, args.execution, action == "fixture")
+        else:
+            limit = getattr(args, "limit", None)
+            if limit is not None and limit < 1:
+                parser.error("--limit must be positive")
+            device = canonical_gpu_uuid(args.gpu_uuid) if args.gpu_uuid else "cpu"
+            permit = dict(zip(("path","sha256"), args.approval, strict=True)) if args.approval else None
+            result = e2e.campaign(root, out, code, args.plan_sha, permit, device, limit=limit,
+                                  report=getattr(args, "report", None))
+        print(json.dumps(result), flush=True)
+    elif args.operation == "register":
         if out.exists():
             raise ValueError("A new external campaign directory is required")
         register(read_pinned(args.inputs, args.inputs_sha256), out)
