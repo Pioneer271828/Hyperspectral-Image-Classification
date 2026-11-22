@@ -20,9 +20,12 @@ from scripts.wp12_frozen54_deployment_contract import COLD, WARM, PHASES, SETUP,
 
 PLAN = "wp12_observation_paired_plan_v1"
 AUTHORITY = "wp12_observation_paired_authority_v1"
+CACHE_PLAN = "wp12_observation_decoded_cache_plan_v1"
+CACHE_AUTHORITY = "wp12_observation_decoded_cache_authority_v1"
 GPU3 = "GPU-2cbff259-d7db-32cf-b267-8f296e34b1d5"
 WORKER = "3ba683439ed6c5ea3ae219bea0840e41b738ffce"
 ARMS = ("buffered", "sealed-mmap")
+CACHE_ARMS = ("buffered", "decoded-cache")
 CLASSES = {"paviaU":9, "xuzhou":9, "whu-honghu":22}
 E2E = "wp12-frozen54-end-to-end-20261121/review-validated"
 SYNTHETIC = "wp12-verified-observation-io-20261121/fixtures"
@@ -31,6 +34,10 @@ SOURCES = {
     "compact": (E2E+"/engineering-plan-A/measurement-plan.json", "38113db777e6f7b043fdbf000fd2b40e01a176bfaa63d8262adaf9af699608ab"),
     "fixtures": (SYNTHETIC+"/fixtures.json", "65804dad57c9c90bc7320d5e76e0306c8f425b355c2ecff7898309275be3b04a"),
     "models": (SYNTHETIC+"/models.json", "bb113c2c8d08139a4c997fc633cc370471ee8bed1209b38bf6a2175c2480f5ef"),
+    "prior_warm_plan": ("wp12-approved-warm-pairs-20261121/pending-real/paired-plan.json",
+                        "54968c95c702768e011e1fbdbdbcadc8e9112c1a975481fff27d2e80db4ec5b9"),
+    "prior_warm_audit": ("wp12-real-warm-pairs-20261121/real-audit.json",
+                         "01717b65117e3034f062d2f56ba69087ef523830717bb401610e8e68bad31812"),
 }
 POLICY = dict(
     order="AB_even_BA_odd", backends=ARMS, cpu_affinity=24, min_free_mib=12288, max_gpu_utilization=60,
@@ -92,26 +99,53 @@ def roster(root, engineering):
     return result
 
 
-def implementation_pins():
+def implementation_pins(decoded_cache=False):
     paths = ("benchmark_wp12_observation_io.py", "wp12_observation_snapshot.py", Path(__file__).name)
+    if decoded_cache:
+        paths += ("wp12_decoded_observation_cache.py", "wp12_frozen54_deployment_contract.py")
     return {name:sha256((ROOT/"scripts"/name).read_bytes()).hexdigest() for name in paths}
 
 
-def draft(root, path, code, runtime, engineering):
+def draft(root, path, code, runtime, engineering, decoded_cache=False):
     canonical(root, path)
     output = canonical(root, path.with_name(path.name+"-execution"))
     cases = roster(root, engineering)
     timing = {scope:TIMING[scope] for scope in ((COLD,WARM) if engineering else (WARM,))}
-    return dict(schema=PLAN, producer=code, engineering=engineering, gpu_uuid=GPU3, worker=str(runtime),
-                worker_commit=WORKER, source_pins=source_pins(root, engineering), execution=str(output),
-                backends=ARMS, implementation=implementation_pins(), timing=timing, policy=POLICY, cases=cases)
+    pins = source_pins(root, engineering)
+    policy, backends = POLICY, ARMS
+    if decoded_cache:
+        require(not engineering, "Use the engineering cache benchmark for synthetic inputs")
+        for name in ("prior_warm_plan", "prior_warm_audit"):
+            relative, checksum = SOURCES[name]
+            pins[name] = dict(path=str(root / relative), sha256=checksum)
+        previous, audited = (json.loads(read(root, pins[name])) for name in ("prior_warm_plan", "prior_warm_audit"))
+        require(previous["cases"] == cases and previous["gpu_uuid"] == GPU3
+                and previous["policy"] == json.loads(json.dumps(POLICY))
+                and previous["backends"] == list(ARMS) and audited["status"] == "audited"
+                and audited["plan"] == pins["prior_warm_plan"] and set(audited["cases"]) == set(cases),
+                "Expected the exact prior real warm cases, device, budget and accepted audit")
+        backends = CACHE_ARMS
+        policy = {**POLICY, "backends": backends,
+                  "estimator": "median_of_buffered_minus_cache_pairs_must_exceed_both_arms_p95_minus_p50",
+                  "first_request": "record_cache_prime_separately_before_timed_requests",
+                  "measured_requests": 72, "warmup_requests": 12, "cold_requests": 0,
+                  "optimizer_updates": 0, "labels_read": 0}
+    return dict(schema=CACHE_PLAN if decoded_cache else PLAN, producer=code, engineering=engineering,
+                gpu_uuid=GPU3, worker=str(runtime), worker_commit=WORKER, source_pins=pins, execution=str(output),
+                backends=backends, implementation=implementation_pins(decoded_cache), timing=timing,
+                policy=policy, cases=cases)
 
 
 def authority(plan, ref, decision, reference):
-    return dict(schema=AUTHORITY, decision=decision, plan_sha256=ref["sha256"], producer=plan["producer"],
+    decoded_cache = plan["schema"] == CACHE_PLAN
+    return dict(schema=CACHE_AUTHORITY if decoded_cache else AUTHORITY,
+                decision=decision, plan_sha256=ref["sha256"], producer=plan["producer"],
                 execution=plan["execution"], physical_uuid=GPU3, scopes=list(plan["timing"]),
                 data_access="synthetic_observations" if plan["engineering"] else "sealed_observations_no_labels",
-                approval_reference=reference)
+                approval_reference=reference,
+                **({"budget": {key:plan["policy"][key] for key in ("measured_requests","warmup_requests",
+                     "cold_requests","optimizer_updates","labels_read","cpu_affinity",
+                     "campaign_timeout_seconds","estimate")}} if decoded_cache else {}))
 
 
 def admitted(root, plan_path, plan_sha, code, runtime, permit):
@@ -122,7 +156,7 @@ def admitted(root, plan_path, plan_sha, code, runtime, permit):
     plan = json.loads(read(root, ref))
     require(type(plan["engineering"]) is bool and path.name=="paired-plan.json",
             "Expected the independent paired observation plan")
-    expected = draft(root, path.parent, code, runtime, plan["engineering"])
+    expected = draft(root, path.parent, code, runtime, plan["engineering"], plan["schema"] == CACHE_PLAN)
     require(json.loads(json.dumps(expected)) == plan, "Plan differs from its frozen sources, budget or execution")
     require(permit is not None, "A separately supplied paired approval is required")
     permit_path = canonical(root, Path(permit["path"]))
@@ -150,6 +184,8 @@ def worker_context(args):
     job = plan["cases"][key]
     expected_path = Path(plan["execution"])/key/attempt
     require(args.gpu_uuid == GPU3 and args.scene == job["scene"] and args.out == expected_path
+            and args.backend in plan["backends"]
+            and (plan["schema"] != CACHE_PLAN or os.sched_getaffinity(0) == {POLICY["cpu_affinity"]})
             and attempt.startswith("attempt-") and Path(attempt).name == attempt and expected_path.is_dir()
             and (args.worker != "cold" or job["cold_pairs"]>0),
             "Worker invocation is outside the approved paired scope")
@@ -162,7 +198,7 @@ def worker_context(args):
     return root, item, model, context
 
 
-def quantify(pairs, *, evaluate):
+def quantify(pairs, *, evaluate, decoded_cache=False):
     from evaluation.wp12_cost_primitives import timing_summary
 
     def summarize(x):
@@ -174,7 +210,9 @@ def quantify(pairs, *, evaluate):
                     phases={p:summarize([r["phases"][p]["wall_ms"] for r in rows]) for p in PHASES},
                     cuda_allocated_bytes=max(r["cuda_peak_bytes"] for r in rows),
                     process_peak_rss_kib=max(r["process_peak_rss_kib"] for r in rows),
-                    logical_snapshot_bytes=max(r["snapshot_bytes"] for r in rows))
+                    logical_snapshot_bytes=max(r["snapshot_bytes"] for r in rows),
+                    **({"decoded_cache_retained_bytes": max(r.get("decoded_cache_retained_bytes", 0)
+                                                           for r in rows)} if decoded_cache else {}))
 
     # The raw array is always stored in fixed A,B order, regardless of launch order.
     a, b = method(0), method(1)
@@ -186,8 +224,10 @@ def quantify(pairs, *, evaluate):
                  exceeds_noise=median(differences)>width, p95=b["wall"]["p95_ms"]<=a["wall"]["p95_ms"],
                  cuda=b["cuda_allocated_bytes"]<=a["cuda_allocated_bytes"],
                  rss=b["process_peak_rss_kib"]-a["process_peak_rss_kib"]<=POLICY["max_rss_growth_kib"],
-                 snapshot=b["logical_snapshot_bytes"]<=POLICY["max_snapshot_bytes"]) if evaluate else None)
-    return dict(buffered=a, sealed_mmap=b, saved_pair_ms=differences, median_saved_ms=median(differences),
+                 **({"cache":b["decoded_cache_retained_bytes"]<=POLICY["max_snapshot_bytes"]} if decoded_cache
+                    else {"snapshot":b["logical_snapshot_bytes"]<=POLICY["max_snapshot_bytes"]})) if evaluate else None)
+    return dict(buffered=a, **{("decoded_cache" if decoded_cache else "sealed_mmap"):b},
+                saved_pair_ms=differences, median_saved_ms=median(differences),
                 ab_median_saved_ms=p50_ab,ba_median_saved_ms=p50_ba,noise_width_ms=width,faster_pairs=faster,
                 gates=gates)
 
@@ -197,6 +237,8 @@ def rebuild(root, ref, approval_sha, plan, key, attempt, invocations):
     from model.research_config import digest
 
     job = plan["cases"][key]
+    backends = tuple(plan["backends"])
+    decoded_cache = backends == CACHE_ARMS
     cold_count = 2*job["cold_pairs"]
     require(len(invocations)==cold_count+2,"Unexpected process roster")
     phases_by_scope = {"cold":[],"warm":[]}
@@ -221,11 +263,12 @@ def rebuild(root, ref, approval_sha, plan, key, attempt, invocations):
         backend = process["backend"]
         expected = binding(ref["sha256"],approval_sha,key,scope,backend,attempt.name)
         expected_count = 1 if scope=="cold" else POLICY["warmups_per_arm"]+job["warm_pairs"]
-        require(backend in ARMS and process["scope"]==scope and len(rows)==expected_count
+        require(backend in backends and process["scope"]==scope and len(rows)==expected_count
                 and (scope=="cold" or times[0]>=last_cold_exit),
                 "Worker scope, backend, lifecycle or request count differs")
         setup = rows[0]["setup"]
         previous = phase_end(setup, SETUP, *times, GPU3)
+        cache_bytes = rows[0].get("decoded_cache_retained_bytes")
         for sequence, row in enumerate(rows):
             start, stop = row["request_started_ns"],row["first_prediction_ns"]
             warmup = scope=="warm" and sequence<POLICY["warmups_per_arm"]
@@ -242,8 +285,16 @@ def rebuild(root, ref, approval_sha, plan, key, attempt, invocations):
                     and (job["expected_ordered_scores"] is None or row["combined_score_sha256"]==job["expected_ordered_scores"]),
                     "Original checkpoint, observation or three-head output identity differs")
             require(type(row["process_peak_rss_kib"]) is int and row["process_peak_rss_kib"]>0
-                    and (row["snapshot_bytes"]==0 if backend==ARMS[0] else 0<row["snapshot_bytes"]<=POLICY["max_snapshot_bytes"]),
+                    and (0<row["snapshot_bytes"]<=POLICY["max_snapshot_bytes"] if backend=="sealed-mmap"
+                         else row["snapshot_bytes"]==0),
                     "Unexpected RSS or snapshot memory evidence")
+            if backend == "decoded-cache":
+                require(scope == "warm" and type(cache_bytes) is int and 0 < cache_bytes <= POLICY["max_snapshot_bytes"]
+                        and row["decoded_cache_retained_bytes"] == cache_bytes
+                        and row["decoded_cache_hit"] is (sequence > 0), "Cache priming or byte accounting differs")
+            else:
+                require(not {"decoded_cache_hit", "decoded_cache_retained_bytes"} & row.keys(),
+                        "Cache evidence does not belong to this backend")
             identities.add((row["combined_score_sha256"],tuple(row["score_sha256"]),tuple(row["decision_sha256"])))
             phases = list(row["phases"].values()) + ([] if scope=="warm" else list(setup.values()))
             row.update(backend=backend, wall_ms=elapsed(times[0] if scope=="cold" else start,stop),
@@ -265,14 +316,19 @@ def rebuild(root, ref, approval_sha, plan, key, attempt, invocations):
         for index in range(0,len(rows),2):
             pair = rows[index:index+2]
             pair_number = index//2 - (warmups if scope=="warm" else 0)
-            arms = ARMS if pair_number%2==0 else ARMS[::-1]
+            arms = backends if pair_number%2==0 else backends[::-1]
             require(tuple(r["backend"] for r in pair)==arms and all(r["role"]==
                     ("warmup" if pair_number<0 else "measured") for r in pair)
                     and (scope=="cold" or all(r["sequence"]==index//2 for r in pair)),
                     "Original requests differ from the registered AB/BA schedule")
             if pair_number>=0:
-                pairs.append(pair if arms==ARMS else pair[::-1])
-        out[scope] = quantify(pairs,evaluate=not plan["engineering"] and scope=="warm")
+                pairs.append(pair if arms==backends else pair[::-1])
+        out[scope] = quantify(pairs,evaluate=not plan["engineering"] and scope=="warm", decoded_cache=decoded_cache)
+        if decoded_cache:
+            first = {r["backend"]:r for r in rows[:2]}
+            out[scope]["first_requests"] = {name: {k:r[k] for k in
+                ("wall_ms","phases","setup","process_peak_rss_kib","cuda_peak_bytes")}
+                for name,r in first.items()}
     return dict(attempt=attempt.name, invocations=invocations, summaries=out, digest=next(iter(identities))[0])
 
 
@@ -304,7 +360,7 @@ def capture(args, root, ref, plan, key, attempt, lease):
 
     with (attempt/"stderr.log").open("x") as stream:
         bench.collect(worker_args,lease,stream,cold_pairs=job["cold_pairs"],warm_pairs=job["warm_pairs"],
-                      warmups=POLICY["warmups_per_arm"],start_worker=start_worker,
+                      warmups=POLICY["warmups_per_arm"],backends=tuple(plan["backends"]),start_worker=start_worker,
                       receive_sample=lambda proc:bench.receive(proc,transcripts[proc]))
     return rebuild(root,ref,args.approval[1],plan,key,attempt,invocations)
 
@@ -348,7 +404,7 @@ def dispatch(args, root, ref, plan):
         passed = not plan["engineering"] and all(all(row["summaries"]["warm"]["gates"].values()) for row in results.values())
         report = canonical(root,args.report)
         require(report.parent == args.out.parent and not report.exists(), "Use a fresh independent report destination")
-        return _write(report, dict(schema=PLAN,status="audited", engineering=plan["engineering"], plan=ref,
+        return _write(report, dict(schema=plan["schema"],status="audited", engineering=plan["engineering"], plan=ref,
             approval=dict(zip(("path","sha256"),args.approval,strict=True)),cases=results,
             outcome="engineering_only" if plan["engineering"] else ("eligible_for_review" if passed else "retain_buffered")))
     return {"accepted_cases":len(results),"execution":plan["execution"]}
@@ -363,7 +419,9 @@ def main():
         parser.add_argument("--"+field,type=Path,required=True)
     parser.add_argument("--expected-commit",required=True)
     commands = parser.add_subparsers(dest="operation",required=True)
-    commands.add_parser("prepare").add_argument("--engineering",action="store_true")
+    prepare = commands.add_parser("prepare")
+    prepare.add_argument("--engineering",action="store_true")
+    prepare.add_argument("--decoded-cache",action="store_true")
     for name in ("run","audit"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--plan-sha",required=True)
@@ -376,15 +434,16 @@ def main():
     require_clean(args.runtime,WORKER)
     path = canonical(root,args.out)
     if args.operation=="prepare":
-        plan = draft(root,path,args.expected_commit,args.runtime,args.engineering)
+        plan = draft(root,path,args.expected_commit,args.runtime,args.engineering,args.decoded_cache)
         require(not path.exists() and not Path(plan["execution"]).exists(),"Fresh plan and execution locations required")
         path.mkdir()
         ref = _write(path/"paired-plan.json",plan)
         _write(path/"application-template.json",authority(plan,ref,None,None))
         result = ref
     else:
+        require(args.approval is not None, "A separately supplied paired approval is required")
         ref, plan = admitted(root,path/"paired-plan.json",args.plan_sha,args.expected_commit,args.runtime,
-                             dict(zip(("path","sha256"),args.approval,strict=True)) if args.approval else None)
+                             dict(zip(("path","sha256"),args.approval,strict=True)))
         require(os.sched_getaffinity(0)=={POLICY["cpu_affinity"]},"Expected the preregistered single CPU core")
         if args.operation=="run":
             def expire(*_):
