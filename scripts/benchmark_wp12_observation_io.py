@@ -17,11 +17,13 @@ from time import perf_counter_ns
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.wp12_frozen54_deployment_contract import PHASES, SETUP, read
+from scripts.wp12_decoded_observation_cache import DecodedObservationCache
 from scripts.wp12_observation_snapshot import load_snapshot, verified_snapshot
 
 WORKER = "3ba683439ed6c5ea3ae219bea0840e41b738ffce"
 SCENES = ("paviaU", "xuzhou", "whu-honghu")
 BACKENDS = ("buffered", "sealed-mmap")
+CACHE_BACKEND = "decoded-cache"
 COLD_PAIRS, WARM_PAIRS, WARMUPS = 8, 12, 2
 
 
@@ -105,6 +107,9 @@ def worker(args):
             raise ValueError("Frozen label-free observation or decoded tensor identity differs")
         return item
 
+    cache = (DecodedObservationCache(root, case["pin"], validate)
+             if args.backend == CACHE_BACKEND else None)
+
     def request():
         phases = {}
         sync()
@@ -114,10 +119,14 @@ def worker(args):
             item = stage(phases, PHASES[1], lambda: validate(torch.load(
                 io.BytesIO(raw), map_location="cpu", weights_only=True)))
             del raw
-        else:
+        elif cache is None:
             with ExitStack() as snapshot:
                 path = stage(phases, PHASES[0], lambda: snapshot.enter_context(verified_snapshot(root, case["pin"])))
                 item = stage(phases, PHASES[1], lambda: validate(load_snapshot(path)))
+        else:
+            hit = cache.retained_bytes != 0
+            stage(phases, PHASES[0], cache.check_source)
+            item = stage(phases, PHASES[1], cache.checkout)
         features = stage(phases, PHASES[2], lambda: {k:v.to(device) if torch.is_tensor(v) else v
                                                      for k,v in item.items()})
         scores = stage(phases, PHASES[3], lambda: forward(model, args.scene, features)[:3])
@@ -132,6 +141,8 @@ def worker(args):
                     decision_sha256=[_tree_fingerprint(tensor) for tensor in decisions],
                     process_peak_rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
                     snapshot_bytes=case["size"] if args.backend == "sealed-mmap" else 0,
+                    **({"decoded_cache_hit": hit, "decoded_cache_retained_bytes": cache.retained_bytes}
+                       if cache is not None else {}),
                     pid=os.getpid())
 
     with torch.inference_mode(), OrderedValidation():
@@ -192,9 +203,11 @@ def launch(args, scope, backend, lease, log):
 def campaign(args, lease):
     args.out.mkdir()
     samples = []
+    backends = ("buffered", CACHE_BACKEND) if args.compare_decoded_cache else BACKENDS
+    cold_pairs = 0 if args.compare_decoded_cache else COLD_PAIRS
     with (args.out/"stderr.log").open("x") as log:
-        for index in range(COLD_PAIRS):
-            order = BACKENDS if index%2 == 0 else BACKENDS[::-1]
+        for index in range(cold_pairs):
+            order = backends if index%2 == 0 else backends[::-1]
             for position, backend in enumerate(order):
                 with launch(args, "cold", backend, lease, log) as (proc, started):
                     row = receive(proc)
@@ -203,13 +216,13 @@ def campaign(args, lease):
                     samples.append(row)
         with ExitStack() as workers:
             pool = {}
-            for backend in BACKENDS:
+            for backend in backends:
                 proc, _ = workers.enter_context(launch(args, "warm", backend, lease, log))
                 if receive(proc) != {"ready":True}:
                     raise ValueError("Resident worker failed to acknowledge setup")
                 pool[backend] = proc
             for index in range(-WARMUPS, WARM_PAIRS):
-                order = BACKENDS if index%2 == 0 else BACKENDS[::-1]
+                order = backends if index%2 == 0 else backends[::-1]
                 for position, backend in enumerate(order):
                     proc = pool[backend]
                     proc.stdin.write("request\n")
@@ -222,12 +235,18 @@ def campaign(args, lease):
     identities = ("observation_sha256", "decoded_sha256", "score_sha256", "decision_sha256")
     if any(any(row[key] != samples[0][key] for key in identities) for row in samples):
         raise ValueError("Whole-input, decoded tensors, score heads or decisions changed")
+    if args.compare_decoded_cache:
+        cached = [row for row in samples if row["backend"] == CACHE_BACKEND]
+        if ([row["decoded_cache_hit"] for row in cached] !=
+                [False] + [True] * (WARM_PAIRS + WARMUPS - 1)):
+            raise ValueError("The verified cache must prime exactly once before timed warm requests")
     require_clean(ROOT, args.expected_commit)
     require_clean(args.runtime, WORKER)
     with (args.out/"receipt.json").open("x") as stream:
         json.dump(dict(scene=args.scene, gpu=args.gpu_uuid, code=args.expected_commit, runtime=WORKER,
                        affinity=sorted(os.sched_getaffinity(0)), warmups_per_backend=WARMUPS,
-                       cold_pairs=COLD_PAIRS, warm_pairs=WARM_PAIRS, rows=samples,
+                       cold_pairs=cold_pairs, warm_pairs=WARM_PAIRS, rows=samples,
+                       **({"engineering_comparison": list(backends)} if args.compare_decoded_cache else {}),
                        prescored_dataset_reads=0), stream, allow_nan=False, indent=2)
         stream.write("\n")
 
@@ -240,8 +259,10 @@ def main():
         parser.add_argument("--"+field, required=True)
     parser.add_argument("--scene", choices=SCENES, required=True)
     parser.add_argument("--gpu-uuid")
+    parser.add_argument("--compare-decoded-cache", action="store_true",
+                        help="Pair buffered reads with opt-in decoded reuse on warm engineering requests")
     parser.add_argument("--worker", choices=("cold","warm"), help=argparse.SUPPRESS)
-    parser.add_argument("--backend", choices=BACKENDS, help=argparse.SUPPRESS)
+    parser.add_argument("--backend", choices=(*BACKENDS, CACHE_BACKEND), help=argparse.SUPPRESS)
     parser.add_argument("--lease-fd", type=int, help=argparse.SUPPRESS)
     parser.add_argument("--lease-path", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
