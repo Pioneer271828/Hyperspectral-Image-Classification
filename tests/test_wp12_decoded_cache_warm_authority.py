@@ -20,7 +20,8 @@ class DecodedCacheWarmAuthorityTest(unittest.TestCase):
             runtime = root / "worker"
             plan = dict(schema=paired.CACHE_PLAN, producer="new-code", engineering=False,
                         execution=str(root / "fresh-execution"), timing={WARM:{}},
-                        policy={**paired.POLICY, "measured_requests":72, "warmup_requests":12,
+                        policy={**paired.POLICY, "backends":list(paired.CACHE_ARMS),
+                                "measured_requests":72, "warmup_requests":12,
                                 "cold_requests":0, "optimizer_updates":0, "labels_read":0})
 
             def write(file, value):
