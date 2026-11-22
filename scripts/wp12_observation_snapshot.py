@@ -24,7 +24,7 @@ def verified_snapshot(root, pin, *, max_bytes=None):
                     or Path(f"/proc/self/fd/{original}").readlink() != path):
                 raise ValueError("Expected the pinned regular observation file")
             if max_bytes is not None and status.st_size > max_bytes:
-                raise ValueError("Observation archive exceeds the cache byte limit")
+                raise ValueError("Observation exceeds the registered snapshot size ceiling")
             offset = 0
             while offset < status.st_size:
                 copied = os.sendfile(snapshot, original, offset, status.st_size - offset)
