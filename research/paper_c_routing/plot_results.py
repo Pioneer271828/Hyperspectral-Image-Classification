@@ -14,8 +14,9 @@ matplotlib.rcParams['svg.fonttype']='none'
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--analysis',required=True);p.add_argument('--out',required=True)
+    p.add_argument('--cases',nargs=3,default=[f'transfer-s{s}-span03' for s in (2036,2046,2056)])
     a=p.parse_args();source=Path(a.analysis);all_cases=json.loads(source.read_text())['cases']
-    cases=[all_cases[f'transfer-s{s}-span03'] for s in (2036,2046,2056)]
+    cases=[all_cases[name] for name in a.cases]
     out=Path(a.out);out.mkdir()
     arms=list(cases[0]['metrics']);views=list(cases[0]['metrics']['content'])
     rows=[]

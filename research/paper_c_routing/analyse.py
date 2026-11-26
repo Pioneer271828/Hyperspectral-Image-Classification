@@ -51,6 +51,7 @@ def analyse(audit_path,run,development):
            'original_method':audit['contract'].get('original_method',
                   'source_pretrained_full_finetune' if audit['contract']['profile']=='g3_pavia_xuzhou' else 'WP11 scratch different budget'),
            'descriptor':audit['contract']['descriptor'],'released_distinct_labels':len(lookup),
+           'normalization':audit['contract'].get('normalization','released_development'),
            'same_labels_reused_across_views':True,'independent_confirmation':False,
            'matched_random_identical_plan':coverage==random,'random_strata':saturation,
            'all_random_strata_saturated':all(x['all_or_none'] for x in saturation.values()),
@@ -72,7 +73,10 @@ def main():
             'semantic_class_names':'Numeric1..9 only: original publisher table contradicts historical project names; no semantic remapping applied.',
             'statistical_tests':'none; fixed support/split and historically exposed context; no IID-pixel/seed significance claim'}
     methods=('target_scratch_full','source_pretrained_head_only','source_pretrained_full_finetune')
-    index={(x['original_method'],x['frozen_model_seed']):x for x in cases.values() if x['descriptor']=='approximate_span'}
+    mode='checkpoint_original' if any(x['normalization']=='checkpoint_original' for x in cases.values()) else 'released_development'
+    result['matched_comparison_normalization']=mode
+    index={(x['original_method'],x['frozen_model_seed']):x for x in cases.values()
+           if x['descriptor']=='approximate_span' and x['normalization']==mode}
     if all((m,s) in index for m in methods for s in (2036,2046,2056)):
         paired=[]
         for candidate,reference in ((methods[1],methods[0]),(methods[2],methods[0]),(methods[2],methods[1])):

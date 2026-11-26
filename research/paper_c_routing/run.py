@@ -53,13 +53,18 @@ def main():
     p.add_argument("--g3-root")
     p.add_argument("--g3-seed",type=int,choices=(2036,2046,2056),default=2036)
     p.add_argument('--g3-method',choices=('source_pretrained_full_finetune','source_pretrained_head_only','target_scratch_full'),default='source_pretrained_full_finetune')
+    p.add_argument('--normalization',choices=('released_development','checkpoint_original'),default='released_development')
+    p.add_argument('--g3-statistics')
     p.add_argument("--range-view",action="store_true")
     p.add_argument("--descriptor",choices=("retained_fraction","approximate_span"),default="retained_fraction")
     a=p.parse_args()
     started=perf_counter()
     if sys.platform!="linux" or os.environ.get("CUDA_VISIBLE_DEVICES")!="":raise ValueError("Authorized Linux CPU only")
-    if a.profile=='wp11_scratch' and (a.g3_root is not None or a.g3_seed!=2036 or a.g3_method!='source_pretrained_full_finetune'):
+    if a.profile=='wp11_scratch' and (a.g3_root is not None or a.g3_seed!=2036 or a.g3_method!='source_pretrained_full_finetune'
+                                    or a.normalization!='released_development' or a.g3_statistics is not None):
         raise ValueError('G3 options cannot be silently ignored by the WP11 scratch profile')
+    if (a.normalization=='checkpoint_original')!=(a.g3_statistics is not None):
+        raise ValueError('Original checkpoint normalization requires its explicit pinned statistics file')
     root=Path(__file__).resolve().parents[2]
     clean(root,a.expected_commit);clean(a.dependency,DEPENDENCY)
     torch.set_num_threads(1)
@@ -84,6 +89,16 @@ def main():
         if any(sha(path)!=h for path,h in model_pins.items()):raise ValueError("Imported original model/metadata identity differs")
         task=json.loads((g3/"frozen-task.json").read_text());cfg=json.loads((g3/(model_name+'.json')).read_text())
         original_support=json.loads((g3/'support-10.json').read_text())
+        original_statistics=None
+        if a.normalization=='checkpoint_original':
+            stats_path=Path(a.g3_statistics).resolve()
+            if not stats_path.is_relative_to(runs.parent/'references') or sha(stats_path)!=profiles['target_statistics_sha256']:
+                raise ValueError('Original frozen normalizer identity differs')
+            original_statistics=json.loads(stats_path.read_text())
+            if (original_statistics['statistics_hash']!=cfg['training_config']['statistics_hash']
+                    or original_statistics['plan_hash']!=cfg['training_config']['plan_hash']):
+                raise ValueError('Normalizer differs from the original checkpoint contract')
+            model_pins[str(stats_path)]=profiles['target_statistics_sha256']
         frozen=json.loads((g3/"target-checkpoints-frozen.json").read_text())[a.g3_method]
         if (task["config"]["source_dataset"]!="paviaU" or task["config"]["target_dataset"]!="xuzhou"
                 or task["task_hash"]!=cfg["training_config"]["task_hash"]
@@ -113,6 +128,7 @@ def main():
                     original_method=a.g3_method if a.profile!='wp11_scratch' else 'WP11 target scratch5000 and light fit')
     contract.update(range_view=a.range_view,descriptor=a.descriptor,
                     descriptor_quality="approximate delivered centers; no certified SRF or device calibration")
+    contract['normalization']=a.normalization
     if a.profile!="wp11_scratch":contract["source_pretraining"]="original Pavia source10000 + target1000, no new updates"
     if a.profile!='wp11_scratch' and a.g3_method=='target_scratch_full':
         contract['source_pretraining']='none; original matched target scratch1000, no new updates'
@@ -153,6 +169,13 @@ def main():
         light=SimpleNamespace(model=LightCNN(full))
     for path,h in protected.items():
         if sha(path)!=h:raise ValueError("Frozen model or development input differs")
+    released_statistics_hash=scene.stats['statistics_hash']
+    if a.normalization=='checkpoint_original':
+        from copy import copy
+        scene=copy(scene)
+        if original_statistics['plan_hash']!=scene.plan['plan_hash']:raise ValueError('Original normalization plan differs')
+        # Reuse only already admitted raw FP32 blocks. Never refit or load a full scene.
+        scene.stats=original_statistics
     requests=[];indices=[];labels=[]
     full_requests=prepare_requests(scene,record)
     support=dict(zip(record["validation_support"]["indices"],record["validation_support"]["labels"]))
@@ -187,6 +210,8 @@ def main():
         setup={"input_hash":input_hash,"models":before,"reference":reference,"loading_ms":loading_ms,
                "reference_counts":warm["counts"],"reference_ms":warm["pipeline_ms"],"protected":protected,
                "released_support":len(support),"new_labels":0,"class_order":list(range(1,10))}
+        setup.update(applied_statistics_hash=scene.stats['statistics_hash'],released_statistics_hash=released_statistics_hash,
+                     original_checkpoint_statistics_match=a.profile!='wp11_scratch' and scene.stats['statistics_hash']==cfg['training_config']['statistics_hash'])
         setup["requests"]=[{"key":r.key,"parent":r.parent,"band":r.band,"coverage":r.coverage,
                             "bands":len(r.waves),"wavelength_min":float(r.waves.min()),
                             "wavelength_max":float(r.waves.max())} for r in requests]

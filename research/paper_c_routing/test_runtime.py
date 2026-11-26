@@ -9,6 +9,12 @@ from inference.native_deployment import Request, Runtime, RouteFailure
 from evaluation.wp11_deployment_synthetic import models
 from policy import ARMS, execute, plan, metrics
 from audit import independent_plans
+from audit import audit_prepared_inputs
+from policy import digest as input_digest
+from model.research_config import digest as canonical_digest
+from research_runtime import tensor_hash
+import hashlib
+import json
 
 
 @pytest.fixture
@@ -93,3 +99,31 @@ def test_independent_reconstruction_has_no_producer_plan_dependency(actual):
         assert got['full_plan']==expected[arm]
     with pytest.raises(ValueError):metrics([1.5],[[.5,.5]],2)
     with pytest.raises(ValueError):metrics([1],[[1.2,-.2]],2)
+
+
+def test_numpy_rebuild_matches_native_request_bytes_and_detects_normalization_drift(tmp_path):
+    raw=np.random.default_rng(64).random((8,8,12),dtype=np.float32)
+    path=tmp_path/'tile-0.npy';np.save(path,raw,allow_pickle=False)
+    waves=np.linspace(415,2508,12)
+    stats={'schema_version':1,'plan_hash':'synthetic-plan','fit_partition':'train',
+           'minimum':[0.]*12,'maximum':[1.]*12}
+    stats['statistics_hash']=canonical_digest(stats)
+    dev={'statistics':stats,'plan':{'shape':[8,8],'plan_hash':'synthetic-plan'},
+         'record':{'roles':[{'id':0,'role':'devval','box':[0,8,0,8]}]},
+         'blocks':[{'id':0,'name':'tile-0.npy','sha256':hashlib.sha256(path.read_bytes()).hexdigest()}],
+         'bands':{'wavelengths':waves.tolist()}}
+    yy,xx=np.mgrid[0:8,0:8];coords=np.stack((yy/7,xx/7),axis=-1).astype(np.float32)
+    tensor=torch.from_numpy(np.concatenate((raw,coords),axis=-1));wave=torch.tensor(waves,dtype=torch.float32)
+    requests=[]
+    for stride in (1,2,4):
+        pos=torch.arange(0,12,stride);x=torch.cat((tensor[:,:,pos],tensor[:,:,12:]),-1)
+        requests.append(Request(f'0-stride{stride}','xuzhou',tensor_hash(x),'0',f'stride{stride}',x,wave[pos],None,None,100,len(pos)/12,True))
+    setup={'input_hash':input_digest([r.identity for r in requests]),
+           'requests':[{'key':r.key,'coverage':r.coverage,'bands':len(r.waves)} for r in requests]}
+    contract={'model_pins':{},'descriptor':'retained_fraction','normalization':'released_development'}
+    result=audit_prepared_inputs(tmp_path,tmp_path/'development.json',dev,contract,setup)
+    assert result['input_hash_exact'] and result['request_count']==3
+    stats['minimum'][0]=.1
+    stats['statistics_hash']=canonical_digest({k:v for k,v in stats.items() if k!='statistics_hash'})
+    with pytest.raises(ValueError,match='normalized request bytes'):
+        audit_prepared_inputs(tmp_path,tmp_path/'development.json',dev,contract,setup)

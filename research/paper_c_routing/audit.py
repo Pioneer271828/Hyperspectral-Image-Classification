@@ -12,6 +12,57 @@ import numpy as np
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
+def audit_prepared_inputs(root,development,dev,contract,setup):
+    """Rebuild exact FP32 bytes/coordinates/metadata hashes with NumPy only."""
+    def canonical(value):return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
+    def digest(value):return hashlib.sha256(canonical(value).encode()).hexdigest()
+    def tensor(value):
+        value=np.ascontiguousarray(value,dtype=np.float32)
+        h=hashlib.sha256(canonical({'dtype':'torch.float32','shape':list(value.shape)}).encode())
+        h.update(memoryview(value).cast('B'));return h.hexdigest()
+    stats=dev['statistics'];normalizer_match=None
+    if contract.get('normalization')=='checkpoint_original':
+        normalizers=[p for p in contract['model_pins'] if p.endswith('g3-target-statistics.json')]
+        metadata=[p for p in contract['model_pins'] if p.endswith('model.pt.json')]
+        if len(normalizers)!=1 or len(metadata)!=1:raise ValueError('Explicit normalizer/model pins required')
+        stats=json.loads(Path(normalizers[0]).read_text())
+        cfg=json.loads(Path(metadata[0]).read_text())
+        normalizer_match=stats['statistics_hash']==cfg['training_config']['statistics_hash']
+        if not normalizer_match or setup['applied_statistics_hash']!=stats['statistics_hash']:
+            raise ValueError('Applied normalizer differs from original checkpoint')
+    else:
+        metadata=[p for p in contract.get('model_pins',{}) if p.endswith('model.pt.json')]
+        if metadata:normalizer_match=stats['statistics_hash']==json.loads(Path(metadata[0]).read_text())['training_config']['statistics_hash']
+    raw_stats={k:v for k,v in stats.items() if k!='statistics_hash'}
+    if digest(raw_stats)!=stats['statistics_hash'] or stats['plan_hash']!=dev['plan']['plan_hash']:
+        raise ValueError('Frozen statistics content differs')
+    low,high=np.asarray(stats['minimum'],dtype=np.float32),np.asarray(stats['maximum'],dtype=np.float32)
+    waves=np.asarray(dev['bands']['wavelengths'],dtype=np.float32);identities=[];roster=[]
+    blocks={x['id']:x for x in dev['blocks']};height,width=dev['plan']['shape']
+    for tile in dev['record']['roles']:
+        if tile['role']!='devval':continue
+        item=blocks[tile['id']];path=development.parent/item['name']
+        if sha(path)!=item['sha256']:raise ValueError('Released raw block differs')
+        raw=np.load(path,allow_pickle=False);spectra=(raw-low)/np.where(high>low,high-low,1)
+        y0,y1,x0,x1=tile['box'];yy,xx=np.mgrid[y0:y1,x0:x1]
+        coordinates=np.stack((yy/max(height-1,1),xx/max(width-1,1)),axis=-1).astype(np.float32)
+        views=[(f'stride{s}',np.arange(0,len(waves),s)) for s in (1,2,4)]
+        if contract.get('range_view'):views.append(('range_le1000nm',np.where(waves<=1000)[0]))
+        for band,pos in views:
+            x=np.concatenate((spectra[:,:,pos],coordinates),axis=-1)
+            wave=waves[pos]
+            coverage=(float(np.float32((wave[-1]-wave[0])/(waves[-1]-waves[0])))
+                      if contract.get('descriptor')=='approximate_span' else len(pos)/len(waves))
+            key=f"{tile['id']}-{band}";observation=tensor(x)
+            identities.append(digest([key,'xuzhou',observation,str(tile['id']),band,100,coverage,True,observation,tensor(wave),None]))
+            roster.append((key,coverage,len(pos)))
+    observed=hashlib.sha256(json.dumps(identities,sort_keys=True,allow_nan=False).encode()).hexdigest()
+    if observed!=setup['input_hash']:raise ValueError('Independent normalized request bytes/identity differ')
+    if roster!=[(r['key'],r['coverage'],r['bands']) for r in setup['requests']]:raise ValueError('Independent spectral views differ')
+    return {'input_hash_exact':True,'request_count':len(identities),'checkpoint_normalization_match':normalizer_match,
+            'applied_statistics_hash':stats['statistics_hash'],'raw_gt_or_query_arrays_read':0,'torch_imported':False}
+
+
 def independent_plans(roster, light, contract):
     """Reconstruct all scores and routes without importing producer policy/torch."""
     ids=[r['key'] for r in roster]
@@ -58,6 +109,7 @@ def main():
     for name,h in setup["protected"].items():
         if sha(name)!=h:raise ValueError("Original weight or development file changed")
     dev=json.loads(Path(a.development).read_text());rec=dev["record"]
+    prepared=audit_prepared_inputs(root,Path(a.development),dev,contract,setup)
     lookup=dict(zip(rec["validation_support"]["indices"],rec["validation_support"]["labels"]))
     tiles=[t for t in rec["roles"] if t["role"]=="devval"]
     points=[];width=dev["plan"]["shape"][1]
@@ -135,6 +187,7 @@ def main():
            "graph_p50_ms":{k:median(v) for k,v in graph_times.items()},
            "planning_p50_ms":{k:median(v) for k,v in planning_times.items()},
            "compact_results":compact,"requests":roster,"contract":contract,
+           "independent_input_reconstruction":prepared,
            "setup_reference_counts":setup['reference_counts'],'setup_reference_ms':setup['reference_ms'],
            "loading_ms":setup['loading_ms'],
            "independent_confirmation":False,"original_inputs_unchanged":True}

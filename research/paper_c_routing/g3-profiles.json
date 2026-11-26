@@ -2,6 +2,7 @@
   "schema": "original_g3_p2_frozen_single_source_pair_v1",
   "source": "paviaU",
   "target": "xuzhou",
+  "target_statistics_sha256": "73b3d65a06cdff12630497f74659f7d3c5577d292fcd44564ce8afddd6fd94b7",
   "support_sha256": "913732b4e514ff99e16d8df3d88585b1d11e42fab9b2f0fe8df44a3856195dd6",
   "profiles": {
     "2036": {
