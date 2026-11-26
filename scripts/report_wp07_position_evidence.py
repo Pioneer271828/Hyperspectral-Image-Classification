@@ -146,14 +146,18 @@ def main():
     table(a.out/'synthetic-resident-cost.csv',all_cost)
     table(a.out/'same-content-controls.csv',all_controls)
     table(a.out/'mean-content-aliases.csv',aliases)
-    for relative in ('real-probe-v1-output/endpoints.csv','real-cost-v1-output/real-resident-cost.csv',
+    real_cost=[]
+    for family,folder in (('legacy','real-cost-v1-output'),('balanced','real-balanced-cost-v1-output')):
+        real_cost.extend(dict(family=family,**row) for row in read_csv(a.root/folder/'real-resident-cost.csv'))
+    table(a.out/'real-resident-cost.csv',real_cost)
+    for relative in ('real-probe-v1-output/endpoints.csv',
                      'admission-v3-output/existing-provider-reads.csv','admission-v3-output/pre-score-identifiability.csv'):
         shutil.copyfile(a.root/relative,a.out/Path(relative).name)
     index={tuple(row[key] for key in ('family','classes','seed','representation','policy','endpoint','head','band')):row for row in all_endpoints}
     class_index=defaultdict(list)
     for row in all_classes:
         class_index[tuple(row[key] for key in ('family','classes','seed','representation','policy','endpoint','head','band'))].append(row)
-    pairs=[]
+    pairs=[];adverse=[]
     for key,right in index.items():
         family,classes,seed,representation,policy,endpoint,head,band=key
         comparison=[]
@@ -169,7 +173,15 @@ def main():
             pairs.append(dict(family=family,classes=classes,seed=seed,representation=representation,policy=policy,
                 endpoint=endpoint,head=head,band=band,contrast=contrast,nll_delta=float(right['nll'])-float(left['nll']),
                 oa_delta=float(right['oa'])-float(left['oa']),minimum_class_recall_delta=minimum,protected=minimum>=-.02))
+            if minimum<-.02:
+                for row in class_index[key]:
+                    base=left_classes[row['class_id']];delta=float(row['recall'])-float(base['recall'])
+                    if delta<-.02:
+                        adverse.append(dict(family=family,classes=classes,seed=seed,representation=representation,policy=policy,
+                            endpoint=endpoint,head=head,band=band,contrast=contrast,class_id=row['class_id'],support=row['support'],
+                            correct=row['correct'],reference_correct=base['correct'],recall_delta=delta))
     table(a.out/'paired-comparisons.csv',pairs)
+    table(a.out/'adverse-classes.csv',adverse)
     base=a.root.parent/'wp07-b-fine16-20261126/wp12';prior=a.out/'unchanged-base';prior.mkdir()
     preserved={}
     for name in ('adverse-classes.csv','graph-response.csv','primary-pairs.csv','resident-cost.csv','xuzhou-classes-5-6.csv'):

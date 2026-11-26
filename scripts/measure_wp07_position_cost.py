@@ -31,6 +31,7 @@ def main():
     for name in ('root','core','out'):
         p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--gpu',required=True);p.add_argument('--expected-commit',required=True)
+    p.add_argument('--representation-family',choices=('legacy','balanced'),default='legacy')
     a=p.parse_args();code=code_snapshot();require_frozen_code(code)
     graph.require(code['commit']==a.expected_commit and os.environ.get('CUDA_VISIBLE_DEVICES')==a.gpu,'Wrong frozen source or device')
     a.out.mkdir()
@@ -51,7 +52,8 @@ def main():
         tile=min(e['tile'] for e in spec['validation'])
         for event in (e for e in spec['validation'] if e['tile']==tile):
             started=time.perf_counter();actual,_,_=engine._materialize('devval',event);materialization=time.perf_counter()-started
-            for representation in position.REPRESENTATIONS:
+            representations=position.REPRESENTATIONS if a.representation_family=='legacy' else position.BALANCED_REPRESENTATIONS
+            for representation in representations:
                 for control in ('missing','matched'):
                     provider.override=control;samples=[]
                     with position.representation(model,representation),condition.selection_policy(model,'content','joint'):
