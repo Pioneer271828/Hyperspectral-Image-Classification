@@ -15,7 +15,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--out',required=True)
     p.add_argument('--bytes',type=int,required=True);p.add_argument('--sha256',required=True)
     p.add_argument('--frame-bytes',type=int,choices=(1048576,16777216),default=1048576)
-    p.add_argument('--status',action='store_true');a=p.parse_args();final=Path(a.out).resolve()
+    p.add_argument('--status',action='store_true');p.add_argument('--one-frame',action='store_true')
+    a=p.parse_args();final=Path(a.out).resolve()
     part=final.with_suffix(final.suffix+'.partial');journal=final.with_suffix(final.suffix+'.progress.json')
     if final.exists():
         if final.stat().st_size!=a.bytes or sha(final)!=a.sha256:raise ValueError('Existing final file differs; never overwrite')
@@ -47,6 +48,8 @@ def main():
             state['chunks'].append({'offset':offset,'bytes':len(raw),'sha256':digest})
             state['offset']+=len(raw);commit()
             print(json.dumps({'offset':state['offset'],'chunk_sha256':digest}),flush=True)
+            if a.one_frame:break
+    if a.one_frame and state['offset']<a.bytes:return
     if state['offset']!=a.bytes or sha(part)!=a.sha256:raise ValueError('Final archive bytes/SHA differ')
     if final.exists():raise ValueError('Final publication appeared concurrently')
     part.rename(final);state['complete']=True;commit()

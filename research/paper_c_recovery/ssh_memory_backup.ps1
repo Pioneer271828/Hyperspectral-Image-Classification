@@ -74,8 +74,10 @@ try {
     }
     # Open receiver only after source authentication and the first full frame.
     if ($null -eq $routingTarget) {
+      $routingReceiveCommand=$routingCommand
+      if ($BoundedSourceChunks) { $routingReceiveCommand+=' --one-frame' }
       $routingTarget=Start-RoutingSsh @('-T','-o','BatchMode=yes','-o','ConnectTimeout=15',
-        '-o','ServerAliveInterval=15',$TargetHost,$routingCommand) $true
+        '-o','ServerAliveInterval=15',$TargetHost,$routingReceiveCommand) $true
     }
     $routingHash=[Convert]::ToHexString([Security.Cryptography.SHA256]::Create().ComputeHash($routingBuffer,0,$routingFilled)).ToLowerInvariant()
     $routingFrame=[Convert]::ToBase64String($routingBuffer,0,$routingFilled)
@@ -93,15 +95,23 @@ try {
       throw 'Receiver acknowledgement differs.'
     }
     $routingOffset=[long]$routingAck.offset;$routingAcks.Add($routingAck)
+    if ($BoundedSourceChunks -and $routingOffset -lt $ArchiveBytes) {
+      $routingTarget.StandardInput.Close();$routingTarget.WaitForExit()
+      if ($routingTarget.ExitCode -ne 0) { throw 'Bounded target SSH exit failure.' }
+      $routingTarget.Dispose();$routingTarget=$null
+    }
     if ($routingAcks.Count % $routingReportEvery -eq 0 -or $routingOffset -eq $ArchiveBytes) { Write-Output "VERIFIED_BYTES $routingOffset" }
   }
   if ($null -ne $routingSource) {
     $routingSource.WaitForExit()
     if ($routingSource.ExitCode -ne 0) { throw 'Source SSH exit failure.' }
   }
-  $routingEnd=[Text.Encoding]::ASCII.GetBytes("END`n")
-  $routingTarget.StandardInput.BaseStream.Write($routingEnd,0,$routingEnd.Length)
-  $routingTarget.StandardInput.BaseStream.Flush();$routingTarget.StandardInput.Close()
+  if (-not $BoundedSourceChunks) {
+    $routingEnd=[Text.Encoding]::ASCII.GetBytes("END`n")
+    $routingTarget.StandardInput.BaseStream.Write($routingEnd,0,$routingEnd.Length)
+    $routingTarget.StandardInput.BaseStream.Flush()
+  }
+  $routingTarget.StandardInput.Close()
   $routingFinal=$routingTarget.StandardOutput.ReadLine() | ConvertFrom-Json
   $routingTarget.WaitForExit()
   if ($routingTarget.ExitCode -ne 0 -or -not $routingFinal.complete -or $routingFinal.archive_sha256 -ne $ArchiveSha256) {

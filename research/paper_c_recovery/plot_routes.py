@@ -44,7 +44,8 @@ def main():
             for seed,value in zip((64,512,2048),values):records.append({'direction':short[source]+' → '+short[target],'kind':kind,'seed':seed,'value':value})
     for ax,values,title in zip(axes,(heavy,latency),('Paid graph calls / static full','Resident batch p50 / static full')):
         ax.bar(range(5),values,color='#4c7c9f',width=.62);ax.axhline(1,color='#65717c',ls='--',lw=1)
-        ax.set_xticks(range(5),labels,rotation=22,ha='right');ax.set_title(title);ax.grid(axis='y',alpha=.2);ax.set_axisbelow(True)
+        wrapped=[short[s]+'\n→ '+short[t] for s,t in directions]
+        ax.set_xticks(range(5),wrapped,ha='center');ax.set_title(title);ax.grid(axis='y',alpha=.2);ax.set_axisbelow(True)
         for i,v in enumerate(values):ax.text(i,v+.025,f'{v:.2f}',ha='center',fontsize=9)
         ax.set_ylim(0,max(1.2,max(values)*1.15))
     fig.suptitle('Content + approximate-span coverage: call budget and observed cost',fontsize=12)

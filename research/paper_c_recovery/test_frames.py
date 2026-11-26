@@ -13,6 +13,18 @@ def frame(offset,raw):return f'{offset}|{hashlib.sha256(raw).hexdigest()}|'.enco
 
 
 class LargerFrames(unittest.TestCase):
+    def test_bounded_receiver_exits_cleanly_at_each_committed_frame(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp)/'bounded';raw=b'first-frame-second-frame'
+            cmd=[sys.executable,str(Path(__file__).with_name('receive_backup_stream.py')),'--out',str(out),'--bytes',str(len(raw)),
+                 '--sha256',hashlib.sha256(raw).hexdigest(),'--one-frame']
+            first=subprocess.run(cmd,input=frame(0,raw[:8]),capture_output=True)
+            self.assertEqual(first.returncode,0,first.stderr.decode());self.assertFalse(out.exists())
+            self.assertEqual(json.loads(first.stdout)['offset'],8)
+            second=subprocess.run(cmd,input=frame(8,raw[8:]),capture_output=True)
+            self.assertEqual(second.returncode,0,second.stderr.decode())
+            self.assertTrue(json.loads(second.stdout.splitlines()[-1])['complete']);self.assertEqual(out.read_bytes(),raw)
+
     def test_resume_one_MiB_then_large_frame_and_final_readonly(self):
         with tempfile.TemporaryDirectory() as tmp:
             out=Path(tmp)/'archive';raw=b'SYNTHETIC-BACKUP-'*200000;digest=hashlib.sha256(raw).hexdigest()
