@@ -6,11 +6,12 @@ from pathlib import Path
 import sys
 
 import numpy as np
-import numpy.core, numpy.core.multiarray, numpy.core.numeric, numpy.core._multiarray_umath
-for suffix in ('', '.multiarray', '.numeric', '._multiarray_umath'):
-    sys.modules['numpy._core'+suffix] = sys.modules['numpy.core'+suffix]
 import torch
 torch.set_num_threads(1)
+if int(np.__version__.split('.')[0]) < 2:
+    import numpy.core, numpy.core.multiarray, numpy.core.numeric, numpy.core._multiarray_umath
+    for suffix in ('', '.multiarray', '.numeric', '._multiarray_umath'):
+        sys.modules['numpy._core'+suffix] = sys.modules['numpy.core'+suffix]
 
 
 def load(path):return json.loads(path.read_text())
@@ -86,7 +87,7 @@ def main():
         NLL_max_absolute_error=maximum,historical_real_probability_vectors_bitwise_matched=270,
         old_real_checkpoint_models_represented=1,classifier_forwards=0,optimizer_steps=0,
         python=sys.version.split()[0],torch=str(torch.__version__),numpy=np.__version__,
-        NumPy2_pickle_aliases_process_local=True,reader_sha256=sha(Path(__file__)),
+        NumPy2_pickle_aliases_process_local=int(np.__version__.split('.')[0])<2,reader_sha256=sha(Path(__file__)),
         original_LXC_files_read=surface=='source-LXC',
         scope='Actual saved-copy readability, exact already-saved recovery-route comparison and scalar prediction recount. No cross-host trainer continuation or GPU numerical qualification.')
     with out.open('x') as stream:stream.write(json.dumps(result,indent=2)+'\n')

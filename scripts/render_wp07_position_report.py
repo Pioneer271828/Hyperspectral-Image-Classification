@@ -74,6 +74,7 @@ def main():
             bottom+=values
     ax.axhline(sum(allocated.values()),ls='--',lw=1,color='#52677a')
     ax.set_xticks(range(4),['mean','content','metadata','joint']);ax.set_ylabel('Elements changed from initial to final state')
+    ax.set_ylim(0,34000)
     ax.set_title('Balanced common projection: measured parameter participation',fontsize=15)
     ax.text(.01,.93,'Plain: summary; hatched: exact. Means across 9/22 classes × three model seeds.',transform=ax.transAxes,fontsize=10)
     ax.legend(frameon=False,loc='center left',bbox_to_anchor=(1, .5));ax.grid(axis='y',alpha=.15);ax.set_axisbelow(True)
