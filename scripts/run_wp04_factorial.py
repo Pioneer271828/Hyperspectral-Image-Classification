@@ -368,12 +368,19 @@ def edge_weight_diagnostics(case, model, item, runtime):
     with torch.no_grad():
         if condition == "row_normalized":
             normalization.verify_initialization_binding(model, runtime.normalization_binding)
-            result = model(runtime.normalization_binding["target"], obs["net_input"], obs["Q"], obs["A"],
-                           wavelengths=obs["wavelengths"], fwhm=obs["fwhm"], superpixel_scale=obs["superpixel_scale"],
-                           return_graph_info=True, return_diagnostics=True)
+            captured = []
+            hook = model.backbone.edge_updater.register_forward_hook(lambda _m, _a, output: captured.append(output[1]))
+            try:
+                model(runtime.normalization_binding["target"], obs["net_input"], obs["Q"], obs["A"],
+                      wavelengths=obs["wavelengths"], fwhm=obs["fwhm"], superpixel_scale=obs["superpixel_scale"],
+                      return_graph_info=True, return_diagnostics=True)
+            finally:
+                hook.remove()
+            require(len(captured) == 1, "Normalization was not applied exactly once in the real schedule")
+            info = captured[0]
         else:
             result = edge.forward_observation(model, obs, expected_binding=runtime.edge_binding, diagnostics=True)
-    info = result[-1]["interaction"]
+            info = result[-1]["interaction"]
     a = item["A"].to_sparse_coo().coalesce()
     edges = {tuple(row) for row in a.indices()[:, a.values() > 0].T.tolist()}
     occupied = {row for row, _ in edges}

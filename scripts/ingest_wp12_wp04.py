@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
+from evaluation.wp12_edge_weight_evidence import intake as edge_weight_intake
 from scripts.run_wp04_factorial import (CONTROL_CONTRASTS, HEADS, REAL_CATALOG_SHA, SCHEMA,
                                        identity, require, roster, verify)
 from transfer.p4_runtime_device import CUDA_FP64_WEIGHT, UUID
@@ -116,7 +117,8 @@ def main():
     parser.add_argument("--runs", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     for key in ("cpu", "gpu", "real", "strict-real"):
-        parser.add_argument("--" + key, nargs=2, required=key in ("cpu", "real"))
+        parser.add_argument("--" + key, nargs=2)
+    parser.add_argument("--edge-weight-development", nargs=2, metavar=("EVIDENCE", "SHA256"))
     for key in CONTROL_CONTRASTS:
         parser.add_argument("--" + key, nargs=4, metavar=("SYNTHETIC", "SHA256", "ZERO_UPDATE", "SHA256"))
     args = parser.parse_args()
@@ -131,8 +133,17 @@ def main():
 
     controls = {key: (pair(value[:2]), pair(value[2:])) for key in CONTROL_CONTRASTS
                 if (value := getattr(args, key))}
-    data = intake(root, pair(args.cpu), pair(args.real), pair(args.gpu), strict_real=pair(args.strict_real),
-                  controls=controls)
+    has_engineering = args.cpu is not None or args.real is not None
+    if has_engineering:
+        require(args.cpu is not None and args.real is not None, "Both original engineering inputs are required")
+        data = intake(root, pair(args.cpu), pair(args.real), pair(args.gpu), strict_real=pair(args.strict_real),
+                      controls=controls)
+        if args.edge_weight_development:
+            data["edge_weight_development"] = edge_weight_intake(root, pair(args.edge_weight_development))
+    else:
+        require(args.edge_weight_development is not None and not (args.gpu or args.strict_real or controls),
+                "Supply original engineering inputs or a real edge-weight development receipt")
+        data = edge_weight_intake(root, pair(args.edge_weight_development))
     out.mkdir()
     write_json(out / "supplement.json", {**data, "adapter": identity(code)})
 
