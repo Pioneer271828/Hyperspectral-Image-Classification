@@ -10,6 +10,8 @@ from transfer import wp07_condition_run as run
 from transfer import wp07_observed_conditions as cond
 from transfer import wp07_graph_range as graph
 from transfer.native_scale_observation import forward
+from transfer.multiscale_training import MultiscaleTrial
+from transfer.native_scale_fixture import condition_for
 from transfer.xuzhou_multiscale_audit import _exact
 
 
@@ -89,3 +91,19 @@ class ObservedConditionsTests(TestCase):
                 self.assertEqual(len(output[:3]),3)
         self.assertFalse(first.content_selector._forward_hooks)
         self.assertFalse(model.backbone.range_metadata._forward_hooks)
+
+    @torch.no_grad()
+    def test_existing_content_weights_survive_missing_and_neutral_graft(self):
+        model=MultiscaleTrial(cnn_multiscale='content',graph_multiscale='content').initialize(self.provider.baseline(64),7385).eval()
+        model.backbone.adapter.cache_attention=False
+        model.backbone.range_content.weight.add_(.071)
+        with graph.frozen_support(model,self.entry,'content'):
+            original,_=forward(model,self.actual,'fixture','devval',condition=condition_for(self.actual,'matched'),graph_scale=16)
+        before={n:v.clone() for n,v in model.state_dict().items()}
+        cond.install_encoders(model,48402)
+        missing,_=self.call(model,'content','content','missing')
+        self.assertTrue(all(torch.equal(x,y) for x,y in zip(original[:3],missing[:3])))
+        model.backbone.range_metadata.weight.zero_();model.backbone.CNN_Branch[0].condition_selector.weight.zero_()
+        neutral,_=self.call(model)
+        self.assertTrue(all(torch.equal(x,y) for x,y in zip(original[:3],neutral[:3])))
+        self.assertTrue(all(torch.equal(model.state_dict()[n],v) for n,v in before.items()))
