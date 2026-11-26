@@ -8,6 +8,7 @@ import json
 import math
 from pathlib import Path
 from statistics import median
+import subprocess
 
 SEEDS = (64, 512, 2048)
 HEADS = ("fused", "graph", "cnn")
@@ -140,7 +141,7 @@ def audit_graph(record, blocks, points, graph_rows, scores):
                 if arm == "none":
                     check(prediction == locked[alias]["prior"][str(seed)][
                         ("left", "native_graph_pred", "native_cnn_pred")[i]], "Baseline prediction differs")
-                scores[seed, arm, head].append((label, prediction, -math.log(max(probs[label - 1], 1e-8))))
+                scores[seed, arm, head].append((unit, label, prediction, -math.log(max(probs[label - 1], 1e-8))))
     return [members for members in seen_masks.values() if len(members) > 1]
 
 
@@ -153,7 +154,31 @@ def write_table(root, name, rows):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def export(raw, registration, root):
+def summarize(scores, seed, arm, head, units, reference, interpretation):
+    identity = dict(seed=seed, arm=arm, head=head, interpretation=interpretation)
+    rows = [(label, pred, loss) for unit, label, pred, loss in scores[seed, arm, head] if unit in units]
+    baseline = [(label, pred) for unit, label, pred, _ in scores[seed, reference, head] if unit in units]
+    support = Counter(label for label, _, _ in rows)
+    check(support == Counter(label for label, _ in baseline), "Paired support differs")
+    if interpretation in ("reference", "strict", "contains_unmatched_diagnostics"):
+        check(support == {c: 5 for c in range(1, 10)}, "Expected 45 released points, five per class")
+    tally = Counter(label for label, pred, _ in rows if label == pred)
+    base_tally = Counter(label for label, pred in baseline if label == pred)
+    count = len(rows)
+    correct = sum(tally.values())
+    scores_row = dict(**identity, reference=reference, support=count, correct=correct,
+                      oa=correct / count if count else None,
+                      aa=math.fsum(tally[c] / support[c] for c in support) / len(support) if support else None,
+                      nll=math.fsum(loss for _, _, loss in rows) / count if count else None,
+                      delta_oa_pp=(correct - sum(base_tally.values())) * 100 / count if count else None)
+    classes = [dict(**identity, class_id=c, support=support[c], correct=tally[c],
+                    recall=tally[c] / support[c] if support[c] else None,
+                    delta_recall_pp=(tally[c] - base_tally[c]) * 100 / support[c] if support[c] else None)
+               for c in range(1, 10)]
+    return scores_row, classes
+
+
+def export(raw, registration, root, consumer, source_digest):
     check(raw["role"] == registration["role"] == "devval" and raw["scene"] == "paviaU"
           and raw["optimizer_updates"] == 0 and raw["query_accessed"] is False
           and tuple(raw["arms"]) == ARMS and tuple(raw["heads"]) == HEADS
@@ -171,8 +196,10 @@ def export(raw, registration, root):
               dict(step=record["step"], sha256=record["checkpoint_sha256"]), "Checkpoint differs")
         for arms in audit_graph(record, blocks, points, graph_rows, scores):
             aliases.append(dict(seed=seed, unit=record["unit"], arms=";".join(arms)))
-    summary, class_rows, cost_summary = [], [], []
+    summary, class_rows, cost_summary, exact_summary, exact_classes = [], [], [], [], []
     for seed in SEEDS:
+        strict_counts = Counter(row["unit"] for row in graph_rows if row["seed"] == seed and row["status"] == "strict")
+        exact_units = {unit for unit, count in strict_counts.items() if count == len(ARMS) - 2}
         for arm in ARMS:
             graphs = [row for row in graph_rows if (row["seed"], row["arm"]) == (seed, arm)]
             status = Counter(row["status"] for row in graphs)
@@ -186,27 +213,21 @@ def export(raw, registration, root):
                                      **{f"p50_{field}": median(r[field] for r in graphs)
                                         for field in ("native_build_ms", "deletion_build_ms", "sparse_mm_ms", "forward_ms")}))
             for head in HEADS:
-                identity = dict(seed=seed, arm=arm, head=head, interpretation=interpretation)
-                rows = scores[seed, arm, head]
-                support = Counter(label for label, _, _ in rows)
-                check(support == {c: 5 for c in range(1, 10)}, "Expected 45 released points, five per class")
-                tally = Counter(label for label, pred, _ in rows if label == pred)
-                baseline = scores[seed, "none", head]
-                base_count = sum(a == b for a, b, _ in baseline)
-                correct = sum(tally.values())
-                summary.append(dict(**identity, support=45, correct=correct, oa=correct / 45,
-                                    aa=math.fsum(tally[c] / support[c] for c in support) / 9,
-                                    nll=math.fsum(loss for _, _, loss in rows) / 45,
-                                    delta_oa_pp=(correct - base_count) * 100 / 45))
-                for c in range(1, 10):
-                    class_rows.append(dict(**identity, class_id=c, support=support[c], correct=tally[c],
-                                           recall=tally[c] / support[c]))
+                all_scores, all_classes = summarize(scores, seed, arm, head, blocks, "none", interpretation)
+                exact_scores, matched_classes = summarize(scores, seed, arm, head, exact_units, "important",
+                                                          "strict_context_intersection")
+                summary.append(all_scores)
+                class_rows.extend(all_classes)
+                exact_summary.append(dict(**exact_scores, contexts=len(exact_units)))
+                exact_classes.extend(matched_classes)
     root.mkdir()
     tables = {"graph-and-cost.csv": graph_rows, "three-heads.csv": summary, "per-class.csv": class_rows,
-              "cost-summary.csv": cost_summary}
+              "cost-summary.csv": cost_summary, "strict-subset-heads.csv": exact_summary,
+              "strict-subset-classes.csv": exact_classes}
     if aliases:
         tables["duplicate-masks.csv"] = aliases
     receipt = {"status": "passed", "registration_sha256": APPROVED, "commit": raw["commit"],
+               "audit_commit": consumer, "source_sha256": source_digest,
                "scene": "paviaU", "role": "devval", "contexts": len(raw["records"]),
                "updates": 0, "query_accessed": False, "arm_status": dict(Counter(row["status"] for row in graph_rows)),
                "tables": {name: {"sha256": write_table(root, name, rows), "rows": len(rows)} for name, rows in tables.items()}}
@@ -218,10 +239,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--source-sha256", required=True)
+    parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--registration", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
-    result = export(read(args.source, args.source_sha256), read(args.registration, APPROVED), args.out)
+    checkout = Path(__file__).resolve().parents[1]
+    commit = subprocess.check_output(["git", "-C", checkout, "rev-parse", "HEAD"], text=True).strip()
+    status = subprocess.check_output(["git", "-C", checkout, "status", "--porcelain"], text=True)
+    check(commit == args.expected_commit and not status and not args.out.resolve().is_relative_to(checkout),
+          "Clean exact audit checkout and external output required")
+    result = export(read(args.source, args.source_sha256), read(args.registration, APPROVED), args.out,
+                    commit, args.source_sha256)
     print(json.dumps(result, sort_keys=True))
 
 
