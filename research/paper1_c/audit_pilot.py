@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from adapter import load_author_model
-from pilot import BANK_CODE, RECEIPTS, SEEDS, git_clean, load_bank, sha, write_new
+from pilot import BANK_CODE, RECEIPTS, SEEDS, batch, evaluate, git_clean, load_bank, sha, write_new
 
 
 def main():
@@ -64,8 +64,15 @@ def main():
             if saved["selected_step"] != selected:
                 raise ValueError("Selected weight metadata differs")
             bands, classes = bank.release.shape[-1], bank.release.classes
+            torch.manual_seed(seed)
             model = author.DSNet(bands, classes, 7, "conv2d_unmix").eval()
+            initial = {name: value.clone() for name, value in model.state_dict().items()}
             model.load_state_dict({name.removeprefix("model."): value for name, value in saved["state"].items()}, strict=True)
+            changed = {}
+            for name, value in model.state_dict().items():
+                if not torch.equal(initial[name], value):
+                    group = name.split(".")[0]
+                    changed[group] = changed.get(group, 0)+1
             confusion = np.zeros((classes, classes), dtype=np.int64)
             predictions, nll = [], 0.
             for row in bank.role_rows("devval"):
@@ -113,11 +120,17 @@ def main():
             expected_exposure = sum(reg["scenes"][scene]["geometry"]["coverage"]["devtrain"]["released_per_class"])
             if result["train_label_exposure_per_arm"] != expected_exposure:
                 raise ValueError("Released point exposure differs")
+            # Extra fit readout is descriptive and explicitly uses the producer
+            # helper. The devval reconstruction above remains independent.
+            train_fit = evaluate(model, [batch(bank, row) for row in bank.role_rows("devtrain")
+                                         if row["samples"]], classes)
             audited.append({"scene": scene, "seed": seed, "updates": [n, n], "exposure": expected_exposure,
                             "selected_step": selected, "oa": oa, "aa": aa, "recall": recall.tolist(),
                             "support": support.tolist(), "confusion_cells": classes**2,
                             "prediction_sha256": prediction_hash, "numpy_nll": nll/int(support.sum()),
-                            "parameter_count": sum(p.numel() for p in model.parameters())})
+                            "parameter_count": sum(p.numel() for p in model.parameters()),
+                            "changed_state_tensors_by_author_module": changed,
+                            "selected_train_fit_descriptive": train_fit})
     unchanged = protected_before == {path: sha(path) for path in protected_before}
     if not unchanged:
         raise ValueError("Independent audit changed an input")
