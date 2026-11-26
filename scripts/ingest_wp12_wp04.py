@@ -126,6 +126,8 @@ def main():
     parser.add_argument("--message-development", nargs=2, metavar=("EVIDENCE", "SHA256"))
     parser.add_argument("--message-frozen", nargs=2, action="append", metavar=("EVIDENCE", "SHA256"))
     parser.add_argument("--qualify-remaining-history", nargs=2, metavar=("PUBLISHED_CATALOG", "SHA256"))
+    parser.add_argument("--comparable-development", type=Path, metavar="EVIDENCE_DIRECTORY",
+                        help="Restore the admitted WP04 development comparisons from pinned evidence")
     for item in ("residual-assignment", "direct-joint", "remaining-history"):
         parser.add_argument("--" + item, nargs=2, metavar=("EVIDENCE", "SHA256"))
     for key in CONTROL_CONTRASTS:
@@ -144,6 +146,13 @@ def main():
                 if (value := getattr(args, key))}
     has_engineering = args.cpu is not None or args.real is not None
     remaining_pins = (args.residual_assignment, args.direct_joint, args.remaining_history)
+    if args.comparable_development:
+        require(not (has_engineering or args.gpu or args.strict_real or controls or args.edge_weight_development
+                    or args.message_development or args.message_frozen or args.qualify_remaining_history
+                    or any(remaining_pins)), "Run comparable development intake as a separate command")
+        from evaluation.wp12_comparable_development import intake as comparable_intake
+        comparable_intake(root, args.comparable_development, out, identity(code))
+        return
     require(not any(remaining_pins) or all(remaining_pins), "Supply both new trials and the history qualification")
     if args.qualify_remaining_history:
         require(not (has_engineering or args.gpu or args.strict_real or controls or args.edge_weight_development
