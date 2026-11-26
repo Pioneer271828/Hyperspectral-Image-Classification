@@ -84,7 +84,10 @@ def main():
                     batch.append(array[yy[:, None], xx[None, :]].transpose(2, 0, 1))
                     labels.append(label-1)
                 with torch.no_grad():
-                    logits = model(torch.from_numpy(np.stack(batch)))[2].cpu().double().numpy()
+                    # The author uses Tensor.view after convolutions and the
+                    # producer supplies contiguous NCHW. Preserve those strides
+                    # when constructing an independent NumPy patch reference.
+                    logits = model(torch.from_numpy(np.ascontiguousarray(np.stack(batch))))[2].cpu().double().numpy()
                 if not np.isfinite(logits).all():
                     raise ValueError("Nonfinite independent logits")
                 labels = np.asarray(labels, dtype=np.int64)
