@@ -12,6 +12,7 @@ import resource
 import subprocess
 import sys
 from time import perf_counter, sleep
+from unittest.mock import patch
 from uuid import UUID
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -28,6 +29,7 @@ import g4_interaction_target as interaction
 import g4_interaction_target_runtime as interaction_runtime
 import g4_normalized_edge_target as normalization
 import g4_normalized_edge_target_runtime as normalization_runtime
+import g4_residual_assignment_target as assignment_control
 from evaluation.classification_metrics import metrics_from_confusion
 from g4_position_fusion_target_runtime import prepare
 from g4_support_context import prepare_contexts, read, validate_manifest
@@ -98,9 +100,22 @@ MESSAGE_CONDITIONS = {"I8": "gated_joint", "I9-message": "message_global_joint",
                       "Wg65": "capacity_matched_graph"}
 MESSAGE_PARAMS = {"I8": 137090, "I9-message": 137090, "Wg65": 78592}
 MESSAGE_CONTRASTS = (("I8", "I9-message"),)
-EDGE_POINT_GROUPS = {EDGE_WEIGHT_GROUP: EDGE_WEIGHT_CONDITIONS, MESSAGE_GROUP: MESSAGE_CONDITIONS}
-EDGE_POINT_SCOPES = (EDGE_WEIGHT_SCOPE, MESSAGE_SCOPE)
-POINT_SCOPES = (FACTORIAL_SCOPE, *EDGE_POINT_SCOPES)
+ASSIGNMENT_GROUP = "residual_assignment"
+ASSIGNMENT_SCOPE = "real_dev_residual_assignment"
+I7_GROUP = "direct_joint"
+I7_SCOPE = "real_dev_direct_joint_edge"
+I7_CONDITIONS = {"I7": "add_joint"}
+I7_PARAMS = {"I7": 111872}
+REMAINING = {ASSIGNMENT_GROUP: (ASSIGNMENT_SCOPE, assignment_control.PARAMETERS,
+                              "frozen_SLIC_and_native_grid_fixed_A_per_stratum"),
+             I7_GROUP: (I7_SCOPE, I7_PARAMS, "fixed_Q_and_A_joint_edge_values")}
+ASSIGNMENT_EFFECTS = {"GridR-Grid0": {"GridR": 1, "Grid0": -1},
+                      "LearnR-Learn0": {"LearnR": 1, "Learn0": -1},
+                      "(LearnR-Learn0)-(GridR-Grid0)": {"LearnR": 1, "Learn0": -1, "GridR": -1, "Grid0": 1}}
+EDGE_POINT_GROUPS = {EDGE_WEIGHT_GROUP: EDGE_WEIGHT_CONDITIONS, MESSAGE_GROUP: MESSAGE_CONDITIONS,
+                     I7_GROUP: I7_CONDITIONS}
+EDGE_POINT_SCOPES = (EDGE_WEIGHT_SCOPE, MESSAGE_SCOPE, I7_SCOPE)
+POINT_SCOPES = (FACTORIAL_SCOPE, *EDGE_POINT_SCOPES, ASSIGNMENT_SCOPE)
 REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE, *POINT_SCOPES)
 FACTORIAL_PARAMS = {"B0": 61696, "R": 69952, "F": 61825, "R+F": 70081, "Bcap": 69952, "Bcap+F": 70081}
 FACTORIAL_EFFECTS = {
@@ -143,6 +158,8 @@ def verify(pin):
 
 
 def roster(group="factorial"):
+    if group == ASSIGNMENT_GROUP:
+        return [{"seed": seed, "arm": arm, "condition": arm} for seed in SEEDS for arm in assignment_control.CONDITIONS]
     if group in EDGE_POINT_GROUPS:
         return [{"seed": seed, "arm": arm, "condition": condition}
                 for seed in SEEDS for arm, condition in EDGE_POINT_GROUPS[group].items()]
@@ -172,6 +189,8 @@ def plan(catalog, code, scope, *, arithmetic=None, group="factorial"):
         value.update(group=group, graph="fixed_Q_and_A_candidates_stage2_weight_control")
     if group == MESSAGE_GROUP:
         value.update(group=group, graph="fixed_Q_and_A_candidates_regional_joint_edge_alignment")
+    if group in REMAINING:
+        value.update(group=group, graph=REMAINING[group][2])
     return value
 
 
@@ -187,7 +206,8 @@ def registration(args, code):
                 and value == real_plan(catalog, published, code, [value["devices"][str(seed)] for seed in SEEDS],
                                        prior=value.get("prior"), factorial=value["scope"] == FACTORIAL_SCOPE,
                                        edge_weights=value["scope"] == EDGE_WEIGHT_SCOPE,
-                                       messages=value["scope"] == MESSAGE_SCOPE),
+                                       messages=value["scope"] == MESSAGE_SCOPE,
+                                       remaining=value.get("group") if value.get("group") in REMAINING else None),
                 "Real paired development registration or publication differs")
         return value
     require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"),
@@ -197,7 +217,8 @@ def registration(args, code):
     return value
 
 
-def real_plan(catalog, published, code, devices, *, prior=None, factorial=False, edge_weights=False, messages=False):
+def real_plan(catalog, published, code, devices, *, prior=None, factorial=False, edge_weights=False, messages=False,
+              remaining=None):
     require(len(devices) == len(SEEDS) and len(set(devices)) == len(SEEDS)
             and all("GPU-" + str(UUID(gpu.removeprefix("GPU-"))) == gpu for gpu in devices),
             "Assign one distinct physical GPU UUID to each paired seed")
@@ -228,6 +249,13 @@ def real_plan(catalog, published, code, devices, *, prior=None, factorial=False,
                 "cases": cases, "parameters_by_arm": MESSAGE_PARAMS,
                 "primary_comparisons": ["I8-I9-message", "Wj-Wg65"],
                 "real_updates_authorized": len(cases) * sum(STEPS.values())}
+    if remaining is not None:
+        require(prior is None, "Historical controls are admitted separately and acquire no updates")
+        scope, parameters, graph = REMAINING[remaining]
+        cases = roster(remaining)
+        return {**base, "scope": scope, "group": remaining, "graph": graph,
+                "cases": cases, "parameters_by_arm": parameters,
+                "real_updates_authorized": len(cases) * sum(STEPS.values())}
     if prior is None:
         return base
     require(prior["sha256"] == PRIOR_EVIDENCE, "Expected the independently accepted I0/I3 evidence")
@@ -253,6 +281,8 @@ def bound(reg, case, out, device):
     if group in EDGE_POINT_GROUPS:
         runtime, _, _ = edge_weight_adapter(case["condition"])
         return runtime(*paths, condition=case["condition"], **common)
+    if group == ASSIGNMENT_GROUP:
+        return assignment_control.prepare(*paths, condition=case["condition"], **common)
     if group in ADAPTERS:
         return ADAPTERS[group][0](*paths, condition=case["condition"], **common)
     return prepare(*paths, mode=case["mode"], condition=case["fusion"],
@@ -285,6 +315,12 @@ def hardware(gpu, started):
 
 def model_snapshot(model, group="factorial"):
     tensors = {k: tensor_hash(v) for k, v in model.state_dict().items()}
+    if group == ASSIGNMENT_GROUP:
+        prefixes = (assignment_control.GRAPH_PREFIX, assignment_control.RESIDUAL_PREFIX)
+        return {"shared": digest({k: v for k, v in tensors.items() if not k.startswith(prefixes)}),
+                "graph_builder": {k: v for k, v in tensors.items() if k.startswith(prefixes[0])},
+                "residual": {k: v for k, v in tensors.items() if k.startswith(prefixes[1])},
+                "parameters": sum(p.numel() for p in model.parameters())}
     if group in CONTROLS or group in EDGE_POINT_GROUPS:
         prefixes = edge.PREFIXES if group in ("edges", *EDGE_POINT_GROUPS) else (interaction.PREFIX,)
         return {"shared": digest({k: v for k, v in tensors.items() if not k.startswith(prefixes)}),
@@ -357,6 +393,8 @@ def control_diagnostics(group, case, model, item, runtime, probabilities):
                                   else interaction.configuration(case["condition"]))}
     if group in EDGE_POINT_GROUPS:
         return edge_weight_diagnostics(case, model, item, runtime)
+    if group == ASSIGNMENT_GROUP:
+        return assignment_diagnostics(case, model, item)
     if group != "edges":
         return {}
     config = edge.configuration(case["condition"])
@@ -377,6 +415,63 @@ def control_diagnostics(group, case, model, item, runtime, probabilities):
     result.update(candidate_edges=len(original), isolated_fallback_edges=len(fallback), actual_edges=len(observed),
                   updated_weight_elements=int(torch.count_nonzero(after-before)), maximum_change=float((after-before).abs().max()))
     return result
+
+
+def assignment_diagnostics(case, model, item):
+    backbone = model.backbone
+    mode, assignment = assignment_control.CONDITIONS[case["condition"]]
+    obs = observation(model, item)
+    captured = []
+    if assignment is None:
+        q, adjacency = obs["Q"], obs["A"]
+    else:
+        builder = backbone.learnable_graph
+        original = builder.build_graph
+
+        def capture(*args, **kwargs):
+            state = original(*args, **kwargs)
+            captured.append(state)
+            return state
+
+        with torch.no_grad(), patch.object(builder, "build_graph", side_effect=capture):
+            model(item["name"], obs["net_input"], obs["Q"], obs["A"], wavelengths=obs["wavelengths"],
+                  fwhm=obs["fwhm"], superpixel_scale=obs["superpixel_scale"])
+        require(len(captured) == 1, "Expected one actual assignment graph construction")
+        q, adjacency, _ = captured[0].to_legacy()
+    q, adjacency = q.to_sparse_coo().coalesce(), adjacency.to_sparse_coo().coalesce()
+    row_counts = torch.bincount(q.indices()[0], minlength=q.shape[0])
+    values = q.values().detach().double()
+    graph = {"mode": assignment or "frozen_SLIC", "pixels": q.shape[0], "nodes": q.shape[1],
+             "q_nnz": q._nnz(), "a_nnz": adjacency._nnz(), "q_sha256": tensor_hash(q),
+             "a_sha256": tensor_hash(adjacency), "row_max_support": int(row_counts.max()),
+             "mean_assignment_entropy": float(-(values * values.clamp_min(1e-30).log()).sum() / q.shape[0])}
+    if mode in ("residual_only", "x_region", "x_residual"):
+        residual = backbone.region_residual
+        observations = []
+
+        def inspect(_module, args, output):
+            clean, used_q = args
+            r = clean - broadcast_regions(used_q, output.region_features)
+            xr = clean - r
+            if mode == "residual_only":
+                require(torch.equal(output.cnn_input, r), "The CNN acquired a non-residual input")
+            if mode == "x_region":
+                # Use the original reconstruction directly to avoid cancellation.
+                xr = broadcast_regions(used_q, output.region_features)
+                require(torch.equal(output.cnn_input, residual.projection(torch.cat((clean, xr), dim=1))),
+                        "The regional hint arm changed its CNN input")
+            observations.append(float(r.double().square().sum() / clean.double().square().sum().clamp_min(1e-30)))
+
+        handle = residual.register_forward_hook(inspect)
+        try:
+            with torch.no_grad():
+                model(item["name"], obs["net_input"], obs["Q"], obs["A"], wavelengths=obs["wavelengths"],
+                      fwhm=obs["fwhm"], superpixel_scale=obs["superpixel_scale"])
+        finally:
+            handle.remove()
+        require(len(observations) == 1, "Missing measured residual")
+        graph["residual_energy_fraction"] = observations[0]
+    return graph
 
 
 def edge_weight_diagnostics(case, model, item, runtime):
@@ -514,6 +609,9 @@ def audit_case(reg, case, out, gpu, *, real=False):
     items = move_items(cpu_items, device)
 
     def calibrated(model):
+        if group == ASSIGNMENT_GROUP:
+            return assignment_control.calibrate(model, observation(model, items[target]), target=target,
+                                               binding=runtime.assignment_binding)[0]
         if group == "directions" and case["condition"] in local_control.LOCAL_MATCHES:
             calibrator, binding = local_control.calibrate, runtime.branch_local_binding
         elif group in EDGE_POINT_GROUPS:
@@ -585,10 +683,12 @@ def audit_case(reg, case, out, gpu, *, real=False):
     final_model = calibrated(model)
     _, probs = runtime.validation_snapshot(final_model, items)
     point_options = {"keep_correctness": reg["scope"] in POINT_SCOPES,
-                     "keep_points": reg["scope"] in EDGE_POINT_SCOPES}
+                     "keep_points": reg["scope"] in (*EDGE_POINT_SCOPES, ASSIGNMENT_SCOPE)}
     trained = {}
     if group in EDGE_POINT_GROUPS:
         trained["last"] = edge_weight_diagnostics(case, final_model, items[target], runtime)
+    if group == ASSIGNMENT_GROUP:
+        trained["last"] = assignment_diagnostics(case, final_model, items[target])
     final = validation_evidence(probs[target]["val"], item, last["history"][-1]["metrics"][target]["val"],
                                 **point_options)
     del final_model
@@ -597,6 +697,8 @@ def audit_case(reg, case, out, gpu, *, real=False):
     selected = validation_evidence(probs[target]["val"], item, minimum["metrics"][target]["val"], **point_options)
     if group in EDGE_POINT_GROUPS:
         trained["selected"] = edge_weight_diagnostics(case, primary, items[target], runtime)
+    if group == ASSIGNMENT_GROUP:
+        trained["selected"] = assignment_diagnostics(case, primary, items[target])
     guard()
     costs = {phase: read(out / f"{phase}.json") for phase in STEPS}
     require([costs[phase]["updates"] for phase in STEPS] == list(STEPS.values()), "Wrong phase updates")
@@ -620,20 +722,33 @@ def audit_case(reg, case, out, gpu, *, real=False):
                     "Parameter-free normalization acquired trainable state")
         else:
             activity = component_activity("edges", last["trace"])
+    if group == ASSIGNMENT_GROUP:
+        for name in last["trace"][0]["assignment_components"]:
+            records = [z["assignment_components"][name] for z in last["trace"]]
+            activity[name] = {"parameters": records[0]["parameters"],
+                              "gradient_steps": sum((r["gradient"] or 0) > 0 for r in records),
+                              "changed": sum(r["changed"] for r in records)}
+        mode, assignment = assignment_control.CONDITIONS[case["condition"]]
+        require(any(x["changed"] > 0 for n, x in activity.items() if n.startswith(assignment_control.GRAPH_PREFIX))
+                == (assignment == "learned")
+                and any(x["changed"] > 0 for n, x in activity.items() if n.startswith(assignment_control.RESIDUAL_PREFIX))
+                == (mode in ("x_residual", "x_region")), "Learned assignment or CNN residual update differs")
     return {"case": case, "inputs": inputs, "init": init, "steps": {"selected": selected_step, "last": 12},
             "endpoints": {"selected": selected, "last": final}, "head_updates": changes, "phases": costs,
             "exact_whole_split": True, "resume_completed_updates": 0, "audit_updates": 0,
             "trace_proof": digest(last["trace"]),
             **({"learned_components": activity} if reg["scope"] == FACTORIAL_SCOPE else {}),
             **({"diagnostics": {"initial": diagnostic, **trained}, "learned_components": activity}
-               if group in EDGE_POINT_GROUPS else {}),
+               if group in (*EDGE_POINT_GROUPS, ASSIGNMENT_GROUP) else {}),
             **({"diagnostics": diagnostic, "learned_components": component_activity(group, last["trace"])}
                if group in CONTROLS else {}),
             **({"exact_independent_step_one": True} if reg.get("arithmetic") else {})}
 
 
 def paired_initialization(rows, group="factorial"):
-    arms = (MESSAGE_CONDITIONS if group in (MESSAGE_GROUP, MESSAGE_SCOPE) else
+    arms = (assignment_control.CONDITIONS if group in (ASSIGNMENT_SCOPE, ASSIGNMENT_GROUP) else
+            I7_CONDITIONS if group in (I7_SCOPE, I7_GROUP) else
+            MESSAGE_CONDITIONS if group in (MESSAGE_GROUP, MESSAGE_SCOPE) else
             EDGE_WEIGHT_CONDITIONS if group in (EDGE_WEIGHT_GROUP, EDGE_WEIGHT_SCOPE) else DIRECTION_PARAMS if group == DIRECTION_SCOPE
             else REAL_PAIR if group == REAL_PAIR_SCOPE else CONTROLS.get(group, ARMS))
     for seed in SEEDS:
@@ -643,6 +758,26 @@ def paired_initialization(rows, group="factorial"):
                 and len({digest(row["inputs"]) for row in cases}) == 1, "Paired input or shared initialization differs")
         control = {r["case"]["arm"]: r for r in cases}
         by_arm = {r["case"]["arm"]: r["init"] for r in cases}
+        if group in (I7_SCOPE, I7_GROUP):
+            require({arm: init["parameters"] for arm, init in by_arm.items()} == I7_PARAMS,
+                    "Incorrect I7 trainable architecture")
+            continue
+        if group in (ASSIGNMENT_SCOPE, ASSIGNMENT_GROUP):
+            native = ("Grid0", "GridR", "Learn0", "LearnR")
+            require({arm: init["parameters"] for arm, init in by_arm.items()} == assignment_control.PARAMETERS
+                    and len({digest(by_arm[a]["graph_builder"]) for a in native}) == 1
+                    and by_arm["GridR"]["residual"] == by_arm["LearnR"]["residual"] == by_arm["XRegion"]["residual"],
+                    "Native controls differ in geometry, shared tensors or residual initialization")
+            endpoints = ("initial", "selected", "last") if group == ASSIGNMENT_SCOPE else (None,)
+            for endpoint in endpoints:
+                checks = [control[arm]["diagnostics"] for arm in native]
+                if endpoint:
+                    checks = [row[endpoint] for row in checks]
+                require(len({(x["a_sha256"], x["nodes"]) for x in checks}) == 1
+                        and checks[0]["q_sha256"] == checks[1]["q_sha256"]
+                        and checks[2]["row_max_support"] > 1 and checks[3]["row_max_support"] > 1,
+                        "Fixed A or native assignment control changed its registered geometry")
+            continue
         if group in (MESSAGE_GROUP, MESSAGE_SCOPE):
             require({arm: init["parameters"] for arm, init in by_arm.items()} == MESSAGE_PARAMS
                     and by_arm["I8"] == by_arm["I9-message"],
@@ -719,6 +854,8 @@ def make_tables(rows, group="factorial"):
     contrasts = CONTRASTS if group == "factorial" else {f"{a}-{b}": {a: 1, b: -1} for a, b in pairs}
     if group == FACTORIAL_SCOPE:
         contrasts = FACTORIAL_EFFECTS
+    if group == ASSIGNMENT_SCOPE:
+        contrasts = ASSIGNMENT_EFFECTS
     changes = []
     for row in rows:
         case = row["case"]
@@ -761,7 +898,7 @@ def make_tables(rows, group="factorial"):
     products = {"endpoints": endpoints, "per-class": per_class, "paired": paired, "paired-per-class": paired_class, "costs": costs}
     if group in POINT_SCOPES:
         products["correct-point-transitions"] = changes
-    return products
+    return {name: result for name, result in products.items() if result} if group == I7_SCOPE else products
 
 
 def stage(args, code, reg, out):
@@ -930,7 +1067,7 @@ def probe(args, code, out):
                "cases": rows, "registration_draft": pinned(out / "registration-draft.json"),
                "published_catalog": static_proof, "rebound_contexts_verified": 27,
                "real_updates": 0, "query_access": False, "fixed_graph": args.group != "edges", "device": args.gpu or "cpu",
-                   **({"group": args.group} if args.group in (*CONTROLS, MESSAGE_GROUP) else {}),
+                   **({"group": args.group} if args.group in (*CONTROLS, MESSAGE_GROUP, *REMAINING) else {}),
                **({"arithmetic": numeric, "kernel_calls": dict(calls)} if arithmetic else {})})
     verify(static_proof)
 
@@ -1034,14 +1171,14 @@ def main():
         if kind in ("run", "stage"):
             selector.add_argument("--seed", type=int, choices=SEEDS, required=kind == "stage")
             selector.add_argument("--arm", choices=sorted(set(ARMS).union(DIRECTION_PARAMS, EDGE_WEIGHT_CONDITIONS,
-                                                                   MESSAGE_CONDITIONS,
+                                                                   MESSAGE_CONDITIONS, assignment_control.CONDITIONS,
                                                                    *CONTROLS.values())),
                                   required=kind == "stage")
         if kind in ("run", "stage", "probe"):
             selector.add_argument("--gpu")
         if kind in ("prepare", "probe"):
             selector.add_argument("--strict-cuda", action="store_true")
-            groups = ("factorial", *CONTROLS, MESSAGE_GROUP) if kind == "probe" else ("factorial", *CONTROLS)
+            groups = ("factorial", *CONTROLS, MESSAGE_GROUP, *REMAINING) if kind == "probe" else ("factorial", *CONTROLS)
             selector.add_argument("--group", choices=groups, default="factorial")
         if kind == "run":
             selector.add_argument("--resource-wait-seconds", type=float, default=0)
@@ -1058,6 +1195,7 @@ def main():
             flavor.add_argument("--factorial", action="store_true")
             flavor.add_argument("--edge-weights", action="store_true")
             flavor.add_argument("--messages", action="store_true")
+            flavor.add_argument("--remaining", choices=REMAINING)
     args = parser.parse_args()
     code = code_snapshot()
     require(sys.platform == "linux" and __debug__ and code["commit"] == args.expected_commit, "Expected Linux frozen revision")
@@ -1086,8 +1224,8 @@ def main():
         path = out / "registration.json"
         prior = None if args.prior is None else {"path": str(Path(args.prior[0]).resolve()), "sha256": args.prior[1]}
         value = real_plan(catalog, publication, code, args.devices, prior=prior, factorial=args.factorial,
-                          edge_weights=args.edge_weights, messages=args.messages)
-        if args.edge_weights or args.messages:
+                          edge_weights=args.edge_weights, messages=args.messages, remaining=args.remaining)
+        if args.edge_weights or args.messages or args.remaining == I7_GROUP:
             group = value["group"]
             for arm, condition in EDGE_POINT_GROUPS[group].items():
                 _, factory, _ = edge_weight_adapter(condition)
@@ -1095,6 +1233,10 @@ def main():
                     model_seed=SEEDS[0], head_seed=SEEDS[0]+1000)
                 require(sum(p.numel() for p in model.parameters()) == value["parameters_by_arm"][arm],
                         "Pre-dispatch edge weight parameter count differs")
+        if args.remaining == ASSIGNMENT_GROUP:
+            for condition in assignment_control.CONDITIONS:
+                assignment_control.initialize(value["target"], value["method"], condition,
+                                              model_seed=SEEDS[0], head_seed=SEEDS[0]+1000)
         if args.factorial:
             for arm, (mode, fusion) in ARMS.items():
                 model, _ = initialize_position(value["target"], value["method"], fusion, mode=mode,
