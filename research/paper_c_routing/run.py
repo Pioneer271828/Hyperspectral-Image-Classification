@@ -51,6 +51,8 @@ def main():
     p.add_argument("--stop-after",type=int)
     p.add_argument("--profile",choices=("wp11_scratch","g3_pavia_xuzhou"),default="wp11_scratch")
     p.add_argument("--g3-root")
+    p.add_argument("--range-view",action="store_true")
+    p.add_argument("--descriptor",choices=("retained_fraction","approximate_span"),default="retained_fraction")
     a=p.parse_args()
     started=perf_counter()
     if sys.platform!="linux" or os.environ.get("CUDA_VISIBLE_DEVICES")!="":raise ValueError("Authorized Linux CPU only")
@@ -93,6 +95,8 @@ def main():
               "source_pretraining":"none: target-scratch ancestry","optimizer_updates":0,
               "calibration":False,"confirmation":False}
     contract.update(profile=a.profile,model_pins=model_pins)
+    contract.update(range_view=a.range_view,descriptor=a.descriptor,
+                    descriptor_quality="approximate delivered centers; no certified SRF or device calibration")
     if a.profile!="wp11_scratch":contract["source_pretraining"]="original Pavia source10000 + target1000, no new updates"
     pin=digest(contract)
     if out.exists():
@@ -140,11 +144,16 @@ def main():
         local=[(y-y0)*(x1-x0)+x-x0 for y in range(y0,y1) for x in range(x0,x1) if y*width+x in support]
         lab=[support[y*width+x] for y in range(y0,y1) for x in range(x0,x1) if y*width+x in support]
         n=len(r["wavelengths"])
-        for stride in (1,2,4):
-            pos=torch.arange(0,n,stride);x=torch.cat((r["x"][:,:,pos],r["x"][:,:,n:]),-1)
-            key=f"{r['id']}-stride{stride}"
-            requests.append(Request(key,"xuzhou",tensor_hash(x),str(r["id"]),f"stride{stride}",x,
-                                    r["wavelengths"][pos],None,None,r["scale"],len(pos)/n,True))
+        views=[(f"stride{s}",torch.arange(0,n,s)) for s in (1,2,4)]
+        if a.range_view:views.append(("range_le1000nm",torch.where(r["wavelengths"]<=1000)[0]))
+        for view_name,pos in views:
+            if len(pos)<4:raise ValueError("Range has insufficient retained bands")
+            x=torch.cat((r["x"][:,:,pos],r["x"][:,:,n:]),-1)
+            key=f"{r['id']}-{view_name}"
+            span=float((r["wavelengths"][pos[-1]]-r["wavelengths"][pos[0]])/(r["wavelengths"][-1]-r["wavelengths"][0]))
+            coverage=len(pos)/n if a.descriptor=="retained_fraction" else span
+            requests.append(Request(key,"xuzhou",tensor_hash(x),str(r["id"]),view_name,x,
+                                    r["wavelengths"][pos],None,None,r["scale"],coverage,True))
             indices.append(local);labels.append(lab)
     before={"full":state_hash(full),"light":state_hash(light.model)}
     input_hash=digest([r.identity for r in requests])
@@ -160,6 +169,9 @@ def main():
         setup={"input_hash":input_hash,"models":before,"reference":reference,"loading_ms":loading_ms,
                "reference_counts":warm["counts"],"reference_ms":warm["pipeline_ms"],"protected":protected,
                "released_support":len(support),"new_labels":0,"class_order":list(range(1,10))}
+        setup["requests"]=[{"key":r.key,"parent":r.parent,"band":r.band,"coverage":r.coverage,
+                            "bands":len(r.waves),"wavelength_min":float(r.waves.min()),
+                            "wavelength_max":float(r.waves.max())} for r in requests]
         new(out/"setup.json",setup)
     completed=0;results=[]
     for repeat in range(6):

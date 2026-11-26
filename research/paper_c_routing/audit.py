@@ -30,7 +30,8 @@ def main():
     for tile in tiles:
         y0,y1,x0,x1=tile["box"]
         ids=[(y*width+x,(y-y0)*(x1-x0)+x-x0) for y in range(y0,y1) for x in range(x0,x1) if y*width+x in lookup]
-        for stride in (1,2,4):points.append((f"{tile['id']}-stride{stride}",stride,ids))
+        bands=["stride1","stride2","stride4"]+(["range_le1000nm"] if contract.get("range_view") else [])
+        for band in bands:points.append((f"{tile['id']}-{band}",band,ids))
     audited=[];baselines={}
     for repeat in range(6):
         light=np.load(root/f"round-{repeat}-light.npz",allow_pickle=False)
@@ -38,7 +39,7 @@ def main():
         for arm in ("light","full","content","content_coverage","permuted_coverage","matched_random"):
             row=json.loads((root/f"round-{repeat}-{arm}.json").read_text())
             data=np.load(root/f"round-{repeat}-{arm}.npz",allow_pickle=False)
-            selected=set(row["full_plan"]);conf={s:np.zeros((9,9),dtype=np.int64) for s in (1,2,4)}
+            selected=set(row["full_plan"]);conf={s:np.zeros((9,9),dtype=np.int64) for s in bands}
             if row["counts"]["full_calls"]!=len(selected) or row["counts"]["graph_builds"]!=len(selected):
                 raise ValueError("Graph was computed for skipped heavy calls")
             if row["counts"]["light_calls"]!=(0 if arm=="full" else len(points)):
@@ -49,19 +50,19 @@ def main():
                 for global_id,local_id in ids:
                     conf[stride][lookup[global_id]-1, int(np.argmax(observed[local_id]))]+=1
             for stride,c in conf.items():
-                old=row["metrics"][f"stride{stride}"]
+                old=row["metrics"][stride]
                 if c.tolist()!=old["confusion"] or c.sum(1).tolist()!=old["support"]:
                     raise ValueError("Independent support/confusion differs")
                 recall=np.diag(c)/c.sum(1)
                 if not np.allclose(recall,old["recall"],rtol=0,atol=1e-14):raise ValueError("Recall differs")
             if arm=="matched_random":
                 reference=json.loads((root/f"round-{repeat}-content_coverage.json").read_text())["full_plan"]
-                for stride in (1,2,4):
+                for stride in bands:
                     cohort={k for k,s,_ in points if s==stride}
                     if len(selected&cohort)!=len(set(reference)&cohort):raise ValueError("Random call-rate strata differ")
             baselines.setdefault(arm,[]).append(row["pipeline_ms"])
             audited.append({"round":repeat,"arm":arm,"full_calls":len(selected),"graph_skips":len(points)-len(selected),
-                            "recall_values":27,"confusion_cells":243,"endpoint_probabilities_exact":True})
+                            "recall_values":9*len(bands),"confusion_cells":81*len(bands),"endpoint_probabilities_exact":True})
     value={"status":"PASSED","producer":contract["code"],"scope":contract["qualification"],
            "stages":audited,"actual_optimizer_updates":0,"neural_forwards_in_this_audit":0,
            "independent_confusion_cells":sum(x["confusion_cells"] for x in audited),
