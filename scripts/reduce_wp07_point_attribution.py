@@ -138,6 +138,12 @@ def main():
                     for label, field in [('content','nll_content'), ('mean','nll_trained_mean')]:
                         require(abs(mean(rows, field)-metrics[label][head][band]['nll'])<1e-12, 'Original independent NLL differs')
                     require(abs(mean(rows,'nll_content_weights_mean_coeff')-captured['metrics'][head][band]['nll'])<1e-12, 'Captured NLL differs')
+                    for prediction, score in [('pred_content',metrics['content'][head][band]),
+                            ('pred_trained_mean',metrics['mean'][head][band]),
+                            ('pred_content_weights_mean_coeff',captured['metrics'][head][band])]:
+                        confusion=[[0]*9 for _ in range(9)]
+                        for r in rows:confusion[r['class_id']-1][r[prediction]-1]+=1
+                        require(confusion==score['confusion_matrix'], 'Reconstructed original-point confusion differs')
             parameter_rows.extend({'scene':scene,'seed':seed,**r} for r in captured['parameter_changes'])
             for band in ('full','even_retained_positions'):
                 hist = [r for r in captured['gate_history'] if r['band']==band]
@@ -213,6 +219,7 @@ def main():
         'model_seeds_share_one_spatial_release':True,'optimizer_updates':0,'new_classifier_evaluations':0,
         'public_original_tile_or_native_indices':False,'all_point_decompositions_exact_within':1e-12,
         'independent_and_captured_NLL_reconstructed_within':1e-12,
+        'independent_and_captured_confusion_matrices_exact':108,
         'interpretation':'Reference-order-dependent decomposition; training residual is not a unique causal effect. Positive support and inverse HHI differ. Graph-input scalar proxy is not nonlinear classifier or full raw-image receptive field. No significance inference.',
         'elapsed_seconds':time.perf_counter()-start}
     (args.out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n');print(json.dumps(summary),flush=True)
