@@ -205,15 +205,14 @@ class _CudaGraphKernels(TorchFunctionMode):
 
 
 @contextmanager
-def arithmetic(protocol, gpu=None, *, kernel_calls=None):
+def arithmetic(protocol, gpu=None, *, kernel_calls=None, enforce_resource_thresholds=True):
     """Apply a versioned arithmetic protocol and restore process settings on exit."""
     require(protocol in (CPU, *CUDA_PROTOCOLS) and (gpu is None) == (protocol == CPU), 'Device/protocol mismatch')
     details = {'protocol': protocol, 'physical_uuid': gpu, 'device': 'cpu' if gpu is None else 'cuda:0',
                'torch': str(torch.__version__), 'torch_threads': 1,
                'machine': platform.machine(), 'host': platform.node()}
     if gpu is not None:
-        # Gate before creating a CUDA context and require the coordinator's isolation.
-        row = gate(gpu)
+        row = gate(gpu) if enforce_resource_thresholds else snapshot(gpu)
         require(os.environ.get('CUDA_VISIBLE_DEVICES') == gpu and
                 os.environ.get('CUBLAS_WORKSPACE_CONFIG') == WORKSPACE,
                 'Expose only the assigned UUID with the registered cuBLAS workspace')

@@ -1,6 +1,7 @@
 """Register and verify the fixed-Q/A WP04 scratch factorial through the bounded target runtime."""
 import argparse
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext, redirect_stdout
 import csv
 import ctypes
@@ -74,6 +75,9 @@ ADAPTERS = {
     "directions": (interaction_runtime.prepare, interaction, "interaction_binding"),
     "edges": (edge_runtime.prepare, edge, "edge_binding"),
 }
+REAL_PAIR_SCOPE = "real_dev_c2g_paired"
+REAL_PAIR = ("off", "C2G")
+REAL_PAIR_UPDATES = len(SEEDS) * len(REAL_PAIR) * (STEPS["whole"] + STEPS["prefix"] + STEPS["resume"])
 
 
 def require(ok, message):
@@ -125,11 +129,36 @@ def registration(args, code):
     path = verify({"path": str(Path(args.registration[0]).resolve()), "sha256": args.registration[1]})
     value = read(path)
     catalog = verify(value["catalog"])
+    if value["scope"] == REAL_PAIR_SCOPE:
+        published = value["published_catalog"]
+        verify(published)
+        require(published["sha256"] == REAL_CATALOG_SHA
+                and catalog == path.parent / "rebound-contexts" / "manifest.json"
+                and value == real_plan(catalog, published, code, [value["devices"][str(seed)] for seed in SEEDS]),
+                "Real paired development registration or publication differs")
+        return value
     require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"),
                           group=value.get("group", "factorial"))
             and catalog == path.parent / "contexts" / "manifest.json",
             "Only the generated synthetic fixture registration can run optimization")
     return value
+
+
+def real_plan(catalog, published, code, devices):
+    require(len(devices) == len(SEEDS) and len(set(devices)) == len(SEEDS)
+            and all("GPU-" + str(UUID(gpu.removeprefix("GPU-"))) == gpu for gpu in devices),
+            "Assign one distinct physical GPU UUID to each paired seed")
+    base = plan(catalog, code, REAL_PAIR_SCOPE, arithmetic=p4.CUDA_FP64_WEIGHT, group="directions")
+    return {**base, "cases": [c for c in base["cases"] if c["arm"] in REAL_PAIR],
+            "published_catalog": published, "devices": dict(zip(map(str, SEEDS), devices, strict=True)),
+            "real_updates_authorized": REAL_PAIR_UPDATES, "resource_policy": "actual_cuda_allocation",
+            "role_scope": "published_train_dev_only", "execution": str(catalog.parent.parent / "execution")}
+
+
+def check_real_lane(reg, seed, gpu, lane):
+    if reg["scope"] == REAL_PAIR_SCOPE:
+        require(gpu == reg["devices"].get(str(seed)) and lane == Path(reg["execution"]) / str(seed),
+                "Production worker does not match its registered seed, GPU or output directory")
 
 
 def bound(reg, case, out, device):
@@ -351,7 +380,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
 
 
 def paired_initialization(rows, group="factorial"):
-    arms = CONTROLS.get(group, ARMS)
+    arms = REAL_PAIR if group == REAL_PAIR_SCOPE else CONTROLS.get(group, ARMS)
     for seed in SEEDS:
         cases = [row for row in rows if row["case"]["seed"] == seed]
         require({row["case"]["arm"] for row in cases} == set(arms)
@@ -359,11 +388,11 @@ def paired_initialization(rows, group="factorial"):
                 and len({digest(row["inputs"]) for row in cases}) == 1, "Paired input or shared initialization differs")
         control = {r["case"]["arm"]: r for r in cases}
         by_arm = {r["case"]["arm"]: r["init"] for r in cases}
-        if group == "directions":
+        if group in ("directions", REAL_PAIR_SCOPE):
             def head(arm, name):
                 return control[arm]["diagnostics"]["initial_head_sha256"][name]
             require(head("C2G", "cnn") == head("off", "cnn")
-                    and head("G2C", "graph") == head("off", "graph"),
+                    and (group == REAL_PAIR_SCOPE or head("G2C", "graph") == head("off", "graph")),
                     "A disabled message direction changed the non-receiving branch")
             continue
         if group == "edges":
@@ -384,8 +413,8 @@ def paired_initialization(rows, group="factorial"):
 def make_tables(rows, group="factorial"):
     endpoints, per_class, paired, paired_class, costs = [], [], [], [], []
     selected = {}
-    contrasts = CONTRASTS if group == "factorial" else {
-        f"{arm}-{base}": {arm: 1, base: -1} for arm, base in CONTROL_CONTRASTS[group]}
+    pairs = (("C2G", "off"),) if group == REAL_PAIR_SCOPE else CONTROL_CONTRASTS.get(group, ())
+    contrasts = CONTRASTS if group == "factorial" else {f"{a}-{b}": {a: 1, b: -1} for a, b in pairs}
     for row in rows:
         case = row["case"]
         for endpoint, heads in row["endpoints"].items():
@@ -423,13 +452,16 @@ def make_tables(rows, group="factorial"):
 def stage(args, code, reg, out):
     case = next(c for c in reg["cases"] if (c["seed"], c["arm"]) == (args.seed, args.arm))
     gpu, phase = args.gpu, args.phase
+    check_real_lane(reg, args.seed, gpu, out.parent)
     p4.check_inherited_lease(args.matrix_fd, out.parent / ".matrix.lock")
     require(out == out.parent / f"{case['seed']}-{case['arm']}" and
             not (out / f"{phase}.json").exists(), "Wrong or already committed operation")
     numeric = reg.get("arithmetic")
     require(numeric is None or gpu is not None, "Strict arithmetic requires a registered physical GPU")
     calls = Counter()
-    compute = p4.arithmetic(numeric, gpu, kernel_calls=calls) if numeric else nullcontext(None)
+    compute = (p4.arithmetic(numeric, gpu, kernel_calls=calls,
+                              enforce_resource_thresholds=reg["scope"] != REAL_PAIR_SCOPE)
+               if numeric else nullcontext(None))
     lease = physical_lease(gpu, inherited_fd=args.lease_fd) if gpu else nullcontext()
     with lease, compute as details:
         inventory = (p4.snapshot(gpu) if numeric else p4.gate(gpu)) if gpu else None
@@ -465,10 +497,12 @@ def stage(args, code, reg, out):
 
 
 def run(args, code, reg, out):
-    out.mkdir(exist_ok=True)
     gpu = args.gpu
+    check_real_lane(reg, args.seed, gpu, out)
+    out.mkdir(exist_ok=True)
     require(reg.get("arithmetic") is None or gpu, "Strict arithmetic requires a registered physical GPU")
-    chosen = [c for c in reg["cases"] if args.arm is None or (c["seed"], c["arm"]) == (args.seed, args.arm)]
+    chosen = [c for c in reg["cases"] if (args.seed is None or c["seed"] == args.seed)
+              and (args.arm is None or c["arm"] == args.arm)]
     require(chosen, "No selected registered case")
     lock = physical_lease(gpu) if gpu else nullcontext()
     with p4.lease(out / ".matrix.lock") as matrix_lock, lock as lease:
@@ -500,7 +534,7 @@ def run(args, code, reg, out):
                         if result.returncode != 75 or perf_counter()-started >= args.resource_wait_seconds:
                             result.check_returncode()
                         sleep(5)
-        if args.arm is not None:
+        if args.seed is not None:
             return
         rows = [read(out / f"{c['seed']}-{c['arm']}" / "audit.json") for c in reg["cases"]]
         group = reg.get("group", "factorial")
@@ -530,7 +564,7 @@ def run(args, code, reg, out):
         print(json.dumps({"status": "passed", "evidence": pinned(out / "evidence.json")}))
 
 
-def probe(args, code, out):
+def rebind(args, code, out):
     published = verify({"path": str(Path(args.manifest[0]).resolve()), "sha256": args.manifest[1]})
     require(args.manifest[1] == REAL_CATALOG_SHA, "Expected the independently admitted Xuzhou context")
     out.mkdir(exist_ok=False)
@@ -547,7 +581,11 @@ def probe(args, code, out):
             == [{k: v for k, v in row.items() if k != "sha256"} for row in original["contexts"]],
             "Rebound support roles, graph or observations changed")
     static_proof = pinned(published)
-    catalog = rebound / "manifest.json"
+    return rebound / "manifest.json", static_proof
+
+
+def probe(args, code, out):
+    catalog, static_proof = rebind(args, code, out)
     arithmetic = p4.CUDA_FP64_WEIGHT if args.strict_cuda else None
     require(arithmetic is None or args.gpu, "Strict real probe requires a registered physical GPU")
     reg = plan(catalog, code, "real_zero_update_draft", arithmetic=arithmetic, group=args.group)
@@ -582,15 +620,69 @@ def probe(args, code, out):
     verify(static_proof)
 
 
+def dispatch_real(args, code, reg, out):
+    require(reg["scope"] == REAL_PAIR_SCOPE and out == Path(reg["execution"]),
+            "Expected the registered paired development output")
+    out.mkdir(exist_ok=True)
+
+    def lane(seed):
+        gpu = reg["devices"][str(seed)]
+        command = [sys.executable, "-B", __file__, "--expected-commit", code["commit"], "run",
+                   "--registration", *args.registration, "--out", str(out / str(seed)), "--seed", str(seed),
+                   "--gpu", gpu]
+        env = {**os.environ, "CUDA_VISIBLE_DEVICES": gpu, "CUBLAS_WORKSPACE_CONFIG": p4.WORKSPACE}
+        with (out / f"{seed}.log").open("ab") as log:
+            return subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
+
+    with p4.lease(out / ".dispatch.lock"):
+        with ThreadPoolExecutor(max_workers=len(SEEDS)) as pool:
+            exits = dict(zip(map(str, SEEDS), pool.map(lane, SEEDS), strict=True))
+        receipt = {"lane_exit_codes": exits, "devices": reg["devices"]}
+        if any(exits.values()):
+            failed = out / f"failed-{os.getpid()}.json"
+            write_json(failed, receipt)
+            raise RuntimeError(f"Incomplete paired run, see {failed} and each lane log")
+        rows = []
+        case_pins = []
+        for case in reg["cases"]:
+            path = out / str(case["seed"]) / f"{case['seed']}-{case['arm']}" / "audit.json"
+            rows.append(read(path))
+            case_pins.append(pinned(path))
+        paired_initialization(rows, REAL_PAIR_SCOPE)
+        actual_updates = sum(phase["updates"] for row in rows for phase in row["phases"].values())
+        require(actual_updates == reg["real_updates_authorized"], "Real recovery budget differs")
+        require_frozen_code(code)
+        evidence = out / "evidence.json"
+        if evidence.exists():
+            previous = read(evidence)
+            require(previous["case_pins"] == case_pins, "Paired case evidence changed")
+            for pin in previous["tables"]:
+                verify(pin)
+        else:
+            products = make_tables(rows, REAL_PAIR_SCOPE)
+            for name, data in products.items():
+                with (out / f"{name}.csv").open("w", encoding="utf-8", newline="") as stream:
+                    writer = csv.DictWriter(stream, fieldnames=list(data[0]))
+                    writer.writeheader()
+                    writer.writerows(data)
+            write_json(evidence, {**receipt, "code": identity(code), "scope": reg["scope"],
+                       "registration": dict(zip(("path", "sha256"), args.registration, strict=True)),
+                       "case_pins": case_pins, "tables": [pinned(out / f"{name}.csv") for name in products],
+                       "real_updates": actual_updates, "research_updates": len(rows) * STEPS["whole"],
+                       "query_access": False})
+        print(json.dumps(pinned(evidence)))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
     sub = parser.add_subparsers(dest="action", required=True)
-    for kind in ("prepare", "run", "stage", "probe"):
+    for kind in ("prepare", "run", "stage", "probe", "prepare-real-pairs", "dispatch-real-pairs"):
         selector = sub.add_parser(kind)
         selector.add_argument("--out", required=True, type=Path)
-        if kind in ("run", "stage"):
+        if kind in ("run", "stage", "dispatch-real-pairs"):
             selector.add_argument("--registration", required=True, nargs=2)
+        if kind in ("run", "stage"):
             selector.add_argument("--seed", type=int, choices=SEEDS, required=kind == "stage")
             selector.add_argument("--arm", choices=sorted(set(ARMS).union(*(set(arms) for arms in CONTROLS.values()))),
                                   required=kind == "stage")
@@ -605,8 +697,10 @@ def main():
             selector.add_argument("--lease-fd", type=int)
             selector.add_argument("--matrix-fd", required=True, type=int)
             selector.add_argument("--phase", required=True, choices=(*STEPS, "audit"))
-        if kind == "probe":
+        if kind in ("probe", "prepare-real-pairs"):
             selector.add_argument("--manifest", nargs=2, required=True)
+        if kind == "prepare-real-pairs":
+            selector.add_argument("--devices", nargs=len(SEEDS), required=True)
     args = parser.parse_args()
     code = code_snapshot()
     require(sys.platform == "linux" and __debug__ and code["commit"] == args.expected_commit, "Expected Linux frozen revision")
@@ -630,9 +724,18 @@ def main():
         print(json.dumps(pinned(path)))
     elif args.action == "probe":
         probe(args, code, out)
+    elif args.action == "prepare-real-pairs":
+        catalog, publication = rebind(args, code, out)
+        path = out / "registration.json"
+        write_json(path, real_plan(catalog, publication, code, args.devices))
+        print(json.dumps(pinned(path)))
+    elif args.action == "dispatch-real-pairs":
+        dispatch_real(args, code, registration(args, code), out)
     else:
-        require((args.seed is None) == (args.arm is None), "Specify a seed and arm together")
         value = registration(args, code)
+        require(args.arm is None or args.seed is not None, "An arm requires its model seed")
+        require(value["scope"] == REAL_PAIR_SCOPE or (args.seed is None) == (args.arm is None),
+                "Specify a synthetic seed and arm together")
         try:
             (stage if args.action == "stage" else run)(args, code, value, out)
         except p4.ResourceUnavailable as exc:
