@@ -35,7 +35,7 @@
       "license": "UNCONFIRMED",
       "scope": "No root or ZIP license member; inspected source/README entries have no explicit license/attribution lines. Nested superpixel code and binaries are not thereby licensed.",
       "model_path": "DCG_Net/DCG_Net.py",
-      "model_sha256": "8337ecb2a1bdbc4351720c4d7ea9126b540c6f9d280d9d120c7045b14433fb17c",
+      "model_sha256": "8337ecb2a1bdbc4351720c4d7ea9126b540c6f9d280d9d120c7045b1443fb17c",
       "integration_gaps": ["torch_geometric knn_graph dependency", "global cuda0 device", "multiscale graph/preprocessing and local observation access need adaptation", "third-party superpixel source/binary provenance"],
       "array_or_gt_members_decoded": 0,
       "upstream_executed": false,
