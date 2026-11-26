@@ -33,13 +33,15 @@ def main():
     delta=np.mean([[[100*(x-y) for x,y in zip(c['metrics']['content_coverage'][v]['recall'],c['metrics']['content'][v]['recall'])]
                      for v in views] for c in cases],axis=0)
     fig,ax=plt.subplots(figsize=(10.6,4.5),layout='constrained')
-    image=ax.imshow(delta,cmap='RdBu',vmin=-50,vmax=50,aspect='auto')
+    limit=max(10.,float(10*np.ceil(np.abs(delta).max()/10)))
+    image=ax.imshow(delta,cmap='RdBu',vmin=-limit,vmax=limit,aspect='auto')
     ax.set_xticks(range(9),[str(x) for x in range(1,10)]);ax.set_xlabel('Numeric class ID; semantic remapping unresolved')
     ax.set_yticks(range(4),['Native436','Stride2 (218)','Stride4 (109)','Approx. center cut (122)'])
     for y in range(4):
         for x in range(9):ax.text(x,y,f'{delta[y,x]:+.1f}',ha='center',va='center',fontsize=10,
-                                  color='white' if abs(delta[y,x])>=30 else 'black')
-    ax.set_title('Coverage minus content: paired recall difference (percentage points)\nDevelopment only; same 45 labels/view; mean of 3 original training seeds',pad=12)
+                                  color='white' if abs(delta[y,x])>=.6*limit else 'black')
+    mode=cases[0].get('normalization','released_development')
+    ax.set_title('Coverage minus content: paired recall difference (percentage points)\nDevelopment only; same 45 labels/view; mean of 3 original training seeds\nNormalization: '+mode,pad=12,fontsize=11)
     fig.colorbar(image,ax=ax,label='Recall difference (pp)',shrink=.8)
     for suffix in ('svg','png'):fig.savefig(out/f'development-recall-delta01.{suffix}',dpi=160)
     plt.close(fig)

@@ -14,13 +14,16 @@ def main():
         roster=setup['requests'];coverage={r['key']:r['coverage'] for r in roster};m=row['margin']
         selected=set(row['full_plan']);others=set(coverage)-selected
         if not all(coverage[i]<coverage[j] for i in selected for j in others):
-            raise ValueError('This sufficient complete-cohort separation certificate does not apply')
+            records.append({'case':case,'certificate_applies':False,
+                            'reason':'Selected requests are not strictly separated by coverage alone; no complete-cohort separation claim is made',
+                            'margin_range':[min(m.values()),max(m.values())]})
+            continue
         boundary=max([0.]+[(m[i]-m[j])/(coverage[j]-coverage[i]) for i in selected for j in others])
         original_scores={k:1-m[k]+1-coverage[k] for k in coverage}
         minimum_gap=min(original_scores[i]-original_scores[j] for i in selected for j in others)
         if boundary>=1 or minimum_gap<=0:raise ValueError('Original unit coverage weight does not strictly separate cohorts')
         by_view={v:[r['key'] for r in roster if r['band']==v] for v in {r['band'] for r in roster}}
-        records.append({'case':case,'descriptor':json.loads((root/'contract.json').read_text())['descriptor'],
+        records.append({'case':case,'certificate_applies':True,'descriptor':json.loads((root/'contract.json').read_text())['descriptor'],
                         'margin_range':[min(m.values()),max(m.values())],
                         'within_view_descriptor_constant':all(len({coverage[k] for k in keys})==1 for keys in by_view.values()),
                         'full_selected_views':sorted(v for v,keys in by_view.items() if set(keys)<=selected),
@@ -31,7 +34,7 @@ def main():
     value={'schema':'paper_c_score_scale_diagnosis_v1','records':records,'label_values_read':0,
            'new_neural_forwards':0,'optimizer_updates':0,'post_hoc':True,
            'selection':'none; original six-arm policy and every result retained; no replacement weight is chosen',
-           'conclusion':'At unit coverage weight, observed margin variation cannot prevent complete cohort selection. Conditional matched random then has no alternate eligible plan; this comparison cannot identify a coverage-information benefit.'}
+           'conclusion':'For cases with a positive certificate, unit coverage weight forces complete observed-cohort selection; conditional matched random has no alternate eligible plan. Nonseparable cases are left explicit and require their own route/paired-output analysis.'}
     with Path(a.out).open('x') as f:json.dump(value,f,indent=2,allow_nan=False)
     print(json.dumps({'status':'EXPLAINED_OBSERVED_SATURATION','cases':len(records),'labels_read':0,'optimizer_updates':0}))
 
