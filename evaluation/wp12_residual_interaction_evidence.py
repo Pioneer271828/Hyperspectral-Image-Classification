@@ -251,6 +251,23 @@ def intake(root, residual_pin, joint_pin, history_pin):
     for name, design in FACTORIALS.items():
         factorials[name] = {"effects": _factorial(cases, design),
             "devices": {str(seed): {arm: cases[seed, arm]["device"] for arm in design} for seed in SEEDS}}
+    component_pairs = (("I1", "I7", "backbone.interaction."), ("I2", "I8", "backbone.interaction."),
+                       ("I6", "I7", "backbone.edge_updater."), ("I6", "I8", "backbone.edge_updater."),
+                       ("I7", "I8", "backbone.edge_updater."))
+    alignment = {}
+    for seed in SEEDS:
+        matched = {}
+        for a, b, prefix in component_pairs:
+            t1 = cases[seed, a]["initial"]["additional_tensors"]
+            t2 = cases[seed, b]["initial"]["additional_tensors"]
+            first = {k: v for k, v in t1.items() if k.startswith(prefix)}
+            second = {k: v for k, v in t2.items() if k.startswith(prefix)}
+            require(first and set(first) == set(second), "Unexpected component initialization schema")
+            matched[f"{a}/{b}"] = {"equal": [k for k in first if first[k] == second[k]],
+                                   "different": [k for k in first if first[k] != second[k]]}
+        require(not matched["I1/I7"]["different"] and not matched["I2/I8"]["different"],
+                "The standalone and joint message tensors changed initialization")
+        alignment[str(seed)] = matched
     return {"schema": "wp12_wp04_residual_assignment_and_direct_joint_v1",
             "qualification": "paired_released_development_12_steps", "query_access": False,
             "production_accuracy_qualified": False, "history": history_pin, "sources": [residual_pin, joint_pin],
@@ -258,7 +275,7 @@ def intake(root, residual_pin, joint_pin, history_pin):
             "research_updates": residual["research_updates"] + joint["research_updates"],
             "real_updates": residual["real_updates"] + joint["real_updates"], "historical_new_updates": 0,
             "table_counts": {ASSIGNMENT_SCOPE: rcounts, I7_SCOPE: icounts},
-            "pairs": pairs, "factorials": factorials,
+            "pairs": pairs, "factorials": factorials, "component_initialization": alignment,
             "cases": [{k: v for k, v in row.items() if k not in ("contract", "initial")} for row in rows]}
 
 
