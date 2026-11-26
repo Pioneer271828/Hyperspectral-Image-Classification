@@ -1,0 +1,27 @@
+{
+  "schema": "original_g3_p2_frozen_single_source_pair_v1",
+  "source": "paviaU",
+  "target": "xuzhou",
+  "support_sha256": "913732b4e514ff99e16d8df3d88585b1d11e42fab9b2f0fe8df44a3856195dd6",
+  "profiles": {
+    "2036": {
+      "model.pt": "f11cc09b95fbd8b1009de73ee080e7fc9f14a23ff92ac84ff977dfdffdb5c4c7",
+      "model.pt.json": "5b926c690cce695b68537acde6de4ab264d671312f35090e6e36d39bdcfe3252",
+      "frozen-task.json": "4623ffa9844ae1f4247e075e4edefd99fc90200e49f40cd9f81e24dddb27d4e0",
+      "target-checkpoints-frozen.json": "d1bc92212478116859cab29455a3a62a34c16efa27ff335da6e9b8b997f4fab2"
+    },
+    "2046": {
+      "model.pt": "21f679efa535609ab8e8daf1cd4fe3f1239e49fb6d20f3168a1d60476724153a",
+      "model.pt.json": "fb4a4b23ee7a179689dc605caee3ba4e1a7f2c21db153508b2b29fe56ee7e23f",
+      "frozen-task.json": "929be06fa950a10d743d732478d05bd519a344cdb345c6375b5d0d64b5b45573",
+      "target-checkpoints-frozen.json": "ecfa2f48adc3b8f0c414f6904111fa8bd8efece4f5f106e6d7c412bc3004dbc3"
+    },
+    "2056": {
+      "model.pt": "254307876c58110de6f8a5534d5138a46f99a4ab44cd7dcd08696029fdf6c9f9",
+      "model.pt.json": "f981837ebacc91c0d91b208e469d149b56dac0a85b4a74b21a0c96f013278054",
+      "frozen-task.json": "938c69555b676f3f1b78e79fc91fde055896f199b24f6d5b1131dccdaf2a4f9a",
+      "target-checkpoints-frozen.json": "e3d7af67f413b9d2fe209dddc0bf364c9168f8f9a892e83b46278949a37c2f82"
+    }
+  },
+  "scope": "Original trained CNN branch copied as cheap model; zero new fitting. Same support/split across original model seeds; not independent task or sensor replicates."
+}

@@ -15,7 +15,10 @@ SOURCES={
  "whu-honghu":{"device":"Headwall Nano-Hyperspec17mm,2017-11-20","evidence":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm","gap":"class21 independent geography; detector calibration and retained map"},
  "whu-longkou":{"device":"Headwall Nano-Hyperspec8mm,2018-07-17","evidence":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm","gap":"new role release and local version/semantic binding; serial device unknown"},
  "whu-hanchuan":{"device":"Headwall Nano-Hyperspec17mm,2016-06-17","evidence":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm","gap":"admitted image payload and role release; serial device unknown"},
- "laoyuhesidi":{"device":None,"evidence":"loadData/dataset_registry.py: registry only","gap":"original acquisition/device publication, payload version, semantics and role release"}}
+ "laoyuhesidi":{"device":"PROVISIONAL candidate: OHS satellite product, not bound to local file",
+                "evidence":"https://doi.org/10.3390/rs17050763",
+                "primary_origin_reference":"https://doi.org/10.1109/JSTARS.2024.3403863",
+                "gap":"AFGNet experiment reports391x591x32/8classes/10m/May2024 but project historical inventory391x550x32; no exact local payload/label-map/license/role binding, referenced origin not independently verified"}}
 
 
 def build(table):
