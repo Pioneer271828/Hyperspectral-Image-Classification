@@ -29,7 +29,7 @@ KEY = "edge_target_binding"
 CALIBRATION_KEY = "edge_target_calibration"
 CONDITIONS = ("none", "gated", "graph", "gated_graph", "joint", "gated_joint",
               "add_joint", "global_joint")
-RESEARCH_CONTROLS = ("message_global_joint", "capacity_matched_graph")
+RESEARCH_CONTROLS = ("message_global_joint", "capacity_matched_graph", "gated_matched_joint")
 PREFIXES = ("backbone.interaction.", "backbone.edge_updater.")
 
 
@@ -125,6 +125,10 @@ def initialize(target, method, condition, *, model_seed, head_seed, source_spec=
             raise ValueError("Only new M7 target tensors may extend the unchanged base state")
         state.update({n: v.detach().clone() for n, v in original.items()})
         model.load_state_dict(state, strict=True)
+        if condition == "gated_matched_joint":
+            canonical, _ = initialize(target, method, "joint", model_seed=model_seed,
+                                      head_seed=head_seed, source_spec=source_spec, device=device)
+            model.backbone.edge_updater.load_state_dict(canonical.backbone.edge_updater.state_dict(), strict=True)
     parameters = {n: p.numel() for n, p in model.named_parameters() if n.startswith(PREFIXES)}
     binding = {"policy": POLICY, "target": target, "method": method, "condition": condition,
         "model_seed": model_seed, "head_seed": head_seed, "interaction_config": config,

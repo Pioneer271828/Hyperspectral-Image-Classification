@@ -106,15 +106,20 @@ I7_GROUP = "direct_joint"
 I7_SCOPE = "real_dev_direct_joint_edge"
 I7_CONDITIONS = {"I7": "add_joint"}
 I7_PARAMS = {"I7": 111872}
+MATCHED_GROUP = "matched_joint_factorial"
+MATCHED_SCOPE = "real_dev_matched_joint_factorial"
+MATCHED_CONDITIONS = {"M01": "joint", "M11": "gated_matched_joint"}
+MATCHED_PARAMS = {"M00": 61696, "M10": 120194, "M01": 78592, "M11": 137090}
 REMAINING = {ASSIGNMENT_GROUP: (ASSIGNMENT_SCOPE, assignment_control.PARAMETERS,
                               "frozen_SLIC_and_native_grid_fixed_A_per_stratum"),
-             I7_GROUP: (I7_SCOPE, I7_PARAMS, "fixed_Q_and_A_joint_edge_values")}
+             I7_GROUP: (I7_SCOPE, I7_PARAMS, "fixed_Q_and_A_joint_edge_values"),
+             MATCHED_GROUP: (MATCHED_SCOPE, MATCHED_PARAMS, "fixed_Q_and_A_common_gated_joint_initialization")}
 ASSIGNMENT_EFFECTS = {"GridR-Grid0": {"GridR": 1, "Grid0": -1},
                       "LearnR-Learn0": {"LearnR": 1, "Learn0": -1},
                       "(LearnR-Learn0)-(GridR-Grid0)": {"LearnR": 1, "Learn0": -1, "GridR": -1, "Grid0": 1}}
 EDGE_POINT_GROUPS = {EDGE_WEIGHT_GROUP: EDGE_WEIGHT_CONDITIONS, MESSAGE_GROUP: MESSAGE_CONDITIONS,
-                     I7_GROUP: I7_CONDITIONS}
-EDGE_POINT_SCOPES = (EDGE_WEIGHT_SCOPE, MESSAGE_SCOPE, I7_SCOPE)
+                     I7_GROUP: I7_CONDITIONS, MATCHED_GROUP: MATCHED_CONDITIONS}
+EDGE_POINT_SCOPES = (EDGE_WEIGHT_SCOPE, MESSAGE_SCOPE, I7_SCOPE, MATCHED_SCOPE)
 POINT_SCOPES = (FACTORIAL_SCOPE, *EDGE_POINT_SCOPES, ASSIGNMENT_SCOPE)
 REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE, *POINT_SCOPES)
 FACTORIAL_PARAMS = {"B0": 61696, "R": 69952, "F": 61825, "R+F": 70081, "Bcap": 69952, "Bcap+F": 70081}
@@ -158,6 +163,9 @@ def verify(pin):
 
 
 def roster(group="factorial"):
+    if group == MATCHED_GROUP:
+        return [{"seed": seed, "arm": arm, "condition": condition} for seed in SEEDS
+                for arm, condition in MATCHED_CONDITIONS.items() if (seed, arm) != (2048, "M01")]
     if group == ASSIGNMENT_GROUP:
         return [{"seed": seed, "arm": arm, "condition": arm} for seed in SEEDS for arm in assignment_control.CONDITIONS]
     if group in EDGE_POINT_GROUPS:
@@ -253,9 +261,12 @@ def real_plan(catalog, published, code, devices, *, prior=None, factorial=False,
         require(prior is None, "Historical controls are admitted separately and acquire no updates")
         scope, parameters, graph = REMAINING[remaining]
         cases = roster(remaining)
-        return {**base, "scope": scope, "group": remaining, "graph": graph,
+        result = {**base, "scope": scope, "group": remaining, "graph": graph,
                 "cases": cases, "parameters_by_arm": parameters,
                 "real_updates_authorized": len(cases) * sum(STEPS.values())}
+        if remaining == MATCHED_GROUP:
+            result["common_initialization"] = pinned(catalog.parent.parent / "common-initialization.json")
+        return result
     if prior is None:
         return base
     require(prior["sha256"] == PRIOR_EVIDENCE, "Expected the independently accepted I0/I3 evidence")
@@ -333,6 +344,20 @@ def model_snapshot(model, group="factorial"):
             "parameters": sum(p.numel() for p in model.parameters()),
             "residual_parameters": sum(p.numel() for k, p in model.named_parameters() if k.startswith(EXTRA[0])),
             "fusion_parameters": sum(p.numel() for k, p in model.named_parameters() if k.startswith(EXTRA[1]))}
+
+
+def freeze_matched_initialization(out):
+    entries = {}
+    for seed in SEEDS:
+        model, _ = edge.initialize("xuzhou", METHODS[0], "gated_matched_joint", model_seed=seed,
+                                   head_seed=seed+1000)
+        init = model_snapshot(model, MATCHED_GROUP)
+        path = out / f"common-{seed}.pt"
+        tensors = {n: t.detach().cpu() for n, t in model.state_dict().items() if n.startswith(edge.PREFIXES)}
+        torch.save(tensors, path)
+        entries[str(seed)] = {"tensors": pinned(path), "initialization": init}
+    write_json(out / "common-initialization.json", {"schema": "wp04_common_message_edge_tensors_v1",
+               "seeds": entries, "inactive_role": "registered_tensor_artifact_no_forward_or_optimizer_presence"})
 
 
 def move_items(items, device):
@@ -746,6 +771,11 @@ def audit_case(reg, case, out, gpu, *, real=False):
 
 
 def paired_initialization(rows, group="factorial"):
+    if group in (MATCHED_GROUP, MATCHED_SCOPE):
+        require([row["case"] for row in rows] == roster(MATCHED_GROUP)
+                and all(row["init"]["parameters"] == MATCHED_PARAMS[row["case"]["arm"]] for row in rows)
+                and len({digest(row["inputs"]) for row in rows}) == 1, "Invalid new matched matrix roster")
+        return
     arms = (assignment_control.CONDITIONS if group in (ASSIGNMENT_SCOPE, ASSIGNMENT_GROUP) else
             I7_CONDITIONS if group in (I7_SCOPE, I7_GROUP) else
             MESSAGE_CONDITIONS if group in (MESSAGE_GROUP, MESSAGE_SCOPE) else
@@ -898,7 +928,7 @@ def make_tables(rows, group="factorial"):
     products = {"endpoints": endpoints, "per-class": per_class, "paired": paired, "paired-per-class": paired_class, "costs": costs}
     if group in POINT_SCOPES:
         products["correct-point-transitions"] = changes
-    return {name: result for name, result in products.items() if result} if group == I7_SCOPE else products
+    return {name: result for name, result in products.items() if result} if group in (I7_SCOPE, MATCHED_SCOPE) else products
 
 
 def stage(args, code, reg, out):
@@ -1171,7 +1201,7 @@ def main():
         if kind in ("run", "stage"):
             selector.add_argument("--seed", type=int, choices=SEEDS, required=kind == "stage")
             selector.add_argument("--arm", choices=sorted(set(ARMS).union(DIRECTION_PARAMS, EDGE_WEIGHT_CONDITIONS,
-                                                                   MESSAGE_CONDITIONS, assignment_control.CONDITIONS,
+                                                                   MESSAGE_CONDITIONS, assignment_control.CONDITIONS, MATCHED_CONDITIONS,
                                                                    *CONTROLS.values())),
                                   required=kind == "stage")
         if kind in ("run", "stage", "probe"):
@@ -1222,10 +1252,12 @@ def main():
     elif args.action == "prepare-real-pairs":
         catalog, publication = rebind(args, code, out)
         path = out / "registration.json"
+        if args.remaining == MATCHED_GROUP:
+            freeze_matched_initialization(out)
         prior = None if args.prior is None else {"path": str(Path(args.prior[0]).resolve()), "sha256": args.prior[1]}
         value = real_plan(catalog, publication, code, args.devices, prior=prior, factorial=args.factorial,
                           edge_weights=args.edge_weights, messages=args.messages, remaining=args.remaining)
-        if args.edge_weights or args.messages or args.remaining == I7_GROUP:
+        if args.edge_weights or args.messages or args.remaining in (I7_GROUP, MATCHED_GROUP):
             group = value["group"]
             for arm, condition in EDGE_POINT_GROUPS[group].items():
                 _, factory, _ = edge_weight_adapter(condition)
