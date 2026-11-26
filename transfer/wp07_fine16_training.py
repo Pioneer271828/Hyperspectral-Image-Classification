@@ -232,8 +232,8 @@ class RangeRun(NativeRun):
                               "Checkpoint history changed its frozen graph")
 
 
-def execute(spec, phase, path, provider, entries, producer, execution, prior=None):
-    run = RangeRun(spec, provider, entries, producer, execution)
+def execute(spec, phase, path, provider, entries, producer, execution, prior=None, *, run_factory=RangeRun):
+    run = run_factory(spec, provider, entries, producer, execution)
     start, end = {"full": (0, spec["steps"]), "prefix": (0, spec["prefix"]),
                   "resume": (spec["prefix"], spec["steps"]), "completed": (spec["steps"], spec["steps"])}[phase]
     graph.require(not path.exists() and (prior is not None) == (start > 0), "Phase predecessor or destination differs")
@@ -254,9 +254,9 @@ def execute(spec, phase, path, provider, entries, producer, execution, prior=Non
 
 
 @torch.no_grad()
-def audit(spec, state, provider, entries, producer, execution, *, cost=False):
+def audit(spec, state, provider, entries, producer, execution, *, cost=False, run_factory=RangeRun, point_context=()):
     """Independently map released original pixels and compare every saved head."""
-    run = RangeRun(spec, provider, entries, producer, execution)
+    run = run_factory(spec, provider, entries, producer, execution)
     run.restore(state, spec["steps"])
     run.optimizer = None
     endpoints = {}
@@ -282,6 +282,7 @@ def audit(spec, state, provider, entries, producer, execution, *, cost=False):
                     bucket["nll"].append(-math.log(float(np.clip(probability[label-1], 1e-8, 1))))
                     points.append({"tile": event["tile"], "released_ordinal": ordinal, "head": head,
                                    "band": event["band"], "class_id": label, "probabilities": probability.tolist()})
+                    points[-1].update({name: event[name] for name in point_context})
 
         value = evaluate_validation(run.model, spec["validation"], historical["step"],
             lambda event: run._materialize("devval", event), run._forward, released=provider,
