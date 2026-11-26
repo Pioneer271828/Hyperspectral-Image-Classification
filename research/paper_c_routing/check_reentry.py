@@ -19,6 +19,7 @@ def main():
     p.add_argument('--producer-root',required=True);p.add_argument('--producer',required=True)
     p.add_argument('--dependency',required=True);p.add_argument('--runs',required=True)
     p.add_argument('--g3-root',required=True);p.add_argument('--out',required=True)
+    p.add_argument('--case',default='transfer-span02');p.add_argument('--seed',type=int)
     a=p.parse_args();root=Path(a.producer_root).resolve();runs=Path(a.runs).resolve()
     suite=runs/'paper-c-routing-20261126';events=[]
     script=root/'research/paper_c_routing/run.py'
@@ -34,6 +35,7 @@ def main():
             return original_load(*args,**kw)
         argv=[str(script),*base,'--out',str(case),'--profile','g3_pavia_xuzhou',
               '--g3-root',a.g3_root,'--range-view','--descriptor','approximate_span',*(args or [])]
+        if a.seed is not None:argv+=['--g3-seed',str(a.seed)]
         error=None;started=perf_counter()
         with patch.object(sys,'argv',argv),patch.object(torch.nn.Module,'_call_impl',forbidden_forward),\
                 patch.object(torch,'load',load),redirect_stdout(text),redirect_stderr(text):
@@ -46,7 +48,7 @@ def main():
         events.append({'case':name,'expected_error':expected,'observed_error':error,**calls,
                        'elapsed_seconds':perf_counter()-started,'stdout':text.getvalue()})
     sys.path.insert(0,str(script.parent))
-    original=suite/'transfer-span02'
+    original=suite/a.case
     invoke('completed',original,args=['--resume'])
     invoke('implicit_overwrite',original,expected='Explicit exact resume required')
     invoke('wrong_contract',original,args=['--resume','--descriptor','retained_fraction'],expected='Explicit exact resume required')
