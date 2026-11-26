@@ -12,6 +12,7 @@ from transfer import wp07_exact_positions as positions
 from transfer.development_bank_training import _initial
 from transfer.g3_training import state_hash
 from transfer.native_scale_training import baseline
+from transfer import native_released_training
 
 FORMAT = 'wp07_exact_positions_synthetic_continuation_v1'
 ARMS = tuple('both.' + mode for mode in ('mean', 'content', 'metadata', 'joint'))
@@ -38,7 +39,7 @@ class FixtureProvider(previous.FixtureProvider):
 
     def materialize(self, role, event, producer):
         graph.require(role in self.fixtures, 'No held-out or query role')
-        return self.fixtures[role].materialize(event, producer)
+        return native_released_training.materialize(self.fixtures[role], event, producer)
 
     def selection_condition(self, actual, spec):
         return positions.bind(actual, self.override)

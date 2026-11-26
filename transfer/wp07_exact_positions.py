@@ -157,7 +157,8 @@ class ControlledFixture:
     def tiles(self):
         return self.parent.tiles
 
-    def materialize(self, event, producer):
+    def materialize(self, tile, factor, band, profile, producer):
+        event = dict(tile=tile, factor=factor, band=band, profile=profile)
         require(event['band'] in POSITION_SETS and event['factor'] == 1, 'Unregistered controlled view')
         original, labels, _ = self.parent.materialize(event['tile'], 1, 'full', event['profile'], producer)
         positions = POSITION_SETS[event['band']]
