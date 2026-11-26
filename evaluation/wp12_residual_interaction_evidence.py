@@ -11,7 +11,7 @@ from research_runtime import digest, tensor_hash
 from scripts.audit_wp04_message_correspondence import scores
 from scripts.run_wp04_factorial import (
     ASSIGNMENT_GROUP, ASSIGNMENT_SCOPE, HEADS, I7_GROUP, I7_SCOPE, REAL_CATALOG_SHA, REMAINING,
-    SEEDS, STEPS, paired_initialization, pinned, read, require, roster, terminal, verify,
+    SEEDS, STEPS, identity, paired_initialization, pinned, require, roster, terminal, verify,
 )
 from target_initialization import METHODS
 from transfer.p4_runtime_device import CUDA_FP64_WEIGHT
@@ -115,7 +115,7 @@ def historical(root, publication_pin):
                 tree = Path(receipt["path"]).parent / "split"
                 result_pin = pinned(tree / "result.json")
                 result = _open(result_pin, root)
-                require(result["start_code"] == reg["code"] and result["selected_step"] == 12,
+                require(identity(result["start_code"]) == reg["code"] and result["selected_step"] == 12,
                         "Historical checkpoint producer or first-min endpoint differs")
                 settings = contract(result, seed)
                 output_pin = {"path": str(tree / "selected-probabilities.pt"),
@@ -186,7 +186,7 @@ def _new_campaign(root, pin, group):
         result_path = Path(case_pin["path"]).parent / "split/result.json"
         result_pin = pinned(result_path)
         result = _open(result_pin, root)
-        require(result["start_code"] == data["code"] and result["selected_step"] == row["steps"]["selected"],
+        require(identity(result["start_code"]) == data["code"] and result["selected_step"] == row["steps"]["selected"],
                 "New endpoint or producer differs")
         points = {e: {h: _recompute(row["endpoints"][e][h]) for h in HEADS} for e in ("selected", "last")}
         results.append({"seed": seed, "arm": row["case"]["arm"], "input": row["inputs"], "device": uuid,
