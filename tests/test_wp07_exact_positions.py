@@ -109,6 +109,17 @@ class ExactPositionTests(TestCase):
             replay = run.PositionRun(spec, self.provider, self.entries, 'fixture', execution)
             replay.restore(state, 1)
             self.assertTrue(_exact(state, replay.pack()))
+            changed_buffer = deepcopy(state)
+            name = next(iter(spec['fixed_buffers']))
+            changed_buffer['model'][name].add_(.01)
+            with self.assertRaisesRegex(ValueError, 'fixed position buffer'):
+                replay.restore(changed_buffer, 1)
+            changed_entries = deepcopy(self.entries)
+            k = previous.key('devtrain', spec['training'][0])
+            q = changed_entries[k]['q'].coalesce()
+            changed_entries[k]['q'] = torch.sparse_coo_tensor(q.indices(), q.values()*.99, q.shape).coalesce()
+            with self.assertRaisesRegex(ValueError, 'geometry changed'):
+                run.PositionRun(spec, self.provider, changed_entries, 'fixture', execution).restore(state, 1)
             for mutation in ({'representation': 'summary8'}, {'steps': 25}):
                 with self.assertRaisesRegex(ValueError, 'registration'):
                     run.PositionRun({**spec, **mutation}, self.provider, self.entries, 'fixture', execution)

@@ -5,6 +5,7 @@ from itertools import product
 import torch
 
 from model.research_config import digest
+from research_runtime import tensor_hash
 from transfer import wp07_condition_run as previous
 from transfer import wp07_fine16_training as parent
 from transfer import wp07_graph_range as graph
@@ -102,3 +103,9 @@ class PositionRun(previous.ConditionRun):
         trace['position_representation'] = self._contract['representation']
         trace['condition_semantics'] = self._contract['condition_semantics']
         return output, trace, condition
+
+    def restore(self, value, cursor):
+        graph.require(all(name in value['model'] and tensor_hash(value['model'][name]) == expected
+                          for name, expected in self._contract.get('fixed_buffers', {}).items()),
+                      'Checkpoint changed a fixed position buffer')
+        super().restore(value, cursor)
