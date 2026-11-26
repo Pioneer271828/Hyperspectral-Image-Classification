@@ -20,6 +20,7 @@ def main():
     p.add_argument('--dependency',required=True);p.add_argument('--runs',required=True)
     p.add_argument('--g3-root',required=True);p.add_argument('--out',required=True)
     p.add_argument('--case',default='transfer-span02');p.add_argument('--seed',type=int)
+    p.add_argument('--method')
     a=p.parse_args();root=Path(a.producer_root).resolve();runs=Path(a.runs).resolve()
     suite=runs/'paper-c-routing-20261126';events=[]
     script=root/'research/paper_c_routing/run.py'
@@ -36,6 +37,7 @@ def main():
         argv=[str(script),*base,'--out',str(case),'--profile','g3_pavia_xuzhou',
               '--g3-root',a.g3_root,'--range-view','--descriptor','approximate_span',*(args or [])]
         if a.seed is not None:argv+=['--g3-seed',str(a.seed)]
+        if a.method is not None:argv+=['--g3-method',a.method]
         error=None;started=perf_counter()
         with patch.object(sys,'argv',argv),patch.object(torch.nn.Module,'_call_impl',forbidden_forward),\
                 patch.object(torch,'load',load),redirect_stdout(text),redirect_stderr(text):

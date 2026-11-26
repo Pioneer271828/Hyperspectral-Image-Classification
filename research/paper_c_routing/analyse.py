@@ -48,6 +48,8 @@ def analyse(audit_path,run,development):
                       'all_or_none':len(set(keys)&coverage) in (0,len(keys))} for view,keys in cohorts.items()}
     value={'audit_sha256':sha(audit_path),'producer':audit['producer'],'scope':audit['scope'],
            'frozen_model_seed':audit['contract'].get('frozen_model_seed',2036),
+           'original_method':audit['contract'].get('original_method',
+                  'source_pretrained_full_finetune' if audit['contract']['profile']=='g3_pavia_xuzhou' else 'WP11 scratch different budget'),
            'descriptor':audit['contract']['descriptor'],'released_distinct_labels':len(lookup),
            'same_labels_reused_across_views':True,'independent_confirmation':False,
            'matched_random_identical_plan':coverage==random,'random_strata':saturation,
@@ -69,6 +71,24 @@ def main():
     result={'schema':'paper_c_saved_output_paired_analysis_v1','cases':cases,'new_neural_forwards':0,'new_optimizer_updates':0,
             'semantic_class_names':'Numeric1..9 only: original publisher table contradicts historical project names; no semantic remapping applied.',
             'statistical_tests':'none; fixed support/split and historically exposed context; no IID-pixel/seed significance claim'}
+    methods=('target_scratch_full','source_pretrained_head_only','source_pretrained_full_finetune')
+    index={(x['original_method'],x['frozen_model_seed']):x for x in cases.values() if x['descriptor']=='approximate_span'}
+    if all((m,s) in index for m in methods for s in (2036,2046,2056)):
+        paired=[]
+        for candidate,reference in ((methods[1],methods[0]),(methods[2],methods[0]),(methods[2],methods[1])):
+            for arm in index[(methods[0],2036)]['metrics']:
+                for view in index[(methods[0],2036)]['metrics'][arm]:
+                    differences=[];recall=[]
+                    for seed in (2036,2046,2056):
+                        x=index[(candidate,seed)]['metrics'][arm][view];y=index[(reference,seed)]['metrics'][arm][view]
+                        differences.append(100*(x['oa']-y['oa']))
+                        recall.append([100*(i-j) for i,j in zip(x['recall'],y['recall'])])
+                    paired.append({'candidate':candidate,'reference':reference,'arm':arm,'view':view,
+                                   'paired_OA_delta_pp':differences,'mean_delta_pp':float(np.mean(differences)),
+                                   'sd_ddof1_pp':float(np.std(differences,ddof=1)),
+                                   'paired_class_recall_delta_pp':recall,'distinct_target_labels':45,
+                                   'source_cost':'Scratch0 source updates; both adapted methods inherit source10000; target1000/K10/V0 equal'})
+        result['matched_original_method_comparisons']=paired
     target=Path(a.out)
     with target.open('x') as f:json.dump(result,f,indent=2,allow_nan=False)
     rows=[{'case':case,**row} for case,value in cases.items() for row in value['paired_error_contingencies']]
