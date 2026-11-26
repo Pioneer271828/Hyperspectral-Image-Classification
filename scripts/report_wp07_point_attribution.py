@@ -46,20 +46,22 @@ def main():
         ax.scatter([1e3*float(r['total_delta']) for r in rr],y,s=34,c='#172a3a',label='Total (A−C)',zorder=4)
         ax.axvline(0,color='#7c8992',lw=.8);ax.set_yticks(y,[r['seed']+' / '+('full' if r['band']=='full' else 'retained') for r in rr])
         ax.invert_yaxis();ax.set_title(('PaviaU' if scene=='paviaU' else 'Xuzhou')+' · fused head');ax.set_xlabel('Mean paired NLL difference × 10³ (lower is better)');ax.grid(axis='x',alpha=.15)
-    axes[0].legend(loc='lower left',fontsize=8,frameon=False)
+    handles,labels=axes[0].get_legend_handles_labels()
+    fig.legend(handles,labels,loc='upper center',bbox_to_anchor=(.5,.91),ncol=3,fontsize=9,frameon=False)
     fig.suptitle('Frozen model attribution: one reference order, 45 points per row',fontsize=13)
-    fig.tight_layout();save(fig,'fused-nll-decomposition')
+    fig.tight_layout(rect=(0,0,1,.87));save(fig,'fused-nll-decomposition')
     flips=[r for r in points if r['transition'] in ('wrong->correct','correct->wrong')]
     assert len(flips)==3
-    fig,axes=plt.subplots(1,3,figsize=(12,4.6))
+    fig,axes=plt.subplots(1,3,figsize=(12,4.0))
     for ax,r in zip(axes,flips):
-        names=['C: mean-trained','B: content weights\nmean coefficients','A: content-trained']
+        names=['C · mean-trained','B · equal coeff.','A · learned coeff.']
         margins=[1e3*float(r['true_class_margin_'+n]) for n in ('trained_mean','content_weights_mean_coeff','content')]
-        ax.bar(range(3),margins,color=['#8796a5','#247ba0','#ed8b36']);ax.axhline(0,color='#334c60',lw=.8)
-        ax.set_xticks(range(3),names,fontsize=8);ax.set_ylabel('True-class margin × 10³')
+        ax.barh(range(3),margins,color=['#8796a5','#247ba0','#ed8b36']);ax.axvline(0,color='#334c60',lw=.8)
+        ax.set_yticks(range(3),names,fontsize=8);ax.invert_yaxis();ax.set_xlabel('True-class margin × 10³')
+        lo,hi=min(0,min(margins)),max(0,max(margins));span=hi-lo;ax.set_xlim(lo-.25*span,hi+.25*span)
         ax.set_title('Xuzhou '+r['seed']+' · '+r['head']+' · class '+r['class_id']+'\n'+('full' if r['band']=='full' else 'retained'))
-        for i,y in enumerate(margins):ax.annotate(f'{y:.4f}',(i,y),xytext=(0,5 if y>=0 else -14),textcoords='offset points',ha='center',fontsize=8)
-        ax.grid(axis='y',alpha=.15)
+        for i,y in enumerate(margins):ax.annotate(f'{y:.4f}',(y,i),xytext=(5 if y>=0 else -5,0),textcoords='offset points',ha='left' if y>=0 else 'right',va='center',fontsize=8)
+        ax.grid(axis='x',alpha=.15)
     fig.suptitle('All correctness flips in 1,620 paired point rows (two panels share one class-6 point)',fontsize=12)
     fig.tight_layout();save(fig,'xuzhou-point-margins')
     fig,axes=plt.subplots(1,2,figsize=(11,4.6),sharex=True,sharey=True)
