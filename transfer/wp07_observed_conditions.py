@@ -111,7 +111,7 @@ def install_encoders(model, seed, *, neutral=False):
     """Extend a copy only; leave existing kernels/heads/selector tensors unchanged unless neutral is explicit."""
     first=model.backbone.CNN_Branch[0];backbone=model.backbone
     with torch.random.fork_rng(devices=[]):
-        torch.manual_seed(seed)
+        torch.random.default_generator.manual_seed(seed)
         for owner,encoder_name,selector_name in ((first,'condition_encoder','condition_selector'),
                 (backbone,'range_encoder','range_metadata')):
             # A fixed CNN has no conditional candidate selector: do not invent one for a trained checkpoint.

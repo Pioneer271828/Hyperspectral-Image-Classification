@@ -107,3 +107,10 @@ class ObservedConditionsTests(TestCase):
         neutral,_=self.call(model)
         self.assertTrue(all(torch.equal(x,y) for x,y in zip(original[:3],neutral[:3])))
         self.assertTrue(all(torch.equal(model.state_dict()[n],v) for n,v in before.items()))
+
+    def test_adapter_initialization_preserves_CPU_rng_and_never_reseeds_GPU(self):
+        model=MultiscaleTrial(cnn_multiscale='content',graph_multiscale='content').initialize(self.provider.baseline(64),7385)
+        before=torch.get_rng_state().clone()
+        with patch('torch.cuda.manual_seed_all',side_effect=AssertionError('GPU must not be reseeded')):
+            cond.install_encoders(model,48402)
+        self.assertTrue(torch.equal(before,torch.get_rng_state()))
