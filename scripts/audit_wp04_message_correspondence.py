@@ -22,7 +22,7 @@ from transfer import p4_runtime_device as p4
 from transfer.shared_gpu_lease import physical_lease
 
 
-PRIOR_JOINT = "c4c166aa0c2b7c9ea41eaa1dde888d8e8da131feb87e1117ca55b2bbbbb007159"
+PRIOR_JOINT = "c4c166aa0c2b7c9ea41eaa1dde888d8e8da131feb87e117ca55b2bbbbb007159"
 SHUFFLE_BASE = 23011
 
 
@@ -178,6 +178,11 @@ def main():
                         for report in (shuffled, global_mean)),
                 "Frozen model, support or baseline changed")
         guard()
+        compatibility = {"I8": original}
+        for arm in ("I9-message", "Wg65"):
+            _, _, _, endpoints, _, check = checked_endpoints(current_reg, case_pin(current, arm), device)
+            compatibility[arm] = endpoints
+            check()
         prior_row, baseline, _, prior_endpoints, _, prior_guard = checked_endpoints(
             prior_reg, case_pin(prior, "Wj"), device)
         matched = read(verify(case_pin(current, "Wg65")))
@@ -197,7 +202,7 @@ def main():
                      "updates": 0, "query_access": False, "selected_step": row["steps"]["selected"],
                      "shuffle_seed": SHUFFLE_BASE + args.seed, "permutation_sha256": tensor_hash(order),
                      "fixed_points": fixed_points, "regions": nodes, "original": original["selected"],
-                     "shuffled": shuffled, "global_mean": global_mean,
+                     "shuffled": shuffled, "global_mean": global_mean, "adapter_compatibility": compatibility,
                      "prior_joint": {"endpoints": prior_endpoints, "case": case_pin(prior, "Wj"),
                                      "input_sha256": prior_row["inputs"], "parameters": prior_row["init"]["parameters"],
                                      "feature_channels": features, "embedding_channels": width,

@@ -317,7 +317,6 @@ class VCASAHGCNBackbone(nn.Module):
         coverage_descriptor_version=1,
         coverage_condition="continuous",
         graph_route=None,
-        edge_alignment_mode=None,
     ):
         super(VCASAHGCNBackbone, self).__init__()
         self.extra_channels = extra_channels
@@ -340,9 +339,6 @@ class VCASAHGCNBackbone(nn.Module):
         if coverage_condition=='continuous':self.coverage_settings.pop('coverage_condition')
         self.coverage_mode = coverage_mode
         self.interaction_config = InteractionConfig(**interaction_kwargs(locals()))
-        if edge_alignment_mode is not None and (edge_alignment_mode != "region" or graph_update_mode != "joint"):
-            raise ValueError("An independent regional edge alignment requires joint edge updates")
-        self.edge_alignment_mode = edge_alignment_mode
         self.dataset_names = _safe_dataset_names(dataset_names)
         self.adapter = VariableChannelAdapter(
             latent_channels=latent_channels,
@@ -606,10 +602,7 @@ class VCASAHGCNBackbone(nn.Module):
             )
             info.update(message_info)
         if self.edge_updater is not None:
-            aligned_pixels = None
-            if self.edge_updater.mode == "joint":
-                aligned_pixels = (pool_regions(Q, pixels) if self.edge_alignment_mode == "region"
-                                  else self.alignment.to_regions(pixels, Q))
+            aligned_pixels = self.alignment.to_regions(pixels, Q) if self.edge_updater.mode == "joint" else None
             A, edge_info = self.edge_updater(
                 regions, A, aligned_pixels, collect_stats=collect_stats, return_diagnostics=return_diagnostics,
             )

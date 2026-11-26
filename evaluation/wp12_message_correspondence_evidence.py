@@ -77,6 +77,12 @@ def intake(root, pin, frozen_pins, adapter):
                 and receipt["selected_step"] == i8["steps"]["selected"]
                 and all(receipt["original"][h][k] == selected[h][k] for h in HEADS for k in ("probability_sha256", "points")),
                 "Frozen treatment lacks its original paired endpoint")
+        compatibility = receipt["adapter_compatibility"]
+        require(set(compatibility) == set(MESSAGE_PARAMS)
+                and all(compatibility[arm][e][h][k] == by_key[seed, arm]["endpoints"][e][h][k]
+                        for arm in MESSAGE_PARAMS for e in ("selected", "last")
+                        for h in HEADS for k in ("probability_sha256", "points")),
+                "The standalone adapter cannot replay the original trained endpoints exactly")
         summary = {}
         for treatment in ("shuffled", "global_mean"):
             observed = receipt[treatment]
@@ -111,5 +117,6 @@ def intake(root, pin, frozen_pins, adapter):
             "scope": MESSAGE_SCOPE, "query_access": False, "production_accuracy_qualified": False,
             "optimizer_updates": updates, "research_updates": data["research_updates"],
             "completed_reentry_updates": 0, "frozen_updates": 0, "reused_joint_cases": len(SEEDS),
-            "counts": counts, "comparisons": comparisons, "phase_and_operation_costs": costs,
+            "counts": counts, "exact_adapter_head_replays": len(expected) * 2 * len(HEADS),
+            "comparisons": comparisons, "phase_and_operation_costs": costs,
             "frozen_message_comparisons": changes, "validation_points_per_class": 5}
