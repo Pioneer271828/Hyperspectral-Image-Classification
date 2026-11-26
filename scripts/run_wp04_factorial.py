@@ -22,6 +22,8 @@ import torch
 
 import g4_edge_target as edge
 import g4_edge_target_runtime as edge_runtime
+import g4_branch_local_target as local_control
+import g4_branch_local_target_runtime as local_runtime
 import g4_interaction_target as interaction
 import g4_interaction_target_runtime as interaction_runtime
 from evaluation.classification_metrics import metrics_from_confusion
@@ -78,6 +80,16 @@ ADAPTERS = {
 REAL_PAIR_SCOPE = "real_dev_c2g_paired"
 REAL_PAIR = ("off", "C2G")
 REAL_PAIR_UPDATES = len(SEEDS) * len(REAL_PAIR) * (STEPS["whole"] + STEPS["prefix"] + STEPS["resume"])
+DIRECTION_SCOPE = "real_dev_direction_capacity"
+REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE)
+PRIOR_CODE = "3b383a59d644b17e6427d5a8656ce22d971c6d82"
+PRIOR_EVIDENCE = "955c50b81d729ea0a811789eac78cde59705b446530c1e68f0ddff8ebfdc295f"
+NEW_DIRECTIONS = {"add": "add", "both": "gated", "G2C": "graph_to_cnn",
+                  "local-add": "local_add", "local-both": "branch_local",
+                  "local-C2G": "local_graph", "local-G2C": "local_cnn"}
+MATCHES = (("add", "local-add"), ("both", "local-both"), ("C2G", "local-C2G"), ("G2C", "local-G2C"))
+DIRECTION_PARAMS = {"off": 61696, "C2G": 90945, "G2C": 90945, "add": 94976, "both": 120194}
+DIRECTION_PARAMS.update({control: DIRECTION_PARAMS[arm] for arm, control in MATCHES})
 
 
 def require(ok, message):
@@ -129,12 +141,13 @@ def registration(args, code):
     path = verify({"path": str(Path(args.registration[0]).resolve()), "sha256": args.registration[1]})
     value = read(path)
     catalog = verify(value["catalog"])
-    if value["scope"] == REAL_PAIR_SCOPE:
+    if value["scope"] in REAL_SCOPES:
         published = value["published_catalog"]
         verify(published)
         require(published["sha256"] == REAL_CATALOG_SHA
                 and catalog == path.parent / "rebound-contexts" / "manifest.json"
-                and value == real_plan(catalog, published, code, [value["devices"][str(seed)] for seed in SEEDS]),
+                and value == real_plan(catalog, published, code, [value["devices"][str(seed)] for seed in SEEDS],
+                                       prior=value.get("prior")),
                 "Real paired development registration or publication differs")
         return value
     require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"),
@@ -144,19 +157,26 @@ def registration(args, code):
     return value
 
 
-def real_plan(catalog, published, code, devices):
+def real_plan(catalog, published, code, devices, *, prior=None):
     require(len(devices) == len(SEEDS) and len(set(devices)) == len(SEEDS)
             and all("GPU-" + str(UUID(gpu.removeprefix("GPU-"))) == gpu for gpu in devices),
             "Assign one distinct physical GPU UUID to each paired seed")
     base = plan(catalog, code, REAL_PAIR_SCOPE, arithmetic=p4.CUDA_FP64_WEIGHT, group="directions")
-    return {**base, "cases": [c for c in base["cases"] if c["arm"] in REAL_PAIR],
+    base = {**base, "cases": [c for c in base["cases"] if c["arm"] in REAL_PAIR],
             "published_catalog": published, "devices": dict(zip(map(str, SEEDS), devices, strict=True)),
             "real_updates_authorized": REAL_PAIR_UPDATES, "resource_policy": "actual_cuda_allocation",
             "role_scope": "published_train_dev_only", "execution": str(catalog.parent.parent / "execution")}
+    if prior is None:
+        return base
+    require(prior["sha256"] == PRIOR_EVIDENCE, "Expected the independently accepted I0/I3 evidence")
+    return {**base, "scope": DIRECTION_SCOPE, "prior": prior, "parameters_by_arm": DIRECTION_PARAMS,
+            "cases": [{"seed": seed, "arm": arm, "condition": condition}
+                      for seed in SEEDS for arm, condition in NEW_DIRECTIONS.items()],
+            "real_updates_authorized": len(SEEDS)*len(NEW_DIRECTIONS)*(STEPS["whole"]+STEPS["prefix"]+STEPS["resume"])}
 
 
 def check_real_lane(reg, seed, gpu, lane):
-    if reg["scope"] == REAL_PAIR_SCOPE:
+    if reg["scope"] in REAL_SCOPES:
         require(gpu == reg["devices"].get(str(seed)) and lane == Path(reg["execution"]) / str(seed),
                 "Production worker does not match its registered seed, GPU or output directory")
 
@@ -166,6 +186,8 @@ def bound(reg, case, out, device):
                   method=reg["method"], model_seed=case["seed"], device=device)
     paths = reg["catalog"]["path"], reg["catalog"]["sha256"], out
     group = reg.get("group", "factorial")
+    if group == "directions" and case["condition"] in local_control.LOCAL_MATCHES:
+        return local_runtime.prepare(*paths, condition=case["condition"], **common)
     if group in ADAPTERS:
         return ADAPTERS[group][0](*paths, condition=case["condition"], **common)
     return prepare(*paths, mode=case["mode"], condition=case["fusion"], **common)
@@ -242,7 +264,9 @@ def terminal(path):
 def control_diagnostics(group, case, model, item, runtime, probabilities):
     if group == "directions":
         return {"initial_head_sha256": {k: tensor_hash(v) for k, v in probabilities.items()},
-                "configuration": interaction.configuration(case["condition"])}
+                "configuration": (local_control.configuration(case["condition"])
+                                  if case["condition"] in local_control.LOCAL_MATCHES
+                                  else interaction.configuration(case["condition"]))}
     if group != "edges":
         return {}
     config = edge.configuration(case["condition"])
@@ -270,6 +294,8 @@ def component_activity(group, trace):
     if group not in labels:
         return {}
     key, members = labels[group]
+    if group == "directions" and "branch_local_control" in trace[0]:
+        key, members = "branch_local_control", "slots"
     values = {}
     for name in trace[0][key][members]:
         rows = [row[key][members][name] for row in trace]
@@ -299,7 +325,9 @@ def audit_case(reg, case, out, gpu, *, real=False):
     items = move_items(cpu_items, device)
 
     def calibrated(model):
-        if group in ADAPTERS:
+        if group == "directions" and case["condition"] in local_control.LOCAL_MATCHES:
+            calibrator, binding = local_control.calibrate, runtime.branch_local_binding
+        elif group in ADAPTERS:
             _, factory, binding_key = ADAPTERS[group]
             calibrator, binding = factory.calibrate, getattr(runtime, binding_key)
         else:
@@ -380,7 +408,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
 
 
 def paired_initialization(rows, group="factorial"):
-    arms = REAL_PAIR if group == REAL_PAIR_SCOPE else CONTROLS.get(group, ARMS)
+    arms = DIRECTION_PARAMS if group == DIRECTION_SCOPE else REAL_PAIR if group == REAL_PAIR_SCOPE else CONTROLS.get(group, ARMS)
     for seed in SEEDS:
         cases = [row for row in rows if row["case"]["seed"] == seed]
         require({row["case"]["arm"] for row in cases} == set(arms)
@@ -388,12 +416,25 @@ def paired_initialization(rows, group="factorial"):
                 and len({digest(row["inputs"]) for row in cases}) == 1, "Paired input or shared initialization differs")
         control = {r["case"]["arm"]: r for r in cases}
         by_arm = {r["case"]["arm"]: r["init"] for r in cases}
-        if group in ("directions", REAL_PAIR_SCOPE):
+        if group in ("directions", *REAL_SCOPES):
             def head(arm, name):
                 return control[arm]["diagnostics"]["initial_head_sha256"][name]
             require(head("C2G", "cnn") == head("off", "cnn")
                     and (group == REAL_PAIR_SCOPE or head("G2C", "graph") == head("off", "graph")),
                     "A disabled message direction changed the non-receiving branch")
+            if group == DIRECTION_SCOPE:
+                require({arm: init["parameters"] for arm, init in by_arm.items()} == DIRECTION_PARAMS,
+                        "Measured parameters differ from the registered direction matrix")
+                for arm, capacity in MATCHES:
+                    reference, local = by_arm[arm], by_arm[capacity]
+                    require(reference["learned_parameters"] == local["learned_parameters"]
+                            and reference["additional_tensors"] == {
+                                n: v for n, v in local["additional_tensors"].items()
+                                if n != interaction.PREFIX + "protocol_version"},
+                            "Local control differs in trainable capacity or initial tensors")
+                require(head("local-C2G", "cnn") == head("off", "cnn")
+                        and head("local-G2C", "graph") == head("off", "graph"),
+                        "Local control changed the untouched branch")
             continue
         if group == "edges":
             require(by_arm["I8"]["additional_tensors"] == by_arm["I9"]["additional_tensors"]
@@ -414,6 +455,9 @@ def make_tables(rows, group="factorial"):
     endpoints, per_class, paired, paired_class, costs = [], [], [], [], []
     selected = {}
     pairs = (("C2G", "off"),) if group == REAL_PAIR_SCOPE else CONTROL_CONTRASTS.get(group, ())
+    if group == DIRECTION_SCOPE:
+        pairs = (*MATCHES, *((arm, "off") for arm in DIRECTION_PARAMS if arm != "off"),
+                 ("both", "add"), ("both", "C2G"), ("both", "G2C"), ("C2G", "G2C"))
     contrasts = CONTRASTS if group == "factorial" else {f"{a}-{b}": {a: 1, b: -1} for a, b in pairs}
     for row in rows:
         case = row["case"]
@@ -460,7 +504,7 @@ def stage(args, code, reg, out):
     require(numeric is None or gpu is not None, "Strict arithmetic requires a registered physical GPU")
     calls = Counter()
     compute = (p4.arithmetic(numeric, gpu, kernel_calls=calls,
-                              enforce_resource_thresholds=reg["scope"] != REAL_PAIR_SCOPE)
+                              enforce_resource_thresholds=reg["scope"] not in REAL_SCOPES)
                if numeric else nullcontext(None))
     lease = physical_lease(gpu, inherited_fd=args.lease_fd) if gpu else nullcontext()
     with lease, compute as details:
@@ -620,9 +664,40 @@ def probe(args, code, out):
     verify(static_proof)
 
 
+def prior_directions(reg, code):
+    path = verify(reg["prior"])
+    previous = read(path)
+    old = read(verify(previous["registration"]))
+    expected_contract = ("catalog", "published_catalog", "target", "support_seed", "per_class", "phase_updates",
+                         "method", "graph", "selection", "arithmetic", "devices", "role_scope", "resource_policy")
+    require(previous["scope"] == old["scope"] == REAL_PAIR_SCOPE
+            and previous["code"] == old["code"] and old["code"]["commit"] == PRIOR_CODE
+            and previous["real_updates"] == old["real_updates_authorized"] == 144
+            and previous["research_updates"] == 72 and previous["query_access"] is False
+            and all(old[k] == reg[k] for k in expected_contract if k != "catalog"),
+            "Accepted I0/I3 contract differs")
+    old_catalog = read(verify(old["catalog"]))
+    new_catalog = read(verify(reg["catalog"]))
+    for k in ("input_spec_sha256", "observations", "protected_files"):
+        require(old_catalog[k] == new_catalog[k], "Historical data binding changed")
+    subprocess.run(["git", "diff", "--exit-code", PRIOR_CODE, code["commit"], "--",
+                    "model", "g4_interaction_target.py", "g4_interaction_target_runtime.py", "target_training.py",
+                    "g4_support_context.py", "g4_support_target.py", "joint_training.py",
+                    "transfer/p4_runtime_device.py", "transfer/shared_gpu_lease.py"], check=True)
+    require(len(previous["case_pins"]) == len(SEEDS)*len(REAL_PAIR), "Historical matrix incomplete")
+    rows = [read(verify(pin)) for pin in previous["case_pins"]]
+    require([row["case"] for row in rows] == old["cases"]
+            and all(row["exact_independent_step_one"] and row["exact_whole_split"]
+                    and row["resume_completed_updates"] == row["audit_updates"] == 0
+                    for row in rows), "Historical case receipt or restoration differs")
+    return rows, previous["case_pins"]
+
+
 def dispatch_real(args, code, reg, out):
-    require(reg["scope"] == REAL_PAIR_SCOPE and out == Path(reg["execution"]),
+    scope = reg["scope"]
+    require(scope in REAL_SCOPES and out == Path(reg["execution"]),
             "Expected the registered paired development output")
+    reused_rows, reused_pins = prior_directions(reg, code) if scope == DIRECTION_SCOPE else ([], [])
     out.mkdir(exist_ok=True)
 
     def lane(seed):
@@ -648,7 +723,7 @@ def dispatch_real(args, code, reg, out):
             path = out / str(case["seed"]) / f"{case['seed']}-{case['arm']}" / "audit.json"
             rows.append(read(path))
             case_pins.append(pinned(path))
-        paired_initialization(rows, REAL_PAIR_SCOPE)
+        paired_initialization([*reused_rows, *rows], scope)
         actual_updates = sum(phase["updates"] for row in rows for phase in row["phases"].values())
         require(actual_updates == reg["real_updates_authorized"], "Real recovery budget differs")
         require_frozen_code(code)
@@ -656,10 +731,11 @@ def dispatch_real(args, code, reg, out):
         if evidence.exists():
             previous = read(evidence)
             require(previous["case_pins"] == case_pins, "Paired case evidence changed")
+            require(previous.get("reused_case_pins", []) == reused_pins, "Reused evidence changed")
             for pin in previous["tables"]:
                 verify(pin)
         else:
-            products = make_tables(rows, REAL_PAIR_SCOPE)
+            products = make_tables([*reused_rows, *rows], scope)
             for name, data in products.items():
                 with (out / f"{name}.csv").open("w", encoding="utf-8", newline="") as stream:
                     writer = csv.DictWriter(stream, fieldnames=list(data[0]))
@@ -669,6 +745,8 @@ def dispatch_real(args, code, reg, out):
                        "registration": dict(zip(("path", "sha256"), args.registration, strict=True)),
                        "case_pins": case_pins, "tables": [pinned(out / f"{name}.csv") for name in products],
                        "real_updates": actual_updates, "research_updates": len(rows) * STEPS["whole"],
+                       **({"reused_case_pins": reused_pins, "reused_updates": REAL_PAIR_UPDATES}
+                          if scope == DIRECTION_SCOPE else {}),
                        "query_access": False})
         print(json.dumps(pinned(evidence)))
 
@@ -684,7 +762,7 @@ def main():
             selector.add_argument("--registration", required=True, nargs=2)
         if kind in ("run", "stage"):
             selector.add_argument("--seed", type=int, choices=SEEDS, required=kind == "stage")
-            selector.add_argument("--arm", choices=sorted(set(ARMS).union(*(set(arms) for arms in CONTROLS.values()))),
+            selector.add_argument("--arm", choices=sorted(set(ARMS).union(DIRECTION_PARAMS, *CONTROLS.values())),
                                   required=kind == "stage")
         if kind in ("run", "stage", "probe"):
             selector.add_argument("--gpu")
@@ -701,6 +779,7 @@ def main():
             selector.add_argument("--manifest", nargs=2, required=True)
         if kind == "prepare-real-pairs":
             selector.add_argument("--devices", nargs=len(SEEDS), required=True)
+            selector.add_argument("--prior", nargs=2, metavar=("ACCEPTANCE", "SHA256"))
     args = parser.parse_args()
     code = code_snapshot()
     require(sys.platform == "linux" and __debug__ and code["commit"] == args.expected_commit, "Expected Linux frozen revision")
@@ -727,14 +806,27 @@ def main():
     elif args.action == "prepare-real-pairs":
         catalog, publication = rebind(args, code, out)
         path = out / "registration.json"
-        write_json(path, real_plan(catalog, publication, code, args.devices))
+        prior = None if args.prior is None else {"path": str(Path(args.prior[0]).resolve()), "sha256": args.prior[1]}
+        value = real_plan(catalog, publication, code, args.devices, prior=prior)
+        if prior:
+            prior_directions(value, code)
+            for case in value["cases"]:
+                if case["seed"] != SEEDS[0]:
+                    continue
+                condition = case["condition"]
+                operator = local_control if condition in local_control.LOCAL_MATCHES else interaction
+                model, _ = operator.initialize(value["target"], value["method"], condition,
+                                               model_seed=SEEDS[0], head_seed=SEEDS[0]+1000)
+                require(sum(p.numel() for p in model.parameters()) == DIRECTION_PARAMS[case["arm"]],
+                        "Pre-dispatch capacity calculation differs")
+        write_json(path, value)
         print(json.dumps(pinned(path)))
     elif args.action == "dispatch-real-pairs":
         dispatch_real(args, code, registration(args, code), out)
     else:
         value = registration(args, code)
         require(args.arm is None or args.seed is not None, "An arm requires its model seed")
-        require(value["scope"] == REAL_PAIR_SCOPE or (args.seed is None) == (args.arm is None),
+        require(value["scope"] in REAL_SCOPES or (args.seed is None) == (args.arm is None),
                 "Specify a synthetic seed and arm together")
         try:
             (stage if args.action == "stage" else run)(args, code, value, out)
