@@ -19,6 +19,17 @@ cost again. Source cost remains additional to each target adaptation. Synthetic
 transaction/integration/profile tests are separate and never counted as real
 training. All scientific execution used the authorized LXC, CPU single thread.
 
+The producer environment was Python3.10.20, Torch2.7.1+cu128, NumPy2.0.2 and
+SciPy1.15.3, with CUDA disabled and one compute thread. No dependency installation
+or shared training configuration was changed. Private artifact roots under the
+authorized project root are `runs/paper-c-recovery-20261126`,
+`runs/paper-c-transfer-engineering-20261126`,
+`runs/paper-c-routes-engineering-20261126` and
+`backups/paper-c-recovery-20261126-01`, all outside checkouts. The three producer
+checkouts remain clean at the exact SHAs above. CPU off-host byte/state inspection
+used its existing Python3.12.3/Torch2.7.0a0 build; this differing runtime was not
+used for training or claimed to continue the optimizer identically.
+
 The scratch registration SHA256 is
 `8263398636b284a27ee5f14cec3494fe0f8dc943195cde7042315d658d8cad17`.
 The transfer registration SHA256 is
@@ -60,8 +71,17 @@ shape-aware cohorts and three frame transport cases: **19 distinct unit cases**.
 The original model integration requires pinned author/native dependencies and
 passed with both provided; a dependency skip is not counted as that proof.
 Transport checks at `b90dea40d8cf82e41893eb4575fdb70505ca247b` passed three tests.
-Other test groups retain their actual earlier source SHA in logs; they were not
-all rerun at the eventual documentation tip.
+The [execution-binding table](test-evidence.json) pairs each group with its actual
+earlier source SHA and retained pass/failure log. Log text alone does not contain
+every source identity. They were not all rerun at the documentation tip.
+
+Tests use `python -m unittest discover -s research/paper_c_recovery -p <pattern> -v`
+at each table entry's frozen SHA, with `PAPER_C_NATIVE` and `PAPER_C_AUTHOR` set to
+the clean pinned checkouts. Readback entry points are `summarize.py`,
+`audit_transfer.py`, `audit_routes.py`, `check_reentry.py`, `verify_selected.py`
+and `check_route_reentry.py`; their retained logs and aggregate JSON files are in
+the review export. Final source AST/JSON parsing and ZIP hash/JSON checks are
+separate from these model integration tests.
 
 The manual whole-repository command at
 `9898e13c0b598a73efaf872a7ae5e535d03c8d2c` was:
@@ -85,6 +105,18 @@ losses and DSNet CE+SAD remain different, as do capacity/context (tile-local
 native graph versus replicate-padded 7×7 DSNet patches). This common engineering
 recipe is not the external author training protocol or shared project default.
 
+External source review is inherited from the frozen
+[C reference ledger](../paper1_c/source-review.json). DSNet dynamically loads
+author `hanzhu97702/DSNet` at
+`e910795073b52373ce0771ac85139a17f250b236`, whose root code license is GPL-3.0;
+no author files, trainer, split or data protocol are vendored. The adapter
+preserves the author's unclamped SAD/abundance path and its singular-input
+failure behavior. Native runtime dependency is pinned to
+`395caef57fba8ab6a09223538f748179dab552f2`; released bank custodian is pinned to
+`49bce8c5fa2d8b79c0e58b2a70693c7b897d4eb7`. The complete external `demo.py`
+trainer is not reproduced. Numerical adapter tests establish that specific
+forward path, not a paper-level reproduction or architecture superiority.
+
 | Scene | Native mean OA % | DSNet mean OA % | DSNet − native pp |
 |---|---:|---:|---:|
 | PaviaU | 11.852 | 25.926 | +14.074 |
@@ -98,6 +130,14 @@ checkpoint 34.017. Stored baseline state bytes were 9723854025. Cold verificatio
 loading, audit, IPC and backups are additional; these are shared-CPU measurements,
 not isolated deployment or GPU performance. The pending forty-sweep proposal
 estimates 129443310132 bytes and was not started or declared complete.
+
+The 15 new target adaptations separately measured forward 48.941s, backward
+65.100s, optimizer 5.626s, development selection 13.314s and checkpoint 24.138s;
+their stored state files total 1602285328 bytes. These values come from the
+existing independent lineage audit's committed per-update records, with the
+same exclusions. All selected target steps are positive; one HongHu target
+selected step132 rather than its final198, so selection is not replaced by a
+last-step assumption.
 
 The bounded historical inventory found zero matching candidates for the five
 remaining directions among 49 sidecars/eight tasks across two hosts. This is a
@@ -142,7 +182,16 @@ All 30 ordered-pair rows remain versioned; available development profiles are
 six, formal independent confirmation directions are **zero**. No new labels,
 full GT, query access, calibration or confirmation was released.
 
-## Backup and remaining work
+## Timing, backup and remaining work
+
+Package timing uses `clock.curr_time` only, starting 2026-11-26T08:28:01Z.
+The final timing receipt records actual elapsed wall time. Effective work and
+pure waiting were not separately instrumented and remain unknown; the four-hour
+effective-work target is not asserted as achieved. A paired sample bracketed by
+clock-tool 11:36:09–11:36:10Z showed source `date -u` 19:39:15Z. These clocks differ
+by about8h03m, so source/GitHub display timestamps are not subtracted from clock
+tool times. Committed per-component costs use monotonic timers. Background
+backup overlaps analysis/documentation; no time is padded with repeated training.
 
 Original source artifacts are retained in their authorized external LXC roots.
 Critical capsules include every initial/selected/current complete state and the
@@ -159,16 +208,22 @@ It omits 1991 historical states / 1585490519 bytes, which remain on the LXC.
 
 Baseline critical capsule: 106360985 bytes,
 SHA256 `dc3dd8c12eb3d9c9bfb083c11b7736f27fb0b6171837ff9b82bb1dd90d8c01b7`.
-It omits 2291 intermediate/profile states / 9693195208 bytes. Off-host verification
-is pending until a separate target receipt proves both whole-archive restoration
-and all 18 recovery-state envelopes. Do not infer completion from a partial file.
+It omits 2291 intermediate/profile states / 9693195208 bytes. Off-host byte
+restoration and all 18 initial/selected/current state envelopes passed CPU
+inspection with zero model construction, neural calls and optimizer updates.
+Together the two critical capsules verify 33 complete initial, 33 selected and
+33 final states. Original raw-bank/runtime/path dependencies are still required
+for execution; this inspection does not prove exact cross-host continuation.
 
 All routing outputs are sealed with exact whole-file SHA deduplication:
 161206780 bytes, SHA256
-`4684a7ee159b400aa56322614b77089bfcf1ee4ddfee15fca16365b4d4923d6d6`;
+`4684a7ee159b400aa56322614b77089bfcf1e4ddfee15fca16365b4d4923d6d6`;
 1173 logical files, 710 unique objects. Every original probability output remains
-represented byte-identically; no raw input bank is included. Off-host verification
-is pending. Later closing receipts/source/aggregate review copies are incremental.
+represented byte-identically; no raw input bank is included. Off-host restoration
+verified all 1173 logical files / 1256931576 bytes and 710 unique objects, with
+zero neural calls or optimizer updates. The final review exporter requires this
+receipt plus both critical state receipts before accepting a completed matrix.
+Later closing receipts/source/aggregate review copies are incremental.
 
 Next useful research work requires separately admitted compute/storage and a
 preregistered sufficient-budget design, or genuinely independent geographic and
