@@ -1,5 +1,7 @@
 # C 实验证据包
 
+首要入口：[整包交付与复盘](delivery-review.md)、[跨传感器英文协议](cross-sensor-protocol.md)、[30 个有方向配对](ordered-pair-feasibility.csv)、[空间资格表](spatial-eligibility.csv)、[作者实现与许可记录](source-review.json)。
+
 此目录由 C 唯一写入。基准 `a339ce8d7e5f0a600363b1a8826b96d8a16ae794`，分支 `codex/paper1-c-baselines-20261126`。不写 A/B 文件、主状态表或 main。确认设计见 [冻结草案](confirmation-draft.json)。该草案不签发新标签或长训练权限。
 
 M4-S2 #135 的 1%/0.5% 三景联合实验不是 G4 的 K10/V5；前者是既见场景传导且测试已被查看。#141 原概率复现失败与 #143 训练后、测试前的决策稳定性修订分别保留。开发银行是 support512/K5、validation3031/V5，不能凭三个模型种子改称空间重复。
