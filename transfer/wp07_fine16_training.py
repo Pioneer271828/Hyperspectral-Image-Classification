@@ -60,14 +60,31 @@ def response_observer(run):
             'cosine': float((a.flatten()@b.flatten())/(a.norm()*b.norm()).clamp_min(1e-12)),
             'scope': 'actual learned two-layer branch states broadcast with frozen Q; fixed same-weight forward; excludes upstream dependency claims'})
 
-    handles = [backbone.graph_stage1.register_forward_pre_hook(graph_input),
-               backbone.graph_stage2.register_forward_hook(states),
-               backbone.cnn_stage1.register_forward_pre_hook(cnn_input)]
+    names = ('graph_stage1', 'graph_stage2', 'cnn_stage1')
+    graph.require(not any(n in vars(backbone) for n in names), "Response observer already attached")
+    first, second, cnn = (getattr(backbone, n) for n in names)
+
+    def wrap_first(*args, **kwargs):
+        graph_input(None, args)
+        return first(*args, **kwargs)
+
+    def wrap_second(*args, **kwargs):
+        result = second(*args, **kwargs)
+        states(None, args, result)
+        return result
+
+    def wrap_cnn(*args, **kwargs):
+        cnn_input(None, args)
+        return cnn(*args, **kwargs)
+
+    backbone.graph_stage1 = wrap_first
+    backbone.graph_stage2 = wrap_second
+    backbone.cnn_stage1 = wrap_cnn
     try:
         yield rows
     finally:
-        for handle in handles:
-            handle.remove()
+        for name in names:
+            delattr(backbone, name)
 
 
 def key(role, event):

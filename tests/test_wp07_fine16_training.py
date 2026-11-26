@@ -78,7 +78,7 @@ class FineRangeTrainingTests(unittest.TestCase):
                 self.assertEqual(sum(v["count"] for v in endpoint["metrics"]["fused"].values()), points)
 
     def test_optimized_training_cli_refused_before_execution(self):
-        p = subprocess.run([sys.executable, "-O", "scripts/run_wp07_graph_pair.py", "--help"],
+        p = subprocess.run([sys.executable, "-O", "scripts/run_wp07_fine16_pair.py", "--help"],
                            cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True)
         self.assertNotEqual(p.returncode, 0)
         self.assertIn("refuses optimized Python", p.stderr)

@@ -1,4 +1,4 @@
-"""Register and run the admitted PaviaU frozen-Q graph-range comparison."""
+"""Register and run the two-scene factor1 scale16 frozen-Q comparison."""
 import argparse
 from collections import Counter
 from io import BytesIO
@@ -81,7 +81,7 @@ def qualify(root, out, gpu, code):
 
 def prepare(root, out, geometry, qualifications, code):
     require_frozen_code(code)
-    graph.require(True, "Expected the frozen pre-score geometry decision")
+    graph.require(geometry["sha256"] and geometry["path"], "Expected pinned same-source geometry")
     decision = read(geometry, root)
     graph.require(decision["producer"] == code["commit"]
                   and decision["labels_scored"] == decision["classifier_heads_evaluated"] == decision["optimizer_updates"] == 0,
@@ -115,7 +115,7 @@ def prepare(root, out, geometry, qualifications, code):
         shared_backbone = backbone if shared_backbone is None else shared_backbone
         graph.require(backbone == shared_backbone, "Model-seed initialization changed the frozen geometry encoder")
         train, val, events = provider.events()
-        graph.require(len(train) == STEPS and len(val) == VIEWS and events == [0, PREFIX, STEPS], "Original PaviaU budget or validation roster differs")
+        graph.require(len(train) == STEPS and len(val) == VIEWS and events == [0, PREFIX, STEPS], "Original scene budget or validation roster differs")
         for role, rows in (("devtrain", train), ("devval", val)):
             for event in rows:
                 entry = cache["entries"][training.key(role, event)]
