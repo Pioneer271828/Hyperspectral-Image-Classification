@@ -8,7 +8,10 @@ from pathlib import Path
 CLASSES={"paviaU":9,"xuzhou":9,"whu-honghu":22,"whu-longkou":9,"whu-hanchuan":16,"laoyuhesidi":8}
 SOURCES={
  "paviaU":{"device":"reported ROSIS-03","evidence":"https://www.ehu.eus/ccwintco/index.php?title=Hyperspectral_Remote_Sensing_Scenes","gap":"103-band version to original detector/band calibration binding; current provider fetch403"},
- "xuzhou":{"device":"publisher-reported airborne HYSPEX","evidence":"https://www.3sobs.cn/share#Xuzhou","gap":"exact hardware and per-band centers/SRF/retained-band mapping; local label semantic binding"},
+ "xuzhou":{"device":"HySpex VNIR-1600 + SWIR-384; resampled/merged acquisition product",
+            "evidence":"https://www.3sobs.cn/share#Xuzhou",
+            "original_paper":"https://doi.org/10.1109/JSTARS.2019.2892975",
+            "paper_page":634,"gap":"per-band centers/SRF/retained-band mapping and local version binding; original paper class3/4=coal/cement differs from historical project class5/6 names"},
  "whu-honghu":{"device":"Headwall Nano-Hyperspec17mm,2017-11-20","evidence":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm","gap":"class21 independent geography; detector calibration and retained map"},
  "whu-longkou":{"device":"Headwall Nano-Hyperspec8mm,2018-07-17","evidence":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm","gap":"new role release and local version/semantic binding; serial device unknown"},
  "whu-hanchuan":{"device":"Headwall Nano-Hyperspec17mm,2016-06-17","evidence":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm","gap":"admitted image payload and role release; serial device unknown"},
