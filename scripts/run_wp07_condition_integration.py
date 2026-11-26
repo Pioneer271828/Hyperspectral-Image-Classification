@@ -6,12 +6,14 @@ from copy import deepcopy
 from io import BytesIO
 import hashlib
 import json
+import os
 from pathlib import Path
 import statistics
 import sys
 import time
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0,os.environ.get('WP07_CONDITION_SOURCE',str(Path(__file__).resolve().parents[1])))
 import torch
+from model.research_config import digest
 from research_runtime import code_snapshot,require_frozen_code
 from transfer import wp07_condition_run as integration
 from transfer import wp07_observed_conditions as conditions
@@ -75,36 +77,54 @@ def inventory(core,out,code):
 
 
 def fixtures(out,code):
-    graph.require(not out.exists(),'A fresh fixture campaign is required; completed stages are immutable')
-    out.mkdir();started=time.perf_counter()
-    header=dev._json_new(out/'registration.json',dict(producer=code['commit'],source_hash=code['source_hash'],
+    out.mkdir(exist_ok=True);started=time.perf_counter()
+    registration=dict(producer=code['commit'],source_hash=code['source_hash'],
         classes=[9,22],seeds=[64,512,2048],cases=list(integration.CASES),cases_total=72,updates_per_route=12,
         routes=['full','prefix+resume'],maximum_synthetic_optimizer_updates=1728,maximum_real_optimizer_updates=0,
         checkpoint_clock=[0,6,12],prefix=5,selection='first_min_released_point_fused_nll',
         same_complete_initial_state_within_seed=True,common_candidates={'cnn':[1,2,3],'graph':[1,2]},
-        purpose='engineering and falsifiable controls; no confirmation accuracy claim'))
+        purpose='engineering and falsifiable controls; no confirmation accuracy claim')
+    if (out/'registration.json').exists():
+        header=dev._pin(out/'registration.json');graph.require(read(header,out)==registration,'Existing fixture registration differs')
+    else:header=dev._json_new(out/'registration.json',registration)
+    new_updates=0;reused_updates=0
     summaries=[];endpoints=[];perclass=[];participation=[];costs=[];controls=[];point_rows=[]
     with arithmetic(out,None) as execution:
         for classes in (9,22):
-            provider=integration.FixtureProvider(classes);entries=integration.cache(provider,code['commit'])
-            cachepin=save(out/f'fixture-{classes}-geometry.pt',{'entries':entries})
+            provider=integration.FixtureProvider(classes);cachepath=out/f'fixture-{classes}-geometry.pt'
+            if cachepath.exists():cachepin=dev._pin(cachepath);entries=packet(cachepin,out)['entries']
+            else:entries=integration.cache(provider,code['commit']);cachepin=save(cachepath,{'entries':entries})
             initial_by_seed={}
             for seed in (64,512,2048):
                 for arm in integration.CASES:
-                    case=f'c{classes}-s{seed}-{arm}';dest=out/case;dest.mkdir()
+                    case=f'c{classes}-s{seed}-{arm}';dest=out/case;dest.mkdir(exist_ok=True)
                     spec=integration.contract(provider,seed,arm,code['commit'],execution.numeric,cachepin,{'synthetic':True,'registration':header})
-                    specpin=dev._json_new(dest/'registration.json',spec);initial_by_seed.setdefault(seed,set()).add(spec['initialization']['state'])
+                    if (dest/'registration.json').exists():
+                        specpin=dev._pin(dest/'registration.json');graph.require(read(specpin,out)==spec,'Existing case registration/cache differs')
+                    else:specpin=dev._json_new(dest/'registration.json',spec)
+                    initial_by_seed.setdefault(seed,set()).add(spec['initialization']['state'])
                     states={};stages=[];t=time.perf_counter()
                     for phase in ('full','prefix','resume','completed'):
                         prior=states.get({'resume':'prefix','completed':'resume'}.get(phase));path=dest/(phase+'.pt')
-                        dev._json_new(dest/(phase+'.intent.json'),dict(registration=specpin,phase=phase,maximum_updates={'full':12,'prefix':5,'resume':7,'completed':0}[phase]))
-                        stage=phases.execute(spec,phase,path,provider,entries,code['commit'],execution,prior,run_factory=integration.ConditionRun)
-                        saved=dev._json_new(dest/(phase+'.json'),dict(**stage,checkpoint=dev._pin(path),registration=specpin))
+                        amount={'full':12,'prefix':5,'resume':7,'completed':0}[phase]
+                        if (dest/(phase+'.json')).exists():
+                            saved=dev._pin(dest/(phase+'.json'));stage=read(saved,out)
+                            graph.require(stage['registration']==specpin and stage['phase']==phase and stage['updates']==amount
+                                and stage['checkpoint']['path']==str(path),'Existing phase belongs to another case/interval')
+                            reused_updates+=amount
+                        else:
+                            graph.require(not path.exists() and not (dest/(phase+'.intent.json')).exists(),'Uncommitted interrupted phase retained; do not rerun it')
+                            dev._json_new(dest/(phase+'.intent.json'),dict(registration=specpin,phase=phase,maximum_updates=amount))
+                            stage=phases.execute(spec,phase,path,provider,entries,code['commit'],execution,prior,run_factory=integration.ConditionRun)
+                            saved=dev._json_new(dest/(phase+'.json'),dict(**stage,checkpoint=dev._pin(path),registration=specpin));new_updates+=amount
                         states[phase]=packet(read(saved,out)['checkpoint'],out);stages.append(stage)
                     graph.require(_exact(states['full'],states['resume']) and _exact(states['full'],states['completed']),'Continuous/split/completed packets differ')
                     graph.require(_exact(states['full']['history'][:5],states['prefix']['history']),'Prefix path differs')
-                    audit=phases.audit(spec,states['full'],provider,entries,code['commit'],execution,cost=False,run_factory=integration.ConditionRun,point_context=('profile',))
-                    auditpin=dev._json_new(dest/'independent.json',audit)
+                    if (dest/'independent.json').exists():auditpin=dev._pin(dest/'independent.json');audit=read(auditpin,out)
+                    else:
+                        audit=phases.audit(spec,states['full'],provider,entries,code['commit'],execution,cost=False,run_factory=integration.ConditionRun,point_context=('profile',))
+                        auditpin=dev._json_new(dest/'independent.json',audit)
+                    graph.require(audit['selected_step']==states['full']['selected']['step'] and audit['state_unchanged'] and audit['audit_optimizer_updates']==0,'Existing independent audit differs')
                     replay=integration.ConditionRun(spec,provider,entries,code['commit'],execution);replay.restore(states['full'],12)
                     replay.model.load_state_dict(states['full']['selected']['state']);replay.model.eval();before=replay.pack()
                     same_reference=None
@@ -163,6 +183,8 @@ def fixtures(out,code):
             ('resident-cost.csv',costs),('condition-controls.csv',controls),('points.csv',point_rows)]:table(out/name,data)
     summary=dict(status='passed',producer=code['commit'],source_hash=code['source_hash'],cases=summaries,
         cases_total=len(summaries),synthetic_optimizer_updates=sum(r['synthetic_updates'] for r in summaries),real_optimizer_updates=0,
+        new_synthetic_updates_this_invocation=new_updates,reused_committed_synthetic_updates=reused_updates,
+        driver_program_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         table_rows={n:len(r) for n,r in [('endpoints',endpoints),('per_class',perclass),('participation',participation),('cost',costs),('controls',controls),('points',point_rows)]},
         exact_full_split_completed_cases=len(summaries),read_only_controls_cases=len(summaries),
         effect_claim='engineering only; no significance or real-data condition efficacy',elapsed_seconds=time.perf_counter()-started)
@@ -171,11 +193,13 @@ def fixtures(out,code):
 
 def main():
     graph.require_checks();torch.set_num_threads(1)
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--controller-commit')
     sub=p.add_subparsers(dest='mode',required=True)
     q=sub.add_parser('inventory');q.add_argument('--core',type=Path,required=True);q.add_argument('--out',type=Path,required=True)
     q=sub.add_parser('fixtures');q.add_argument('--out',type=Path,required=True)
     a=p.parse_args();code=code_snapshot();require_frozen_code(code);graph.require(code['commit']==a.expected_commit,'Wrong clean analysis source')
+    controller=code_snapshot(Path(__file__).resolve().parents[1])
+    graph.require(not controller['dirty'] and (a.controller_commit or code['commit'])==controller['commit'],'Wrong/dirty independent driver source')
     graph.require(Path(__file__).resolve().parents[1] not in a.out.resolve().parents,'Outputs must be outside checkout')
     if a.mode=='inventory':inventory(a.core,a.out,code)
     else:fixtures(a.out,code)
