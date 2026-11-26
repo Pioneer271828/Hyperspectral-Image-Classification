@@ -27,10 +27,15 @@ def decompose(content, coefficient_mean, trained_mean, label):
     require(abs(total-coefficient-residual) <= 1e-12, 'Point decomposition differs')
     pred_a = max(range(len(content)), key=content.__getitem__)+1
     pred_c = max(range(len(trained_mean)), key=trained_mean.__getitem__)+1
+    pred_b = max(range(len(coefficient_mean)), key=coefficient_mean.__getitem__)+1
     transition = ('correct' if pred_c == label else 'wrong')+'->'+('correct' if pred_a == label else 'wrong')
     return {'nll_content': a, 'nll_content_weights_mean_coeff': b, 'nll_trained_mean': c,
             'total_delta': total, 'coefficient_delta': coefficient, 'training_residual_delta': residual,
-            'pred_content': pred_a, 'pred_trained_mean': pred_c, 'transition': transition,
+            'pred_content': pred_a, 'pred_content_weights_mean_coeff': pred_b,
+            'pred_trained_mean': pred_c, 'transition': transition,
+            'coefficient_transition': ('correct' if pred_b == label else 'wrong')+'->'+('correct' if pred_a == label else 'wrong'),
+            **{'true_class_margin_'+name: p[label-1]-max(v for i,v in enumerate(p) if i != label-1)
+               for name,p in [('content',content), ('content_weights_mean_coeff',coefficient_mean), ('trained_mean',trained_mean)]},
             'p_true_content': content[label-1], 'p_true_content_weights_mean_coeff': coefficient_mean[label-1],
             'p_true_trained_mean': trained_mean[label-1]}
 

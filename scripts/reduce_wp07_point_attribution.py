@@ -162,11 +162,18 @@ def main():
     for k, rows in groups.items():
         common = dict(zip(('scene','seed','head','band'),k))
         aggregate.append({**common,'points':len(rows),**{f:mean(rows,f) for f in fields},
+            'content_correct':sum(r['pred_content']==r['class_id'] for r in rows),
+            'content_weights_mean_coeff_correct':sum(r['pred_content_weights_mean_coeff']==r['class_id'] for r in rows),
+            'trained_mean_correct':sum(r['pred_trained_mean']==r['class_id'] for r in rows),
+            'coefficient_argmax_changes':sum(r['pred_content']!=r['pred_content_weights_mean_coeff'] for r in rows),
+            'coefficient_correctness_changes':sum((r['pred_content']==r['class_id'])!=(r['pred_content_weights_mean_coeff']==r['class_id']) for r in rows),
+            'trained_pair_argmax_changes':sum(r['pred_content']!=r['pred_trained_mean'] for r in rows),
             **{t:sum(r['transition']==t for r in rows) for t in ('correct->correct','wrong->wrong','wrong->correct','correct->wrong')}})
         for cls in range(1,10):
             subset = [r for r in rows if r['class_id']==cls]
             classes.append({**common,'class_id':cls,'points':len(subset),**{f:mean(subset,f) for f in fields},
                 'content_correct':sum(r['pred_content']==cls for r in subset),
+                'content_weights_mean_coeff_correct':sum(r['pred_content_weights_mean_coeff']==cls for r in subset),
                 'trained_mean_correct':sum(r['pred_trained_mean']==cls for r in subset),
                 'wrong_to_correct':sum(r['transition']=='wrong->correct' for r in subset),
                 'correct_to_wrong':sum(r['transition']=='correct->wrong' for r in subset)})

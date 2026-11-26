@@ -8,6 +8,15 @@ class PointBookkeepingTests(unittest.TestCase):
         self.assertAlmostEqual(value['total_delta'], value['coefficient_delta']+value['training_residual_delta'])
         self.assertEqual(value['transition'], 'wrong->correct')
         self.assertLess(value['coefficient_delta'], 0)
+        self.assertEqual(value['pred_content_weights_mean_coeff'], 2)
+        self.assertGreater(value['true_class_margin_content'], 0)
+        self.assertLess(value['true_class_margin_trained_mean'], 0)
+
+    def test_wrong_class_change_is_not_correctness_change(self):
+        value = decompose([.1,.3,.6], [.1,.7,.2], [.1,.7,.2], 1)
+        self.assertNotEqual(value['pred_content'], value['pred_content_weights_mean_coeff'])
+        self.assertEqual(value['coefficient_transition'], 'wrong->wrong')
+        self.assertEqual(value['coefficient_delta'], 0)
 
     def test_concentration_is_not_positive_support_count(self):
         self.assertEqual(concentration([.5, .5]), 2)
