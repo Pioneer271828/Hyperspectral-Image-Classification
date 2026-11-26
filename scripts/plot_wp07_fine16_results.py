@@ -44,7 +44,7 @@ def main():
                       and int(r['seed'])==seed and r['endpoint']=='selected']
             # All fixed original views: an empirical distribution, no stochastic sampling.
             values = np.sort(values)
-            ax.plot(values, np.arange(1, len(values)+1)/len(values), color=colors[i], label=f'{seed}: n={len(values)}')
+            ax.step(values, np.arange(1, len(values)+1)/len(values), where='post', color=colors[i], label=f'{seed}: n={len(values)}')
         ax.set_title(scene)
         ax.set_xlabel('Near/wide actual broadcast-state relative L2 difference')
         ax.set_ylabel('Fraction of fixed validation views')
