@@ -23,7 +23,7 @@ def audit(root):
         if sha(p)!=h:raise ValueError('Original protected input changed')
     names=sorted(p.name for p in (root/'stages').iterdir())
     if names!=[f'{i:06d}' for i in range(c['updates']+1)]:raise ValueError('Incomplete or uncertain update set')
-    previous=None;selections=[];best=None;updates=[];checkpoint_bytes=0
+    previous=None;selections=[];best=None;updates=[];checkpoint_bytes=0;timings={}
     for step,name in enumerate(names):
         folder=root/'stages'/name;r=json.loads((folder/'record.json').read_text())
         if (r['step']!=step or r['previous']!=previous or r['contract']!=digest(c)
@@ -32,6 +32,9 @@ def audit(root):
             raise ValueError('Independent hash/counter/plan check failed')
         if r['checkpoint_bytes']!=(folder/'state.pt').stat().st_size:raise ValueError('Saved-state size differs')
         checkpoint_bytes+=r['checkpoint_bytes'];previous=sha(folder/'record.json')
+        for key,value in r['timings'].items():
+            if not math.isfinite(value) or value<0:raise ValueError('Invalid measured time')
+            timings.setdefault(key,[]).append(value)
         if step:
             if not math.isfinite(r['loss']):raise ValueError('Nonfinite recorded training loss')
             updates.append(r['block'])
@@ -64,6 +67,8 @@ def audit(root):
         'committed_optimizer_updates':len(updates),'sweeps':c['sweeps'],'blocks_per_sweep':len(c['roster']),
         'selected_step':best['step'],'selected_metrics':selections[c['selection_steps'].index(best['step'])]['metrics'],
         'checkpoint_bytes':checkpoint_bytes,'full_optimizer_RNG_buffer_cursor_saved':True,
+        'measured_components':{k:{'count':len(v),'sum_seconds':sum(v),'median_seconds':float(np.median(v)),
+                                  'p90_seconds':float(np.quantile(v,.9))} for k,v in timings.items()},
         'new_optimizer_updates_during_audit':0,'new_neural_forwards_during_audit':0,'query_reads':0,'confirmation':False}
 
 

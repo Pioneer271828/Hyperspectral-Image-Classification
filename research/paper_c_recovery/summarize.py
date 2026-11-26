@@ -31,6 +31,9 @@ def main():
         'committed_optimizer_updates':total,'independent_audit_new_optimizer_updates':0,'query_reads':0,'confirmation':False,
         'scope':'Three-sweep recovery/exposure engineering on old development roles, not convergence/architecture efficacy or independent sensor generalization.',
         'checkpoint_bytes':sum(r['checkpoint_bytes'] for r in results),
+        'measured_component_seconds':{key:sum(r['measured_components'].get(key,{}).get('sum_seconds',0) for r in results)
+            for key in sorted({k for r in results for k in r['measured_components']})},
+        'cost_limit':'Measured update/selection/checkpoint components only; complete cold loading, bank/source verification, audit, IPC and backup wall time are additional. No GPU or isolated deployment speed claim.',
         'matching':'Same per-scene label IDs, exact per-seed per-sweep block permutation, updates, optimizer and selected event schedule. Different original context/loss/capacity recipes remain disclosed.'}
     out=Path(a.out)
     with out.open('x') as f:json.dump(value,f,indent=2,allow_nan=False)
