@@ -60,10 +60,10 @@ def main():
         ref = encoder.exact_mask[0].weight
         for name, indices in proposal.items():
             vector = positions.mask_features(indices, n)
-            packet = summary.IndexPacket(None, indices, n)
+            descriptor = summary.IndexPacket(None, indices, n)
             with torch.no_grad():
-                encoder.representation = 'summary8'; small = encoder(packet, None, None, ref)
-                encoder.representation = 'exact_mask'; exact = encoder(packet, None, None, ref)
+                encoder.representation = 'summary8'; small = encoder(descriptor, None, None, ref)
+                encoder.representation = 'exact_mask'; exact = encoder(descriptor, None, None, ref)
             qualification.append(dict(scene=scene, view=name, master_count=n, retained_count=len(indices),
                 minimum=indices[0], maximum=indices[-1], span=indices[-1]-indices[0],
                 positions_sha256=digest(indices), mask_sha256=digest(vector),
