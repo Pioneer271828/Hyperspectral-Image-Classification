@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from adapter import load_author_model
-from pilot import BANK_CODE, RECEIPTS, SEEDS, batch, evaluate, git_clean, load_bank, sha, write_new
+from pilot import BANK_CODE, RECEIPTS, SEEDS, batch as bank_batch, evaluate, git_clean, load_bank, sha, write_new
 
 
 def main():
@@ -122,7 +122,7 @@ def main():
                 raise ValueError("Released point exposure differs")
             # Extra fit readout is descriptive and explicitly uses the producer
             # helper. The devval reconstruction above remains independent.
-            train_fit = evaluate(model, [batch(bank, row) for row in bank.role_rows("devtrain")
+            train_fit = evaluate(model, [bank_batch(bank, row) for row in bank.role_rows("devtrain")
                                          if row["samples"]], classes)
             audited.append({"scene": scene, "seed": seed, "updates": [n, n], "exposure": expected_exposure,
                             "selected_step": selected, "oa": oa, "aa": aa, "recall": recall.tolist(),
