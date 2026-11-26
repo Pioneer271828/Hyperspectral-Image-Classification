@@ -54,7 +54,7 @@
       "license_sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
       "model_path": "model.py",
       "model_git_blob": "86d6843ade5a18b2187e20854a0b66d183baf5df",
-      "model_sha256": "96dc899916ddf32e6778449446e82bdf99d2f8d8e47d4e4c8397dc94571398055",
+      "model_sha256": "96dc899916df32e6778449446e82bdf99d2f8d8e47d4e4c8397dc94571398055",
       "actually_executed": ["unmodified DSNet constructor/forward", "unmodified Conv_Classifier", "isolated matched one-pass development model updates and reload"],
       "not_executed": ["complete author demo.py", "author dataset/split/test-selection workflow", "published full benchmark"],
       "adaptation": ["7x7 role-local replicate patch extraction", "explicit finite and dimension checks", "classification-logit scoring and frozen devval first-min CE NLL selection"],

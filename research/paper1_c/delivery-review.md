@@ -34,7 +34,7 @@ PaviaU 11 月 18 日补齐发布的银行根为 `9bdf53a87354cfe1e1b97b0f9931397
 | --- | --- | --- |
 | CEGCN | `e5bc8a007a7179d2092aa1cc1c0993ac1a171d4c`；最直接的 CNN/超像素图结构参照，固定树未见许可文件 | 核作者 README、源码及历史登记；IEEE 全文入口被机器人验证挡住，不声称本轮全文重读或原程序复现；未复制/执行 |
 | DCG-Net | `2eb4e7b9fef602c2899cb2f6d596b95655b5bf3f`；2024 作者论文直接链接的较新结构候选 | 实际代码 ZIP 有 72 个成员，不能称“无代码”。读取 14 个源码/README 条目，根和 ZIP 未见许可文件或这些条目的许可声明；含 PyG、固定 cuda0 及第三方超像素源码，许可链未明；不解码 ZIP 中 MAT/GT、不执行 |
-| DSNet | `e910795073b52373ce0771ac85139a17f250b236`；根 GPL-3.0，分解特征备选，不是区域图或残差等价方案 | 外置固定作者 `model.py`，只加载原 `DSNet.forward`；原始模型文件 SHA `96dc899916ddf32e6778449446e82bdf99d2f8d8e47d4e4c8397dc94571398055`，许可 SHA `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986`；无外部文件入库 |
+| DSNet | `e910795073b52373ce0771ac85139a17f250b236`；根 GPL-3.0，分解特征备选，不是区域图或残差等价方案 | 外置固定作者 `model.py`，只加载原 `DSNet.forward`；原始模型文件 SHA `96dc899916df32e6778449446e82bdf99d2f8d8e47d4e4c8397dc94571398055`，许可 SHA `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986`；无外部文件入库 |
 
 DCG ZIP SHA 为 `5ac90d9b661ee4b09bd085882673f517734202e6e65459d6287c20eacfcf6b78`。实际方法匹配优先级仍是 CEGCN/DCG-Net；DSNet 是通过许可核查、可执行的补充分解特征比较。没有把它包装成最近的超像素方法或 SOTA 全面查新。第二个外部结构基线建议 DCG-Net，条件是文件级许可/第三方组件来源获核并完成原入口和适配核验；否则保留未运行，不把链接存在计为复现。
 
@@ -66,6 +66,7 @@ DCG ZIP SHA 为 `5ac90d9b661ee4b09bd085882673f517734202e6e65459d6287c20eacfcf6b7
 - 首次真实 launch 因我转录登记 hash 多了一个字符，在输出目录/更新之前拒绝；保留 `pilot01.log`。随后从冻结文件直接计算 hash，仅纠正启动身份，不重登记门槛、不增加预算。
 - 独立审计01的 NumPy 转置内存布局不满足作者 `view`；修正为与生产相同的连续 NCHW，不改原模型。审计02已完成独立 devval 复算。补训练拟合时审计03因局部 `batch` 列表遮蔽函数名而失败；一次修正 bundle 尚未上传完便 fetch，审计04仍运行旧代码而保留同样失败。确认完整上传和 SHA 后，审计05通过，全部为0优化。历史源码审计首个入口亦因该次同步未完成缺文件，正式02完成。
 - 仓库 `scripts/check_repository.py` 在 `16477e0f...` 拒绝基准继承的过期状态 Markdown。其 SHA `306cc6e7661723ca0df62271b71fa7fa568bc3f2ecca3f25f607c08fc4f6984f` 与 a339 基准相同，C 未修改状态 JSON 或投影。单独 AST/JSON 和30方向表检查通过；不将其称为整仓验收通过或 CI 已运行。主审若需要整合，应由台账负责人生成最新投影后重新验收。
+- 最终机器记录交叉核查还捕获了一处 DSNet 文件 SHA 转录多字符；以原文件实际摘要纠正文档和 JSON，保留 `final-manifests08.log` 的拒绝。模型 blob、训练登记和实际执行文件未改变。
 
 证据根 `/home/lbx/hsi-pioneer271828/runs/paper1-c-baselines-20261126/`。核心文件为 `asset-inventory01.json`、`historical-reuse02.json`、`registration02.json`、`execution02/summary.json`、九组 `result.json/updates.jsonl`、`independent-audit05.json`、专项和失败日志。独立审计05 SHA 为 `a5de935e5f969f87637e26629116153e600d03fe2018c9cf33c9b174445af5480`。原权重、真实数组、原始 PDF 和外部源码不进入 Git/审阅包。交付目录另提供去身份回执及逐文件 SHA 清单，供主审按完整 tested SHA 核对。没有关闭 Issue 或请求合并 main。
 
