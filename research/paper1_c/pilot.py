@@ -202,6 +202,7 @@ def execute_pair(args, reg, scene, seed, folder):
     states = [None, None]
     order = list(np.random.default_rng(seed).permutation(row["train_roster"]))
     total_updates = [0, 0]
+    journal = folder / "updates.jsonl"
     for step in range(len(order)+1):
         if step in row["events"]:
             metrics = []
@@ -233,6 +234,12 @@ def execute_pair(args, reg, scene, seed, folder):
             times[arm] += time.perf_counter()-t0
             losses.append(float(loss.detach()))
             total_updates[arm] += 1
+            with journal.open("a", encoding="utf-8") as stream:
+                stream.write(json.dumps({"arm": arm, "step": step+1,
+                    "tile": int(order[step]), "completed_updates": total_updates.copy(),
+                    "loss": losses[-1]}, allow_nan=False)+"\n")
+                stream.flush()
+                os.fsync(stream.fileno())
         if losses[0] != losses[1] or state_hash(direct) != state_hash(adapted.model):
             raise ValueError("Training trajectories differ")
     direct.load_state_dict(states[0])
@@ -277,8 +284,13 @@ def run(args):
             try:
                 row = execute_pair(args, reg, scene, seed, folder)
             except Exception as error:
+                updates = [0, 0]
+                if (folder/"updates.jsonl").exists():
+                    lines = (folder/"updates.jsonl").read_text().splitlines()
+                    if lines:
+                        updates = json.loads(lines[-1])["completed_updates"]
                 row = {"scene": scene, "seed": seed, "status": "FAILED", "error": str(error),
-                       "traceback": traceback.format_exc(), "no_automatic_retry": True}
+                       "updates": updates, "traceback": traceback.format_exc(), "no_automatic_retry": True}
             write_new(folder/"result.json", row)
             results.append(row)
             print(json.dumps({k: row.get(k) for k in ("scene", "seed", "status", "updates", "elapsed_seconds", "error")}), flush=True)
