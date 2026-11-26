@@ -114,3 +114,8 @@ class ObservedConditionsTests(TestCase):
         with patch('torch.cuda.manual_seed_all',side_effect=AssertionError('GPU must not be reseeded')):
             cond.install_encoders(model,48402)
         self.assertTrue(torch.equal(before,torch.get_rng_state()))
+
+    def test_real_training_cannot_consume_this_synthetic_adapter(self):
+        provider=run.FixtureProvider(9);provider.synthetic=False
+        with self.assertRaisesRegex(ValueError,'Only registered synthetic'):
+            run.contract(provider,64,'both.joint','fixture',None,{'fixture':'cache'},{'synthetic':False})
