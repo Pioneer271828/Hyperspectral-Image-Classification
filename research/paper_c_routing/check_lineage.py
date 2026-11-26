@@ -16,15 +16,21 @@ def main():
     inventory=json.loads(Path(a.inventory).read_text());cases=[]
     validation=dict(zip(rec['validation_support']['indices'],rec['validation_support']['labels']))
     width=dev['plan']['shape'][1]
-    for seed,files in profiles['profiles'].items():
+    methods=('source_pretrained_full_finetune','source_pretrained_head_only','target_scratch_full')
+    for seed,method in ((s,m) for s in profiles['profiles'] for m in methods):
+        files=dict(profiles['profiles'][seed]);model_name='model.pt'
+        if method!='source_pretrained_full_finetune':
+            files.pop('model.pt');files.pop('model.pt.json')
+            files.update(profiles['variants'][seed][method]);model_name=method+'/model.pt'
         root=Path(a.models)/f'g3-p2-s{seed}'
         pins={name:sha(root/name) for name in (*files,'support-10.json')}
         if pins!={**files,'support-10.json':profiles['support_sha256']}:raise ValueError('Original file identity differs')
-        task=json.loads((root/'frozen-task.json').read_text());meta=json.loads((root/'model.pt.json').read_text())
+        task=json.loads((root/'frozen-task.json').read_text());meta=json.loads((root/(model_name+'.json')).read_text())
         support=json.loads((root/'support-10.json').read_text());cfg=task['config'];training=meta['training_config']
         if (cfg['source_dataset']!='paviaU' or cfg['target_dataset']!='xuzhou' or cfg['model_seed']!=int(seed)
                 or cfg['source_updates']!=10000 or cfg['target_updates']!=1000 or cfg['target_validation_labels']!=0
                 or cfg['target_selection']!='fixed_final_step' or training['optimizer_steps']!=1000
+                or training['method']!=method
                 or training['task_hash']!=task['task_hash'] or training['support_hash']!=support['support_hash']
                 or task['target_plan_hash']!=dev['identity']['plan_hash']
                 or task['target_identity']['image_sha256']!=inventory['images']['xuzhou']['sha256']):
@@ -40,8 +46,8 @@ def main():
             for label in labels:class_parents[str(label)].add(tile['id'])
             context.append({'tile':tile['id'],'original_plan_parent':tile['id'],
                             'original_training_points_inside':len(seen),'current_devval_points':len(labels)})
-        cases.append({'seed':int(seed),'pins':pins,'task_hash':task['task_hash'],'support_hash':support['support_hash'],
-                      'source_updates':10000,'target_updates':1000,'original_target_K':10,'original_target_V':0,
+        cases.append({'seed':int(seed),'method':method,'pins':pins,'task_hash':task['task_hash'],'support_hash':support['support_hash'],
+                      'source_updates':0 if method=='target_scratch_full' else 10000,'target_updates':1000,'original_target_K':10,'original_target_V':0,
                       'selected_target_optimizer_step':training['optimizer_steps'],
                       'target_image_matches_previous_inventory':True,'target_plan_matches_development':True,
                       'original_support_labels':len(original),'released_validation_labels':len(validation),

@@ -45,6 +45,20 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(sum(x['development_execution'] for x in catalog['directions']),1)
         self.assertTrue(all(not x['independent_confirmation'] and not x['independent_calibration'] for x in catalog['directions']))
 
+    def test_nine_original_models_have_explicit_immutable_file_pins(self):
+        manifest=json.loads((Path(__file__).parent/'g3-profiles.json').read_text())
+        self.assertEqual(set(manifest['profiles']),{'2036','2046','2056'})
+        models=[]
+        for seed,files in manifest['profiles'].items():
+            models.append(files['model.pt'])
+            self.assertEqual(set(manifest['variants'][seed]),{'target_scratch_full','source_pretrained_head_only'})
+            for method,pins in manifest['variants'][seed].items():
+                self.assertEqual(set(pins),{method+'/model.pt',method+'/model.pt.json'})
+                models.append(pins[method+'/model.pt'])
+            for h in [*files.values(),*(v for pins in manifest['variants'][seed].values() for v in pins.values())]:
+                self.assertEqual(len(h),64);int(h,16)
+        self.assertEqual(len(set(models)),9)
+
     def test_quota_permutation_random_and_label_absence(self):
         rows=self.fixture();m={r.key:(i+1)/10 for i,r in enumerate(rows)}
         before=copy.deepcopy(m)

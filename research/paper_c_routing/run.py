@@ -52,11 +52,14 @@ def main():
     p.add_argument("--profile",choices=("wp11_scratch","g3_pavia_xuzhou"),default="wp11_scratch")
     p.add_argument("--g3-root")
     p.add_argument("--g3-seed",type=int,choices=(2036,2046,2056),default=2036)
+    p.add_argument('--g3-method',choices=('source_pretrained_full_finetune','source_pretrained_head_only','target_scratch_full'),default='source_pretrained_full_finetune')
     p.add_argument("--range-view",action="store_true")
     p.add_argument("--descriptor",choices=("retained_fraction","approximate_span"),default="retained_fraction")
     a=p.parse_args()
     started=perf_counter()
     if sys.platform!="linux" or os.environ.get("CUDA_VISIBLE_DEVICES")!="":raise ValueError("Authorized Linux CPU only")
+    if a.profile=='wp11_scratch' and (a.g3_root is not None or a.g3_seed!=2036 or a.g3_method!='source_pretrained_full_finetune'):
+        raise ValueError('G3 options cannot be silently ignored by the WP11 scratch profile')
     root=Path(__file__).resolve().parents[2]
     clean(root,a.expected_commit);clean(a.dependency,DEPENDENCY)
     torch.set_num_threads(1)
@@ -71,34 +74,48 @@ def main():
         g3=Path(a.g3_root).resolve()
         profiles=json.loads((Path(__file__).parent/'g3-profiles.json').read_text())
         expected={**profiles['profiles'][str(a.g3_seed)],'support-10.json':profiles['support_sha256']}
+        model_name='model.pt'
+        if a.g3_method!='source_pretrained_full_finetune':
+            expected.pop('model.pt');expected.pop('model.pt.json')
+            expected.update(profiles['variants'][str(a.g3_seed)][a.g3_method])
+            model_name=a.g3_method+'/model.pt'
         if not g3.is_relative_to(runs.parent/"references"):raise ValueError("Imported frozen models must stay in project references")
         model_pins={str(g3/n):h for n,h in expected.items()}
         if any(sha(path)!=h for path,h in model_pins.items()):raise ValueError("Imported original model/metadata identity differs")
-        task=json.loads((g3/"frozen-task.json").read_text());cfg=json.loads((g3/"model.pt.json").read_text())
+        task=json.loads((g3/"frozen-task.json").read_text());cfg=json.loads((g3/(model_name+'.json')).read_text())
         original_support=json.loads((g3/'support-10.json').read_text())
-        frozen=json.loads((g3/"target-checkpoints-frozen.json").read_text())["source_pretrained_full_finetune"]
+        frozen=json.loads((g3/"target-checkpoints-frozen.json").read_text())[a.g3_method]
         if (task["config"]["source_dataset"]!="paviaU" or task["config"]["target_dataset"]!="xuzhou"
                 or task["task_hash"]!=cfg["training_config"]["task_hash"]
                 or original_support['support_hash']!=task['support_hash']
-                or cfg["training_config"]["method"]!="source_pretrained_full_finetune"
-                or frozen["checkpoint_sha256"]!=expected["model.pt"] or frozen["sidecar_sha256"]!=expected["model.pt.json"]):
+                or cfg['training_config']['optimizer_steps']!=1000 or task['config']['model_seed']!=a.g3_seed
+                or cfg["training_config"]["method"]!=a.g3_method
+                or frozen["checkpoint_sha256"]!=expected[model_name] or frozen["sidecar_sha256"]!=expected[model_name+'.json']):
             raise ValueError("Single-source task/selected model lineage differs")
-        qualification=admit(table,"paviaU","xuzhou",scope="cross_device_development",role="devval",
-                            ancestry={"source":"paviaU","target":"xuzhou","kind":"verified_source_pretrain_target_adaptation"})
+        if a.g3_method=='target_scratch_full':
+            qualification=admit(table,'xuzhou','xuzhou',scope='target_local_development_control',role='devval',
+                                ancestry={'source':'xuzhou','target':'xuzhou','kind':'target_scratch'})
+        else:
+            qualification=admit(table,"paviaU","xuzhou",scope="cross_device_development",role="devval",
+                                ancestry={"source":"paviaU","target":"xuzhou","kind":"verified_source_pretrain_target_adaptation"})
         qualification.update(original_target_training_K=10,original_target_validation_V=0,
-                             original_target_updates=1000,original_source_updates=10000,
+                             original_target_updates=1000,original_source_updates=0 if a.g3_method=='target_scratch_full' else 10000,
                              scoring_role="existing bank V5; development recontextualization, not independent confirmation",
                              light="exact frozen trained CNN branch copy; no new light-head fitting")
+        qualification['original_method']=a.g3_method
     contract={"schema":"paper_c_routing_dev_zero_v1","code":a.expected_commit,"dependency":DEPENDENCY,
               "qualification":qualification,"table_sha256":sha(table),"release_sha256":RELEASE_SHA,
               "views":[1,2,4],"full_fraction":.5,"seed":64,"rounds":6,"warmups":1,
               "scope":"development only; synthetic retained-column views separate from native full",
               "source_pretraining":"none: target-scratch ancestry","optimizer_updates":0,
               "calibration":False,"confirmation":False}
-    contract.update(profile=a.profile,model_pins=model_pins,frozen_model_seed=a.g3_seed if a.profile!='wp11_scratch' else None)
+    contract.update(profile=a.profile,model_pins=model_pins,frozen_model_seed=a.g3_seed if a.profile!='wp11_scratch' else None,
+                    original_method=a.g3_method if a.profile!='wp11_scratch' else 'WP11 target scratch5000 and light fit')
     contract.update(range_view=a.range_view,descriptor=a.descriptor,
                     descriptor_quality="approximate delivered centers; no certified SRF or device calibration")
     if a.profile!="wp11_scratch":contract["source_pretraining"]="original Pavia source10000 + target1000, no new updates"
+    if a.profile!='wp11_scratch' and a.g3_method=='target_scratch_full':
+        contract['source_pretraining']='none; original matched target scratch1000, no new updates'
     pin=digest(contract)
     if out.exists():
         if not a.resume or json.loads((out/"contract.json").read_text())!=contract:raise ValueError("Explicit exact resume required")
@@ -131,8 +148,8 @@ def main():
         from transfer.registered_development import _load_source
         from inference.light_cnn import LightCNN
         from types import SimpleNamespace
-        full=_load_source({"path":str(g3/"model.pt"),"sha256":expected["model.pt"]},
-                          {"path":str(g3/"model.pt.json"),"sha256":expected["model.pt.json"]})
+        full=_load_source({"path":str(g3/model_name),"sha256":expected[model_name]},
+                          {"path":str(g3/(model_name+'.json')),"sha256":expected[model_name+'.json']})
         light=SimpleNamespace(model=LightCNN(full))
     for path,h in protected.items():
         if sha(path)!=h:raise ValueError("Frozen model or development input differs")
