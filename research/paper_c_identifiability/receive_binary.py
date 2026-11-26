@@ -1,11 +1,13 @@
 """Receive raw SSH bytes into durable hashed frames; publish only whole-SHA proof."""
 import argparse
+from contextlib import ExitStack
 import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import sys
+import socket
 import uuid
 
 
@@ -25,7 +27,9 @@ def fsync_directory(path):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--out',required=True);p.add_argument('--bytes',type=int,required=True);p.add_argument('--sha256',required=True)
-    p.add_argument('--frame-bytes',type=int,default=16777216);p.add_argument('--status',action='store_true');a=p.parse_args()
+    p.add_argument('--frame-bytes',type=int,default=16777216);p.add_argument('--status',action='store_true')
+    p.add_argument('--socket',help='Private remote Unix socket carried entirely by native SSH forwarding')
+    a=p.parse_args()
     if a.bytes<=0 or not 1<=a.frame_bytes<=16777216 or len(a.sha256)!=64 or any(c not in '0123456789abcdef' for c in a.sha256):
         raise ValueError('Positive archive/frame bounds and full SHA256 required')
     os.umask(0o077);final=Path(a.out).resolve();part=final.with_suffix(final.suffix+'.partial')
@@ -57,11 +61,18 @@ def main():
             with tmp.open('x') as f:json.dump(state,f,indent=2);f.flush();os.fsync(f.fileno())
             os.replace(tmp,journal);fsync_directory(journal.parent)
         last_report=state['offset']
-        with part.open('ab' if journal.exists() else 'xb') as f:
+        with ExitStack() as resources:
+            stream=sys.stdin.buffer
+            if a.socket:
+                endpoint=Path(a.socket)
+                if not endpoint.is_absolute() or endpoint.parent.stat().st_mode&0o077:raise ValueError('Private absolute Unix-socket parent required')
+                client=resources.enter_context(socket.socket(socket.AF_UNIX,socket.SOCK_STREAM));client.connect(str(endpoint))
+                stream=resources.enter_context(client.makefile('rb'))
+            f=resources.enter_context(part.open('ab' if journal.exists() else 'xb'))
             while state['offset']<a.bytes:
                 wanted=min(a.frame_bytes,a.bytes-state['offset']);raw=bytearray()
                 while len(raw)<wanted:
-                    data=sys.stdin.buffer.read(wanted-len(raw))
+                    data=stream.read(wanted-len(raw))
                     if not data:raise EOFError('SSH ended inside an uncommitted in-memory frame; source retained')
                     raw.extend(data)
                 f.write(raw);f.flush();os.fsync(f.fileno())
