@@ -12,6 +12,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from transactions import execute,inspect,locked,paired_plan,sha
+from audit import audit
 
 
 class Toy:
@@ -132,6 +133,20 @@ class RecoveryTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):execute(root,self.c,Toy,fault=crash)
         r=execute(root,self.c,Toy,resume=True)
         self.assertEqual(r['new_updates'],0);self.assertTrue(r['complete'])
+
+    def test_independent_audit_and_optimizer_cursor_corruption(self):
+        root=self.root/'audit';execute(root,self.c,Toy)
+        result=audit(root)
+        self.assertEqual(result['committed_optimizer_updates'],9)
+        self.assertEqual(result['new_neural_forwards_during_audit'],0)
+        p=root/'stages'/'000009'/'state.pt';value=state(root,9)
+        first=next(iter(value['optimizer']['state'].values()));first['step']=torch.tensor(9.5)
+        torch.save(value,p)
+        record=root/'stages'/'000009'/'record.json';row=json.loads(record.read_text())
+        row['state_sha256']=sha(p);row['checkpoint_bytes']=p.stat().st_size;record.write_text(json.dumps(row))
+        done=root/'done.json';receipt=json.loads(done.read_text());receipt['last_record']=sha(record);done.write_text(json.dumps(receipt))
+        # Even a self-consistent new byte manifest cannot hide a fractional Adam cursor.
+        with self.assertRaisesRegex(ValueError,'Adam step'):audit(root)
 
 
 if __name__=='__main__':unittest.main()
