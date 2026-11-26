@@ -26,6 +26,8 @@ import g4_branch_local_target as local_control
 import g4_branch_local_target_runtime as local_runtime
 import g4_interaction_target as interaction
 import g4_interaction_target_runtime as interaction_runtime
+import g4_normalized_edge_target as normalization
+import g4_normalized_edge_target_runtime as normalization_runtime
 from evaluation.classification_metrics import metrics_from_confusion
 from g4_position_fusion_target_runtime import prepare
 from g4_support_context import prepare_contexts, read, validate_manifest
@@ -82,7 +84,15 @@ REAL_PAIR = ("off", "C2G")
 REAL_PAIR_UPDATES = len(SEEDS) * len(REAL_PAIR) * (STEPS["whole"] + STEPS["prefix"] + STEPS["resume"])
 DIRECTION_SCOPE = "real_dev_direction_capacity"
 FACTORIAL_SCOPE = "real_dev_fixed_qa_residual_fusion"
-REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE, FACTORIAL_SCOPE)
+EDGE_WEIGHT_SCOPE = "real_dev_fixed_candidates_edge_weights"
+EDGE_WEIGHT_GROUP = "edge_weights"
+EDGE_WEIGHT_CONDITIONS = {"off": "none", "norm": "row_normalized", "Wg": "graph", "Wj": "joint"}
+EDGE_WEIGHT_PARAMS = {"off": 61696, "norm": 61696, "Wg": 70144, "Wj": 78592}
+EDGE_WEIGHT_CONTRASTS = (("norm", "off"), ("Wg", "norm"), ("Wj", "norm"),
+                         ("Wj", "Wg"), ("Wg", "off"), ("Wj", "off"))
+EDGE_WEIGHT_PRIMARY = tuple(f"{a}-{b}" for a, b in EDGE_WEIGHT_CONTRASTS[:3])
+POINT_SCOPES = (FACTORIAL_SCOPE, EDGE_WEIGHT_SCOPE)
+REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE, FACTORIAL_SCOPE, EDGE_WEIGHT_SCOPE)
 FACTORIAL_PARAMS = {"B0": 61696, "R": 69952, "F": 61825, "R+F": 70081, "Bcap": 69952, "Bcap+F": 70081}
 FACTORIAL_EFFECTS = {
     **CONTRASTS,
@@ -124,6 +134,9 @@ def verify(pin):
 
 
 def roster(group="factorial"):
+    if group == EDGE_WEIGHT_GROUP:
+        return [{"seed": seed, "arm": arm, "condition": condition}
+                for seed in SEEDS for arm, condition in EDGE_WEIGHT_CONDITIONS.items()]
     if group in CONTROLS:
         return [{"seed": seed, "arm": arm, "condition": condition}
                 for seed in SEEDS for arm, condition in CONTROLS[group].items()]
@@ -146,6 +159,8 @@ def plan(catalog, code, scope, *, arithmetic=None, group="factorial"):
         value["group"] = group
         if group == "edges":
             value["graph"] = "fixed_Q_and_A_candidate_support_opt_in_learned_A_values"
+    if group == EDGE_WEIGHT_GROUP:
+        value.update(group=group, graph="fixed_Q_and_A_candidates_stage2_weight_control")
     return value
 
 
@@ -159,7 +174,8 @@ def registration(args, code):
         require(published["sha256"] == REAL_CATALOG_SHA
                 and catalog == path.parent / "rebound-contexts" / "manifest.json"
                 and value == real_plan(catalog, published, code, [value["devices"][str(seed)] for seed in SEEDS],
-                                       prior=value.get("prior"), factorial=value["scope"] == FACTORIAL_SCOPE),
+                                       prior=value.get("prior"), factorial=value["scope"] == FACTORIAL_SCOPE,
+                                       edge_weights=value["scope"] == EDGE_WEIGHT_SCOPE),
                 "Real paired development registration or publication differs")
         return value
     require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"),
@@ -169,7 +185,7 @@ def registration(args, code):
     return value
 
 
-def real_plan(catalog, published, code, devices, *, prior=None, factorial=False):
+def real_plan(catalog, published, code, devices, *, prior=None, factorial=False, edge_weights=False):
     require(len(devices) == len(SEEDS) and len(set(devices)) == len(SEEDS)
             and all("GPU-" + str(UUID(gpu.removeprefix("GPU-"))) == gpu for gpu in devices),
             "Assign one distinct physical GPU UUID to each paired seed")
@@ -184,6 +200,14 @@ def real_plan(catalog, published, code, devices, *, prior=None, factorial=False)
                 "cases": roster("factorial"), "parameters_by_arm": FACTORIAL_PARAMS,
                 "primary_comparisons": ["R-Bcap", "R+F-(Bcap+F)", "F-B0", "R+F-R"],
                 "real_updates_authorized": len(SEEDS)*len(ARMS)*(STEPS["whole"]+STEPS["prefix"]+STEPS["resume"])}
+    if edge_weights:
+        require(prior is None, "Edge weight controls require a fresh, matched baseline")
+        cases = roster(EDGE_WEIGHT_GROUP)
+        return {**base, "scope": EDGE_WEIGHT_SCOPE, "group": EDGE_WEIGHT_GROUP,
+                "graph": "fixed_Q_and_A_candidates_stage2_weight_control",
+                "cases": cases, "parameters_by_arm": EDGE_WEIGHT_PARAMS,
+                "primary_comparisons": list(EDGE_WEIGHT_PRIMARY),
+                "real_updates_authorized": len(cases) * sum(STEPS.values())}
     if prior is None:
         return base
     require(prior["sha256"] == PRIOR_EVIDENCE, "Expected the independently accepted I0/I3 evidence")
@@ -206,10 +230,19 @@ def bound(reg, case, out, device):
     group = reg.get("group", "factorial")
     if group == "directions" and case["condition"] in local_control.LOCAL_MATCHES:
         return local_runtime.prepare(*paths, condition=case["condition"], **common)
+    if group == EDGE_WEIGHT_GROUP:
+        runtime, _, _ = edge_weight_adapter(case["condition"])
+        return runtime(*paths, condition=case["condition"], **common)
     if group in ADAPTERS:
         return ADAPTERS[group][0](*paths, condition=case["condition"], **common)
     return prepare(*paths, mode=case["mode"], condition=case["fusion"],
                    exact_capacity=reg["scope"] == FACTORIAL_SCOPE and case["mode"] == "capacity_control", **common)
+
+
+def edge_weight_adapter(condition):
+    if condition == "row_normalized":
+        return normalization_runtime.prepare, normalization, "normalization_binding"
+    return edge_runtime.prepare, edge, "edge_binding"
 
 
 def attest(gpu):
@@ -232,8 +265,8 @@ def hardware(gpu, started):
 
 def model_snapshot(model, group="factorial"):
     tensors = {k: tensor_hash(v) for k, v in model.state_dict().items()}
-    if group in CONTROLS:
-        prefixes = edge.PREFIXES if group == "edges" else (interaction.PREFIX,)
+    if group in CONTROLS or group == EDGE_WEIGHT_GROUP:
+        prefixes = edge.PREFIXES if group in ("edges", EDGE_WEIGHT_GROUP) else (interaction.PREFIX,)
         return {"shared": digest({k: v for k, v in tensors.items() if not k.startswith(prefixes)}),
                 "additional_tensors": {k: v for k, v in tensors.items() if k.startswith(prefixes)},
                 "parameters": sum(p.numel() for p in model.parameters()),
@@ -251,7 +284,7 @@ def move_items(items, device):
             for name, item in items.items()}
 
 
-def validation_evidence(probabilities, item, recorded, *, keep_correctness=False):
+def validation_evidence(probabilities, item, recorded, *, keep_correctness=False, keep_points=False):
     data = {}
     truth = item["val_labels"].cpu().numpy()
     classes = item["class_num"]
@@ -272,6 +305,19 @@ def validation_evidence(probabilities, item, recorded, *, keep_correctness=False
         if keep_correctness:
             correct = scores.argmax(1) == truth
             data[head]["correctness"] = [correct[truth == label].tolist() for label in range(classes)]
+        if keep_points:
+            actual = scores[np.arange(len(truth)), truth]
+            other = scores.copy()
+            other[np.arange(len(truth)), truth] = -np.inf
+            data[head]["confusion"] = matrix.tolist()
+            data[head]["points"] = [
+                {"class_id": int(label) + 1, "point": ordinal + 1,
+                 "predicted": int(scores[index].argmax()) + 1,
+                 "true_probability": float(actual[index]),
+                 "margin": float(actual[index] - other[index].max())}
+                for label in range(classes)
+                for ordinal, index in enumerate(np.flatnonzero(truth == label))
+            ]
     return data
 
 
@@ -289,6 +335,8 @@ def control_diagnostics(group, case, model, item, runtime, probabilities):
                 "configuration": (local_control.configuration(case["condition"])
                                   if case["condition"] in local_control.LOCAL_MATCHES
                                   else interaction.configuration(case["condition"]))}
+    if group == EDGE_WEIGHT_GROUP:
+        return edge_weight_diagnostics(case, model, item, runtime)
     if group != "edges":
         return {}
     config = edge.configuration(case["condition"])
@@ -309,6 +357,40 @@ def control_diagnostics(group, case, model, item, runtime, probabilities):
     result.update(candidate_edges=len(original), isolated_fallback_edges=len(fallback), actual_edges=len(observed),
                   updated_weight_elements=int(torch.count_nonzero(after-before)), maximum_change=float((after-before).abs().max()))
     return result
+
+
+def edge_weight_diagnostics(case, model, item, runtime):
+    condition = case["condition"]
+    if condition == "none":
+        require(model.backbone.edge_updater is None, "Off arm acquired an edge updater")
+        return {"condition": condition, "stage2_operator": "original_input_A"}
+    obs = observation(model, item)
+    with torch.no_grad():
+        if condition == "row_normalized":
+            normalization.verify_initialization_binding(model, runtime.normalization_binding)
+            result = model(runtime.normalization_binding["target"], obs["net_input"], obs["Q"], obs["A"],
+                           wavelengths=obs["wavelengths"], fwhm=obs["fwhm"], superpixel_scale=obs["superpixel_scale"],
+                           return_graph_info=True, return_diagnostics=True)
+        else:
+            result = edge.forward_observation(model, obs, expected_binding=runtime.edge_binding, diagnostics=True)
+    info = result[-1]["interaction"]
+    a = item["A"].to_sparse_coo().coalesce()
+    edges = {tuple(row) for row in a.indices()[:, a.values() > 0].T.tolist()}
+    occupied = {row for row, _ in edges}
+    fallback = {(row, row) for row in range(a.shape[0]) if row not in occupied}
+    support = {tuple(row) for row in info["edge_indices"].T.tolist()}
+    require(support == edges | fallback, "Stage two changed fixed candidate support")
+    prior, weights = info["edge_weights_before"], info["edge_weights_after"]
+    delta = (weights - prior).abs()
+    changes = int(torch.count_nonzero(delta))
+    require(bool(torch.isfinite(weights).all() and (weights > 0).all())
+            and (changes == 0) == (condition == "row_normalized"), "Unexpected normalized or learned edge weights")
+    return {"condition": condition, "stage2_operator": "normalized_prior" if condition == "row_normalized"
+            else "learned_prior_mixture", "nodes": a.shape[0], "candidate_edges": len(edges),
+            "isolated_fallback_edges": len(fallback), "actual_edges": len(support),
+            "support_sha256": tensor_hash(info["edge_indices"]), "prior_sha256": tensor_hash(prior),
+            "weights_sha256": tensor_hash(weights), "changed_weights": changes,
+            "mean_abs_change_from_prior": float(delta.mean()), "max_abs_change_from_prior": float(delta.max())}
 
 
 def component_activity(group, trace):
@@ -349,6 +431,9 @@ def audit_case(reg, case, out, gpu, *, real=False):
     def calibrated(model):
         if group == "directions" and case["condition"] in local_control.LOCAL_MATCHES:
             calibrator, binding = local_control.calibrate, runtime.branch_local_binding
+        elif group == EDGE_WEIGHT_GROUP:
+            _, factory, binding_key = edge_weight_adapter(case["condition"])
+            calibrator, binding = factory.calibrate, getattr(runtime, binding_key)
         elif group in ADAPTERS:
             _, factory, binding_key = ADAPTERS[group]
             calibrator, binding = factory.calibrate, getattr(runtime, binding_key)
@@ -359,7 +444,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
 
     diagnostic = {}
     strict_replay = {}
-    if real or group in CONTROLS:
+    if real or group in CONTROLS or group == EDGE_WEIGHT_GROUP:
         before = state_id(model)
         candidate = calibrated(model)
         checked, probs = runtime.validation_snapshot(candidate, items)
@@ -412,19 +497,26 @@ def audit_case(reg, case, out, gpu, *, real=False):
     require(_tree_fingerprint(last["model"]) == _tree_fingerprint(torch.load(raw, weights_only=True, map_location="cpu")),
             "Final calibration used the wrong raw state")
     model.load_state_dict(last["model"], strict=True)
-    _, probs = runtime.validation_snapshot(calibrated(model), items)
-    keep_correctness = reg["scope"] == FACTORIAL_SCOPE
+    final_model = calibrated(model)
+    _, probs = runtime.validation_snapshot(final_model, items)
+    point_options = {"keep_correctness": reg["scope"] in POINT_SCOPES,
+                     "keep_points": reg["scope"] == EDGE_WEIGHT_SCOPE}
+    trained = {}
+    if group == EDGE_WEIGHT_GROUP:
+        trained["last"] = edge_weight_diagnostics(case, final_model, items[target], runtime)
     final = validation_evidence(probs[target]["val"], item, last["history"][-1]["metrics"][target]["val"],
-                                keep_correctness=keep_correctness)
+                                **point_options)
+    del final_model
     primary = runtime.load_selected(split / "primary.pt", items, split / f"raw-validation-{selected_step:06d}.pt", device=device)
     _, probs = runtime.validation_snapshot(primary, items)
-    selected = validation_evidence(probs[target]["val"], item, minimum["metrics"][target]["val"],
-                                   keep_correctness=keep_correctness)
+    selected = validation_evidence(probs[target]["val"], item, minimum["metrics"][target]["val"], **point_options)
+    if group == EDGE_WEIGHT_GROUP:
+        trained["selected"] = edge_weight_diagnostics(case, primary, items[target], runtime)
     guard()
     costs = {phase: read(out / f"{phase}.json") for phase in STEPS}
     require([costs[phase]["updates"] for phase in STEPS] == list(STEPS.values()), "Wrong phase updates")
     activity = {}
-    if keep_correctness:
+    if reg["scope"] == FACTORIAL_SCOPE:
         trace = last["trace"]
         for name, active, gradients, elements in (
                 ("residual_or_control", case["mode"] != "none",
@@ -436,18 +528,28 @@ def audit_case(reg, case, out, gpu, *, real=False):
             require(all(np.isfinite(gradients)) and (max(gradients) > 0) == active
                     and (sum(elements) > 0) == active, "Declared factorial mechanism did not match its update trace")
             activity[name] = {"active": active, "peak_gradient_norm": max(gradients), "changed_elements": sum(elements)}
+    if group == EDGE_WEIGHT_GROUP:
+        if case["condition"] == "row_normalized":
+            require(all(row["prior_normalization"]["normalization_parameters"] == 0
+                        and row["prior_normalization"]["changed_elements"] == 0 for row in last["trace"]),
+                    "Parameter-free normalization acquired trainable state")
+        else:
+            activity = component_activity("edges", last["trace"])
     return {"case": case, "inputs": inputs, "init": init, "steps": {"selected": selected_step, "last": 12},
             "endpoints": {"selected": selected, "last": final}, "head_updates": changes, "phases": costs,
             "exact_whole_split": True, "resume_completed_updates": 0, "audit_updates": 0,
             "trace_proof": digest(last["trace"]),
-            **({"learned_components": activity} if keep_correctness else {}),
+            **({"learned_components": activity} if reg["scope"] == FACTORIAL_SCOPE else {}),
+            **({"diagnostics": {"initial": diagnostic, **trained}, "learned_components": activity}
+                if group == EDGE_WEIGHT_GROUP else {}),
             **({"diagnostics": diagnostic, "learned_components": component_activity(group, last["trace"])}
                if group in CONTROLS else {}),
             **({"exact_independent_step_one": True} if reg.get("arithmetic") else {})}
 
 
 def paired_initialization(rows, group="factorial"):
-    arms = DIRECTION_PARAMS if group == DIRECTION_SCOPE else REAL_PAIR if group == REAL_PAIR_SCOPE else CONTROLS.get(group, ARMS)
+    arms = (EDGE_WEIGHT_CONDITIONS if group == EDGE_WEIGHT_SCOPE else DIRECTION_PARAMS if group == DIRECTION_SCOPE
+            else REAL_PAIR if group == REAL_PAIR_SCOPE else CONTROLS.get(group, ARMS))
     for seed in SEEDS:
         cases = [row for row in rows if row["case"]["seed"] == seed]
         require({row["case"]["arm"] for row in cases} == set(arms)
@@ -455,6 +557,17 @@ def paired_initialization(rows, group="factorial"):
                 and len({digest(row["inputs"]) for row in cases}) == 1, "Paired input or shared initialization differs")
         control = {r["case"]["arm"]: r for r in cases}
         by_arm = {r["case"]["arm"]: r["init"] for r in cases}
+        if group == EDGE_WEIGHT_SCOPE:
+            require({arm: init["parameters"] for arm, init in by_arm.items()} == EDGE_WEIGHT_PARAMS
+                    and not by_arm["off"]["additional_tensors"]
+                    and set(by_arm["norm"]["additional_tensors"]) == {normalization.PREFIX + "protocol_version"},
+                    "Edge controls changed parameter count or the normalization-only state")
+            for endpoint in ("initial", "selected", "last"):
+                signatures = {(d["support_sha256"], d["prior_sha256"])
+                              for arm in ("norm", "Wg", "Wj")
+                              for d in (control[arm]["diagnostics"][endpoint],)}
+                require(len(signatures) == 1, "Learned arms used a different candidate support or normalized prior")
+            continue
         if group in ("directions", REAL_PAIR_SCOPE, DIRECTION_SCOPE):
             def head(arm, name):
                 return control[arm]["diagnostics"]["initial_head_sha256"][name]
@@ -498,6 +611,8 @@ def make_tables(rows, group="factorial"):
     endpoints, per_class, paired, paired_class, costs = [], [], [], [], []
     selected = {}
     pairs = (("C2G", "off"),) if group == REAL_PAIR_SCOPE else CONTROL_CONTRASTS.get(group, ())
+    if group == EDGE_WEIGHT_SCOPE:
+        pairs = EDGE_WEIGHT_CONTRASTS
     if group == DIRECTION_SCOPE:
         pairs = (*MATCHES, *((arm, "off") for arm in DIRECTION_PARAMS if arm != "off"),
                  ("both", "add"), ("both", "C2G"), ("both", "G2C"), ("C2G", "G2C"))
@@ -536,7 +651,7 @@ def make_tables(rows, group="factorial"):
                             delta_recall=delta))
                     paired.append({**context, **{f"delta_{k}": sum(a[k]*w for a, w in arms) for k in ("oa", "aa", "nll")},
                                    "minimum_class_recall_difference": min(deltas), "negative_class_differences": sum(d < -1e-12 for d in deltas)})
-                    if group == FACTORIAL_SCOPE and tuple(design.values()) == (1, -1):
+                    if group in POINT_SCOPES and tuple(design.values()) == (1, -1):
                         a, b = (arm["correctness"] for arm, _ in arms)
                         for label, (now, old) in enumerate(zip(a, b, strict=True), 1):
                             transitions = list(zip(now, old, strict=True))
@@ -544,7 +659,7 @@ def make_tables(rows, group="factorial"):
                                 retained=sum(n and p for n, p in transitions), gained=sum(n and not p for n, p in transitions),
                                 lost=sum(p and not n for n, p in transitions)))
     products = {"endpoints": endpoints, "per-class": per_class, "paired": paired, "paired-per-class": paired_class, "costs": costs}
-    if group == FACTORIAL_SCOPE:
+    if group in POINT_SCOPES:
         products["correct-point-transitions"] = changes
     return products
 
@@ -818,7 +933,8 @@ def main():
             selector.add_argument("--registration", required=True, nargs=2)
         if kind in ("run", "stage"):
             selector.add_argument("--seed", type=int, choices=SEEDS, required=kind == "stage")
-            selector.add_argument("--arm", choices=sorted(set(ARMS).union(DIRECTION_PARAMS, *CONTROLS.values())),
+            selector.add_argument("--arm", choices=sorted(set(ARMS).union(DIRECTION_PARAMS, EDGE_WEIGHT_CONDITIONS,
+                                                                   *CONTROLS.values())),
                                   required=kind == "stage")
         if kind in ("run", "stage", "probe"):
             selector.add_argument("--gpu")
@@ -838,6 +954,7 @@ def main():
             flavor = selector.add_mutually_exclusive_group()
             flavor.add_argument("--prior", nargs=2, metavar=("ACCEPTANCE", "SHA256"))
             flavor.add_argument("--factorial", action="store_true")
+            flavor.add_argument("--edge-weights", action="store_true")
     args = parser.parse_args()
     code = code_snapshot()
     require(sys.platform == "linux" and __debug__ and code["commit"] == args.expected_commit, "Expected Linux frozen revision")
@@ -865,7 +982,15 @@ def main():
         catalog, publication = rebind(args, code, out)
         path = out / "registration.json"
         prior = None if args.prior is None else {"path": str(Path(args.prior[0]).resolve()), "sha256": args.prior[1]}
-        value = real_plan(catalog, publication, code, args.devices, prior=prior, factorial=args.factorial)
+        value = real_plan(catalog, publication, code, args.devices, prior=prior, factorial=args.factorial,
+                          edge_weights=args.edge_weights)
+        if args.edge_weights:
+            for arm, condition in EDGE_WEIGHT_CONDITIONS.items():
+                _, factory, _ = edge_weight_adapter(condition)
+                model, _ = factory.initialize(value["target"], value["method"], condition,
+                    model_seed=SEEDS[0], head_seed=SEEDS[0]+1000)
+                require(sum(p.numel() for p in model.parameters()) == EDGE_WEIGHT_PARAMS[arm],
+                        "Pre-dispatch edge weight parameter count differs")
         if args.factorial:
             for arm, (mode, fusion) in ARMS.items():
                 model, _ = initialize_position(value["target"], value["method"], fusion, mode=mode,
