@@ -527,12 +527,12 @@ def make_tables(rows, group="factorial"):
                     context = dict(seed=seed, endpoint=endpoint, head=head, comparison=comparison)
                     arms = [(selected[seed, endpoint, head, arm], v) for arm, v in design.items()]
                     deltas = []
-                    for group in zip(*(a["classes"] for a, _ in arms), strict=True):
-                        require(len({(c["class_id"], c["support"]) for c in group}) == 1, "Different class denominators")
-                        delta = sum(c["recall"]*sign for (_, sign), c in zip(arms, group, strict=True))
+                    for classes in zip(*(a["classes"] for a, _ in arms), strict=True):
+                        require(len({(c["class_id"], c["support"]) for c in classes}) == 1, "Different class denominators")
+                        delta = sum(c["recall"]*sign for (_, sign), c in zip(arms, classes, strict=True))
                         deltas.append(delta)
-                        paired_class.append(dict(**context, class_id=group[0]["class_id"], denominator=group[0]["support"],
-                            correct_by_arm=json.dumps({arm: c["correct"] for arm, c in zip(design, group, strict=True)}),
+                        paired_class.append(dict(**context, class_id=classes[0]["class_id"], denominator=classes[0]["support"],
+                            correct_by_arm=json.dumps({arm: c["correct"] for arm, c in zip(design, classes, strict=True)}),
                             delta_recall=delta))
                     paired.append({**context, **{f"delta_{k}": sum(a[k]*w for a, w in arms) for k in ("oa", "aa", "nll")},
                                    "minimum_class_recall_difference": min(deltas), "negative_class_differences": sum(d < -1e-12 for d in deltas)})
