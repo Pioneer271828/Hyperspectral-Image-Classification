@@ -16,6 +16,7 @@ from transfer import wp07_graph_range as graph
 from transfer import wp07_observed_conditions as conditions
 from transfer.native_scale_observation import forward
 from transfer.xuzhou_multiscale_audit import _exact
+from transfer.wp07_position_real import RegisteredPositionProvider
 
 
 class ExactPositionTests(TestCase):
@@ -120,3 +121,18 @@ class ExactPositionTests(TestCase):
                     run.contract(self.provider, 64, 'both.joint', 'fixture', execution.numeric, {}, {})
             finally:
                 self.provider.synthetic = True
+
+    def test_real_view_rejection_precedes_payload_access(self):
+        gate = RegisteredPositionProvider.__new__(RegisteredPositionProvider)
+        event = dict(tile=3, factor=1, band='full')
+        gate._registry = {('devval', 3, 'full', 1): {'source': {'positions': [0, 1, 2, 3]}}}
+        from unittest.mock import Mock
+        gate.provider = Mock()
+        for role, changed, values in [('devval', event, [0, 2]),
+                                      ('devtrain', event, None),
+                                      ('devval', {**event, 'band': 'odd'}, None)]:
+            with self.assertRaises(ValueError):
+                gate.request(role, changed, 'fixture', positions=values)
+        gate.provider.materialize.assert_not_called()
+        with self.assertRaisesRegex(ValueError, 'optimizer release'):
+            gate.contract()
