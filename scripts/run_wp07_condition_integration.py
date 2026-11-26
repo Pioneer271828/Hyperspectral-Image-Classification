@@ -13,6 +13,7 @@ import sys
 import time
 sys.path.insert(0,os.environ.get('WP07_CONDITION_SOURCE',str(Path(__file__).resolve().parents[1])))
 import torch
+import numpy as np
 from model.research_config import digest
 from research_runtime import code_snapshot,require_frozen_code
 from transfer import wp07_condition_run as integration
