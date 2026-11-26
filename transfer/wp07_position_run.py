@@ -56,6 +56,10 @@ def contract(provider, seed, arm, producer, numeric, cache_pin, authority):
                   'Only preregistered synthetic position integration may update')
     source = provider.baseline(seed)
     initial = positions.initialize(source, seed + 7321)
+    initialization = _initial(initial, source)
+    parameter_names = set(dict(initial.named_parameters()))
+    fixed_buffers = {name:value for name,value in initialization['fresh'].items() if name not in parameter_names}
+    initialization['fresh'] = {name:value for name,value in initialization['fresh'].items() if name in parameter_names}
     train, val, events = provider.events()
     inputs = {}
     for role, roster in (('devtrain', train), ('devval', val)):
@@ -66,7 +70,7 @@ def contract(provider, seed, arm, producer, numeric, cache_pin, authority):
                 representation=provider.representation, supervision=parent.MODE, objective=parent.LOSS,
                 training=train, validation=val, steps=24, prefix=12, events=events,
                 numeric=deepcopy(numeric), module_seed=seed + 7321, rng_seed=seed + 15000,
-                learning_rate=.0001, initialization=_initial(initial, source), source_state=state_hash(source),
+                learning_rate=.0001, initialization=initialization, fixed_buffers=fixed_buffers, source_state=state_hash(source),
                 parameters=sum(p.numel() for p in initial.parameters()), registered_graph_scale=16,
                 cache=cache_pin, authority=authority, synthetic=True, inputs=inputs,
                 condition_catalog=provider.catalog, selection='first_min_released_point_fused_nll',

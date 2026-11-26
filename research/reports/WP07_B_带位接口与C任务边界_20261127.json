@@ -1,0 +1,31 @@
+{
+  "schema": "wp07_B_processed_position_interface_v1",
+  "read_only_code_pin": "316adf2b09863589532da73015f06748b8896daf",
+  "files": ["transfer/wp07_exact_positions.py", "transfer/wp07_observed_conditions.py", "transfer/wp07_position_real.py"],
+  "owner_B": "Controlled processed-column identifiability, synthetic paired tests, exact/summary descriptor encoding and original admitted development-bank provider",
+  "owner_C": "research/paper_c_device_admission/, Issue521; official instrument/version/header/public training-byte intake; not modified or executed here",
+  "descriptor": {
+    "source_namespace": "Hash-pinned published bank or synthetic position catalog; includes source/version and processing identity",
+    "master_count": "Original column count of this published processed cube; integer 2..436",
+    "positions": "Nonempty strictly increasing unique zero-based integers within master_count, synchronized with actual sliced column order",
+    "physical_metadata": "Separate BandMetadata. Approximate wavelength/FWHM/GSD remains missing to verified-only physical conditioning",
+    "mapping_guard": "IndexPacket.original_physical_mapping_authenticated must remain false in this B bridge; a processed column identity is not an instrument native/SRF coordinate",
+    "roles": "devtrain/devval from original bank; no confirmation/query expansion",
+    "binding": "Observation hash, canonical catalog, donor, missing mask, released-point identity, exact retained positions and frozen Q/near/wide support are checked independently"
+  },
+  "representations": {
+    "summary8": "Eight processed-position/count/gap statistics; known exact FP32 collisions",
+    "exact_mask": "Bounded master-count plus full ordered column-presence vector, then learned 437-to32 projection",
+    "balanced_summary": "Eight statistics padded to437, common fixed orthogonal rotation and L2 normalization, shared learned437-to32 projection",
+    "balanced_exact": "Full exact-mask vector with the same rotation, normalization and learned projection",
+    "limits": "Full discrete mask identifies legal processed column sets. Learned32-dimensional embeddings are only pair-qualified and are not globally injective. Sampling statistics or synthetic masks never certify a new real device."
+  },
+  "current_real_admission": {
+    "allowed": ["historical full", "historical even_retained_positions"],
+    "new_odd_view_allowed": false,
+    "new_controlled_positions_allowed": false,
+    "new_real_optimizer_release": false,
+    "rejection": "New real position sets or roles rejected before bank payload reads; raw API slicing capability does not grant experimental admission"
+  },
+  "coordination": "C can retain native instrument coordinates and version evidence in its own manifest. Any future mapping into B processed positions must explicitly pin its transformation and role authority; nDSM is not treated as a spectral column. B does not reproduce C/D device inventory or genuine-device qualification."
+}
