@@ -49,6 +49,8 @@ def main():
     p.add_argument("--out",required=True)
     p.add_argument("--resume",action="store_true")
     p.add_argument("--stop-after",type=int)
+    p.add_argument("--profile",choices=("wp11_scratch","g3_pavia_xuzhou"),default="wp11_scratch")
+    p.add_argument("--g3-root")
     a=p.parse_args()
     started=perf_counter()
     if sys.platform!="linux" or os.environ.get("CUDA_VISIBLE_DEVICES")!="":raise ValueError("Authorized Linux CPU only")
@@ -58,14 +60,40 @@ def main():
     runs=Path(a.runs).resolve();out=Path(a.out).resolve()
     if not out.is_relative_to(runs) or out==runs:raise ValueError("New external output required")
     table=root/"research/paper1_c/ordered-pair-feasibility.csv"
-    qualification=admit(table,"xuzhou","xuzhou",scope="target_local_development_control",role="devval",
-                        ancestry={"source":"xuzhou","target":"xuzhou","kind":"target_scratch"})
+    model_pins={}
+    if a.profile=="wp11_scratch":
+        qualification=admit(table,"xuzhou","xuzhou",scope="target_local_development_control",role="devval",
+                            ancestry={"source":"xuzhou","target":"xuzhou","kind":"target_scratch"})
+    else:
+        g3=Path(a.g3_root).resolve()
+        expected={"model.pt":"f11cc09b95fbd8b1009de73ee080e7fc9f14a23ff92ac84ff977dfdffdb5c4c7",
+                  "model.pt.json":"5b926c690cce695b68537acde6de4ab264d671312f35090e6e36d39bdcfe3252",
+                  "frozen-task.json":"4623ffa9844ae1f4247e075e4edefd99fc90200e49f40cd9f81e24dddb27d4e0",
+                  "target-checkpoints-frozen.json":"d1bc92212478116859cab29455a3a62a34c16efa27ff335da6e9b8b997f4fab2"}
+        if not g3.is_relative_to(runs.parent/"references"):raise ValueError("Imported frozen models must stay in project references")
+        model_pins={str(g3/n):h for n,h in expected.items()}
+        if any(sha(path)!=h for path,h in model_pins.items()):raise ValueError("Imported original model/metadata identity differs")
+        task=json.loads((g3/"frozen-task.json").read_text());cfg=json.loads((g3/"model.pt.json").read_text())
+        frozen=json.loads((g3/"target-checkpoints-frozen.json").read_text())["source_pretrained_full_finetune"]
+        if (task["config"]["source_dataset"]!="paviaU" or task["config"]["target_dataset"]!="xuzhou"
+                or task["task_hash"]!=cfg["training_config"]["task_hash"]
+                or cfg["training_config"]["method"]!="source_pretrained_full_finetune"
+                or frozen["checkpoint_sha256"]!=expected["model.pt"] or frozen["sidecar_sha256"]!=expected["model.pt.json"]):
+            raise ValueError("Single-source task/selected model lineage differs")
+        qualification=admit(table,"paviaU","xuzhou",scope="cross_device_development",role="devval",
+                            ancestry={"source":"paviaU","target":"xuzhou","kind":"verified_source_pretrain_target_adaptation"})
+        qualification.update(original_target_training_K=10,original_target_validation_V=0,
+                             original_target_updates=1000,original_source_updates=10000,
+                             scoring_role="existing bank V5; development recontextualization, not independent confirmation",
+                             light="exact frozen trained CNN branch copy; no new light-head fitting")
     contract={"schema":"paper_c_routing_dev_zero_v1","code":a.expected_commit,"dependency":DEPENDENCY,
               "qualification":qualification,"table_sha256":sha(table),"release_sha256":RELEASE_SHA,
               "views":[1,2,4],"full_fraction":.5,"seed":64,"rounds":6,"warmups":1,
               "scope":"development only; synthetic retained-column views separate from native full",
               "source_pretraining":"none: target-scratch ancestry","optimizer_updates":0,
               "calibration":False,"confirmation":False}
+    contract.update(profile=a.profile,model_pins=model_pins)
+    if a.profile!="wp11_scratch":contract["source_pretraining"]="original Pavia source10000 + target1000, no new updates"
     pin=digest(contract)
     if out.exists():
         if not a.resume or json.loads((out/"contract.json").read_text())!=contract:raise ValueError("Explicit exact resume required")
@@ -84,11 +112,25 @@ def main():
     from research_runtime import tensor_hash
     load_start=perf_counter()
     release={"path":str(runs/"wp11-matched-xuzhou-frozen01/release.json"),"sha256":RELEASE_SHA}
-    released,origin,scope,scene,record,full,light,history,pins=release_context(release)
-    light.validate(full)
+    if a.profile=="wp11_scratch":
+        released,origin,scope,scene,record,full,light,history,pins=release_context(release)
+        light.validate(full)
+    else:
+        from transfer.registered_development import load_development,_read
+        released=json.loads(_read(release))
+        scene,record,files=load_development(released["development"])
+        pins=[release,*files]
     if scene.dataset!="xuzhou" or "target_scratch_full" not in released["source_weights"]["path"]:
         raise ValueError("The declared target-scratch ancestry no longer matches")
     protected={p["path"]:p["sha256"] for p in pins}
+    protected.update(model_pins)
+    if a.profile!="wp11_scratch":
+        from transfer.registered_development import _load_source
+        from inference.light_cnn import LightCNN
+        from types import SimpleNamespace
+        full=_load_source({"path":str(g3/"model.pt"),"sha256":expected["model.pt"]},
+                          {"path":str(g3/"model.pt.json"),"sha256":expected["model.pt.json"]})
+        light=SimpleNamespace(model=LightCNN(full))
     for path,h in protected.items():
         if sha(path)!=h:raise ValueError("Frozen model or development input differs")
     requests=[];indices=[];labels=[]

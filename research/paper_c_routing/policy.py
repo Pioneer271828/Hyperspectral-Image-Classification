@@ -27,7 +27,8 @@ def admit(table, source, target, *, scope, role, ancestry):
         if source != target or ancestry != {"source": source, "target": target, "kind": "target_scratch"}:
             raise ValueError("Target-local control cannot impersonate a source-target transfer")
         return {"scope": scope, "source": source, "target": target, "confirmation": False}
-    rows = list(csv.DictReader(Path(table).open(encoding="utf-8-sig")))
+    with Path(table).open(encoding="utf-8-sig") as stream:
+        rows = list(csv.DictReader(stream))
     matches = [r for r in rows if (r["source"], r["target"]) == (source, target)]
     if len(matches) != 1 or matches[0]["status"] != "READY_DEVELOPMENT_ONLY":
         raise ValueError("Direction has no released development protocol")
