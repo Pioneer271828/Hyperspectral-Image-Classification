@@ -1,0 +1,4 @@
+scene,train_blocks,devval_blocks,labeled_train_blocks,labeled_devval_blocks,train_points,devval_points,per_class_train,per_class_devval,box_overlap_pixels,minimum_excluded_axis_gap_pixels,shared_parent_ids,normalization,unlabeled_context,confirmation_status
+paviaU,127,41,30,17,45,45,5,5,0,4,NONE,frozen_train_statistics,role_local_tile_no_external_halo,BLOCKED_PREVIOUS_DEVELOPMENT
+xuzhou,73,5,31,5,45,45,5,5,0,4,NONE,frozen_train_statistics,role_local_tile_no_external_halo,BLOCKED_PREVIOUS_DEVELOPMENT
+whu-honghu,261,10,66,10,110,110,5,5,0,2,65,frozen_train_statistics,role_local_tile_no_external_halo,BLOCKED_PREVIOUS_DEVELOPMENT_SHARED_COMPONENT
