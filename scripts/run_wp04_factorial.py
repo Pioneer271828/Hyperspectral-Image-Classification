@@ -32,6 +32,7 @@ from evaluation.classification_metrics import metrics_from_confusion
 from g4_position_fusion_target_runtime import prepare
 from g4_support_context import prepare_contexts, read, validate_manifest
 from joint_training import _tree_fingerprint, run_training
+from model.region_pixel_alignment import broadcast_regions, pool_regions
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, tensor_hash, write_json
 from target_initialization import METHODS
@@ -91,8 +92,16 @@ EDGE_WEIGHT_PARAMS = {"off": 61696, "norm": 61696, "Wg": 70144, "Wj": 78592}
 EDGE_WEIGHT_CONTRASTS = (("norm", "off"), ("Wg", "norm"), ("Wj", "norm"),
                          ("Wj", "Wg"), ("Wg", "off"), ("Wj", "off"))
 EDGE_WEIGHT_PRIMARY = tuple(f"{a}-{b}" for a, b in EDGE_WEIGHT_CONTRASTS[:3])
-POINT_SCOPES = (FACTORIAL_SCOPE, EDGE_WEIGHT_SCOPE)
-REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE, FACTORIAL_SCOPE, EDGE_WEIGHT_SCOPE)
+MESSAGE_SCOPE = "real_dev_joint_message_correspondence"
+MESSAGE_GROUP = "message_correspondence"
+MESSAGE_CONDITIONS = {"I8": "gated_joint", "I9-message": "message_global_joint",
+                      "Wg65": "capacity_matched_graph"}
+MESSAGE_PARAMS = {"I8": 137090, "I9-message": 137090, "Wg65": 78592}
+MESSAGE_CONTRASTS = (("I8", "I9-message"),)
+EDGE_POINT_GROUPS = {EDGE_WEIGHT_GROUP: EDGE_WEIGHT_CONDITIONS, MESSAGE_GROUP: MESSAGE_CONDITIONS}
+EDGE_POINT_SCOPES = (EDGE_WEIGHT_SCOPE, MESSAGE_SCOPE)
+POINT_SCOPES = (FACTORIAL_SCOPE, *EDGE_POINT_SCOPES)
+REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE, *POINT_SCOPES)
 FACTORIAL_PARAMS = {"B0": 61696, "R": 69952, "F": 61825, "R+F": 70081, "Bcap": 69952, "Bcap+F": 70081}
 FACTORIAL_EFFECTS = {
     **CONTRASTS,
@@ -134,9 +143,9 @@ def verify(pin):
 
 
 def roster(group="factorial"):
-    if group == EDGE_WEIGHT_GROUP:
+    if group in EDGE_POINT_GROUPS:
         return [{"seed": seed, "arm": arm, "condition": condition}
-                for seed in SEEDS for arm, condition in EDGE_WEIGHT_CONDITIONS.items()]
+                for seed in SEEDS for arm, condition in EDGE_POINT_GROUPS[group].items()]
     if group in CONTROLS:
         return [{"seed": seed, "arm": arm, "condition": condition}
                 for seed in SEEDS for arm, condition in CONTROLS[group].items()]
@@ -161,6 +170,8 @@ def plan(catalog, code, scope, *, arithmetic=None, group="factorial"):
             value["graph"] = "fixed_Q_and_A_candidate_support_opt_in_learned_A_values"
     if group == EDGE_WEIGHT_GROUP:
         value.update(group=group, graph="fixed_Q_and_A_candidates_stage2_weight_control")
+    if group == MESSAGE_GROUP:
+        value.update(group=group, graph="fixed_Q_and_A_candidates_regional_joint_edge_alignment")
     return value
 
 
@@ -175,7 +186,8 @@ def registration(args, code):
                 and catalog == path.parent / "rebound-contexts" / "manifest.json"
                 and value == real_plan(catalog, published, code, [value["devices"][str(seed)] for seed in SEEDS],
                                        prior=value.get("prior"), factorial=value["scope"] == FACTORIAL_SCOPE,
-                                       edge_weights=value["scope"] == EDGE_WEIGHT_SCOPE),
+                                       edge_weights=value["scope"] == EDGE_WEIGHT_SCOPE,
+                                       messages=value["scope"] == MESSAGE_SCOPE),
                 "Real paired development registration or publication differs")
         return value
     require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"),
@@ -185,7 +197,7 @@ def registration(args, code):
     return value
 
 
-def real_plan(catalog, published, code, devices, *, prior=None, factorial=False, edge_weights=False):
+def real_plan(catalog, published, code, devices, *, prior=None, factorial=False, edge_weights=False, messages=False):
     require(len(devices) == len(SEEDS) and len(set(devices)) == len(SEEDS)
             and all("GPU-" + str(UUID(gpu.removeprefix("GPU-"))) == gpu for gpu in devices),
             "Assign one distinct physical GPU UUID to each paired seed")
@@ -207,6 +219,14 @@ def real_plan(catalog, published, code, devices, *, prior=None, factorial=False,
                 "graph": "fixed_Q_and_A_candidates_stage2_weight_control",
                 "cases": cases, "parameters_by_arm": EDGE_WEIGHT_PARAMS,
                 "primary_comparisons": list(EDGE_WEIGHT_PRIMARY),
+                "real_updates_authorized": len(cases) * sum(STEPS.values())}
+    if messages:
+        require(prior is None, "Use the registered joint message and capacity controls")
+        cases = roster(MESSAGE_GROUP)
+        return {**base, "scope": MESSAGE_SCOPE, "group": MESSAGE_GROUP,
+                "graph": "fixed_Q_and_A_candidates_regional_joint_edge_alignment",
+                "cases": cases, "parameters_by_arm": MESSAGE_PARAMS,
+                "primary_comparisons": ["I8-I9-message", "Wj-Wg65"],
                 "real_updates_authorized": len(cases) * sum(STEPS.values())}
     if prior is None:
         return base
@@ -230,7 +250,7 @@ def bound(reg, case, out, device):
     group = reg.get("group", "factorial")
     if group == "directions" and case["condition"] in local_control.LOCAL_MATCHES:
         return local_runtime.prepare(*paths, condition=case["condition"], **common)
-    if group == EDGE_WEIGHT_GROUP:
+    if group in EDGE_POINT_GROUPS:
         runtime, _, _ = edge_weight_adapter(case["condition"])
         return runtime(*paths, condition=case["condition"], **common)
     if group in ADAPTERS:
@@ -265,8 +285,8 @@ def hardware(gpu, started):
 
 def model_snapshot(model, group="factorial"):
     tensors = {k: tensor_hash(v) for k, v in model.state_dict().items()}
-    if group in CONTROLS or group == EDGE_WEIGHT_GROUP:
-        prefixes = edge.PREFIXES if group in ("edges", EDGE_WEIGHT_GROUP) else (interaction.PREFIX,)
+    if group in CONTROLS or group in EDGE_POINT_GROUPS:
+        prefixes = edge.PREFIXES if group in ("edges", *EDGE_POINT_GROUPS) else (interaction.PREFIX,)
         return {"shared": digest({k: v for k, v in tensors.items() if not k.startswith(prefixes)}),
                 "additional_tensors": {k: v for k, v in tensors.items() if k.startswith(prefixes)},
                 "parameters": sum(p.numel() for p in model.parameters()),
@@ -335,7 +355,7 @@ def control_diagnostics(group, case, model, item, runtime, probabilities):
                 "configuration": (local_control.configuration(case["condition"])
                                   if case["condition"] in local_control.LOCAL_MATCHES
                                   else interaction.configuration(case["condition"]))}
-    if group == EDGE_WEIGHT_GROUP:
+    if group in EDGE_POINT_GROUPS:
         return edge_weight_diagnostics(case, model, item, runtime)
     if group != "edges":
         return {}
@@ -365,6 +385,7 @@ def edge_weight_diagnostics(case, model, item, runtime):
         require(model.backbone.edge_updater is None, "Off arm acquired an edge updater")
         return {"condition": condition, "stage2_operator": "original_input_A"}
     obs = observation(model, item)
+    path = {}
     with torch.no_grad():
         if condition == "row_normalized":
             normalization.verify_initialization_binding(model, runtime.normalization_binding)
@@ -378,6 +399,8 @@ def edge_weight_diagnostics(case, model, item, runtime):
                 hook.remove()
             require(len(captured) == 1, "Normalization was not applied exactly once in the real schedule")
             info = captured[0]
+        elif case["arm"] in MESSAGE_CONDITIONS:
+            info, path = joint_message_path(model, obs, runtime)
         else:
             result = edge.forward_observation(model, obs, expected_binding=runtime.edge_binding, diagnostics=True)
             info = result[-1]["interaction"]
@@ -397,7 +420,62 @@ def edge_weight_diagnostics(case, model, item, runtime):
             "isolated_fallback_edges": len(fallback), "actual_edges": len(support),
             "support_sha256": tensor_hash(info["edge_indices"]), "prior_sha256": tensor_hash(prior),
             "weights_sha256": tensor_hash(weights), "changed_weights": changes,
-            "mean_abs_change_from_prior": float(delta.mean()), "max_abs_change_from_prior": float(delta.max())}
+            "mean_abs_change_from_prior": float(delta.mean()), "max_abs_change_from_prior": float(delta.max()), **path}
+
+
+def joint_message_path(model, obs, runtime):
+    backbone = model.backbone
+    messages, edge_update = backbone.interaction, backbone.edge_updater
+    condition = runtime.edge_binding["condition"]
+    captures = {}
+
+    def capture(name):
+        def receive(_module, inputs, output):
+            require(name not in captures, "Unexpected repeated message or edge update")
+            captures[name] = (inputs, output)
+        return receive
+
+    handles = [edge_update.register_forward_hook(capture("edges"))]
+    if messages is not None:
+        handles.extend(getattr(messages, name).register_forward_hook(capture(name))
+                       for name in ("graph_to_cnn", "cnn_to_graph"))
+    try:
+        result = edge.forward_observation(model, obs, expected_binding=runtime.edge_binding, diagnostics=True)
+    finally:
+        for handle in handles:
+            handle.remove()
+    info = result[-1]["interaction"]
+    (edges_regions, adjacency, aligned_pixels), _ = captures["edges"]
+    require(tensor_hash(adjacency) == tensor_hash(obs["A"]), "Edge updater consumed a different candidate graph")
+    rows = edges_regions.shape[0]
+    channels, width = edges_regions.shape[1], edge_update.embed_dim
+    edge_path = {"mode": edge_update.mode, "feature_channels": edge_update.query.in_features,
+                 "embedding_channels": width, "projection_dense_macs": 2 * rows * edge_update.query.in_features * width,
+                 "edge_dot_macs": info["edge_indices"].shape[1] * width,
+                 "region_input": tensor_hash(edges_regions), "aligned_cnn_input": None}
+    if messages is None:
+        require(edge_update.mode == "graph" and aligned_pixels is None and not set(captures) - {"edges"},
+                "Graph-only control consumed a CNN feature or message")
+        return info, {"message_paths": {}, "edge_path": edge_path}
+
+    (pixels, graph_source), (pixels_after, _) = captures["graph_to_cnn"]
+    (regions, cnn_source), (regions_after, _) = captures["cnn_to_graph"]
+    q = obs["Q"]
+    global_messages = condition == "message_global_joint"
+    graph_expected = regions.mean(0, keepdim=True).expand_as(pixels) if global_messages else broadcast_regions(q, regions)
+    cnn_expected = pixels.mean(0, keepdim=True).expand_as(regions) if global_messages else pool_regions(q, pixels)
+    require(torch.equal(graph_source, graph_expected) and torch.equal(cnn_source, cnn_expected)
+            and torch.equal(edges_regions, regions_after) and torch.equal(aligned_pixels, pool_regions(q, pixels_after)),
+            "The message sources or the region-aligned joint update differed from the registered tensor path")
+    edge_path["aligned_cnn_input"] = tensor_hash(aligned_pixels)
+    path = {"message_paths": {
+        "correspondence": "global_mean" if global_messages else "region_Q",
+        "graph_to_cnn": {"target": tensor_hash(pixels), "source": tensor_hash(graph_source),
+                         "output": tensor_hash(pixels_after), "shape": list(graph_source.shape)},
+        "cnn_to_graph": {"target": tensor_hash(regions), "source": tensor_hash(cnn_source),
+                         "output": tensor_hash(regions_after), "shape": list(cnn_source.shape)}},
+        "edge_path": edge_path}
+    return info, path
 
 
 def component_activity(group, trace):
@@ -438,7 +516,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
     def calibrated(model):
         if group == "directions" and case["condition"] in local_control.LOCAL_MATCHES:
             calibrator, binding = local_control.calibrate, runtime.branch_local_binding
-        elif group == EDGE_WEIGHT_GROUP:
+        elif group in EDGE_POINT_GROUPS:
             _, factory, binding_key = edge_weight_adapter(case["condition"])
             calibrator, binding = factory.calibrate, getattr(runtime, binding_key)
         elif group in ADAPTERS:
@@ -451,7 +529,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
 
     diagnostic = {}
     strict_replay = {}
-    if real or group in CONTROLS or group == EDGE_WEIGHT_GROUP:
+    if real or group in CONTROLS or group in EDGE_POINT_GROUPS:
         before = state_id(model)
         candidate = calibrated(model)
         checked, probs = runtime.validation_snapshot(candidate, items)
@@ -507,9 +585,9 @@ def audit_case(reg, case, out, gpu, *, real=False):
     final_model = calibrated(model)
     _, probs = runtime.validation_snapshot(final_model, items)
     point_options = {"keep_correctness": reg["scope"] in POINT_SCOPES,
-                     "keep_points": reg["scope"] == EDGE_WEIGHT_SCOPE}
+                     "keep_points": reg["scope"] in EDGE_POINT_SCOPES}
     trained = {}
-    if group == EDGE_WEIGHT_GROUP:
+    if group in EDGE_POINT_GROUPS:
         trained["last"] = edge_weight_diagnostics(case, final_model, items[target], runtime)
     final = validation_evidence(probs[target]["val"], item, last["history"][-1]["metrics"][target]["val"],
                                 **point_options)
@@ -517,7 +595,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
     primary = runtime.load_selected(split / "primary.pt", items, split / f"raw-validation-{selected_step:06d}.pt", device=device)
     _, probs = runtime.validation_snapshot(primary, items)
     selected = validation_evidence(probs[target]["val"], item, minimum["metrics"][target]["val"], **point_options)
-    if group == EDGE_WEIGHT_GROUP:
+    if group in EDGE_POINT_GROUPS:
         trained["selected"] = edge_weight_diagnostics(case, primary, items[target], runtime)
     guard()
     costs = {phase: read(out / f"{phase}.json") for phase in STEPS}
@@ -535,7 +613,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
             require(all(np.isfinite(gradients)) and (max(gradients) > 0) == active
                     and (sum(elements) > 0) == active, "Declared factorial mechanism did not match its update trace")
             activity[name] = {"active": active, "peak_gradient_norm": max(gradients), "changed_elements": sum(elements)}
-    if group == EDGE_WEIGHT_GROUP:
+    if group in EDGE_POINT_GROUPS:
         if case["condition"] == "row_normalized":
             require(all(row["prior_normalization"]["normalization_parameters"] == 0
                         and row["prior_normalization"]["changed_elements"] == 0 for row in last["trace"]),
@@ -548,14 +626,15 @@ def audit_case(reg, case, out, gpu, *, real=False):
             "trace_proof": digest(last["trace"]),
             **({"learned_components": activity} if reg["scope"] == FACTORIAL_SCOPE else {}),
             **({"diagnostics": {"initial": diagnostic, **trained}, "learned_components": activity}
-                if group == EDGE_WEIGHT_GROUP else {}),
+               if group in EDGE_POINT_GROUPS else {}),
             **({"diagnostics": diagnostic, "learned_components": component_activity(group, last["trace"])}
                if group in CONTROLS else {}),
             **({"exact_independent_step_one": True} if reg.get("arithmetic") else {})}
 
 
 def paired_initialization(rows, group="factorial"):
-    arms = (EDGE_WEIGHT_CONDITIONS if group == EDGE_WEIGHT_SCOPE else DIRECTION_PARAMS if group == DIRECTION_SCOPE
+    arms = (MESSAGE_CONDITIONS if group in (MESSAGE_GROUP, MESSAGE_SCOPE) else
+            EDGE_WEIGHT_CONDITIONS if group in (EDGE_WEIGHT_GROUP, EDGE_WEIGHT_SCOPE) else DIRECTION_PARAMS if group == DIRECTION_SCOPE
             else REAL_PAIR if group == REAL_PAIR_SCOPE else CONTROLS.get(group, ARMS))
     for seed in SEEDS:
         cases = [row for row in rows if row["case"]["seed"] == seed]
@@ -564,6 +643,18 @@ def paired_initialization(rows, group="factorial"):
                 and len({digest(row["inputs"]) for row in cases}) == 1, "Paired input or shared initialization differs")
         control = {r["case"]["arm"]: r for r in cases}
         by_arm = {r["case"]["arm"]: r["init"] for r in cases}
+        if group in (MESSAGE_GROUP, MESSAGE_SCOPE):
+            require({arm: init["parameters"] for arm, init in by_arm.items()} == MESSAGE_PARAMS
+                    and by_arm["I8"] == by_arm["I9-message"],
+                    "Joint message pair changed its complete initial tensors or capacity")
+            endpoints = ("initial", "selected", "last") if group == MESSAGE_SCOPE else (None,)
+            for endpoint in endpoints:
+                diagnostics = [control[arm]["diagnostics"] for arm in arms]
+                if endpoint is not None:
+                    diagnostics = [d[endpoint] for d in diagnostics]
+                require(len({(d["support_sha256"], d["prior_sha256"]) for d in diagnostics}) == 1,
+                        "Joint message controls changed candidates or the prior")
+            continue
         if group == EDGE_WEIGHT_SCOPE:
             require({arm: init["parameters"] for arm, init in by_arm.items()} == EDGE_WEIGHT_PARAMS
                     and not by_arm["off"]["additional_tensors"]
@@ -620,6 +711,8 @@ def make_tables(rows, group="factorial"):
     pairs = (("C2G", "off"),) if group == REAL_PAIR_SCOPE else CONTROL_CONTRASTS.get(group, ())
     if group == EDGE_WEIGHT_SCOPE:
         pairs = EDGE_WEIGHT_CONTRASTS
+    if group == MESSAGE_SCOPE:
+        pairs = MESSAGE_CONTRASTS
     if group == DIRECTION_SCOPE:
         pairs = (*MATCHES, *((arm, "off") for arm in DIRECTION_PARAMS if arm != "off"),
                  ("both", "add"), ("both", "C2G"), ("both", "G2C"), ("C2G", "G2C"))
@@ -837,7 +930,7 @@ def probe(args, code, out):
                "cases": rows, "registration_draft": pinned(out / "registration-draft.json"),
                "published_catalog": static_proof, "rebound_contexts_verified": 27,
                "real_updates": 0, "query_access": False, "fixed_graph": args.group != "edges", "device": args.gpu or "cpu",
-               **({"group": args.group} if args.group in CONTROLS else {}),
+                   **({"group": args.group} if args.group in (*CONTROLS, MESSAGE_GROUP) else {}),
                **({"arithmetic": numeric, "kernel_calls": dict(calls)} if arithmetic else {})})
     verify(static_proof)
 
@@ -941,13 +1034,15 @@ def main():
         if kind in ("run", "stage"):
             selector.add_argument("--seed", type=int, choices=SEEDS, required=kind == "stage")
             selector.add_argument("--arm", choices=sorted(set(ARMS).union(DIRECTION_PARAMS, EDGE_WEIGHT_CONDITIONS,
+                                                                   MESSAGE_CONDITIONS,
                                                                    *CONTROLS.values())),
                                   required=kind == "stage")
         if kind in ("run", "stage", "probe"):
             selector.add_argument("--gpu")
         if kind in ("prepare", "probe"):
             selector.add_argument("--strict-cuda", action="store_true")
-            selector.add_argument("--group", choices=("factorial", *CONTROLS), default="factorial")
+            groups = ("factorial", *CONTROLS, MESSAGE_GROUP) if kind == "probe" else ("factorial", *CONTROLS)
+            selector.add_argument("--group", choices=groups, default="factorial")
         if kind == "run":
             selector.add_argument("--resource-wait-seconds", type=float, default=0)
         if kind == "stage":
@@ -962,6 +1057,7 @@ def main():
             flavor.add_argument("--prior", nargs=2, metavar=("ACCEPTANCE", "SHA256"))
             flavor.add_argument("--factorial", action="store_true")
             flavor.add_argument("--edge-weights", action="store_true")
+            flavor.add_argument("--messages", action="store_true")
     args = parser.parse_args()
     code = code_snapshot()
     require(sys.platform == "linux" and __debug__ and code["commit"] == args.expected_commit, "Expected Linux frozen revision")
@@ -990,13 +1086,14 @@ def main():
         path = out / "registration.json"
         prior = None if args.prior is None else {"path": str(Path(args.prior[0]).resolve()), "sha256": args.prior[1]}
         value = real_plan(catalog, publication, code, args.devices, prior=prior, factorial=args.factorial,
-                          edge_weights=args.edge_weights)
-        if args.edge_weights:
-            for arm, condition in EDGE_WEIGHT_CONDITIONS.items():
+                          edge_weights=args.edge_weights, messages=args.messages)
+        if args.edge_weights or args.messages:
+            group = value["group"]
+            for arm, condition in EDGE_POINT_GROUPS[group].items():
                 _, factory, _ = edge_weight_adapter(condition)
                 model, _ = factory.initialize(value["target"], value["method"], condition,
                     model_seed=SEEDS[0], head_seed=SEEDS[0]+1000)
-                require(sum(p.numel() for p in model.parameters()) == EDGE_WEIGHT_PARAMS[arm],
+                require(sum(p.numel() for p in model.parameters()) == value["parameters_by_arm"][arm],
                         "Pre-dispatch edge weight parameter count differs")
         if args.factorial:
             for arm, (mode, fusion) in ARMS.items():

@@ -26,20 +26,23 @@ KEY = "edge_target_binding"
 CALIBRATION_KEY = "edge_target_calibration"
 CONDITIONS = ("none", "gated", "graph", "gated_graph", "joint", "gated_joint",
               "add_joint", "global_joint")
+RESEARCH_CONTROLS = ("message_global_joint", "capacity_matched_graph")
 PREFIXES = ("backbone.interaction.", "backbone.edge_updater.")
 
 
 def configuration(condition):
-    if condition not in CONDITIONS:
-        raise ValueError("Explicit existing M7 core-factor condition required")
+    if condition not in (*CONDITIONS, *RESEARCH_CONTROLS):
+        raise ValueError("Explicit M7 core-factor condition required")
     # I7/I9 reuse the existing operators. All six earlier configurations retain
     # their exact values. Global alignment also supplies the joint edge input;
     # graph pooling/broadcasting itself still uses the original Q.
+    global_messages = condition in ("global_joint", "message_global_joint")
     return asdict(replace(InteractionConfig(),
-        alignment_mode="global" if condition == "global_joint" else "region",
+        alignment_mode="global" if global_messages else "region",
         interaction_mode="add" if condition == "add_joint" else
-                         "gated" if condition.startswith("gated") or condition == "global_joint" else "none",
-        graph_update_mode="graph" if condition.endswith("graph") else "joint" if condition.endswith("joint") else "none"))
+                         "gated" if condition.startswith("gated") or global_messages else "none",
+        graph_update_mode="graph" if condition.endswith("graph") else "joint" if condition.endswith("joint") else "none",
+        graph_update_dim=65 if condition == "capacity_matched_graph" else 32))
 
 def operator_signature(module):
     """Bind non-tensor message/edge semantics absent from a tensor hash."""
@@ -66,6 +69,8 @@ def initialize(target, method, condition, *, model_seed, head_seed, source_spec=
         model = base
     else:
         kwargs = {**base.export_config()["backbone_kwargs"], **config}
+        if condition == "message_global_joint":
+            kwargs["edge_alignment_mode"] = "region"
         # Constructor runs on CPU; discarded common parameters cannot consume
         # caller RNG. Original message and edge initializations are retained.
         with torch.random.fork_rng(devices=[]):
@@ -100,6 +105,7 @@ def verify_initialization_binding(model, expected):
             or expected["interaction_config"] != configuration(expected["condition"])
             or asdict(backbone.interaction_config) != expected["interaction_config"]
             or backbone.alignment.mode != expected["interaction_config"]["alignment_mode"]
+            or backbone.edge_alignment_mode != ("region" if expected["condition"] == "message_global_joint" else None)
             or {"messages": operator_signature(backbone.interaction), "edges": operator_signature(backbone.edge_updater)} != expected["operator_signature"]
             or (backbone.interaction is None) != (expected["interaction_config"]["interaction_mode"] == "none")
             or (backbone.edge_updater is None) != (expected["interaction_config"]["graph_update_mode"] == "none") or backbone.coverage_modulation is not None
