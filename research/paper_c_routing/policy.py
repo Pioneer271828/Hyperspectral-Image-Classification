@@ -108,6 +108,9 @@ def execute(runtime, requests, arm, *, full_fraction=.5, seed=64, reference=None
     from inference.tile_cascade import gate_score
     if arm not in ARMS or type(full_fraction) not in (int, float) or not 0 <= full_fraction <= 1:
         raise ValueError("Unknown arm or invalid quota before model execution")
+    # Reuse metadata validation with placeholder scores before any neural work.
+    plan(requests, {r.key:0. for r in requests}, arm,
+         full_fraction=full_fraction, seed=seed, reference=reference)
     if arm == "full":
         full = runtime.run(requests, "full")
         return {**full, "arm": arm, "pipeline_ms": (perf_counter()-started)*1000,
@@ -143,11 +146,15 @@ def execute(runtime, requests, arm, *, full_fraction=.5, seed=64, reference=None
 
 def metrics(labels, probabilities, classes):
     """Only explicit released point labels (1-based); never infer unlabelled 0."""
-    y = np.asarray(labels, dtype=np.int64)
+    raw = np.asarray(labels)
+    if not np.issubdtype(raw.dtype, np.integer):
+        raise ValueError("Released labels must be exact integer class IDs")
+    y = raw.astype(np.int64)
     p = np.asarray(probabilities)
     if y.ndim != 1 or p.shape != (len(y), classes) or not len(y) or not np.isfinite(p).all():
         raise ValueError("Finite released-point probabilities required")
-    if np.any(y < 1) or np.any(y > classes) or not np.allclose(p.sum(1), 1, atol=1e-6, rtol=0):
+    if (np.any(y < 1) or np.any(y > classes) or np.any(p < 0) or np.any(p > 1)
+            or not np.allclose(p.sum(1), 1, atol=1e-6, rtol=0)):
         raise ValueError("Class order/label or probabilities differ")
     c = np.bincount((y-1)*classes+p.argmax(1), minlength=classes**2).reshape(classes, classes)
     support = c.sum(1)

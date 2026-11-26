@@ -1,7 +1,7 @@
-"""Zero-optimizer WP11 target-local development control with resumable outputs.
+"""Zero-update frozen WP11 scratch or authenticated G3 transfer development.
 
-It cannot claim any ordered cross-device direction: its authenticated source
-model is target scratch. Separate direction admission precedes model loading.
+Separate direction admission precedes model loading. Synthetic spectral views
+and released V5 readout never qualify as independent device confirmation.
 """
 import argparse
 from dataclasses import replace
