@@ -113,8 +113,12 @@ def execute(runtime, requests, arm, *, full_fraction=.5, seed=64, reference=None
         return {**full, "arm": arm, "pipeline_ms": (perf_counter()-started)*1000,
                 "planning_ms": 0., "full_plan": sorted(r.key for r in requests)}
     cheap = runtime.run(requests, "light")
+    if arm == "light":
+        return {**cheap,"arm":arm,"pipeline_ms":(perf_counter()-started)*1000,
+                "planning_ms":0.,"full_plan":[],"confirmation":False,"optimizer_updates":0}
     begin = perf_counter()
-    margins = {r.key: gate_score(p[0], "margin") for r, p in zip(requests, cheap["predictions"])}
+    margins = ({r.key:0. for r in requests} if arm=="matched_random" else
+               {r.key: gate_score(p[0], "margin") for r, p in zip(requests, cheap["predictions"])})
     selected, descriptors = plan(requests, margins, arm, full_fraction=full_fraction, seed=seed, reference=reference)
     if arm == "matched_random":
         from inference.native_deployment import matched_random
@@ -127,6 +131,7 @@ def execute(runtime, requests, arm, *, full_fraction=.5, seed=64, reference=None
     heavy_by_id = {} if heavy is None else {r.key: p for r, p in zip(subset, heavy["predictions"])}
     output = [heavy_by_id.get(r.key, p) for r, p in zip(requests, cheap["predictions"])]
     counts = {k: cheap["counts"][k]+(0 if heavy is None else heavy["counts"][k]) for k in cheap["counts"]}
+    counts["gate_calls"] = 0 if arm=="matched_random" else len(requests)
     if counts["full_calls"] != len(selected) or counts["graph_builds"] != len(selected) or counts["graph_reuses"]:
         raise ValueError("Actual heavy/graph calls differ from policy")
     return {"arm": arm, "predictions": output, "full_plan": selected,
