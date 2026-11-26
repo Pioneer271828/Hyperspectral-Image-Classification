@@ -455,7 +455,7 @@ def paired_initialization(rows, group="factorial"):
                 and len({digest(row["inputs"]) for row in cases}) == 1, "Paired input or shared initialization differs")
         control = {r["case"]["arm"]: r for r in cases}
         by_arm = {r["case"]["arm"]: r["init"] for r in cases}
-        if group in ("directions", *REAL_SCOPES):
+        if group in ("directions", REAL_PAIR_SCOPE, DIRECTION_SCOPE):
             def head(arm, name):
                 return control[arm]["diagnostics"]["initial_head_sha256"][name]
             require(head("C2G", "cnn") == head("off", "cnn")
