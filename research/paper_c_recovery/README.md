@@ -1,5 +1,10 @@
 # Recoverable development comparison
 
+Completed package results, producer SHAs, independent audits, actual failure
+records and remaining limits are in [delivery-review.md](delivery-review.md).
+The entry-point/proposal text below describes admission rules; it is not a new
+authorization to rerun completed work. Draft PR518 contains this isolated scope.
+
 Issue [517](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/517).
 Sole writer C, branch `codex/paper-c-recovery-20261126`; changes stay in this
 directory. Base is published C package `45f88cf22ba1de89bc48f2e03a8487ad17f34908`.

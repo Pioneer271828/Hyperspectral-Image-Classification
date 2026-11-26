@@ -3,6 +3,7 @@ param(
   [int]$SourcePort=1222,
   [ValidateSet(1048576,16777216)][int]$FrameBytes=1048576,
   [switch]$BoundedSourceChunks,
+  [switch]$PreloadSourceMemory,
   [Parameter(Mandatory=$true)][string]$SourceArchive,
   [string]$TargetHost='rmvision',
   [Parameter(Mandatory=$true)][string]$TargetArchive,
@@ -31,6 +32,9 @@ if ($routingStatus.complete) {
 }
 $routingOffset=[long]$routingStatus.offset
 $routingStart=$routingOffset
+if ($PreloadSourceMemory -and (-not $BoundedSourceChunks -or $ArchiveBytes-$routingOffset -gt 268435456)) {
+  throw 'Memory preload requires bounded target frames and at most 256 MiB remaining.'
+}
 function Start-RoutingSsh([string[]]$Arguments,[bool]$InputPipe) {
   $routingInfo=[Diagnostics.ProcessStartInfo]::new()
   $routingInfo.FileName=(Get-Command ssh).Source
@@ -49,25 +53,44 @@ if (-not $BoundedSourceChunks) {
 }
 $routingTarget=$null;$routingAcks=[Collections.Generic.List[object]]::new()
 $routingBuffer=[byte[]]::new($FrameBytes)
+$routingPreload=$null
 $routingReportEvery=[int](67108864/$FrameBytes)
 try {
+  if ($PreloadSourceMemory) {
+    $routingPreload=[byte[]]::new([int]($ArchiveBytes-$routingOffset));$routingLoaded=0
+    $routingSource=Start-RoutingSsh @('-T','-p',"$SourcePort",'-o','ConnectTimeout=15','-o','ServerAliveInterval=15',
+      $SourceHost,"tail -c +$($routingOffset+1) $SourceArchive") $false
+    while ($routingLoaded -lt $routingPreload.Length) {
+      $routingRead=$routingSource.StandardOutput.BaseStream.Read($routingPreload,$routingLoaded,$routingPreload.Length-$routingLoaded)
+      if ($routingRead -eq 0) { throw 'Source SSH ended before complete memory preload.' }
+      $routingLoaded+=$routingRead
+    }
+    $routingSource.WaitForExit()
+    if ($routingSource.ExitCode -ne 0) { throw 'Memory preload source SSH exit failure.' }
+    $routingSource.Dispose();$routingSource=$null
+    Write-Output "SOURCE_MEMORY_BYTES $routingLoaded"
+  }
   while ($routingOffset -lt $ArchiveBytes) {
     # Select the Int64 overload before narrowing the bounded one-MiB frame.
     # Otherwise PowerShell chooses Int32 from the first literal and rejects
     # archives above two GiB before reading any payload.
     $routingWanted=[int][Math]::Min([long]$FrameBytes,[long]($ArchiveBytes-$routingOffset));$routingFilled=0
-    if ($BoundedSourceChunks) {
+    if ($BoundedSourceChunks -and -not $PreloadSourceMemory) {
       # Each authenticated source command ends after exactly one bounded frame,
       # avoiding a blocked source stdout while the target durably acknowledges.
       $routingSource=Start-RoutingSsh @('-T','-p',"$SourcePort",'-o','ConnectTimeout=15','-o','ServerAliveInterval=15',
         $SourceHost,"dd if=$SourceArchive iflag=skip_bytes,count_bytes skip=$routingOffset count=$routingWanted bs=1048576 status=none") $false
+    }
+    if ($PreloadSourceMemory) {
+      [Array]::Copy($routingPreload,[int]($routingOffset-$routingStart),$routingBuffer,0,$routingWanted)
+      $routingFilled=$routingWanted
     }
     while ($routingFilled -lt $routingWanted) {
       $routingRead=$routingSource.StandardOutput.BaseStream.Read($routingBuffer,$routingFilled,$routingWanted-$routingFilled)
       if ($routingRead -eq 0) { throw 'Source SSH ended before committed archive boundary.' }
       $routingFilled+=$routingRead
     }
-    if ($BoundedSourceChunks) {
+    if ($BoundedSourceChunks -and -not $PreloadSourceMemory) {
       $routingSource.WaitForExit()
       if ($routingSource.ExitCode -ne 0) { throw 'Bounded source SSH exit failure.' }
       $routingSource.Dispose();$routingSource=$null
@@ -125,6 +148,7 @@ try {
   if ($null -ne $routingSource -and -not $routingSource.HasExited) { $routingSource.Kill() }
   if ($null -ne $routingTarget -and -not $routingTarget.HasExited) { $routingTarget.Kill() }
   [Array]::Clear($routingBuffer)
+  if ($null -ne $routingPreload) { [Array]::Clear($routingPreload) }
   if ($null -ne $routingSource) { $routingSource.Dispose() }
   if ($null -ne $routingTarget) { $routingTarget.Dispose() }
 }

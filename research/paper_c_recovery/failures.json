@@ -6,6 +6,11 @@
     {"phase":"commit_import","error":"API-created commit has no trailing message newline; exact hash reconstruction rejected the newline variant before changing branch","scientific_work_executed":false},
     {"phase":"initial_code_scp","error":"SCP rejected missing bundle after commit import failed; no remote file written","scientific_work_executed":false},
     {"phase":"transaction-tests02_and_synthetic-profile01","commit":"d55eef6fc7c64e36665ed24be69a5709627d14e3","error":"Own profile.py shadowed Python standard-library profile when Adam imported cProfile; renamed cost_profile.py","real_optimizer_updates":0,"synthetic_optimizer_updates":0,"logs_preserved":true},
-    {"phase":"primary_source_fetch","error":"Web tool connection failed for official WHU/Xuzhou pages; prior pinned source evidence remains historical, not a successful new fetch","scientific_work_executed":false}
+    {"phase":"primary_source_fetch","error":"Initial official WHU/Xuzhou fetch failed; later primary WHU retrieval succeeded as recorded in provider-facts.json. No new Xuzhou local mapping or SRF proof obtained","scientific_work_executed":false},
+    {"phase":"large_archive_transport","error":"PowerShell initially selected Int32 Math.Min overload for an 8.3 GB archive; rejected before first payload. Corrected to explicit Int64 and tested large numeric contract","real_optimizer_updates":0},
+    {"phase":"ssh_backup_connections","error":"Repeated source/target resets, target connect timeouts and source authentication prompt expiry. Failed partials/journals retained. One-MiB whole-history transfer remained incomplete; critical recovery capsules prioritized. Bounded target frames and at-most-256-MiB in-memory preload avoid idle source/target SSH lifetimes; never persist payload on Windows","real_optimizer_updates":0},
+    {"phase":"reverse_tunnel_transport","error":"Loopback source host key verified, but nested password login repeatedly closed outer SSH. No successful archive transfer on this path; do not report it as working","real_optimizer_updates":0},
+    {"phase":"visual_QA","error":"Cost-chart rotated first label was clipped. Source chart retained; figures02 uses wrapped labels and passed visual inspection","real_optimizer_updates":0},
+    {"phase":"whole_repository_check","commit":"9898e13c0b598a73efaf872a7ae5e535d03c8d2c","error":"Inherited generated current-status Markdown is stale. Shared ledger/projection unchanged by C. Exit1 retained in repository-check13.log; no repository acceptance or CI claim","real_optimizer_updates":0}
   ]
 }
