@@ -47,6 +47,7 @@ root and Python 3.10.20. Windows is used only for editing, Git and SSH transport
 
 A3-sweep engineering registration, if admitted, has18 cases and2286 maximum
 real optimizer updates, with3600 total label exposures over the same200 released
+training points; selection uses the separate200 previously released development
 points. It selects at0/1/2/3 sweeps. This is explicitly shorter than the pending
 40-sweep proposal and cannot complete its convergence/effectiveness study.
 The common Adam1e-4 recipe, different method losses, capacities and contexts

@@ -1,0 +1,10 @@
+{
+  "schema":"paper_c_provider_facts_v1",
+  "source":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm",
+  "retrieved":"2026-11-26",
+  "scope":"Primary provider metadata/table facts, no questionnaire submitted or data downloaded. Names are not a signed local-file semantic map.",
+  "honghu":{"shape":[940,475,270],"date":"2017-11-20","lens_mm":17,"family":"Headwall Nano-Hyperspec","class_21":{"published_name":"Broad bean","published_count":1328},"class_table3_counts":[14041,3512,21821,163285,6218,44557,24103,4054,10819,12394,11015,8954,22507,7356,1002,7262,3010,3217,8712,3486,1328,4040]},
+  "hanchuan_rechecked":{"date":"2016-06-17","reason":"Provider section1.2 and the previous frozen C catalog/device evidence agree; this is a new source recheck, not a date correction.","shape":[1217,303,274],"family":"Headwall Nano-Hyperspec","lens_mm":17},
+  "limits":["Acquisition metadata does not authenticate retained-band/SRF mapping or local class order.","HH class21 still has shared-parent development geography; identifying its published crop does not create independent roles.","All three WHU acquisitions share the published model family; distinct scenes/lenses are not unseen families."],
+  "license_summary":"Provider limits dataset use to academic purposes with citation and prohibits commercial use. No new project role permission follows from this page."
+}
