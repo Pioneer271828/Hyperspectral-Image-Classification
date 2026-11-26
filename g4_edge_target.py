@@ -56,9 +56,16 @@ def load_edge_model_checkpoint(path, *, device="cpu"):
     metadata = read_checkpoint_metadata(path)
     if metadata is None or "edge_alignment_mode" not in metadata["backbone_kwargs"]:
         return load_model_checkpoint(path, device=device)
-    if metadata.get("training_config", {}).get(KEY, {}).get("condition") != "message_global_joint":
-        raise ValueError("A regional joint edge sidecar requires the registered message-only control")
-    model = RegionalEdgeGlobalMessageTarget(metadata["class_counts"], **metadata["backbone_kwargs"]).to(device)
+    kwargs = dict(metadata["backbone_kwargs"])
+    condition = metadata.get("training_config", {}).get(KEY, {}).get("condition")
+    if kwargs["edge_alignment_mode"] is None and condition in ("gated_joint", "capacity_matched_graph"):
+        kwargs.pop("edge_alignment_mode")
+        model = MultiDatasetVCASAHGCN(metadata["class_counts"], **kwargs).to(device)
+        model.backbone_kwargs["edge_alignment_mode"] = None
+    elif kwargs["edge_alignment_mode"] == "region" and condition == "message_global_joint":
+        model = RegionalEdgeGlobalMessageTarget(metadata["class_counts"], **kwargs).to(device)
+    else:
+        raise ValueError("Unrecognized historical or separated joint edge sidecar")
     model.load_state_dict(torch.load(path, map_location=device, weights_only=True), strict=True)
     model.training_config = metadata["training_config"]
     return model.eval()
