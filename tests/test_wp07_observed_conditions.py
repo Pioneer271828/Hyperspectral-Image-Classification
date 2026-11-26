@@ -57,6 +57,13 @@ class ObservedConditionsTests(TestCase):
     def test_index_positions_have_signal_beyond_count_and_never_promote_wavelengths(self):
         a=cond.index_features((0,2,4,6,8,10),11);b=cond.index_features((0,1,4,6,8,10),11)
         self.assertEqual(a[0],b[0]);self.assertEqual(a[1:3],b[1:3]);self.assertNotEqual(a,b)
+        event=next(e for e in self.provider.events()[1] if e['band']=='even_retained_positions')
+        actual,_,_=self.provider.materialize('devval',event,'fixture');entry=self.entries[run.key('devval',event)];model=self.model()
+        with torch.no_grad():
+            original,ta=self.call(model,'metadata','metadata','matched',actual,entry)
+            changed,tb=self.call(model,'metadata','metadata','equal_count_positions',actual,entry)
+        self.assertNotEqual(ta['weights'],tb['weights']);self.assertFalse(torch.equal(original[0],changed[0]))
+        self.assertEqual((ta['q'],ta['a0']),(tb['q'],tb['a0']))
         encoder=cond.IndexConditionEncoder();ref=encoder.indices[0].weight
         approx=BandMetadata('approx',(0,2,4),(500.,600.,700.),'nm','approximate',(True,)*3)
         first=encoder(cond.IndexPacket(approx,(0,2,4),5),None,None,ref)

@@ -43,7 +43,7 @@ def main():
         ax.bar(modes,vals,bottom=bottom,label=group.replace('_',' '),color=color);bottom+=np.asarray(vals)
     ax.axhline(3040,color='#536779',ls='--',lw=.8);ax.text(3.45,3075,'3,040 allocated in these groups',ha='right',fontsize=8)
     ax.set_ylim(0,3450);ax.set_ylabel('Elements changed from initial to final state');ax.grid(axis='y',alpha=.15)
-    fig.suptitle('Equal total capacity; measured selector/normalization participation',fontsize=13)
+    fig.suptitle('Matched policy capacity; measured selector participation',fontsize=13)
     ax.set_title('Both selectors · six cases per policy (9/22 classes × three model seeds)',fontsize=10)
     ax.legend(loc='upper left',bbox_to_anchor=(1.01,1),frameon=False,fontsize=8);fig.tight_layout();save(fig,'parameter-participation')
     fig,axes=plt.subplots(1,2,figsize=(10.5,4.8),sharey=True);seedcolors={64:'#247ba0',512:'#ed8b36',2048:'#769461'}
@@ -95,6 +95,8 @@ The real preflight manifests contain 1,476 scene/role/factor/band view rows but 
 
 The engineering matrix contains 72 interface cases: 9/22 classes × three model seeds × four selection policies × three selector locations. Each uses the same complete initial state and total parameter count within class/seed, the same 3-CNN/2-graph candidate pool, loss, exposures and 12-step budget. The other branch keeps equal averaging in CNN-only/graph-only selection tests; neither classifier branch is disabled. The three mean scopes are equivalent policy pairs and serve as negative wiring controls, leaving ten distinct policy pairs per class/seed. They are not independent scientific arms. Continuous 12-step and 5+7-step routes, selected/last replay and completed zero-step re-entry pass in all 72 cases: 1,728 synthetic updates in total. The first case's 24 updates were reused after export-only import failures. No completed training stage was repeated.
 
+Synthetic validation denominators per head/band are 80 point-exposures for nine classes (class supports 8 or16), and184 for22 classes (class supports8 or12). Four profiles reuse the underlying released locations; profile, band, head and endpoint repeats are not independent points. The private checkpoint format binds the new encoder to the native lifecycle adapter; the unchanged generic model-only sidecar loader is not claimed to restore this new private format.
+
 An independent WP12-facing consumer recounts 864 synthetic and 300 real-stress confusion matrices from saved original-point probabilities, with NLL differences at most 10⁻¹². Five prior B WP12 CSV tables remain byte-identical. The append-only B supplement is ready for the integration owner; the central production registry is unchanged. All rows retain synthetic-engineering versus untrained real-stress scope tags.
 
 ## Synthetic joint − content (fused head)
@@ -117,7 +119,7 @@ Each band cost uses two warm-ups and five resident forward samples, including pr
 
 '''+mdtable(real_summary,['regime','scope','rows','NLL_min','NLL_max','OA_changed_rows','condition_parameters_trained'])+'''
 
-Six fine16 graph-content checkpoints and the original-GPU Xuzhou seed512 factor2 dual-content checkpoint retain every old tensor. Newly inserted metadata heads have fixed-seed, untrained weights, so their nonzero effects demonstrate consumption or sensitivity only. All-missing and explicit zero-head insertion reproduce historical point probabilities bitwise. Unknown approximate wavelengths and absent GSD are exact negative controls. CNN-only condition perturbations preserve graph-head probabilities; graph-only perturbations preserve CNN-head probabilities. The old factor2 graph supports remain degenerate, so its roughly 10⁻⁹ graph-only NLL differences must not be interpreted as graph-range information gain. The package also verifies both adjacency index/value sets under condition changes before classifier heads, and CPU/CUDA RNG isolation of the final initializer. A CPU reconstruction matches the six archived fixture initial states and all seven previously probed model tensor states; the RNG fix does not alter their initialized parameter values.
+Six fine16 graph-content checkpoints and the original-GPU Xuzhou seed512 factor2 dual-content checkpoint retain every old tensor. Newly inserted metadata heads have fixed-seed, untrained weights, so their nonzero effects demonstrate consumption or sensitivity only. All-missing and explicit zero-head insertion reproduce historical point probabilities bitwise. Unknown approximate wavelengths and absent GSD are exact negative controls. These controls change selector descriptors only; the VCA's original spectral view and Q/A stay fixed. CNN-only condition perturbations preserve graph-head probabilities; graph-only perturbations preserve CNN-head probabilities. The old factor2 graph supports remain degenerate, so its roughly 10⁻⁹ graph-only NLL differences must not be interpreted as graph-range information gain. The package also verifies both adjacency index/value sets under condition changes before classifier heads, and CPU/CUDA RNG isolation of the final initializer. A CPU reconstruction matches the six archived fixture initial states and all seven previously probed model tensor states; the RNG fix does not alter their initialized parameter values.
 
 ## Next real pairing — draft, not released
 
