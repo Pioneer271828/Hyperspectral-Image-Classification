@@ -19,7 +19,7 @@ from transfer.p4_runtime_device import CUDA_FP64_WEIGHT
 
 HISTORICAL = {
     "wp04-residual-fusion-real-20261126": ("registration.json",
-        "2dbd07d0aa8a2d56613da8ac64ff4c4b941dd6b566bbdc9c799ebcb5584c6edd6", {"B0": "B0", "R": "R"}),
+        "2dbd07d0aa8a2d56613da8ac64f4c4b941dd6b566bbdc9c799ebcb5584c6edd6", {"B0": "B0", "R": "R"}),
     "wp04-real-c2g-pairs-20261126": ("execution/evidence.json",
         "955c50b81d729ea0a811789eac78cde59705b446530c1e68f0ddff8ebfdc295f", {"off": "I0"}),
     "wp04-direction-capacity-20261126": ("execution/evidence.json",
@@ -27,7 +27,7 @@ HISTORICAL = {
     "wp04-edge-weights-real-v2-20261126": ("execution/evidence.json",
         "c4c166aa0c2b7c9ea41eaa1dde888d8e8da131feb87e117ca55b2bbbbb007159", {"Wj": "I6"}),
     "wp04-message-correspondence-real-20261126": ("execution/evidence.json",
-        "e98c2d65dc6028932a3f51e1ef1d99ecdf1f6733877ccff12666524cbaa39418c", {"I8": "I8"}),
+        "e98c2d65dc6028932a3f51e1ef1d99ecdf1f673877ccff12666524cbaa39418c", {"I8": "I8"}),
 }
 EXPECTED_PARAMS = {"B0": 61696, "R": 69952, "I0": 61696, "I1": 94976, "I2": 120194,
                    "I6": 78592, "I8": 137090}
@@ -260,3 +260,32 @@ def intake(root, residual_pin, joint_pin, history_pin):
             "table_counts": {ASSIGNMENT_SCOPE: rcounts, I7_SCOPE: icounts},
             "pairs": pairs, "factorials": factorials,
             "cases": [{k: v for k, v in row.items() if k not in ("contract", "initial")} for row in rows]}
+
+
+def write_paper_tables(summary, out):
+    comparisons = [(name, row["endpoints"], row["primary"], row["criterion_passed"])
+                   for name, row in summary["pairs"].items()]
+    comparisons.extend((name, row["effects"], False, None) for name, row in summary["factorials"].items())
+    points, classes = [], []
+    for name, endpoints, primary, passed in comparisons:
+        for endpoint, heads in endpoints.items():
+            for head, seeds in heads.items():
+                for seed, effect in seeds.items():
+                    index = {"comparison": name, "endpoint": endpoint, "head": head, "seed": seed}
+                    points.append({**index, "oa_difference_pp": 100 * effect["delta_oa"],
+                                   "aa_difference_pp": 100 * effect["delta_aa"],
+                                   "nll_difference": effect["delta_nll"], "primary": primary,
+                                   "passed_primary_gate": passed if primary else None})
+                    if "classes" in effect:
+                        class_rows = [(x["class_id"], x["after"] - x["before"], x["lost"], x["gained"])
+                                      for x in effect["classes"]]
+                    else:
+                        class_rows = [(i, n, None, None) for i, n in enumerate(effect["correct_delta_by_class"], 1)]
+                    for label, delta, lost, gained in class_rows:
+                        classes.append({**index, "class_id": label, "support_per_arm": 5,
+                                        "correct_count_difference": delta, "lost": lost, "gained": gained})
+    for filename, rows in (("paper-comparisons.csv", points), ("paper-classes.csv", classes)):
+        with (out / filename).open("x", encoding="utf8", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)

@@ -10,7 +10,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
 from evaluation.wp12_edge_weight_evidence import intake as edge_weight_intake
 from evaluation.wp12_message_correspondence_evidence import intake as message_intake
-from evaluation.wp12_residual_interaction_evidence import historical, intake as residual_interaction_intake
+from evaluation.wp12_residual_interaction_evidence import (
+    historical, intake as residual_interaction_intake, write_paper_tables,
+)
 from scripts.run_wp04_factorial import (CONTROL_CONTRASTS, HEADS, REAL_CATALOG_SHA, SCHEMA,
                                        identity, require, roster, verify)
 from transfer.p4_runtime_device import CUDA_FP64_WEIGHT, UUID
@@ -177,6 +179,8 @@ def main():
             data["edge_weight_development"] = edge_weight_intake(root, pair(args.edge_weight_development))
     out.mkdir()
     write_json(out / "supplement.json", {**data, "adapter": identity(code)})
+    if remaining:
+        write_paper_tables(remaining, out)
 
 
 if __name__ == "__main__":
