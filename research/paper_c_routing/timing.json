@@ -1,0 +1,10 @@
+{
+  "schema": "paper_c_package2_timing_v1",
+  "started_at": "2026-11-26T13:46:09+08:00",
+  "clock_source": "clock.curr_time observed at turn start",
+  "effective_work_seconds": null,
+  "pure_wait_seconds": null,
+  "accounting": "Record measured stages separately; do not sum parallel wall times or claim four hours without evidence.",
+  "scope": "zero-update six-arm routing, admission, data-source evidence, independent audit and external paired experiment plan",
+  "training_updates_authorized": 0
+}
