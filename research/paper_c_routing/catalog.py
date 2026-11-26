@@ -23,7 +23,8 @@ SOURCES={
 
 def build(table):
     with Path(table).open(encoding="utf-8-sig") as stream:rows=list(csv.DictReader(stream))
-    if len(rows)!=30 or len({(r["source"],r["target"]) for r in rows})!=30:raise ValueError("Complete30-direction roster required")
+    if len(rows)!=30 or {(r['source'],r['target']) for r in rows}!={(s,t) for s in CLASSES for t in CLASSES if s!=t}:
+        raise ValueError("Complete30-direction roster required")
     out=[]
     for row in rows:
         src,target=row["source"],row["target"]
@@ -31,7 +32,7 @@ def build(table):
         executable=(src,target)==("paviaU","xuzhou")
         out.append({"source":src,"target":target,"data_gate":row["status"],
                     "source_evidence":SOURCES[src],"target_evidence":SOURCES[target],
-                    "model_gate":"G3_P2_s2036_frozen_pair_with_CNN_copy" if executable else "NO_VERIFIED_SINGLE_SOURCE_FROZEN_LIGHT_FULL_PAIR",
+                    "model_gate":"G3_P2_three_frozen_run_seeds_with_CNN_copy" if executable else "NO_VERIFIED_SINGLE_SOURCE_FROZEN_LIGHT_FULL_PAIR",
                     "development_execution":executable and ready,"independent_calibration":False,"independent_confirmation":False,
                     "missing_source_target_pair":not executable,"target_classes":n,
                     "additional_roles_engineering_floor":{"new_calibration_points":5*n,"new_confirmation_points":5*n,

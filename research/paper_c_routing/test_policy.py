@@ -6,8 +6,10 @@ import tempfile
 import json
 import hashlib
 import numpy as np
+import csv
 
 from policy import admit, plan, metrics, verify_completed
+from catalog import build
 
 
 class PolicyTests(unittest.TestCase):
@@ -25,6 +27,23 @@ class PolicyTests(unittest.TestCase):
         for source,target in (("whu-longkou","xuzhou"),("paviaU","paviaU"),("missing","xuzhou")):
             with self.assertRaises(ValueError):admit(table,source,target,scope="cross_device_development",role="devval",ancestry=ancestry)
         with self.assertRaises(ValueError):admit(table,"paviaU","xuzhou",scope="cross_device_development",role="devval",ancestry={"source":"xuzhou","target":"xuzhou","kind":"target_scratch"})
+
+    def test_all_thirty_directions_are_exhaustive_and_development_only(self):
+        table=Path(__file__).resolve().parents[1]/'paper1_c/ordered-pair-feasibility.csv'
+        catalog=build(table);admitted=0
+        with table.open(encoding='utf-8-sig') as stream:
+            for row in csv.DictReader(stream):
+                args=(table,row['source'],row['target'])
+                kw={'scope':'cross_device_development','role':'devval',
+                    'ancestry':{'source':row['source'],'target':row['target'],'kind':'verified_source_pretrain_target_adaptation'}}
+                if row['status']=='READY_DEVELOPMENT_ONLY':
+                    self.assertFalse(admit(*args,**kw)['confirmation']);admitted+=1
+                else:
+                    with self.assertRaises(ValueError):admit(*args,**kw)
+                with self.assertRaises(ValueError):admit(*args,**{**kw,'role':'confirmation'})
+        self.assertEqual(admitted,6)
+        self.assertEqual(sum(x['development_execution'] for x in catalog['directions']),1)
+        self.assertTrue(all(not x['independent_confirmation'] and not x['independent_calibration'] for x in catalog['directions']))
 
     def test_quota_permutation_random_and_label_absence(self):
         rows=self.fixture();m={r.key:(i+1)/10 for i,r in enumerate(rows)}
