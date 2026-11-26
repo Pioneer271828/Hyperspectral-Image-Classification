@@ -125,7 +125,7 @@ def forward(model, block, mask=None, expected=None):
 
     back = model.backbone
     builder = back.learnable_graph
-    build, stage, mm = builder.build_graph, back.graph_stage2.forward, torch.sparse.mm
+    build, stage, mm = builder.build_graph, back.graph_stage2, torch.sparse.mm
     capture, execution = {}, []
 
     def build_graph(*args, **kwargs):
@@ -155,7 +155,7 @@ def forward(model, block, mask=None, expected=None):
 
     start = perf_counter()
     with (torch.inference_mode(), patch.object(builder, "build_graph", side_effect=build_graph),
-          patch.object(back.graph_stage2, "forward", side_effect=stage2)):
+          patch.object(back, "graph_stage2", side_effect=stage2)):
         outputs = forward_partition(model, "paviaU", block["observation"], block["bands"], 50,
                                     wavelength_unit="nm")[:3]
     elapsed = perf_counter() - start
