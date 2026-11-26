@@ -13,9 +13,23 @@ from tests.test_native_released_production import release_for
 from transfer import native_released_real as real, registered_development as dev
 from transfer.native_scale_campaign import packet, read
 from transfer.xuzhou_multiscale_audit import _exact
+from transfer.spatial_multiscale import initialize
+from transfer.native_scale_training import baseline
 
 
 class BPairTests(TestCase):
+    def test_fallback_accepts_only_missing_cnn_and_graph_metadata_layers(self):
+        source = baseline(9, 64)
+        for arm in ("mean", "content"):
+            trained = initialize(source, arm, 7385)
+            restored = b.missing_fallback(trained.state_dict(), source, arm, 7385)
+            for name, value in trained.state_dict().items():
+                self.assertTrue(torch.equal(value, restored.state_dict()[name]))
+            damaged = dict(trained.state_dict())
+            damaged.pop(next(name for name in damaged if "heads" in name))
+            with self.assertRaisesRegex(ValueError, "non-metadata"):
+                b.missing_fallback(damaged, source, arm, 7385)
+
     def test_both_gate_layers_observe_and_restore_on_error(self):
         original = b.resource.gate
         with patch.object(b.resource, "snapshot", return_value={"free_mib": 0, "utilization": 100}) as sample:

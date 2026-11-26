@@ -13,7 +13,9 @@ from pathlib import Path
 import sys
 from time import perf_counter
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+CONTROLLER_ROOT = Path(__file__).resolve().parents[1]
+WORKER_ROOT = Path(os.environ.get("WP07_B_FROZEN_WORKER", str(CONTROLLER_ROOT))).resolve(strict=True)
+sys.path.insert(0, str(WORKER_ROOT))
 
 import torch
 
@@ -31,6 +33,17 @@ ARMS = ("off", "fixed", "mean", "content", "cnn_content", "graph_content")
 SEEDS = (64, 512, 2048)
 SCHEMA = "wp07_b_xuzhou_factor2_pair_v1"
 POLICY = "record_resources_then_attempt_cuda_no_memory_or_utilization_threshold"
+
+
+def missing_fallback(state, baseline, arm, seed):
+    campaign.require(arm in ("mean", "content"), "Expected a trained fallback arm")
+    alternate = initialize(baseline, "metadata" if arm == "mean" else "joint", seed)
+    incompatible = alternate.load_state_dict(state, strict=False)
+    campaign.require(not incompatible.unexpected_keys and incompatible.missing_keys
+        and all(".condition_encoder." in key or ".condition_selector." in key
+                or key.startswith("backbone.range_encoder.") or key.startswith("backbone.range_metadata.")
+                for key in incompatible.missing_keys), "Fallback changes non-metadata state")
+    return alternate
 
 
 @contextmanager
@@ -170,13 +183,8 @@ def run_lane(root, plan_pin, gpu, code):
                         chosen = state["selected"]
                         replay.model.load_state_dict(chosen["state"], strict=True)
                         original = replay.evaluate(chosen["step"], detailed=True)
-                        alternate = initialize(replay._released.baseline(spec["seed"]),
-                                               "metadata" if arm == "mean" else "joint", spec["module_seed"])
-                        incompatible = alternate.load_state_dict(chosen["state"], strict=False)
-                        campaign.require(not incompatible.unexpected_keys
-                            and incompatible.missing_keys
-                            and all("condition_encoder" in key or "condition_selector" in key
-                                    for key in incompatible.missing_keys), "Fallback changes non-metadata state")
+                        alternate = missing_fallback(chosen["state"], replay._released.baseline(spec["seed"]),
+                                                     arm, spec["module_seed"])
                         replay.model = alternate.to(replay.device)
                         observed = replay.evaluate(chosen["step"], detailed=True)
                         campaign.require(_exact(original, observed), "Actual missing-condition fallback differs")
@@ -262,6 +270,7 @@ def summarize(root, plan_pin, out, code):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--controller-commit")
     parser.add_argument("--root", type=Path, required=True)
     modes = parser.add_subparsers(dest="action", required=True)
     p = modes.add_parser("prepare")
@@ -276,7 +285,12 @@ def main():
     p.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     code = code_snapshot()
+    controller = code_snapshot(CONTROLLER_ROOT)
+    campaign.require(not controller["dirty"] and (args.controller_commit is None
+                     or controller["commit"] == args.controller_commit), "Unexpected or dirty B controller")
     campaign.require(code["commit"] == args.expected_commit, "Unexpected B commit")
+    print(json.dumps({"controller_commit": controller["commit"], "controller_source_hash": controller["source_hash"],
+                      "worker_commit": code["commit"], "worker_source_hash": code["source_hash"]}), flush=True)
     root = args.root.resolve(strict=True)
     if args.action == "prepare":
         result = prepare(root, args.out.resolve(), pin(args.preflight), args.gpus, code)
