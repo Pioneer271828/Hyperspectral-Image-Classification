@@ -33,6 +33,21 @@ def mask_features(positions, master_count):
     return (master_count / MAX_BANDS, *(float(i in present) for i in range(MAX_BANDS)))
 
 
+def proposed_real_positions(master_count):
+    """Metadata-only proposal. This function grants no permission to read or slice real images."""
+    require(type(master_count) is int and 40 <= master_count <= MAX_BANDS, 'Unsupported proposal namespace')
+    count = (master_count + 1) // 2
+    common = tuple(int(v) for v in np.linspace(20, master_count - 2, count - 8, dtype=np.int64))
+    a = POSITION_SETS['interior_a'] + common
+    b = POSITION_SETS['interior_b'] + common
+    shifted = tuple(v + 1 for v in a)
+    require(len(a) == len(set(a)) == len(b) == len(set(b)) == count, 'Proposal repeated columns')
+    # Same suffix preserves sums, sum-squares and internal gap statistics of the planted collision.
+    require(torch.equal(torch.tensor(prior.index_features(a, master_count)),
+                        torch.tensor(prior.index_features(b, master_count))), 'Extended summary collision did not survive FP32')
+    return {'shared_a': a, 'shift_b': shifted, 'interior_b': b}
+
+
 class PositionEncoder(prior.IndexConditionEncoder):
     def __init__(self, old):
         # Retain exactly the already initialized physical and summary tensors.

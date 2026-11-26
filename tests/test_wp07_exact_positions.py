@@ -136,3 +136,14 @@ class ExactPositionTests(TestCase):
         gate.provider.materialize.assert_not_called()
         with self.assertRaisesRegex(ValueError, 'optimizer release'):
             gate.contract()
+
+    def test_metadata_only_real_proposal_matches_count_span_and_collision(self):
+        for master in (103, 436):
+            views = position.proposed_real_positions(master)
+            a, shifted, interior = (views[k] for k in ('shared_a', 'shift_b', 'interior_b'))
+            self.assertEqual(len(a), (master + 1)//2)
+            self.assertEqual((len(a), a[0], a[-1]), (len(interior), interior[0], interior[-1]))
+            self.assertEqual(tuple(v + 1 for v in a), shifted)
+            self.assertTrue(torch.equal(torch.tensor(conditions.index_features(a, master)),
+                                        torch.tensor(conditions.index_features(interior, master))))
+            self.assertNotEqual(position.mask_features(a, master), position.mask_features(interior, master))
