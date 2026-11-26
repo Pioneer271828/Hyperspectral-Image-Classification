@@ -1,0 +1,46 @@
+{
+  "schema": "paper1_c_confirmation_draft_v1",
+  "date": "2026-11-26",
+  "status": "FROZEN_DESIGN_NOT_A_TRAINING_OR_LABEL_RELEASE",
+  "question": "When does the within-region pixel residual improve low-label pixel-region classification?",
+  "scope_owners": {"A": "fixed Q/A residual by fusion and capacity", "B": "conditional scale", "C": "external baselines and confirmation eligibility"},
+  "historical_protocols": {
+    "M4S2": {"issue": 135, "train_fraction": 0.01, "validation_fraction": 0.005, "rounding": "per-class ceil", "scenes": ["paviaU", "xuzhou", "whu-honghu"], "context": "whole-scene transductive", "independent_confirmation": false, "original_probability_gate": "FAILED_NOT_RETROACTIVELY_PASSED", "decision_amendment_issue": 143},
+    "G4": {"training": "K10 per class", "validation": "additional V5 per class", "support_seed": 64, "training_counts": [90, 90, 220], "validation_counts": [45, 45, 110], "context": "unlabeled target scene permitted", "different_from_joint": true},
+    "development_bank": {"support_seed": 512, "training": "K5 per class", "validation_seed": 3031, "validation": "V5 per class", "purpose": "development only; does not inherit untouched status"}
+  },
+  "confirmation": {
+    "state": "BLOCKED_CUSTODIAN_RELEASE_REQUIRED",
+    "required_authority": "Independent custodian publishes immutable geographic role, released labels and observation manifests. C does not inspect raw GT or sealed query.",
+    "prohibited": ["relabel development validation as confirmation", "select geography using confirmation accuracy", "split a shared parent or known connected label component across confirm and fit", "reuse full-scene Q/A across roles", "refit normalization on confirmation", "use unlabeled confirmation context for fit or routing calibration"],
+    "partition_unit": "custodian-approved independent parent geography, not model seed or neighboring pixels",
+    "geometry": "No new coordinates are claimed released. Reuse existing geometry only for development. Custodian must assess independent components and class feasibility before confirmation assignment.",
+    "buffer": "Report measured observation-box separation, patch footprints, Q support and graph reach. Tile-local forwards eliminate direct cross-role paths; finite pixel gap alone does not establish geographical independence.",
+    "classes": "all declared original classes; unsupported class N/A with denominator, no silent removal",
+    "models": "A's frozen selected B0/Bcap/R configurations, no repeated development training by C",
+    "model_seeds": [64, 512, 2048],
+    "split_and_support_seeds": "custodian IDs separate from model seeds; freeze before opening confirm labels",
+    "primary": "scene-equal OA paired residual-minus-B0 and residual-minus-capacity",
+    "guards": {"scene_mean_AA_min_delta_pp": -0.5, "HongHu_mean_OA_min_delta_pp": -0.5, "classes_with_at_most_25_train_labels_mean_recall_min_delta_pp": -2.0},
+    "benefit": "both mean paired OA deltas >0, at least 2 of 3 paired model seeds positive, every guard passes; report all seeds/failures and block-level uncertainty; no significance claim from 3 seeds",
+    "boundary": "only frozen valid four-neighbor unlike labeled pairs; report 1/2/3-pixel bands and supported denominators, N/A when absent",
+    "selection": "first minimum development fused CE NLL; never confirmation labels; architecture, update budget and selection events fixed before release",
+    "numerics": "exact source/input/checkpoint identities; finite normalized outputs; preregister numerical policy separately. NUM-2 historical amendment is evidence, not automatic permission to relax a new gate.",
+    "updates_authorized_by_this_file": 0
+  },
+  "external_engineering_pilot": {
+    "preferred_structural": "CEGCN / DCG-Net pending code permission",
+    "executable_fallback": "author DSNet pinned model, decomposed-feature comparator, not a superpixel graph or residual equivalent",
+    "comparison": "direct author model versus input/output adapter, identical weights, patches, optimizer and events; this establishes adaptation equivalence only",
+    "data": "existing authenticated development-bank train/devval only",
+    "patch": "7x7 tile-local replicated padding; no cross-role halo",
+    "model_seeds": [64, 512, 2048],
+    "budget": "one deterministic traversal of every labeled training block per arm and seed; each released label seen once; freeze actual roster and step counts before execution",
+    "selection_events": "0, ceil(number_of_labeled_blocks/2), final; first minimum devval CE NLL",
+    "optimizer": "Adam1e-4 shared recipe for both equivalence arms, no scheduler; disclose difference from upstream demo's two-rate Adam/StepLR/clipping",
+    "output": "three original reconstruction/logit tensors; only classification logits scored, no invented graph/CNN heads",
+    "duration": "CPU engineering planned <=5 minutes; real one-pass paired pilot planned 5-30 minutes, refine from zero-update measured cost before launch",
+    "gpu": "inspect ownership first; GPU1/4 only if unclaimed. CPU is allowed. No memory/utilization cutoffs, no preemption.",
+    "long_training": false
+  }
+}
