@@ -1,0 +1,8 @@
+{
+  "schema": "paper_c_package3_timing_v1",
+  "started_at": "2026-11-26T16:28:01+08:00",
+  "clock_source": "clock.curr_time",
+  "effective_work_seconds": null,
+  "pure_wait_seconds": null,
+  "note": "Record actual intervals and compute components; no artificial waiting or repeated runs to fill four hours."
+}
