@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
 from evaluation.wp12_edge_weight_evidence import intake as edge_weight_intake
 from evaluation.wp12_message_correspondence_evidence import intake as message_intake
+from evaluation.wp12_residual_interaction_evidence import historical, intake as residual_interaction_intake
 from scripts.run_wp04_factorial import (CONTROL_CONTRASTS, HEADS, REAL_CATALOG_SHA, SCHEMA,
                                        identity, require, roster, verify)
 from transfer.p4_runtime_device import CUDA_FP64_WEIGHT, UUID
@@ -122,6 +123,9 @@ def main():
     parser.add_argument("--edge-weight-development", nargs=2, metavar=("EVIDENCE", "SHA256"))
     parser.add_argument("--message-development", nargs=2, metavar=("EVIDENCE", "SHA256"))
     parser.add_argument("--message-frozen", nargs=2, action="append", metavar=("EVIDENCE", "SHA256"))
+    parser.add_argument("--qualify-remaining-history", nargs=2, metavar=("PUBLISHED_CATALOG", "SHA256"))
+    for item in ("residual-assignment", "direct-joint", "remaining-history"):
+        parser.add_argument("--" + item, nargs=2, metavar=("EVIDENCE", "SHA256"))
     for key in CONTROL_CONTRASTS:
         parser.add_argument("--" + key, nargs=4, metavar=("SYNTHETIC", "SHA256", "ZERO_UPDATE", "SHA256"))
     args = parser.parse_args()
@@ -137,6 +141,17 @@ def main():
     controls = {key: (pair(value[:2]), pair(value[2:])) for key in CONTROL_CONTRASTS
                 if (value := getattr(args, key))}
     has_engineering = args.cpu is not None or args.real is not None
+    remaining_pins = (args.residual_assignment, args.direct_joint, args.remaining_history)
+    require(not any(remaining_pins) or all(remaining_pins), "Supply both new trials and the history qualification")
+    if args.qualify_remaining_history:
+        require(not (has_engineering or args.gpu or args.strict_real or controls or args.edge_weight_development
+                    or args.message_development or args.message_frozen or any(remaining_pins)),
+                "Run historical qualification as a separate read-only command")
+        qualification = historical(root, pair(args.qualify_remaining_history))
+        out.mkdir()
+        write_json(out / "history.json", qualification)
+        return
+    remaining = residual_interaction_intake(root, *(pair(p) for p in remaining_pins)) if all(remaining_pins) else None
     require(bool(args.message_development) == bool(args.message_frozen),
             "A correspondence intake binds both the trained cases and the frozen diagnostics")
     message = (message_intake(root, pair(args.message_development), [pair(pin) for pin in args.message_frozen],
@@ -149,11 +164,16 @@ def main():
             data["edge_weight_development"] = edge_weight_intake(root, pair(args.edge_weight_development))
         if message:
             data["message_development"] = message
+        if remaining:
+            data["residual_interaction_development"] = remaining
     else:
-        require((args.edge_weight_development is not None or message) and not (args.gpu or args.strict_real or controls),
+        require((args.edge_weight_development is not None or message or remaining)
+                and not (args.gpu or args.strict_real or controls),
                 "Supply original engineering inputs or a real development receipt")
-        data = message or edge_weight_intake(root, pair(args.edge_weight_development))
-        if message and args.edge_weight_development:
+        data = remaining or message or edge_weight_intake(root, pair(args.edge_weight_development))
+        if remaining and message:
+            data["message_development"] = message
+        if (remaining or message) and args.edge_weight_development:
             data["edge_weight_development"] = edge_weight_intake(root, pair(args.edge_weight_development))
     out.mkdir()
     write_json(out / "supplement.json", {**data, "adapter": identity(code)})
