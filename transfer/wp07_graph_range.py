@@ -86,7 +86,7 @@ class _Captured(Exception):
 
 
 @torch.no_grad()
-def capture_geometry(model, actual, producer, role, scale):
+def capture_geometry(model, actual, producer, role, scale, *, condition=None):
     """Stop immediately after graph construction, before branch/head prediction."""
     require_checks()
     require(not model.training, "Geometry requires an initial evaluation model")
@@ -109,7 +109,7 @@ def capture_geometry(model, actual, producer, role, scale):
     # stop at forward_stages, after Q exists and before any head is evaluated.
     stages = model.backbone.forward_stages
 
-    def stop(cnn_input, region_input, Q, A, dataset_name=None, **kwargs):
+    def stop(cnn_input, region_input, Q, A, dataset_name=None, *args, **kwargs):
         require(len(captured) == 1, "Expected one Q and candidate pair")
         narrow, wide, _, grid = captured[0]
         require(sparse_digest(narrow) == sparse_digest(A), "Captured near adjacency differs")
@@ -119,7 +119,7 @@ def capture_geometry(model, actual, producer, role, scale):
     model.backbone.forward_stages = stop
     try:
         try:
-            forward(model, actual, producer, role, graph_scale=scale)
+            forward(model, actual, producer, role, graph_scale=scale, condition=condition)
         except _Captured:
             pass
     finally:
@@ -158,7 +158,8 @@ def frozen_support(model, entry, arm):
         current = ranges._graph_forward.get()
         require(current is not None and current.owner is model.backbone, "Range forward context differs")
         current.wider_graph = b
-        current.weights = (model.backbone.range_weights(tokens, current.observation) if arm == "content" else
+        learned = model.backbone.range_weights(tokens, current.observation)
+        current.weights = (learned if arm == "content" else
                            tokens.new_tensor({"near": (1., 0.), "wide": (0., 1.), "mean": (.5, .5)}[arm]))
         return a
 

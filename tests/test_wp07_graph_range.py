@@ -56,10 +56,13 @@ class GeometryTests(unittest.TestCase):
             self.assertNotIn("_build_assignment", vars(model.backbone.learnable_graph))
         self.assertEqual(len(set(counts)), 1)
         self.assertEqual(weights[:3], [[1., 0.], [0., 1.], [.5, .5]])
+        before, _ = forward(self.model, self.actual, "fixture", "devtrain", graph_scale=16)
         with self.assertRaisesRegex(RuntimeError, "cleanup"):
             with graph.frozen_support(self.model, entry, "near"):
                 raise RuntimeError("cleanup")
         self.assertNotIn("_build_graph", vars(self.model.backbone.learnable_graph))
+        after, _ = forward(self.model, self.actual, "fixture", "devtrain", graph_scale=16)
+        self.assertTrue(all(torch.equal(a, b) for a, b in zip(before[:3], after[:3])))
 
     def test_optimized_python_refused(self):
         result = subprocess.run([sys.executable, "-O", "scripts/run_wp07_graph_geometry.py", "--help"],
