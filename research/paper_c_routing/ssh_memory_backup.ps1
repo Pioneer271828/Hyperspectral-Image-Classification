@@ -13,6 +13,7 @@ param(
 # Password entry stays in SSH's inherited interactive console. Payloads remain
 # in memory and SSH stdin; never print, log or persist payload/credentials here.
 $ErrorActionPreference='Stop'
+if (Test-Path -LiteralPath $ReceiptPath) { throw 'New receipt path required; preserve earlier receipts.' }
 foreach ($routingPath in @($SourceArchive,$TargetArchive,$Receiver)) {
   if ($routingPath -notmatch '^/[A-Za-z0-9_./-]+$') { throw 'Controlled absolute remote paths required.' }
 }

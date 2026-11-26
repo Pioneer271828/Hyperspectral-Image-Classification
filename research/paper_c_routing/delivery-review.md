@@ -87,6 +87,7 @@ WHU三景同Headwall家族，不能凭镜头/日期变化宣称未见家族。La
   真正图旁路、概率端点一致、故障清理、权重漂移、标签/概率负例和独立输入重建。WP11依赖的两项原生回归另于`runtime-tests04.log`通过。
 * 原统计下三种方法实际CLI共18负例/重入检查通过，模块调用被陷阱禁止，累计神经前向0、优化器0；涵盖完成重入、
   隐式覆盖、改合同、错误代码、篡改概率及孤立未提交概率。旧统计模式的24例记录亦保留。旧已提交2阶段→仅补34阶段恢复验证通过。
+* 备份协议在`785c8b55bb88bc1cbaefe39c7f89562cb4a29841`以合成数据3项通过；真实两批归档也完成整包与全部逻辑文件核验。
 * 全部保留23个完成矩阵、828阶段，包含旧压力/原型和9个主矩阵；不能把这些重复计作828个独立实验。
 * `scripts/check_repository.py --expected-commit b991bb180a92f7904a2ea6407b99cd78680a5ed2`失败：继承的当前状态Markdown投影陈旧。
   文件SHA仍为`306cc6e7661723ca0df62271b71fa7fa568bc3f2ecca3f25f607c08fc4f6984f`。未越权改共享账本；无CI成功声明。
@@ -96,7 +97,9 @@ WHU三景同Headwall家族，不能凭镜头/日期变化宣称未见家族。La
 远程根为`$PROJECT/runs/paper-c-routing-20261126/`；主结果`g3-original-*-span05/`，
 独审`*-span05-audit02.json`，分析`paired-development02.*`，源码谱系`source-lineage03.json`，
 正式图`figures03/`，外部配对方案`dsnet-native-proposal01.json`，资格`direction-eligibility02.json`。
-完整命令和固定依赖见[入口](README.md)。最终review提交、ZIP SHA、起止与实测计算分项以外部封包回执为准。
+完整命令和固定依赖见[入口](README.md)，停机支线的实际核验及缺口见[备份回执](backup-review.md)。
+Draft PR[#516](https://github.com/Pioneer271828/Hyperspectral-Image-Classification/pull/516)。
+最终review提交、ZIP SHA、起止与实测计算分项以外部封包回执为准。
 
 ## 失败记录与用时
 
