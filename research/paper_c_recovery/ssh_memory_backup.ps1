@@ -1,6 +1,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$SourceHost,
   [int]$SourcePort=1222,
+  [ValidateSet(1048576,16777216)][int]$FrameBytes=1048576,
   [Parameter(Mandatory=$true)][string]$SourceArchive,
   [string]$TargetHost='rmvision',
   [Parameter(Mandatory=$true)][string]$TargetArchive,
@@ -19,6 +20,7 @@ foreach ($routingPath in @($SourceArchive,$TargetArchive,$Receiver)) {
 }
 if ($ArchiveSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Complete SHA256 required.' }
 $routingCommand="python3 $Receiver --out $TargetArchive --bytes $ArchiveBytes --sha256 $ArchiveSha256"
+if ($FrameBytes -ne 1048576) { $routingCommand+=" --frame-bytes $FrameBytes" }
 $routingStatusRaw=& ssh -T -o BatchMode=yes -o ConnectTimeout=15 $TargetHost ($routingCommand+' --status')
 if ($LASTEXITCODE -ne 0) { throw 'Target status SSH failed.' }
 $routingStatus=$routingStatusRaw | ConvertFrom-Json
@@ -42,13 +44,14 @@ function Start-RoutingSsh([string[]]$Arguments,[bool]$InputPipe) {
 $routingSource=Start-RoutingSsh @('-T','-p',"$SourcePort",'-o','ConnectTimeout=15','-o','ServerAliveInterval=15',
   $SourceHost,"tail -c +$($routingOffset+1) $SourceArchive") $false
 $routingTarget=$null;$routingAcks=[Collections.Generic.List[object]]::new()
-$routingBuffer=[byte[]]::new(1048576)
+$routingBuffer=[byte[]]::new($FrameBytes)
+$routingReportEvery=[int](67108864/$FrameBytes)
 try {
   while ($routingOffset -lt $ArchiveBytes) {
     # Select the Int64 overload before narrowing the bounded one-MiB frame.
     # Otherwise PowerShell chooses Int32 from the first literal and rejects
     # archives above two GiB before reading any payload.
-    $routingWanted=[int][Math]::Min([long]1048576,[long]($ArchiveBytes-$routingOffset));$routingFilled=0
+    $routingWanted=[int][Math]::Min([long]$FrameBytes,[long]($ArchiveBytes-$routingOffset));$routingFilled=0
     while ($routingFilled -lt $routingWanted) {
       $routingRead=$routingSource.StandardOutput.BaseStream.Read($routingBuffer,$routingFilled,$routingWanted-$routingFilled)
       if ($routingRead -eq 0) { throw 'Source SSH ended before committed archive boundary.' }
@@ -75,7 +78,7 @@ try {
       throw 'Receiver acknowledgement differs.'
     }
     $routingOffset=[long]$routingAck.offset;$routingAcks.Add($routingAck)
-    if ($routingAcks.Count % 64 -eq 0 -or $routingOffset -eq $ArchiveBytes) { Write-Output "VERIFIED_BYTES $routingOffset" }
+    if ($routingAcks.Count % $routingReportEvery -eq 0 -or $routingOffset -eq $ArchiveBytes) { Write-Output "VERIFIED_BYTES $routingOffset" }
   }
   $routingSource.WaitForExit()
   if ($routingSource.ExitCode -ne 0) { throw 'Source SSH exit failure.' }
