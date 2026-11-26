@@ -2,6 +2,7 @@ param(
   [Parameter(Mandatory=$true)][string]$SourceHost,
   [int]$SourcePort=1222,
   [ValidateSet(1048576,16777216)][int]$FrameBytes=1048576,
+  [switch]$BoundedSourceChunks,
   [Parameter(Mandatory=$true)][string]$SourceArchive,
   [string]$TargetHost='rmvision',
   [Parameter(Mandatory=$true)][string]$TargetArchive,
@@ -41,8 +42,11 @@ function Start-RoutingSsh([string[]]$Arguments,[bool]$InputPipe) {
   $routingProcess=[Diagnostics.Process]::new();$routingProcess.StartInfo=$routingInfo
   [void]$routingProcess.Start();return $routingProcess
 }
-$routingSource=Start-RoutingSsh @('-T','-p',"$SourcePort",'-o','ConnectTimeout=15','-o','ServerAliveInterval=15',
-  $SourceHost,"tail -c +$($routingOffset+1) $SourceArchive") $false
+$routingSource=$null
+if (-not $BoundedSourceChunks) {
+  $routingSource=Start-RoutingSsh @('-T','-p',"$SourcePort",'-o','ConnectTimeout=15','-o','ServerAliveInterval=15',
+    $SourceHost,"tail -c +$($routingOffset+1) $SourceArchive") $false
+}
 $routingTarget=$null;$routingAcks=[Collections.Generic.List[object]]::new()
 $routingBuffer=[byte[]]::new($FrameBytes)
 $routingReportEvery=[int](67108864/$FrameBytes)
@@ -52,10 +56,21 @@ try {
     # Otherwise PowerShell chooses Int32 from the first literal and rejects
     # archives above two GiB before reading any payload.
     $routingWanted=[int][Math]::Min([long]$FrameBytes,[long]($ArchiveBytes-$routingOffset));$routingFilled=0
+    if ($BoundedSourceChunks) {
+      # Each authenticated source command ends after exactly one bounded frame,
+      # avoiding a blocked source stdout while the target durably acknowledges.
+      $routingSource=Start-RoutingSsh @('-T','-p',"$SourcePort",'-o','ConnectTimeout=15','-o','ServerAliveInterval=15',
+        $SourceHost,"dd if=$SourceArchive iflag=skip_bytes,count_bytes skip=$routingOffset count=$routingWanted bs=1048576 status=none") $false
+    }
     while ($routingFilled -lt $routingWanted) {
       $routingRead=$routingSource.StandardOutput.BaseStream.Read($routingBuffer,$routingFilled,$routingWanted-$routingFilled)
       if ($routingRead -eq 0) { throw 'Source SSH ended before committed archive boundary.' }
       $routingFilled+=$routingRead
+    }
+    if ($BoundedSourceChunks) {
+      $routingSource.WaitForExit()
+      if ($routingSource.ExitCode -ne 0) { throw 'Bounded source SSH exit failure.' }
+      $routingSource.Dispose();$routingSource=$null
     }
     # Open receiver only after source authentication and the first full frame.
     if ($null -eq $routingTarget) {
@@ -80,8 +95,10 @@ try {
     $routingOffset=[long]$routingAck.offset;$routingAcks.Add($routingAck)
     if ($routingAcks.Count % $routingReportEvery -eq 0 -or $routingOffset -eq $ArchiveBytes) { Write-Output "VERIFIED_BYTES $routingOffset" }
   }
-  $routingSource.WaitForExit()
-  if ($routingSource.ExitCode -ne 0) { throw 'Source SSH exit failure.' }
+  if ($null -ne $routingSource) {
+    $routingSource.WaitForExit()
+    if ($routingSource.ExitCode -ne 0) { throw 'Source SSH exit failure.' }
+  }
   $routingEnd=[Text.Encoding]::ASCII.GetBytes("END`n")
   $routingTarget.StandardInput.BaseStream.Write($routingEnd,0,$routingEnd.Length)
   $routingTarget.StandardInput.BaseStream.Flush();$routingTarget.StandardInput.Close()
@@ -95,8 +112,9 @@ try {
   $routingReceipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $ReceiptPath
   Write-Output 'VERIFIED_COMPLETE'
 } finally {
-  if (-not $routingSource.HasExited) { $routingSource.Kill() }
+  if ($null -ne $routingSource -and -not $routingSource.HasExited) { $routingSource.Kill() }
   if ($null -ne $routingTarget -and -not $routingTarget.HasExited) { $routingTarget.Kill() }
-  [Array]::Clear($routingBuffer);$routingSource.Dispose()
+  [Array]::Clear($routingBuffer)
+  if ($null -ne $routingSource) { $routingSource.Dispose() }
   if ($null -ne $routingTarget) { $routingTarget.Dispose() }
 }

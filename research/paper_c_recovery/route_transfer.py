@@ -135,6 +135,7 @@ def main():
             if a.stop_after is not None and completed>=a.stop_after:
                 print(json.dumps({'partial':True,'new_stages':completed,'new_optimizer_updates':0}));return
     if before!={'full':state_hash(full),'light':state_hash(light)}:raise ValueError('Frozen deployment weights changed')
+    if policy.digest([r.identity for r in requests])!=input_hash:raise ValueError('Frozen resident input tensor changed')
     verify_files(protected)
     for arm in policy.ARMS:
         same=[r for r in rows if r['arm']==arm]
