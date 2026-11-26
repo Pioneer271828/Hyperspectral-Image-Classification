@@ -1,5 +1,6 @@
 """Replay trained WP04 messages and the existing joint edge baseline without updates."""
 import argparse
+from copy import deepcopy
 from pathlib import Path
 import sys
 from unittest.mock import patch
@@ -9,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
 
 import g4_edge_target as edge
+from g4_edge_target_runtime import EdgeTargetRuntime, settings as edge_settings
+from g4_support_target import settings as support_settings
 from model.region_pixel_alignment import RegionPixelAlignment, broadcast_regions, pool_regions
 from model.research_config import ResearchConfig
 from research_runtime import code_snapshot, external_directory, require_frozen_code, tensor_hash, write_json
@@ -54,14 +57,23 @@ def scores(probabilities, labels):
     return {"probability_sha256": tensor_hash(probabilities), "points": points}
 
 
-def checked_endpoints(reg, pin, device):
+def checked_endpoints(reg, pin, device, rebound):
     path = verify(pin)
     row = read(path)
     target = reg["target"]
     tree = path.parent / "split"
-    opts, items, _, _, runtime, guard = bound(reg, row["case"], tree, device)
+    opts, items, _, _, _, guard = bound({**reg, "catalog": rebound}, row["case"], tree, device)
     input_hashes = {key: tensor_hash(items[target][key]) for key in row["inputs"]}
     require(input_hashes == row["inputs"], "Original train/development observation binding differs")
+    # Load authenticated current inputs, then reconstruct the historical metadata
+    # contract using the source manifest digest kept in the frozen checkpoint.
+    binding = deepcopy(opts["support_context_binding"])
+    binding["context"]["manifest_sha256"] = reg["catalog"]["sha256"]
+    base = support_settings(target, reg["method"], "none", model_seed=row["case"]["seed"],
+                            support_seed=reg["support_seed"], per_class=reg["per_class"],
+                            binding=binding, device=device)
+    options = edge_settings(base, row["case"]["condition"])
+    runtime = EdgeTargetRuntime(options, items, tree)
     inputs = move_items(items, device)
     steps = row["steps"]
     check_paths = (tree / "primary.pt", tree / "primary.pt.json", tree / "progress.json",
@@ -90,6 +102,7 @@ def checked_endpoints(reg, pin, device):
         for file_pin in check_pins:
             verify(file_pin)
         verify(pin)
+        verify(reg["catalog"])
         guard()
 
     return row, selected, inputs[target], endpoints, evaluate, verify_files
@@ -134,6 +147,7 @@ def main():
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--message", nargs=2, required=True)
     parser.add_argument("--prior-edge", nargs=2, required=True)
+    parser.add_argument("--rebound-context", nargs=2, required=True)
     parser.add_argument("--seed", type=int, choices=SEEDS, required=True)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
@@ -142,6 +156,7 @@ def main():
     out = external_directory(args.out)
     current_pin = dict(zip(("path", "sha256"), args.message, strict=True))
     prior_pin = dict(zip(("path", "sha256"), args.prior_edge, strict=True))
+    rebound = dict(zip(("path", "sha256"), args.rebound_context, strict=True))
     require(not out.exists() and code["commit"] == args.expected_commit and prior_pin["sha256"] == PRIOR_JOINT,
             "Different diagnostic revision, prior or output")
     current, prior = (read(verify(pin)) for pin in (current_pin, prior_pin))
@@ -154,6 +169,14 @@ def main():
     for key in ("published_catalog", "target", "support_seed", "per_class", "method", "phase_updates",
                 "selection", "role_scope", "devices", "arithmetic"):
         require(current_reg[key] == prior_reg[key], f"Prior joint run differs in {key}")
+    rebound_manifest = read(verify(rebound))
+    require(rebound_manifest["code"]["commit"] == code["commit"], "Wrong replay input producer")
+    for reg in (current_reg, prior_reg):
+        historic = read(verify(reg["catalog"]))
+        require(all(rebound_manifest[key] == historic[key] for key in ("input_spec_sha256", "observations", "protected_files"))
+                and [{k: v for k, v in x.items() if k != "sha256"} for x in rebound_manifest["contexts"]]
+                == [{k: v for k, v in x.items() if k != "sha256"} for x in historic["contexts"]],
+                "Rebound input catalogue differs from historical observation or role identities")
 
     def case_pin(evidence, arm):
         matches = [pin for pin in evidence["case_pins"]
@@ -165,7 +188,7 @@ def main():
     device = "cuda:0"
     torch.set_num_threads(1)
     with physical_lease(gpu), p4.arithmetic(current_reg["arithmetic"], gpu, enforce_resource_thresholds=False), torch.no_grad():
-        row, model, item, original, evaluate, guard = checked_endpoints(current_reg, case_pin(current, "I8"), device)
+        row, model, item, original, evaluate, guard = checked_endpoints(current_reg, case_pin(current, "I8"), device, rebound)
         before = state_id(model)
         generator = torch.Generator().manual_seed(SHUFFLE_BASE + args.seed)
         order = torch.randperm(item["Q"].shape[1], generator=generator).to(device)
@@ -180,11 +203,11 @@ def main():
         guard()
         compatibility = {"I8": original}
         for arm in ("I9-message", "Wg65"):
-            _, _, _, endpoints, _, check = checked_endpoints(current_reg, case_pin(current, arm), device)
+            _, _, _, endpoints, _, check = checked_endpoints(current_reg, case_pin(current, arm), device, rebound)
             compatibility[arm] = endpoints
             check()
         prior_row, baseline, _, prior_endpoints, _, prior_guard = checked_endpoints(
-            prior_reg, case_pin(prior, "Wj"), device)
+            prior_reg, case_pin(prior, "Wj"), device, rebound)
         matched = read(verify(case_pin(current, "Wg65")))
         require(prior_row["init"]["parameters"] == matched["init"]["parameters"]
                 and prior_row["init"]["shared"] == matched["init"]["shared"] and prior_row["inputs"] == matched["inputs"]
@@ -198,7 +221,8 @@ def main():
         features = updater.query.in_features
         pairs = prior_row["diagnostics"]["selected"]["actual_edges"]
     write_json(out, {"schema": "wp04_frozen_message_and_prior_joint_v1", "source": current_pin,
-                     "prior_edge": prior_pin, "producer": code["commit"], "seed": args.seed, "device": gpu,
+                     "prior_edge": prior_pin, "rebound_context": rebound, "producer": code["commit"],
+                     "seed": args.seed, "device": gpu,
                      "updates": 0, "query_access": False, "selected_step": row["steps"]["selected"],
                      "shuffle_seed": SHUFFLE_BASE + args.seed, "permutation_sha256": tensor_hash(order),
                      "fixed_points": fixed_points, "regions": nodes, "original": original["selected"],

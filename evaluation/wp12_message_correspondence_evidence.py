@@ -53,6 +53,8 @@ def intake(root, pin, frozen_pins, adapter):
 
     frozen = [_open(item, root) for item in frozen_pins]
     require(tuple(row["seed"] for row in frozen) == SEEDS, "Missing or unordered frozen seed")
+    rebound = frozen[0]["rebound_context"]
+    require(_open(rebound, root)["code"]["commit"] == adapter, "Wrong replay context producer")
     prior_pin = frozen[0]["prior_edge"]
     require(prior_pin["sha256"] == PRIOR_JOINT, "Unexpected historical Wj source")
     edge_weight_intake(root, prior_pin)
@@ -71,6 +73,7 @@ def intake(root, pin, frozen_pins, adapter):
         support = i8["diagnostics"]["selected"]
         require(receipt["schema"] == "wp04_frozen_message_and_prior_joint_v1"
                 and receipt["source"] == pin and receipt["producer"] == adapter and receipt["prior_edge"] == prior_pin
+                and receipt["rebound_context"] == rebound
                 and receipt["updates"] == 0 and receipt["query_access"] is False and receipt["device"] == uuid
                 and receipt["shuffle_seed"] == SHUFFLE_BASE + seed and receipt["regions"] == support["nodes"]
                 and 0 <= receipt["fixed_points"] < receipt["regions"]
@@ -113,7 +116,7 @@ def intake(root, pin, frozen_pins, adapter):
     comparisons = {f"{a}-{b}": _comparison(by_case, a, b, primary=True)
                    for a, b in (("I8", "I9-message"), ("Wj", "Wg65"))}
     return {"schema": "wp12_wp04_message_correspondence_v1", "source": pin, "registration": data["registration"],
-            "producer": data["code"], "frozen_replay": frozen_pins, "prior_joint_source": prior_pin,
+            "producer": data["code"], "frozen_replay": frozen_pins, "rebound_context": rebound, "prior_joint_source": prior_pin,
             "scope": MESSAGE_SCOPE, "query_access": False, "production_accuracy_qualified": False,
             "optimizer_updates": updates, "research_updates": data["research_updates"],
             "completed_reentry_updates": 0, "frozen_updates": 0, "reused_joint_cases": len(SEEDS),
