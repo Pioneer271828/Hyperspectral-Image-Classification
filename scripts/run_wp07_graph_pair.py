@@ -25,7 +25,8 @@ from transfer.native_scale_campaign import read, packet
 from transfer.xuzhou_multiscale_audit import _exact
 from joint_training import _run_lock
 
-GEOMETRY_SHA = "d176f887b86c4a8bb4b287d1d316ca3e3744d9e20f20510b417c8863df5840094"
+GEOMETRY_SHA = ("d176f887b86c4a8bb4b287d1d316ca3e"
+                "3744d9e20f20510b417c863df5840094")
 SCHEMA = "wp07_b_paviau_frozen_range_pair_v1"
 SEEDS = (64, 512, 2048)
 PHASES = ("prefix", "resume", "completed")
