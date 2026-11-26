@@ -1,0 +1,11 @@
+{
+  "schema": "paper_c_package3_failures_v1",
+  "records": [
+    {"phase":"initial_ssh","error":"Connect timeout; next independent interactive connection succeeded","scientific_work_executed":false},
+    {"phase":"source_publication","error":"GitHub update-ref transport failure; expected-head read confirmed no mutation; retry used explicit lease","scientific_work_executed":false},
+    {"phase":"commit_import","error":"API-created commit has no trailing message newline; exact hash reconstruction rejected the newline variant before changing branch","scientific_work_executed":false},
+    {"phase":"initial_code_scp","error":"SCP rejected missing bundle after commit import failed; no remote file written","scientific_work_executed":false},
+    {"phase":"transaction-tests02_and_synthetic-profile01","commit":"d55eef6fc7c64e36665ed24be69a5709627d14e3","error":"Own profile.py shadowed Python standard-library profile when Adam imported cProfile; renamed cost_profile.py","real_optimizer_updates":0,"synthetic_optimizer_updates":0,"logs_preserved":true},
+    {"phase":"primary_source_fetch","error":"Web tool connection failed for official WHU/Xuzhou pages; prior pinned source evidence remains historical, not a successful new fetch","scientific_work_executed":false}
+  ]
+}
