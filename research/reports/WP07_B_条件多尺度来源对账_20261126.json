@@ -1,0 +1,48 @@
+{
+  "schema": "wp07_B_condition_integration_source_crosswalk_v1",
+  "scope": "implementation plan 15 and 19.8; no new real optimizer budget",
+  "base": "ad61ab782d730494c2b7eb7350ec5714159a0f29",
+  "existing_reference_review": ["docs/references/oss-a-priority-source-review.json", "docs/references/oss-c-source-closeout.json"],
+  "live_issues_read_20261126": [
+    {"number": 386, "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/386", "state": "open", "scope": "shared CNN dilation1/2/3 and physical condition encoder; code acceptance also documented by later closed Issue411"},
+    {"number": 411, "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/411", "state": "closed", "scope": "Xuzhou old eight-arm 4096-update real short study; do not repeat"},
+    {"number": 457, "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/457", "state": "closed", "scope": "existing native scale 9/22-class fixture, missing physical metadata and held-out controls; reuse, not new confirmation"},
+    {"number": 498, "url": "https://github.com/Pioneer271828/Hyperspectral-Image-Classification/issues/498", "state": "closed", "scope": "fixed PaviaU release; historical issue says125 train blocks, current pinned preflight has127 train and41 val; retain both identities, do not edit old issue"}
+  ],
+  "reference": {
+    "paper_read": "https://arxiv.org/html/1903.06586v2#S3.SS1",
+    "paper": "Selective Kernel Networks, v2, section3.1",
+    "author_repository_linked_by_paper": "https://github.com/implus/SKNet",
+    "author_code_status": "reuse dated20261113 access-failure review; official code/license not newly verified; no external files copied",
+    "maintainer_alternative": "huggingface/pytorch-image-models",
+    "maintainer_commit": "43b549bfe9d680bc94284cfd0b611152d18e97d7",
+    "file": "timm/layers/selective_kernel.py",
+    "file_sha256": "70e06298d6c9be1d98bb9cc98825db8a612ba9e526f1e2d6fefec08c4efe7b10",
+    "license": "Apache-2.0, historical file-level review; no reuse in this package",
+    "difference": "SKNet independent kernels/channel attention/BN do not implement this shared-kernel scene-scalar CNN and graph-range protocol",
+    "MixHop": "author fixedaf9866ae49336c6f8f65f3077d239e856b62a88a, license unverified in Issue411; no code copied"
+  },
+  "cells": [
+    {"cell": "CNN shared dilation1/2/3", "prior": "f2c043e7333cfd8ac166b4ed1abf4a6db7ffa2ef", "action": "reuse unchanged transfer/conditional_multiscale.py; original equivalence regression passed"},
+    {"cell": "same-Q graph radius1/2", "prior": "b87dc035e8f81052a1f5607b7730cbeb39d8d460", "action": "reuse unchanged transfer/multiscale_region_graph.py; keep frozen Q/A to separate selection"},
+    {"cell": "physical encoder and missing fallback", "prior": "Issue386/411/457", "action": "reuse verified-only encoder; never upgrade approximate wavelengths or invent GSD/FWHM"},
+    {"cell": "fixed/off/single-candidate baseline", "prior": "tests/test_conditional_multiscale.py", "action": "reuse existing single/off tests and old accepted short studies; no real retraining"},
+    {"cell": "mean/content/metadata/joint", "prior": "implemented; real metadata was missing fallback", "action": "same canonical joint capacity and candidate execution; mask only contributions"},
+    {"cell": "processed-band-index conditions", "prior": "not previously connected to physical-only encoder", "action": "new eight-summary independent adapter; truthful processed-index provenance"},
+    {"cell": "CNN-only/graph-only selection", "prior": "old single-pool controls already exist", "action": "new matched-pool selector-location controls; other selector remains mean, classifier branches retained"},
+    {"cell": "same-content descriptor swap", "prior": "synthetic physical swaps already exist", "action": "new observed full/even index-donor stress; actual VCA view and Q/A fixed"},
+    {"cell": "unknown wavelengths/no GSD", "prior": "physical-only fallback exists", "action": "index-aware unknown-wave fallback; real unknown-wave/missing-GSD exact negatives"},
+    {"cell": "72 interface recovery cases", "prior": "legacy phase executor/native update and audit", "action": "private run_factory/point_context options; no second phase controller;1728 synthetic updates"},
+    {"cell": "three mean scope aliases", "prior": "same (mean,mean) policy", "action": "negative interface wiring controls, not independent scientific arms;10 unique policy pairs per class/seed"},
+    {"cell": "effective parameter participation", "prior": "only fresh-parameter histories previously", "action": "new all-tensor per-step gradient/change counts and exact initial-to-final changed-element recount"},
+    {"cell": "real unlabelled condition identifiability", "prior": "1476 pinned preflight rows", "action": "four scene/band cells; rank4 of9 columns; no same-count independent position variation"},
+    {"cell": "seven old real checkpoints", "prior": "3ce87583990cfcaf12f7f76985ee065093187350 and96921a409f1ce69ac500b35ceffa5b6aabd4ff20", "action": "zero-update missing/neutral exact insertion plus untrained fixed-seed descriptor stress; no trained-condition efficacy claim"},
+    {"cell": "coarse graph range degeneracy", "prior": "old native factor2 near/wide equality", "action": "retain limitation;40 no-classifier geometry captures verify condition isolation of both adjacency weights"},
+    {"cell": "initializer CPU/CUDA RNG", "prior": "new adapter initially used torch.manual_seed", "action": "CPU-default-generator isolation; all6 fixture/7 real initial tensor states unchanged; GPU no-head insertion/capture RNG proof"},
+    {"cell": "real execution cost", "prior": "existing physical GPU3 arithmetic/lease", "action": "48 CPU fixture cost rows and14 GPU neutral-graft rows; same candidate execution, no kernel-time or speed benefit claim"},
+    {"cell": "WP12", "prior": "five accepted B CSV tables", "action": "byte-identical base plus independently recounted B supplement; central production registry unchanged"},
+    {"cell": "real trained condition comparison", "prior": "new actual-index head not trained", "action": "not executed; next even/odd218-band 744-update maximum is draft only"},
+    {"cell": "physical/spatial confirmation", "prior": "missing reliable GSD/FWHM/original mapping and independent spatial release", "action": "remains incomplete; no sensor, physical-scale or independent accuracy claim"},
+    {"cell": "C lightweight/heavy routing", "prior": "other owner", "action": "excluded from edits and experiments"}
+  ]
+}

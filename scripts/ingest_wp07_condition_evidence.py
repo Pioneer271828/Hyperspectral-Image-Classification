@@ -32,7 +32,7 @@ def rows(path):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    for n in ('root','fixtures','inventory','real','base-wp12','core','out'):p.add_argument('--'+n,type=Path,required=True)
+    for n in ('root','fixtures','inventory','real','base-wp12','core','band-metadata','out'):p.add_argument('--'+n,type=Path,required=True)
     p.add_argument('--expected-commit',required=True);a=p.parse_args();torch.set_num_threads(1)
     graph=__import__('transfer.wp07_graph_range',fromlist=['require']);require=graph.require;graph.require_checks()
     code=code_snapshot();require_frozen_code(code);require(code['commit']==a.expected_commit,'Wrong evidence reader')
@@ -42,6 +42,18 @@ def main():
         and fixture['synthetic_optimizer_updates']==1728 and fixture['real_optimizer_updates']==real['optimizer_updates']==0
         and real['models']==7 and real['condition_parameters_trained'] is False,'Partial matrix or promoted real scope')
     a.out.mkdir();baseline=a.out/'unchanged-base';baseline.mkdir();basepins={}
+    descriptors=read(pin(a.band_metadata),a.root);condition_rows=rows(a.inventory/'condition-identifiability.csv');band_rows=[]
+    for key,item in descriptors.items():
+        scene,band=key.split('/');metadata=item['metadata'];positions=item['original_positions']
+        authority=next(r for r in condition_rows if r['scene']==scene and r['band']==band)
+        require(len(positions)==item['actual_band_count']==int(authority['retained_processed_bands'])
+            and hashlib.sha256(json.dumps(tuple(positions)).encode()).hexdigest()==authority['position_set_sha256'],
+            'Actual-forward descriptor differs from unlabelled preflight positions')
+        require(metadata['wavelength_quality']=='approximate' and metadata['fwhm'] is None,'Physical metadata eligibility changed; review required')
+        band_rows.append(dict(scene=scene,band=band,actual_bands=len(positions),wavelength_quality=metadata['wavelength_quality'],
+            wavelength_unit=metadata['wavelength_unit'],declared_min=min(metadata['wavelengths']),declared_max=max(metadata['wavelengths']),
+            FWHM_present=False,verified_GSD_admitted=False,original_sensor_mapping_authenticated=False))
+    require(len(band_rows)==4,'Missing actual metadata descriptors');table(a.out/'actual-band-metadata.csv',band_rows)
     for path in sorted(a.base_wp12.glob('*.csv')):
         target=baseline/path.name;shutil.copyfile(path,target)
         require(pin(path)['sha256']==pin(target)['sha256'],'Existing WP12 table bytes changed');basepins[path.name]=pin(target)
@@ -181,7 +193,7 @@ def main():
         remaining_unidentified=['Authenticated original sensor mapping, FWHM, actual GSD and sensor-held-out conditions',
             'Independent spatial confirmation; three model seeds still share one released support/validation set']))
     receipt=dict(schema='wp12_wp07_observed_index_condition_supplement_v1',status='accepted_engineering_and_development_diagnostic',
-        executor=code['commit'],source_hash=code['source_hash'],inputs={'fixture':pin(a.fixtures/'summary.json'),'inventory':pin(a.inventory/'summary.json'),'real':pin(a.real/'summary.json')},
+        executor=code['commit'],source_hash=code['source_hash'],inputs={'fixture':pin(a.fixtures/'summary.json'),'inventory':pin(a.inventory/'summary.json'),'real':pin(a.real/'summary.json'),'actual_band_metadata':pin(a.band_metadata)},
         next_real_pairing_draft=draft,
         unchanged_prior_B_WP12_tables=basepins,artifacts=outputs,cases=72,distinct_policy_pairs_per_seed=10,
         mean_scope_aliases_are_negative_wiring_controls=True,synthetic_optimizer_updates=1728,new_real_optimizer_updates=0,
