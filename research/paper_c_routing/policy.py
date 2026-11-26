@@ -19,6 +19,21 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, allow_nan=False).encode()).hexdigest()
 
 
+def verify_completed(root):
+    """Zero-NN reentry must verify both committed outputs and original pins."""
+    root=Path(root)
+    summary=json.loads((root/"summary.json").read_text())
+    setup=json.loads((root/"setup.json").read_text())
+    for name,h in summary["files"].items():
+        path=(root/name).resolve()
+        if not path.is_relative_to(root.resolve()) or hashlib.sha256(path.read_bytes()).hexdigest()!=h:
+            raise ValueError("Completed evidence changed")
+    for name,h in setup["protected"].items():
+        if hashlib.sha256(Path(name).read_bytes()).hexdigest()!=h:
+            raise ValueError("Original model/development input changed")
+    return summary
+
+
 def admit(table, source, target, *, scope, role, ancestry):
     """Validate metadata before any image/weight deserialization."""
     if role != "devval" or scope not in ("cross_device_development", "target_local_development_control"):

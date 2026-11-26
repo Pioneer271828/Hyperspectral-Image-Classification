@@ -16,7 +16,7 @@ from time import perf_counter
 import numpy as np
 import torch
 
-from policy import ARMS, admit, digest, execute, metrics
+from policy import ARMS, admit, digest, execute, metrics, verify_completed
 
 DEPENDENCY = "395caef57fba8ab6a09223538f748179dab552f2"
 RELEASE_SHA = "9a4493d2c25c6cff64d6b8ee8958e467546985865b72df41540327262d24aacb"
@@ -98,9 +98,7 @@ def main():
     if out.exists():
         if not a.resume or json.loads((out/"contract.json").read_text())!=contract:raise ValueError("Explicit exact resume required")
         if (out/"summary.json").exists():
-            s=json.loads((out/"summary.json").read_text())
-            for name,h in s["files"].items():
-                if sha(out/name)!=h:raise ValueError("Completed evidence changed")
+            verify_completed(out)
             print(json.dumps({"completed_reentry":True,"neural_forwards":0,"optimizer_updates":0,"contract":pin}));return
     else:
         out.mkdir();new(out/"contract.json",contract)
@@ -190,6 +188,7 @@ def main():
             if a.stop_after is not None and completed>=a.stop_after:
                 print(json.dumps({"status":"PARTIAL","new_stages":completed,"optimizer_updates":0}));return
     if before!={"full":state_hash(full),"light":state_hash(light.model)}:raise ValueError("Frozen weights changed")
+    if digest([r.identity for r in requests])!=input_hash:raise ValueError("Frozen input tensors changed")
     if protected!={path:sha(path) for path in protected}:raise ValueError("Frozen inputs changed")
     for arm in ARMS:
         rows=[r for r in results if r["arm"]==arm]

@@ -2,9 +2,12 @@ import copy
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
+import tempfile
+import json
+import hashlib
 import numpy as np
 
-from policy import admit, plan, metrics
+from policy import admit, plan, metrics, verify_completed
 
 
 class PolicyTests(unittest.TestCase):
@@ -49,6 +52,18 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(r["confusion"],[[1,0],[1,1]])
         self.assertEqual(r["recall"],[1.,.5])
         with self.assertRaises(ValueError):metrics([0,2,2],p,2)
+
+    def test_completed_reentry_protects_outputs_and_original_inputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);original=root/"input.bin";original.write_bytes(b"model")
+            setup=root/"setup.json"
+            setup.write_text(json.dumps({"protected":{str(original):hashlib.sha256(b"model").hexdigest()}}))
+            (root/"summary.json").write_text(json.dumps({"files":{"setup.json":hashlib.sha256(setup.read_bytes()).hexdigest()}}))
+            verify_completed(root)
+            original.write_bytes(b"changed")
+            with self.assertRaises(ValueError):verify_completed(root)
+            original.write_bytes(b"model");setup.write_text("{}")
+            with self.assertRaises(ValueError):verify_completed(root)
 
 
 if __name__=="__main__":unittest.main()
