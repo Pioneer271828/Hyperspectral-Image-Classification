@@ -109,9 +109,10 @@ def matching(graph, grid, shape, tile):
             require(bound["count_delta"] == receiving == 0, "Deletion cardinality or receiving degree differs")
         if match_status == "strict":
             require(sending == difference == 0 and mask != important, "Alternative fails exact distances or degrees")
+        removed = set(mask)
         controls[arm] = dict(removed=mask, status=match_status, solver=solver_status, reason=reason,
                              geometry=actual, difference=bound, prepare_seconds=perf_counter() - started_arm,
-                             graph_after=[edge for edge in support if edge not in set(mask)])
+                             graph_after=[edge for edge in support if edge not in removed])
     return {"controls": controls, "support": support, "weights": weights.tolist(), "n": n,
             "grid": grid, "shape": shape, "strict_plan_hash": strict["plan_hash"],
             "matching_seconds": perf_counter() - started, "solver_seconds": strict["elapsed_seconds"]}
@@ -138,7 +139,7 @@ def forward(model, block, mask=None, expected=None):
         start = perf_counter()
         result = mm(lhs, rhs, *args, **kwargs)
         execution.append({"seconds": perf_counter() - start, "nnz": lhs._nnz(),
-                          "shape": list(lhs.shape), "rhs_width": rhs.shape[1]})
+                          "shape": list(lhs.shape), "rhs_width": rhs.shape[1], "lhs_sha256": tensor_hash(lhs)})
         return result
 
     def stage2(features, adjacency, dataset_name=None):
@@ -163,12 +164,15 @@ def forward(model, block, mask=None, expected=None):
     if expected:
         require((q_hash, a_hash) == expected, "Original Q or stage-two graph changed")
     actual = capture["actual"]
+    actual_hash = tensor_hash(actual)
     require(execution and all(row["nnz"] == actual._nnz() and row["shape"] == list(actual.shape)
+                              and row["lhs_sha256"] == actual_hash
                               for row in execution), "Actual square sparse multiply did not use the deletion graph")
     require(all(v.shape == (28 * 28, 9) and torch.isfinite(v).all() for v in outputs),
             "Unexpected three-head output")
     return outputs, graph, capture["adjacency"], actual, {
-        "q_sha256": q_hash, "a_before_sha256": a_hash, "a_after_sha256": tensor_hash(actual),
+        "q_sha256": q_hash, "a_before_sha256": a_hash, "a_after_sha256": actual_hash,
+        "actual_weights": actual.values().tolist(),
         "forward_seconds": elapsed, "native_build_seconds": capture["build_seconds"],
         "deletion_build_seconds": capture["deletion_build_seconds"], "sparse_mm": execution,
         "actual_nnz": actual._nnz(),
