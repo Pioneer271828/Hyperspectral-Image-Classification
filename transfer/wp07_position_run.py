@@ -20,7 +20,7 @@ ARMS = tuple('both.' + mode for mode in ('mean', 'content', 'metadata', 'joint')
 
 class FixtureProvider(previous.FixtureProvider):
     def __init__(self, classes, representation):
-        graph.require(representation in positions.REPRESENTATIONS, 'Unknown representation')
+        graph.require(representation in positions.SUPPORTED_REPRESENTATIONS, 'Unknown representation')
         self.classes = classes
         self.representation = representation
         self.fixtures = {role: positions.ControlledFixture(classes, role) for role in ('devtrain', 'devval')}

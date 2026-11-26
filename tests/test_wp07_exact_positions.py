@@ -64,11 +64,11 @@ class ExactPositionTests(TestCase):
                 with position.representation(model, rep), conditions.selection_policy(model, cnn, gnn), graph.frozen_support(model, entry, 'content'):
                     return forward(model, actual, 'fixture', 'devval', condition=position.bind(actual, intervention), graph_scale=16)
 
-            for rep in position.REPRESENTATIONS:
+            for rep in position.SUPPORTED_REPRESENTATIONS:
                 a, ta = call(rep, 'matched')
                 b, tb = call(rep, 'paired')
                 self.assertEqual((ta['q'], ta['a0']), (tb['q'], tb['a0']))
-                if family == 'interior' and rep == 'summary8':
+                if family == 'interior' and rep in ('summary8', 'balanced_summary'):
                     self.assertTrue(all(torch.equal(x, y) for x, y in zip(a[:3], b[:3])))
                 else:
                     self.assertNotEqual(ta['weights'], tb['weights'])
@@ -147,3 +147,23 @@ class ExactPositionTests(TestCase):
             self.assertTrue(torch.equal(torch.tensor(conditions.index_features(a, master)),
                                         torch.tensor(conditions.index_features(interior, master))))
             self.assertNotEqual(position.mask_features(a, master), position.mask_features(interior, master))
+
+    def test_balanced_representations_share_projection_and_unit_norm_input(self):
+        old = conditions.IndexConditionEncoder()
+        encoder = position.PositionEncoder(old)
+        frame = encoder.position_rotation.double()
+        self.assertTrue(torch.allclose(frame.T @ frame, torch.eye(437, dtype=torch.float64), atol=1e-6, rtol=0))
+        ref = encoder.exact_mask[0].weight
+        descriptor = conditions.IndexPacket(None, position.POSITION_SETS['interior_a'], 20)
+        for representation in position.BALANCED_REPRESENTATIONS:
+            encoder.zero_grad(set_to_none=True)
+            inputs = []
+            hook = encoder.exact_mask.register_forward_pre_hook(lambda module, args: inputs.append(args[0].detach().clone()))
+            encoder.representation = representation
+            encoder(descriptor, None, None, ref).square().sum().backward()
+            hook.remove()
+            self.assertEqual(len(inputs), 1)
+            self.assertEqual(tuple(inputs[0].shape), (437,))
+            self.assertAlmostEqual(float(inputs[0].norm()), 1., places=6)
+            self.assertTrue(all(p.grad is not None for p in encoder.exact_mask.parameters()))
+            self.assertTrue(all(p.grad is None for p in encoder.indices.parameters()))

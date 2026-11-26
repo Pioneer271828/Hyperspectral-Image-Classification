@@ -17,6 +17,8 @@ from transfer.wp07_graph_range import require
 
 MAX_BANDS = 436
 REPRESENTATIONS = ('summary8', 'exact_mask')
+BALANCED_REPRESENTATIONS = ('balanced_summary', 'balanced_exact')
+SUPPORTED_REPRESENTATIONS = REPRESENTATIONS + BALANCED_REPRESENTATIONS
 POSITION_SETS = {
     'shift_a': (0, 2, 4, 6, 8, 10, 12, 14),
     'shift_b': (1, 3, 5, 7, 9, 11, 13, 15),
@@ -55,10 +57,16 @@ class PositionEncoder(prior.IndexConditionEncoder):
         self.physical = old.physical
         self.indices = old.indices
         self.exact_mask = nn.Sequential(nn.Linear(MAX_BANDS + 1, 32), nn.GELU())
+        n = MAX_BANDS + 1
+        i = torch.arange(n, dtype=torch.float64)[:, None]
+        j = torch.arange(n, dtype=torch.float64)[None, :]
+        frame = (2/n)**.5 * torch.cos(torch.pi/n*(i+.5)*j)
+        frame[:, 0] /= 2**.5
+        self.register_buffer('position_rotation', frame.float())
         self.representation = 'summary8'
 
     def forward(self, packet, coverage_fraction, gsd_m, reference):
-        require(self.representation in REPRESENTATIONS, 'Unknown position representation')
+        require(self.representation in SUPPORTED_REPRESENTATIONS, 'Unknown position representation')
         if packet is None:
             return self.physical(None, coverage_fraction, gsd_m, reference)
         require(isinstance(packet, prior.IndexPacket)
@@ -69,8 +77,17 @@ class PositionEncoder(prior.IndexConditionEncoder):
         physical = self.physical(packet.bands, None, gsd_m, reference)
         if self.representation == 'summary8':
             observed = self.indices(reference.new_tensor(features))
-        else:
+        elif self.representation == 'exact_mask':
             observed = self.exact_mask(reference.new_tensor(mask_features(packet.positions, packet.master_count)))
+        else:
+            if self.representation == 'balanced_summary':
+                vector = reference.new_zeros(MAX_BANDS + 1)
+                vector[:len(features)] = reference.new_tensor(features)
+            else:
+                vector = reference.new_tensor(mask_features(packet.positions, packet.master_count))
+            vector = self.position_rotation @ vector
+            vector = vector / vector.norm().clamp_min(1e-12)
+            observed = self.exact_mask(vector)
         return observed if physical is None else observed + physical
 
 
@@ -101,7 +118,7 @@ def initialize(baseline, seed):
 
 @contextmanager
 def representation(model, value):
-    require(value in REPRESENTATIONS, 'Unknown position representation')
+    require(value in SUPPORTED_REPRESENTATIONS, 'Unknown position representation')
     layers = list(encoders(model))
     require(layers, 'No registered position encoders')
     before = [layer.representation for layer in layers]

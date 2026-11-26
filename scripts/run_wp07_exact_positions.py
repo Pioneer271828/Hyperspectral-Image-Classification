@@ -51,7 +51,7 @@ def controls(engine, provider):
                             changed, changed_trace, _ = engine._forward(actual, 'devval', 'matched')
                         exact = [torch.equal(x, y) for x, y in zip(original[:3], changed[:3])]
                         graph.require(trace['range_identity'] == changed_trace['range_identity'], 'Descriptor altered Q/A')
-                        if mode in ('mean', 'content') or (intervention == 'paired' and provider.representation == 'summary8' and event['band'].startswith('interior')):
+                        if mode in ('mean', 'content') or (intervention == 'paired' and provider.representation in ('summary8', 'balanced_summary') and event['band'].startswith('interior')):
                             graph.require(all(exact), 'Condition-negative prediction changed')
                         if scope != 'both':
                             graph.require(exact[1 if scope == 'cnn' else 2], 'Other classifier branch changed')
@@ -69,10 +69,10 @@ def controls(engine, provider):
     return rows
 
 
-def fixtures(out, code):
+def fixtures(out, code, representations=position.REPRESENTATIONS):
     out.mkdir(exist_ok=True)
     header = metadata(out/'registration.json', dict(producer=code['commit'], source_hash=code['source_hash'],
-        classes=[9, 22], seeds=[64, 512, 2048], representations=list(position.REPRESENTATIONS),
+        classes=[9, 22], seeds=[64, 512, 2048], representations=list(representations),
         arms=list(matrix.ARMS), synthetic_cases=48, steps=24, routes=['full', '12+12', 'completed0'],
         maximum_synthetic_optimizer_updates=2304, maximum_real_optimizer_updates=0,
         positions={k:list(v) for k,v in position.POSITION_SETS.items()}, selection='first_min_fused_NLL_0_12_24'), out)
@@ -91,7 +91,7 @@ def fixtures(out, code):
                 cachepin = save(cachepath, {'entries': entries})
             initials = defaultdict(set)
             for seed in (64, 512, 2048):
-                for representation in position.REPRESENTATIONS:
+                for representation in representations:
                     provider = matrix.FixtureProvider(classes, representation)
                     for arm in matrix.ARMS:
                         case = f'c{classes}-s{seed}-{representation}-{arm}'
@@ -169,12 +169,13 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--expected-commit', required=True)
     p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--representation-family', choices=('legacy', 'balanced'), default='legacy')
     a = p.parse_args()
     code = code_snapshot()
     require_frozen_code(code)
     graph.require(code['commit'] == a.expected_commit, 'Wrong frozen source')
     graph.require(Path(__file__).resolve().parents[1] not in a.out.resolve().parents, 'Output inside checkout')
-    fixtures(a.out, code)
+    fixtures(a.out, code, position.REPRESENTATIONS if a.representation_family == 'legacy' else position.BALANCED_REPRESENTATIONS)
 
 
 if __name__ == '__main__':
