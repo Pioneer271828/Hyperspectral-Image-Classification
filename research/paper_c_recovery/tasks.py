@@ -24,6 +24,10 @@ LOSSES={'class_balance':True,'graph_loss_weights':{'compactness':.01,'entropy':.
 def prior_module(root,name):
     """Read this repo's frozen prior adapter, never import an upstream trainer."""
     path=Path(root)/'research'/'paper1_c'/f'{name}.py'
+    if name=='pilot':
+        # The frozen pilot uses a sibling import; leave the pinned project
+        # dependency first so its transfer/inference packages keep priority.
+        sys.path.insert(1,str(path.parent))
     spec=importlib.util.spec_from_file_location('paper_c_previous_'+name,path)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
     return module
@@ -105,12 +109,24 @@ def materialize(bank,adapter):
             flat=torch.tensor([y*obs.spectral.shape[1]+x for y,x in points],dtype=torch.long)
             x=torch.tensor(np.array(obs.spectral,copy=True))
             patches=adapter.patches(x,points)
+            # Independent coordinate clamping, not the adapter's F.pad path.
+            reference=np.stack([np.stack([np.stack([obs.spectral[min(max(y+dy,0),x.shape[0]-1),
+                min(max(z+dx,0),x.shape[1]-1)] for dx in range(-3,4)]) for dy in range(-3,4)]).transpose(2,0,1)
+                for y,z in points])
+            if not np.array_equal(patches.numpy(),reference):raise ValueError('Patch bytes differ from independent local coordinates')
             rows[row['id']]={'observation':obs,'wavelengths':np.array(view.bands.wavelengths,dtype=np.float32),
                              'flat_points':flat,'labels':labels,'patches':patches}
-            identities.append({'role':role,'block':row['id'],'context':context,'sample_count':len(labels),
+            identities.append({'role':role,'block':row['id'],'sample_count':len(labels),
+                               'context_sha256':hashlib.sha256(json_bytes(context)).hexdigest(),
+                               'native_input_sha256':hashlib.sha256(np.concatenate((obs.spectral,obs.coordinates),-1).tobytes()).hexdigest(),
                                'patch_sha256':hashlib.sha256(patches.numpy().tobytes()).hexdigest()})
         result[role]=rows
     return result,identities
+
+
+def json_bytes(value):
+    import json
+    return json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
 
 
 def synthetic_data(adapter,bands,classes,*,height=28,width=28):
