@@ -41,7 +41,7 @@ def distances(indices, grid, shape):
 
 
 def matching(graph, grid, shape, tile):
-    from evaluation.matched_edge_controls import freeze, verify
+    from evaluation import matched_edge_controls as engine
     from evaluation.matched_edge_review import coordinates
 
     started = perf_counter()
@@ -57,8 +57,16 @@ def matching(graph, grid, shape, tile):
     bins = [(a + b) / 2 for a, b in zip(lengths, lengths[1:])] or [lengths[0] * 1.5]
     xy = coordinates({"grid_shape": grid, "shape": shape, "node_order": "row_major_seed_grid_v1",
                       "node_position": "grid_seed_centers"})
-    strict = freeze(graph, xy, per_row=1, distance_bins=bins, seeds=SEEDS, time_limit=5.0)
-    verify(strict, graph, xy, expected_hash=strict["plan_hash"])
+    solve = engine.milp
+
+    def without_presolve(cost, *, options, **kwargs):
+        return solve(cost, options={**options, "presolve": False}, **kwargs)
+
+    # The native graph can trigger a postsolve certificate that fails the exact check.
+    # This bounded diagnostic keeps the existing integer verification and disables presolve.
+    with patch.object(engine, "milp", side_effect=without_presolve):
+        strict = engine.freeze(graph, xy, per_row=1, distance_bins=bins, seeds=SEEDS, time_limit=5.0)
+    engine.verify(strict, graph, xy, expected_hash=strict["plan_hash"])
     encoded = {int(r * n + c): j for j, (r, c) in enumerate(zip(*ix))}
     important = strict["baseline"]["removed"]
     rows = sorted({e // n for e in important})
@@ -114,7 +122,7 @@ def matching(graph, grid, shape, tile):
                              geometry=actual, difference=bound, prepare_seconds=perf_counter() - started_arm,
                              graph_after=[edge for edge in support if edge not in removed])
     return {"controls": controls, "support": support, "weights": weights.tolist(), "n": n,
-            "grid": grid, "shape": shape, "strict_plan_hash": strict["plan_hash"],
+            "grid": grid, "shape": shape, "strict_plan_hash": strict["plan_hash"], "solver_presolve": False,
             "matching_seconds": perf_counter() - started, "solver_seconds": strict["elapsed_seconds"]}
 
 
