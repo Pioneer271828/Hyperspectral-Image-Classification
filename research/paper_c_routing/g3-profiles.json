@@ -1,0 +1,42 @@
+{
+  "schema": "original_g3_p2_frozen_single_source_pair_v1",
+  "source": "paviaU",
+  "target": "xuzhou",
+  "target_statistics_sha256": "73b3d65a06cdff12630497f74659f7d3c5577d292fcd44564ce8afddd6fd94b7",
+  "support_sha256": "913732b4e514ff99e16d8df3d88585b1d11e42fab9b2f0fe8df44a3856195dd6",
+  "profiles": {
+    "2036": {
+      "model.pt": "f11cc09b95fbd8b1009de73ee080e7fc9f14a23ff92ac84ff977dfdffdb5c4c7",
+      "model.pt.json": "5b926c690cce695b68537acde6de4ab264d671312f35090e6e36d39bdcfe3252",
+      "frozen-task.json": "4623ffa9844ae1f4247e075e4edefd99fc90200e49f40cd9f81e24dddb27d4e0",
+      "target-checkpoints-frozen.json": "d1bc92212478116859cab29455a3a62a34c16efa27ff335da6e9b8b997f4fab2"
+    },
+    "2046": {
+      "model.pt": "21f679efa535609ab8e8daf1cd4fe3f1239e49fb6d20f3168a1d60476724153a",
+      "model.pt.json": "fb4a4b23ee7a179689dc605caee3ba4e1a7f2c21db153508b2b29fe56ee7e23f",
+      "frozen-task.json": "929be06fa950a10d743d732478d05bd519a344cdb345c6375b5d0d64b5b45573",
+      "target-checkpoints-frozen.json": "ecfa2f48adc3b8f0c414f6904111fa8bd8efece4f5f106e6d7c412bc3004dbc3"
+    },
+    "2056": {
+      "model.pt": "254307876c58110de6f8a5534d5138a46f99a4ab44cd7dcd08696029fdf6c9f9",
+      "model.pt.json": "f981837ebacc91c0d91b208e469d149b56dac0a85b4a74b21a0c96f013278054",
+      "frozen-task.json": "938c69555b676f3f1b78e79fc91fde055896f199b24f6d5b1131dccdaf2a4f9a",
+      "target-checkpoints-frozen.json": "e3d7af67f413b9d2fe209dddc0bf364c9168f8f9a892e83b46278949a37c2f82"
+    }
+  },
+  "variants": {
+    "2036": {
+      "target_scratch_full": {"target_scratch_full/model.pt":"fe71e4aa0e2d6dc7815982a256d7bb58dba4e78d76d36b319ea53763d439126f", "target_scratch_full/model.pt.json":"9ed0633343194cdb897646cc4dd722d493237d5ef0c5c0827c915751e1eb2ffb"},
+      "source_pretrained_head_only": {"source_pretrained_head_only/model.pt":"be0d253434aa7b07f719db32d7b8ff34f0a8a88d48555dfe5dc6b3949d7b7bfd", "source_pretrained_head_only/model.pt.json":"1a475ae85ea06f0db224c8c06524edc8f53dab910da029ef48752829a79efb5a"}
+    },
+    "2046": {
+      "target_scratch_full": {"target_scratch_full/model.pt":"d74b6543c1b6fa32303e518ccc870629489046be42dac590b23aa93b8dd6c28a", "target_scratch_full/model.pt.json":"68b1a68ddc37c2fa506dd6efab753a6dadc6ce66eb789a68ee76f23b2b90d61d"},
+      "source_pretrained_head_only": {"source_pretrained_head_only/model.pt":"d0bef47dfeb4e52648760c4f96d98b52ce2ea0c9154d999572c0967fc22687d0", "source_pretrained_head_only/model.pt.json":"80ae3e57397636b9644a6e3a024b58a899e8ab4e6106f5de7282e9b8dc1fdfc3"}
+    },
+    "2056": {
+      "target_scratch_full": {"target_scratch_full/model.pt":"1f181e695d11bca3d4c8742ae82e042de48e619f8f985d7301cd667304fee879", "target_scratch_full/model.pt.json":"511e0ad7971a13e36e6d9e699c5eb30e027b3df8ae3e043ac2926746b70da3a6"},
+      "source_pretrained_head_only": {"source_pretrained_head_only/model.pt":"5b7c0db834d59fab546d3fab5ef61b26bacb3dcb5369be33ff09de3a2c205044", "source_pretrained_head_only/model.pt.json":"19a92a22c1fdeac8c32d427cabd06e2e3c359c0405e831e9a770def0150be199"}
+    }
+  },
+  "scope": "Original trained CNN branch copied as cheap model; zero new fitting. Same support/split across original model seeds; not independent task or sensor replicates."
+}
