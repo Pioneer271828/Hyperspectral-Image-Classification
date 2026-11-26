@@ -29,6 +29,15 @@ class FrozenRangeTrainingTests(unittest.TestCase):
             run = train.RangeRun(spec, provider, entries, "fixture", execution)
             run.restore(state, 3)
             self.assertTrue(_exact(run.pack(), state))
+            before = run.pack()
+            with run.selector_intervention("near"):
+                measured = run.evaluate(3, detailed=True)
+                self.assertTrue(all(r["graph"]["weights"]["graph"]["weights"] == [1., 0.] for r in measured["rows"]))
+                with self.assertRaisesRegex(ValueError, "read-only inference"):
+                    run.update(spec["training"][3])
+            run.model.eval()
+            self.assertIsNone(run._selection_override)
+            self.assertTrue(_exact(run.pack(), before))
             replaced = deepcopy(entries)
             first = next(iter(replaced))
             q = replaced[first]["q"].coalesce()

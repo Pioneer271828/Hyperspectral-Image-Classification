@@ -1,5 +1,6 @@
 """Private released-point trainer using the existing native update/recovery methods."""
 from copy import deepcopy
+from contextlib import contextmanager
 from io import BytesIO
 from itertools import product
 import math
@@ -126,19 +127,34 @@ class RangeRun(NativeRun):
         self._history, self._validation, self._selected = [], [], None
         self._fresh = tuple(spec["initialization"]["fresh"])
         self._capacity, self._region_action = None, None
+        self._selection_override = None
         self.timing = dict(train_update_seconds=0., validation_seconds=0., transform_seconds=0.,
                            forward_seconds=0., graph_seconds=0.)
 
     def _forward(self, actual, role, intervention):
         entry = self._current_entry
         graph.require(graph.identity(actual) == entry["identity"], "Frozen graph is bound to a different input")
-        with graph.frozen_support(self.model, entry, self._contract["arm"]):
+        if self._selection_override is not None:
+            graph.require(not self.model.training and not torch.is_grad_enabled(),
+                          "Selector interventions are read-only inference, never training")
+        arm = self._selection_override or self._contract["arm"]
+        with graph.frozen_support(self.model, entry, arm):
             output, trace, condition = super()._forward(actual, role, intervention)
         graph.require(trace["q"] == tensor_hash(entry["q"]) and trace["a0"] == tensor_hash(entry["near"]),
                       "Frozen Q or near weights changed")
         graph.require(trace["range_nnz"] == [entry["near"]._nnz(), entry["wide"]._nnz()], "Frozen ranges changed")
         trace["range_identity"] = {k: graph.sparse_digest(entry[k]) for k in ("q", "near", "wide")}
+        trace["selection_override"] = self._selection_override
         return output, trace, condition
+
+    @contextmanager
+    def selector_intervention(self, arm):
+        graph.require(arm in graph.ARMS and self._selection_override is None, "Invalid or nested selector intervention")
+        self._selection_override = arm
+        try:
+            yield
+        finally:
+            self._selection_override = None
 
     def _materialize(self, role, event):
         result = super()._materialize(role, event)

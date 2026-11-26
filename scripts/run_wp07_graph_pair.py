@@ -133,6 +133,7 @@ def prepare(root, out, geometry, qualifications, code):
         "selection": "first_min_fused_NLL_0_30_60", "cnn": "fixed_dilation1_all_arms",
         "capacity": "same existing graph-content model and both message paths; fixed coefficients in controls",
         "Q_and_both_adjacency_values": "frozen_per_input_at_pre_score_initial_encoder",
+        "read_only_counterfactual": "content checkpoints at selected and last; near/wide/mean/content coefficients, same weights and all original V5 views, zero updates",
         "estimated_wall_minutes": [20, 40], "independent_spatial_confirmation": False,
         "query_accessed": False, "raw_gt_loaded": False})
 
@@ -301,6 +302,49 @@ def summarize(root, plan_pin, out, code):
         "independent_spatial_confirmation": False, "scope": "frozen-Q released K5/V5 development pairing only"})
 
 
+def counterfactual(root, plan_pin, gpu, out, code):
+    from transfer import native_released_campaign as campaign
+    plan, entries, receipt = load(root, plan_pin, code)
+    graph.require(root in out.parents and not out.exists() and os.environ.get("CUDA_VISIBLE_DEVICES") == gpu,
+                  "Use a fresh external same-device counterfactual directory")
+    cases = [c for c in plan["cases"] if c["gpu"] == gpu and c["arm"] == "content"]
+    graph.require(cases, "No assigned content checkpoint")
+    out.mkdir()
+    results = []
+    with observation_only_resources(), worker.arithmetic(root, gpu) as execution, torch.no_grad():
+        for case in cases:
+            dest = Path(case["destination"])
+            spec = read(pin(dest / "registration.json"), root)
+            state = packet(read(pin(dest / "completed.json"), root)["checkpoint"], root)
+            provider = training.BankProvider(root, receipt, case["seed"])
+            run = training.RangeRun(spec, provider, entries, code["commit"], execution)
+            run.restore(state, 60)
+            before_packet = run.pack()
+            comparisons = {}
+            for endpoint, weights, step in (("selected", state["selected"]["state"], state["selected"]["step"]),
+                                           ("last", state["model"], 60)):
+                run.model.load_state_dict(weights, strict=True)
+                baseline_state = state_hash(run.model)
+                values = {}
+                for arm in graph.ARMS:
+                    with run.selector_intervention(arm):
+                        measured = run.evaluate(step, detailed=True)
+                    values[arm] = {"metrics": campaign.scoring(measured, 9), "validation": measured}
+                    graph.require(state_hash(run.model) == baseline_state, "Counterfactual changed model tensors")
+                original = read(pin(dest / "independent.json"), root)["endpoints"][endpoint]
+                graph.require(values["content"]["metrics"] == original["metrics"], "Original selector counterfactual differs")
+                comparisons[endpoint] = values
+            run.restore(state, 60)
+            graph.require(_exact(before_packet, run.pack()), "Counterfactual changed checkpoint, optimizer or RNG")
+            result = dev._json_new(out / (case["id"].replace("/", "-") + ".json"), {
+                "case": case["id"], "producer": code["commit"], "plan": plan_pin, "comparisons": comparisons,
+                "optimizer_updates": 0, "checkpoint_unchanged": True, "query_accessed": False, "raw_gt_loaded": False})
+            results.append(result)
+            print(json.dumps(result), flush=True)
+    return dev._json_new(out / "receipt.json", {"status": "passed", "cases": results, "optimizer_updates": 0,
+        "scope": "preregistered_same_weights_selector_intervention_not_retraining", "query_accessed": False, "raw_gt_loaded": False})
+
+
 def main():
     graph.require_checks()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -321,6 +365,10 @@ def main():
     q = actions.add_parser("summarize")
     q.add_argument("--plan", type=Path, required=True)
     q.add_argument("--out", type=Path, required=True)
+    q = actions.add_parser("counterfactual")
+    q.add_argument("--plan", type=Path, required=True)
+    q.add_argument("--gpu", required=True)
+    q.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     code = code_snapshot()
     graph.require(code["commit"] == args.expected_commit, "Unexpected graph-range source")
@@ -333,8 +381,10 @@ def main():
         print(json.dumps(prepare(root, args.out.resolve(), pin(args.geometry), [pin(p) for p in args.qualification], code)), flush=True)
     elif args.action in ("lane", "audit"):
         lane(root, pin(args.plan), args.gpu, code, independent=args.action == "audit")
-    else:
+    elif args.action == "summarize":
         print(json.dumps(summarize(root, pin(args.plan), args.out.resolve(), code)), flush=True)
+    else:
+        print(json.dumps(counterfactual(root, pin(args.plan), args.gpu, args.out.resolve(), code)), flush=True)
 
 
 if __name__ == "__main__":
