@@ -18,6 +18,9 @@ from transfer import wp07_exact_positions as positions
 from transfer import wp07_observed_conditions as summary
 from transfer.wp07_position_real import RegisteredPositionProvider
 from transfer.wp07_graph_range import require
+from transfer import wp07_graph_range as graph
+from transfer.native_scale_campaign import read, packet
+from transfer.development_blocks import array_hash
 
 
 PREFLIGHT = {
@@ -43,6 +46,9 @@ def main():
         preflight = json.loads(raw)
         gate = RegisteredPositionProvider(args.root, preflight, 64)
         bank = gate.provider._bank
+        plan = json.loads((args.root/'wp07-b-fine16-20261126'/scene/'pair/plan.json').read_text())
+        require(plan['preflight']['sha256'] == expected, 'Fine16 geometry came from another release')
+        entries = packet(plan['cache'], args.root)['entries']
         identity = bank.identity
         n = bank.release.shape[-1]
         proposal = positions.proposed_real_positions(n)
@@ -94,12 +100,21 @@ def main():
                 start = time.perf_counter()
                 actual, labels, points = gate.materialize(role, event, code['commit'])
                 elapsed = time.perf_counter()-start
+                cache_entry = entries[f'{role}/{tile}/{band}']
+                require(graph.identity(actual) == cache_entry['identity'], 'Existing graph belongs to a different observation')
+                geometry = {name: graph.sparse_digest(cache_entry[name]) for name in ('q', 'near', 'wide')}
+                again, labels2, points2 = gate.materialize(role, event, code['commit'])
+                require(actual.receipt == again.receipt and points.summary() == points2.summary()
+                        and array_hash(labels) == array_hash(labels2), 'Read-only provider re-entry changed input or released points')
+                require(geometry == {name: graph.sparse_digest(cache_entry[name]) for name in ('q', 'near', 'wide')},
+                        'Provider re-entry changed frozen geometry')
                 roster.append(dict(scene=scene, role=role, tile=tile, band=band,
                     spectral=actual.receipt['spectral'], observation=actual.receipt['observation'],
                     positions=digest(actual.receipt['source']['positions']), band_metadata=actual.view.bands.fingerprint,
                     retained_count=len(actual.view.bands.band_ids), released_points=len(points.points),
                     released_set=points.summary()['point_set'], materialization_seconds=elapsed,
-                    verified_historical_preflight=True))
+                    verified_historical_preflight=True, reentry_exact=True,
+                    Q_and_both_adjacency_identity=digest(geometry), cache_sha256=plan['cache']['sha256']))
             roles[role]['negative_requests_rejected_before_payload'] = rejected
         bands = identity['bands']
         evidence.append(dict(scene=scene, preflight={'path':str(path),'sha256':expected}, bank=bank.pin,
@@ -117,7 +132,8 @@ def main():
     table(args.out/'pre-score-identifiability.csv', qualification)
     dev._json_new(args.out/'source-role-authority.json', evidence)
     dev._json_new(args.out/'summary.json', dict(status='passed_existing_real_provider_and_pre_score_gates',
-        producer=code['commit'], source_hash=code['source_hash'], admitted_existing_reads=len(roster),
+        producer=code['commit'], source_hash=code['source_hash'], admitted_existing_views=len(roster),
+        actual_initial_plus_reentry_payload_reads=len(roster)*2, frozen_geometry_and_reentry_exact_views=len(roster),
         rejected_unadmitted_requests=20, rejected_request_payload_reads=0,
         proposal_representation_checks=len(qualification), new_real_views_materialized=0,
         real_optimizer_updates=0, classifier_forwards=0, raw_GT_opened=False, query_accessed=False,
