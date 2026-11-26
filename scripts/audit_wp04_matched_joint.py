@@ -10,11 +10,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import torch
 
 from evaluation.wp12_edge_weight_evidence import _comparison, _qualified_phases, _recompute
-from evaluation.wp12_residual_interaction_evidence import _factorial, contract
+from evaluation.wp12_residual_interaction_evidence import _factorial, contract, published_roles
+from joint_training import _tree_fingerprint
 from research_runtime import code_snapshot, external_directory, require_frozen_code, tensor_hash, write_json
+from scripts.audit_wp04_message_correspondence import scores
 from scripts.run_wp04_factorial import (
     HEADS, MATCHED_GROUP, MATCHED_PARAMS, MATCHED_SCOPE, SEEDS, STEPS, attest, audit_case, identity,
-    pinned, read, require, roster, verify,
+    pinned, read, require, roster, terminal, verify,
 )
 from transfer import p4_runtime_device as p4
 from transfer.shared_gpu_lease import physical_lease
@@ -70,7 +72,8 @@ def historical(reg, pin, common):
                 and all(row["input"][k] == v for k, v in history["supervision"].items()),
                 "Historical device or released supervision differs")
         match_initial(row["initial"], common[str(seed)], arm)
-        rows.append({**row, "arm": arm, "reused": True, "initialization_tensors": common[str(seed)]["tensors"]})
+        rows.append({**row, "arm": arm, "reused": True, "steps": original["steps"],
+                     "initialization_tensors": common[str(seed)]["tensors"]})
     require(len(rows) == 7, "Incorrect predeclared historical roster")
     return sorted(rows, key=lambda r: (r["seed"], r["arm"]))
 
@@ -95,6 +98,34 @@ def preflight(args, reg, reg_pin, common, code):
                          "rows": rows, "kernel_calls": dict(counts), "updates": 0, "query_access": False})
 
 
+def independent_replay(tree, result, row, labels):
+    route_paths = (tree / "whole", tree / "split")
+    fields = ("model", "optimizer", "scheduler", "history", "trace", "rng", "best_model", "best_probabilities")
+    refs = {}
+    for tag, paths in (("step_one", tuple(p / "state-000001.pt" for p in route_paths)),
+                       ("terminal", tuple(p / "state-000012.pt" for p in route_paths))):
+        pins = [pinned(path) for path in paths]
+        saved = [terminal(path.parent) if tag == "terminal" else torch.load(verify(pin), map_location="cpu", weights_only=True)
+                 for path, pin in zip(paths, pins, strict=True)]
+        before, after = ([_tree_fingerprint(val[k]) for k in fields] for val in saved)
+        require(before == after, f"Independent exact {tag} restoration failed")
+        if tag == "terminal":
+            require(min(saved[1]["history"], key=lambda x: x["val_loss"])["step"] == saved[1]["best_step"]
+                    == row["steps"]["selected"], "Independent first-min selection differs")
+        refs[tag] = {"files": pins, "same_state_by_field": dict(zip(fields, before, strict=True))}
+    path = tree / "split" / "selected-probabilities.pt"
+    pin = {"path": str(path), "sha256": result["artifacts"][path.name]}
+    saved = torch.load(verify(pin), map_location="cpu", weights_only=True)["xuzhou"]["val"]
+    require(tuple(saved) == tuple(HEADS), "Unexpected stored history heads")
+    for head, probabilities in saved.items():
+        numeric = scores(probabilities, labels)
+        phases = ("selected", "last") if row["steps"]["selected"] == row["steps"]["last"] else ("selected",)
+        require(all(numeric["probability_sha256"] == row["endpoints"][phase][head]["probability_sha256"]
+                    and numeric["points"] == row["endpoints"][phase][head]["points"] for phase in phases),
+                "Stored probability point scores differ from WP04 validation")
+    return {**refs, "selected_probabilities": pin}
+
+
 def assemble(args, reg, reg_pin, previous, common, code):
     data = read(verify(args.evidence))
     expected = roster(MATCHED_GROUP)
@@ -105,6 +136,7 @@ def assemble(args, reg, reg_pin, previous, common, code):
             and not any(data["lane_exit_codes"].values()), "Invalid trained matrix receipt")
     for pin in data["tables"]:
         verify(pin)
+    roles, input_hashes, labels = published_roles(reg, Path(reg_pin["path"]).parent.parent)
     new = []
     for planned, pin in zip(expected, data["case_pins"], strict=True):
         row = read(verify(pin))
@@ -113,11 +145,16 @@ def assemble(args, reg, reg_pin, previous, common, code):
         require(row["case"] == planned, "Unexpected new case")
         _qualified_phases(row, gpu)
         match_initial(row["init"], common[str(seed)], arm)
-        result = read(verify(pinned(Path(pin["path"]).parent / "split" / "result.json")))
+        tree = Path(pin["path"]).parent
+        result_pin = pinned(tree / "split" / "result.json")
+        result = read(verify(result_pin))
         require(identity(result["start_code"]) == data["code"]
-                and result["selected_step"] == row["steps"]["selected"], "Selected checkpoint lineage differs")
+                and result["selected_step"] == row["steps"]["selected"]
+                and all(row["inputs"][k] == v for k, v in input_hashes.items()), "Selected checkpoint lineage differs")
+        proof = independent_replay(tree, result, row, labels)
         new.append({"seed": seed, "arm": arm, "origin": pin, "reused": False, "device": gpu,
                     "input": row["inputs"], "shared": row["init"]["shared"], "initial": row["init"],
+                    "result": result_pin, "independent_recovery": proof,
                     "initialization_tensors": common[str(seed)]["tensors"], "phases": row["phases"],
                     "activity": row["learned_components"], "steps": row["steps"], "contract": contract(result, seed),
                     "endpoints": {e: {h: _recompute(row["endpoints"][e][h]) for h in HEADS}
@@ -162,6 +199,7 @@ def assemble(args, reg, reg_pin, previous, common, code):
     write_json(args.out / "supplement.json", {"schema": "wp12_wp04_common_initialization_joint_factorial_v1",
                "producer": data["code"], "adapter": identity(code), "registration": reg_pin, "history": args.history,
                "primary": args.evidence, "common_initialization": reg["common_initialization"], "devices": reg["devices"],
+               "released_role_overlay": roles,
                "new_cases": 5, "reused_cases": 7, "research_updates": 60, "restore_replay_updates": 60,
                "query_access": False, "production_accuracy_qualified": False, "released_points_per_class": 5,
                "edges": graph_identities, "effects": effects, "conditional": conditional, "cases": rows})
