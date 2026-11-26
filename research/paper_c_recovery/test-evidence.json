@@ -1,0 +1,21 @@
+{
+  "schema": "paper_c_grouped_test_execution_bindings_v1",
+  "execution_host": "authorized LXC; CPU; single thread; pinned author/native dependencies",
+  "CI": false,
+  "distinct_unit_cases": 19,
+  "groups": [
+    {"commit":"be72a03742e02f78caa8aa204506272db335a151","log":"baseline/all-tests04.log","passed":10,"coverage":"nine transaction cases plus original six-shape DSNet/native full-versus-resumed state/selection equality","pattern":"test_*.py at that frozen tree"},
+    {"commit":"91f3dfa5cc82e3431669267e1e0fbc2adca4e75d","log":"baseline/admission-tests05.log","passed":3,"coverage":"matching metadata stays candidate; two-source/equal-cardinality head and incompatible native lineage rejected","pattern":"test_admission.py"},
+    {"commit":"110c95d769a6ec88d8cf8c9ac14298302afb959f","log":"transfer/transfer-tests08.log","passed":1,"coverage":"103-to-270-band and nine-to-22-class source backbone/fresh target recovery with exact cheap/full CNN endpoint","pattern":"test_transfer.py"},
+    {"commit":"f4c5e11dbdc413ba922d3064e21deb4002726246","log":"routes/capsule-tests09.log","passed":1,"coverage":"priority capsule restoration explicitly distinguishes omitted history","pattern":"test_capsule.py"},
+    {"commit":"f4c5e11dbdc413ba922d3064e21deb4002726246","log":"routes/route-plan-tests09.log","passed":1,"coverage":"matched random cohorts include actual spatial shape","pattern":"test_route_plans.py"},
+    {"commit":"b90dea40d8cf82e41893eb4575fdb70505ca247b","log":"routes/frame-tests14.log","passed":3,"coverage":"mixed frame resume, multi-GiB numeric contracts and clean bounded receiver completion","pattern":"test_frames.py"}
+  ],
+  "prior_attempts": [
+    {"commit":"1372d63c17c7b8da634d7120e533f77caa089449","log":"baseline/transaction-tests01.log","passed":8},
+    {"commit":"d55eef6fc7c64e36665ed24be69a5709627d14e3","log":"baseline/transaction-tests02.log","status":"FAILED profile.py shadowed Python standard library; retained"},
+    {"commit":"e19141b90275e31759615e7eaf2bccbc64d1df07","log":"baseline/transaction-tests03.log","passed":9},
+    {"commit":"a1471ecbf5f8b1ec4daa169786c5b66d56b80e8e","log":"routes/frame-tests10.log","passed":2}
+  ],
+  "scope": "Later groups add distinct cases; prior repeated cases are not added again. These are actual per-group frozen identities, not a claim that all tests ran at the documentation tip."
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "paper_c_package3_timing_v1",
+  "started_at": "2026-11-26T16:28:01+08:00",
+  "clock_source": "clock.curr_time",
+  "source_freeze_clock_tool": "2026-11-26T11:46:24Z",
+  "elapsed_wall_seconds_to_source_freeze": 11903,
+  "scope_of_elapsed": "Through final source freeze after all three priority/output archives passed off-host verification; final Git/ZIP export and handoff transport follow this cutoff.",
+  "effective_work_seconds": null,
+  "pure_wait_seconds": null,
+  "paired_clock_observation": {
+    "clock_tool_before": "2026-11-26T11:36:09Z",
+    "source_date_u": "2026-11-26T19:39:15Z",
+    "clock_tool_after": "2026-11-26T11:36:10Z",
+    "limit": "Source wall clock is about 8h03m ahead of the clock tool. Do not subtract host/GitHub display timestamps from clock-tool timestamps. Committed perf_counter component durations are separate monotonic measurements."
+  },
+  "note": "Only the clock tool is used for package elapsed time. Effective work and pure-wait totals were not instrumented separately and remain unknown; overlapping backup/background work prevents a reliable retrospective split. No artificial waiting or repeated runs to fill four hours."
+}
