@@ -21,7 +21,20 @@ def _open(pin, root):
 
 
 def _recompute(value):
-    points = value["points"]
+    calculated = _point_metrics(value["points"])
+    require(calculated["confusion"] == value["confusion"] and calculated["oa"] == value["oa"]
+            and isclose(calculated["aa"], value["aa"], abs_tol=1e-12)
+            and isclose(calculated["nll"], value["nll"], abs_tol=1e-6)
+            and [row["correct"] for row in value["classes"]] == calculated["correct_by_class"]
+            and [row["support"] for row in value["classes"]] == [5] * 9,
+            "Independent point-derived metrics differ from the audit")
+    require(value["correctness"] == [
+        [p["predicted"] == c for p in value["points"] if p["class_id"] == c] for c in range(1, 10)
+    ], "Paired correctness differs from predictions")
+    return {**value, "confusion": calculated["confusion"], "oa": calculated["oa"], "aa": calculated["aa"]}
+
+
+def _point_metrics(points):
     expected = {(c, p) for c in range(1, 10) for p in range(1, 6)}
     require(len(points) == 45 and {(p["class_id"], p["point"]) for p in points} == expected,
             "Changed class/point denominators")
@@ -38,15 +51,8 @@ def _recompute(value):
     confusion = [[counts[i, j] for j in range(1, 10)] for i in range(1, 10)]
     per_class = [counts[c, c] for c in range(1, 10)]
     oa = sum(per_class) / 45
-    require(confusion == value["confusion"] and oa == value["oa"] and isclose(oa, value["aa"], abs_tol=1e-12)
-            and isclose(mean(loss), value["nll"], abs_tol=1e-6)
-            and [row["correct"] for row in value["classes"]] == per_class
-            and [row["support"] for row in value["classes"]] == [5] * 9,
-            "Independent point-derived metrics differ from the audit")
-    require(value["correctness"] == [
-        [p["predicted"] == c for p in points if p["class_id"] == c] for c in range(1, 10)
-    ], "Paired correctness differs from predictions")
-    return {**value, "confusion": confusion, "oa": oa, "aa": oa}
+    return {"points": points, "confusion": confusion, "oa": oa, "aa": oa, "nll": mean(loss),
+            "correct_by_class": per_class}
 
 
 def _wilson(correct, n=5):
@@ -81,6 +87,34 @@ def _per_seed(left, right):
                 changed_points=[r for r in rows if r["before"] != r["after"]])
 
 
+def _qualified_phases(row, uuid):
+    phases = row["phases"]
+    require(row["exact_whole_split"] and row["exact_independent_step_one"]
+            and row["resume_completed_updates"] == row["audit_updates"] == 0
+            and list(phases) == list(STEPS) and all(phases[k]["updates"] == n for k, n in STEPS.items())
+            and all(p["gpu"]["uuid"] == p["arithmetic"]["physical_uuid"] == uuid for p in phases.values())
+            and all(phases[k]["kernel_calls"]["sparse_mm"] > 0 for k in ("whole", "prefix", "resume")),
+            "Unqualified arithmetic or unpaired checkpoint recovery")
+
+
+def _comparison(by_case, a, b, *, primary):
+    endpoints = {
+        endpoint: {
+            head: {str(seed): _per_seed(by_case[seed, a][endpoint][head], by_case[seed, b][endpoint][head])
+                   for seed in SEEDS} for head in HEADS
+        } for endpoint in ("selected", "last")
+    }
+    fused = list(endpoints["selected"]["fused"].values())
+    oa, aa, nll = (mean(r[f"delta_{metric}"] for r in fused) for metric in ("oa", "aa", "nll"))
+    recall = {c: mean((r["classes"][c-1]["after"] - r["classes"][c-1]["before"]) / 5 for r in fused)
+              for c in range(1, 10)}
+    failures = [c for c, value in recall.items() if value < -.02]
+    positive = sum(r["delta_oa"] > 0 for r in fused)
+    return dict(primary=primary, criterion_passed=oa > 0 and positive >= 2 and aa >= -.005 and not failures,
+                mean_delta=dict(oa=oa, aa=aa, nll=nll), positive_seeds=positive,
+                mean_class_recall_delta=recall, failed_classes=failures, endpoints=endpoints)
+
+
 def intake(root, pin):
     data = _open(pin, root)
     reg = _open(data["registration"], root)
@@ -101,14 +135,7 @@ def intake(root, pin):
     by_case = {}
     for row, case in zip(rows, cases, strict=True):
         seed, arm = case["seed"], case["arm"]
-        phases = row["phases"]
-        uuid = data["devices"][str(seed)]
-        require(row["exact_whole_split"] and row["exact_independent_step_one"]
-                and row["resume_completed_updates"] == row["audit_updates"] == 0
-                and list(phases) == list(STEPS) and all(phases[k]["updates"] == n for k, n in STEPS.items())
-                and all(p["gpu"]["uuid"] == p["arithmetic"]["physical_uuid"] == uuid for p in phases.values())
-                and all(phases[k]["kernel_calls"]["sparse_mm"] > 0 for k in ("whole", "prefix", "resume")),
-                "Unqualified arithmetic or unpaired checkpoint recovery")
+        _qualified_phases(row, data["devices"][str(seed)])
         by_case[seed, arm] = {e: {h: _recompute(row["endpoints"][e][h]) for h in HEADS}
                              for e in ("selected", "last")}
     paired_initialization(rows, EDGE_WEIGHT_SCOPE)
@@ -123,25 +150,8 @@ def intake(root, pin):
             counts[path.stem] = sum(1 for _ in csv.DictReader(stream))
     require(counts == sizes, "Incomplete WP04 evidence tables")
 
-    comparisons = {}
-    for a, b in EDGE_WEIGHT_CONTRASTS:
-        name = f"{a}-{b}"
-        endpoints = {}
-        for endpoint in ("selected", "last"):
-            endpoints[endpoint] = {
-                head: {str(seed): _per_seed(by_case[seed, a][endpoint][head], by_case[seed, b][endpoint][head])
-                       for seed in SEEDS} for head in HEADS
-            }
-        fused = list(endpoints["selected"]["fused"].values())
-        oa, aa, nll = (mean(r[f"delta_{metric}"] for r in fused) for metric in ("oa", "aa", "nll"))
-        recall = {c: mean((r["classes"][c-1]["after"] - r["classes"][c-1]["before"]) / 5 for r in fused)
-                  for c in range(1, 10)}
-        failures = [c for c, value in recall.items() if value < -.02]
-        positive = sum(r["delta_oa"] > 0 for r in fused)
-        comparisons[name] = dict(primary=name in EDGE_WEIGHT_PRIMARY,
-                                 criterion_passed=oa > 0 and positive >= 2 and aa >= -.005 and not failures,
-                                 mean_delta=dict(oa=oa, aa=aa, nll=nll), positive_seeds=positive,
-                                 mean_class_recall_delta=recall, failed_classes=failures, endpoints=endpoints)
+    comparisons = {f"{a}-{b}": _comparison(by_case, a, b, primary=f"{a}-{b}" in EDGE_WEIGHT_PRIMARY)
+                   for a, b in EDGE_WEIGHT_CONTRASTS}
     return dict(schema="wp12_wp04_edge_weights_development_v1", source=pin, registration=data["registration"],
                 producer=data["code"], scope=EDGE_WEIGHT_SCOPE, query_access=False,
                 production_accuracy_qualified=False, optimizer_updates=288, research_updates=144,
