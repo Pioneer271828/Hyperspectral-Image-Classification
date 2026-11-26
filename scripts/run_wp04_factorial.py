@@ -34,7 +34,7 @@ from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, external_directory, hash_file, require_frozen_code, tensor_hash, write_json
 from target_initialization import METHODS
 from target_training import TargetRuntime, observation
-from g4_position_fusion_target import calibrate
+from g4_position_fusion_target import calibrate, initialize as initialize_position
 from target_initialization import state_id
 from transfer import p4_runtime_device as p4
 from transfer.shared_gpu_lease import physical_lease
@@ -81,7 +81,19 @@ REAL_PAIR_SCOPE = "real_dev_c2g_paired"
 REAL_PAIR = ("off", "C2G")
 REAL_PAIR_UPDATES = len(SEEDS) * len(REAL_PAIR) * (STEPS["whole"] + STEPS["prefix"] + STEPS["resume"])
 DIRECTION_SCOPE = "real_dev_direction_capacity"
-REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE)
+FACTORIAL_SCOPE = "real_dev_fixed_qa_residual_fusion"
+REAL_SCOPES = (REAL_PAIR_SCOPE, DIRECTION_SCOPE, FACTORIAL_SCOPE)
+FACTORIAL_PARAMS = {"B0": 61696, "R": 69952, "F": 61825, "R+F": 70081, "Bcap": 69952, "Bcap+F": 70081}
+FACTORIAL_EFFECTS = {
+    **CONTRASTS,
+    "R+F-F": {"R+F": 1, "F": -1},
+    "R+F-R": {"R+F": 1, "R": -1},
+    "Bcap-B0": {"Bcap": 1, "B0": -1},
+    "Bcap+F-F": {"Bcap+F": 1, "F": -1},
+    "Bcap+F-Bcap": {"Bcap+F": 1, "Bcap": -1},
+    "R-main": {"R": .5, "B0": -.5, "R+F": .5, "F": -.5},
+    "F-main": {"F": .5, "B0": -.5, "R+F": .5, "R": -.5},
+}
 PRIOR_CODE = "3b383a59d644b17e6427d5a8656ce22d971c6d82"
 PRIOR_EVIDENCE = "955c50b81d729ea0a811789eac78cde59705b446530c1e68f0ddff8ebfdc295f"
 NEW_DIRECTIONS = {"add": "add", "both": "gated", "G2C": "graph_to_cnn",
@@ -147,7 +159,7 @@ def registration(args, code):
         require(published["sha256"] == REAL_CATALOG_SHA
                 and catalog == path.parent / "rebound-contexts" / "manifest.json"
                 and value == real_plan(catalog, published, code, [value["devices"][str(seed)] for seed in SEEDS],
-                                       prior=value.get("prior")),
+                                       prior=value.get("prior"), factorial=value["scope"] == FACTORIAL_SCOPE),
                 "Real paired development registration or publication differs")
         return value
     require(value == plan(catalog, code, "synthetic_only", arithmetic=value.get("arithmetic"),
@@ -157,7 +169,7 @@ def registration(args, code):
     return value
 
 
-def real_plan(catalog, published, code, devices, *, prior=None):
+def real_plan(catalog, published, code, devices, *, prior=None, factorial=False):
     require(len(devices) == len(SEEDS) and len(set(devices)) == len(SEEDS)
             and all("GPU-" + str(UUID(gpu.removeprefix("GPU-"))) == gpu for gpu in devices),
             "Assign one distinct physical GPU UUID to each paired seed")
@@ -166,6 +178,12 @@ def real_plan(catalog, published, code, devices, *, prior=None):
             "published_catalog": published, "devices": dict(zip(map(str, SEEDS), devices, strict=True)),
             "real_updates_authorized": REAL_PAIR_UPDATES, "resource_policy": "actual_cuda_allocation",
             "role_scope": "published_train_dev_only", "execution": str(catalog.parent.parent / "execution")}
+    if factorial:
+        require(prior is None, "The position-fusion matrix requires its matched position runtime throughout")
+        return {**base, "scope": FACTORIAL_SCOPE, "group": "factorial", "graph": "input_Q_and_A_fixed",
+                "cases": roster("factorial"), "parameters_by_arm": FACTORIAL_PARAMS,
+                "primary_comparisons": ["R-Bcap", "R+F-(Bcap+F)", "F-B0", "R+F-R"],
+                "real_updates_authorized": len(SEEDS)*len(ARMS)*(STEPS["whole"]+STEPS["prefix"]+STEPS["resume"])}
     if prior is None:
         return base
     require(prior["sha256"] == PRIOR_EVIDENCE, "Expected the independently accepted I0/I3 evidence")
@@ -190,7 +208,8 @@ def bound(reg, case, out, device):
         return local_runtime.prepare(*paths, condition=case["condition"], **common)
     if group in ADAPTERS:
         return ADAPTERS[group][0](*paths, condition=case["condition"], **common)
-    return prepare(*paths, mode=case["mode"], condition=case["fusion"], **common)
+    return prepare(*paths, mode=case["mode"], condition=case["fusion"],
+                   exact_capacity=reg["scope"] == FACTORIAL_SCOPE and case["mode"] == "capacity_control", **common)
 
 
 def attest(gpu):
@@ -232,7 +251,7 @@ def move_items(items, device):
             for name, item in items.items()}
 
 
-def validation_evidence(probabilities, item, recorded):
+def validation_evidence(probabilities, item, recorded, *, keep_correctness=False):
     data = {}
     truth = item["val_labels"].cpu().numpy()
     classes = item["class_num"]
@@ -250,6 +269,9 @@ def validation_evidence(probabilities, item, recorded):
         data[head] = {"oa": stats["oa"], "aa": stats["aa"], "nll": trace["nll"],
                       "classes": [{**c, "correct": int(matrix[i, i])} for i, c in enumerate(stats["per_class"])],
                       "probability_sha256": tensor_hash(probabilities[head])}
+        if keep_correctness:
+            correct = scores.argmax(1) == truth
+            data[head]["correctness"] = [correct[truth == label].tolist() for label in range(classes)]
     return data
 
 
@@ -391,17 +413,34 @@ def audit_case(reg, case, out, gpu, *, real=False):
             "Final calibration used the wrong raw state")
     model.load_state_dict(last["model"], strict=True)
     _, probs = runtime.validation_snapshot(calibrated(model), items)
-    final = validation_evidence(probs[target]["val"], item, last["history"][-1]["metrics"][target]["val"])
+    keep_correctness = reg["scope"] == FACTORIAL_SCOPE
+    final = validation_evidence(probs[target]["val"], item, last["history"][-1]["metrics"][target]["val"],
+                                keep_correctness=keep_correctness)
     primary = runtime.load_selected(split / "primary.pt", items, split / f"raw-validation-{selected_step:06d}.pt", device=device)
     _, probs = runtime.validation_snapshot(primary, items)
-    selected = validation_evidence(probs[target]["val"], item, minimum["metrics"][target]["val"])
+    selected = validation_evidence(probs[target]["val"], item, minimum["metrics"][target]["val"],
+                                   keep_correctness=keep_correctness)
     guard()
     costs = {phase: read(out / f"{phase}.json") for phase in STEPS}
     require([costs[phase]["updates"] for phase in STEPS] == list(STEPS.values()), "Wrong phase updates")
+    activity = {}
+    if keep_correctness:
+        trace = last["trace"]
+        for name, active, gradients, elements in (
+                ("residual_or_control", case["mode"] != "none",
+                 [r.get("m4_parameter_gradient_norm", 0.) for r in trace],
+                 [r.get("m4_changed_elements", 0) for r in trace]),
+                ("position_gate", case["fusion"] == "position_gate",
+                 [r["position_fusion"]["gradient_norm"] for r in trace],
+                 [r["position_fusion"]["changed_elements"] for r in trace])):
+            require(all(np.isfinite(gradients)) and (max(gradients) > 0) == active
+                    and (sum(elements) > 0) == active, "Declared factorial mechanism did not match its update trace")
+            activity[name] = {"active": active, "peak_gradient_norm": max(gradients), "changed_elements": sum(elements)}
     return {"case": case, "inputs": inputs, "init": init, "steps": {"selected": selected_step, "last": 12},
             "endpoints": {"selected": selected, "last": final}, "head_updates": changes, "phases": costs,
             "exact_whole_split": True, "resume_completed_updates": 0, "audit_updates": 0,
             "trace_proof": digest(last["trace"]),
+            **({"learned_components": activity} if keep_correctness else {}),
             **({"diagnostics": diagnostic, "learned_components": component_activity(group, last["trace"])}
                if group in CONTROLS else {}),
             **({"exact_independent_step_one": True} if reg.get("arithmetic") else {})}
@@ -446,7 +485,11 @@ def paired_initialization(rows, group="factorial"):
             require(a["residual"] == b["residual"] and b["parameters"]-a["parameters"] == 129
                     and b["fusion"] == by_arm["F"]["fusion"], "Gate/state or extra parameter pairing differs")
         require(by_arm["R"]["parameters"] - by_arm["B0"]["parameters"] == 8256
-                and by_arm["Bcap"]["parameters"] - by_arm["B0"]["parameters"] == 8320, "Capacity control differs")
+                and by_arm["Bcap"]["parameters"] - by_arm["B0"]["parameters"]
+                == (8256 if group == FACTORIAL_SCOPE else 8320), "Capacity control differs")
+        if group == FACTORIAL_SCOPE:
+            require({arm: init["parameters"] for arm, init in by_arm.items()} == FACTORIAL_PARAMS,
+                    "Measured factorial arm capacity differs")
     require(len({digest(row["inputs"]) for row in rows}) == 1, "Comparison changed support across seeds")
     require(len({row["init"]["shared"] for row in rows}) == len(SEEDS), "Missing independent model seeds")
 
@@ -459,6 +502,9 @@ def make_tables(rows, group="factorial"):
         pairs = (*MATCHES, *((arm, "off") for arm in DIRECTION_PARAMS if arm != "off"),
                  ("both", "add"), ("both", "C2G"), ("both", "G2C"), ("C2G", "G2C"))
     contrasts = CONTRASTS if group == "factorial" else {f"{a}-{b}": {a: 1, b: -1} for a, b in pairs}
+    if group == FACTORIAL_SCOPE:
+        contrasts = FACTORIAL_EFFECTS
+    changes = []
     for row in rows:
         case = row["case"]
         for endpoint, heads in row["endpoints"].items():
@@ -490,7 +536,17 @@ def make_tables(rows, group="factorial"):
                             delta_recall=delta))
                     paired.append({**context, **{f"delta_{k}": sum(a[k]*w for a, w in arms) for k in ("oa", "aa", "nll")},
                                    "minimum_class_recall_difference": min(deltas), "negative_class_differences": sum(d < -1e-12 for d in deltas)})
-    return {"endpoints": endpoints, "per-class": per_class, "paired": paired, "paired-per-class": paired_class, "costs": costs}
+                    if group == FACTORIAL_SCOPE and tuple(design.values()) == (1, -1):
+                        a, b = (arm["correctness"] for arm, _ in arms)
+                        for label, (now, old) in enumerate(zip(a, b, strict=True), 1):
+                            transitions = list(zip(now, old, strict=True))
+                            changes.append(dict(**context, class_id=label, support=len(transitions),
+                                retained=sum(n and p for n, p in transitions), gained=sum(n and not p for n, p in transitions),
+                                lost=sum(p and not n for n, p in transitions)))
+    products = {"endpoints": endpoints, "per-class": per_class, "paired": paired, "paired-per-class": paired_class, "costs": costs}
+    if group == FACTORIAL_SCOPE:
+        products["correct-point-transitions"] = changes
+    return products
 
 
 def stage(args, code, reg, out):
@@ -779,7 +835,9 @@ def main():
             selector.add_argument("--manifest", nargs=2, required=True)
         if kind == "prepare-real-pairs":
             selector.add_argument("--devices", nargs=len(SEEDS), required=True)
-            selector.add_argument("--prior", nargs=2, metavar=("ACCEPTANCE", "SHA256"))
+            flavor = selector.add_mutually_exclusive_group()
+            flavor.add_argument("--prior", nargs=2, metavar=("ACCEPTANCE", "SHA256"))
+            flavor.add_argument("--factorial", action="store_true")
     args = parser.parse_args()
     code = code_snapshot()
     require(sys.platform == "linux" and __debug__ and code["commit"] == args.expected_commit, "Expected Linux frozen revision")
@@ -807,7 +865,13 @@ def main():
         catalog, publication = rebind(args, code, out)
         path = out / "registration.json"
         prior = None if args.prior is None else {"path": str(Path(args.prior[0]).resolve()), "sha256": args.prior[1]}
-        value = real_plan(catalog, publication, code, args.devices, prior=prior)
+        value = real_plan(catalog, publication, code, args.devices, prior=prior, factorial=args.factorial)
+        if args.factorial:
+            for arm, (mode, fusion) in ARMS.items():
+                model, _ = initialize_position(value["target"], value["method"], fusion, mode=mode,
+                    model_seed=SEEDS[0], head_seed=SEEDS[0]+1000, exact_capacity=mode == "capacity_control")
+                require(sum(p.numel() for p in model.parameters()) == FACTORIAL_PARAMS[arm],
+                        "Pre-dispatch residual/fusion capacity differs")
         if prior:
             prior_directions(value, code)
             for case in value["cases"]:
