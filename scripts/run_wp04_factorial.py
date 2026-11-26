@@ -627,7 +627,7 @@ def audit_case(reg, case, out, gpu, *, real=False):
 
     diagnostic = {}
     strict_replay = {}
-    if real or group in CONTROLS or group in EDGE_POINT_GROUPS:
+    if real or group in CONTROLS or group in (*EDGE_POINT_GROUPS, ASSIGNMENT_GROUP):
         before = state_id(model)
         candidate = calibrated(model)
         checked, probs = runtime.validation_snapshot(candidate, items)

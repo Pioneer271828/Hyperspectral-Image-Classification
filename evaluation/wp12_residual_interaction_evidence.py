@@ -151,6 +151,27 @@ def historical(root, publication_pin):
             "role_overlay": role_pin, "supervision": roles, "query_access": False, "updates": 0, "cases": cases}
 
 
+def _verify_initial_replays(data, rows, root):
+    replays = [_open(pin, root) for pin in data["initial_replays"]]
+    require(tuple(x["seed"] for x in replays) == SEEDS, "Wrong initialization replay roster")
+    recovered = []
+    for replay in replays:
+        seed = replay["seed"]
+        require(replay["code"] == data["code"] and replay["registration"] == data["registration"]
+                and replay["device"]["uuid"] == data["devices"][str(seed)] and replay["optimizer_updates"] == 0
+                and replay["query_access"] is False and replay["strict_sparse_mm_calls"] > 0,
+                "Initialization replay changed the producer, physical GPU or role")
+        for row in replay["rows"]:
+            original = _open(row["original"], root)
+            require(original["case"] == row["case"] and original["case"]["seed"] == seed
+                    and original["init"] == row["init"] and original["inputs"] == row["inputs"]
+                    and original["diagnostics"]["initial"] == {},
+                    "The zero-update replay differs from its original control")
+            original["diagnostics"]["initial"] = row["initial"]
+            recovered.append(original)
+    require(recovered == rows, "Initialization replay changed more than the missing initial diagnostics")
+
+
 def _new_campaign(root, pin, group):
     data = _open(pin, root)
     reg = _open(data["registration"], root)
@@ -166,6 +187,9 @@ def _new_campaign(root, pin, group):
             "Inadmissible new residual or direct-edge evidence")
     raw = [_open(case_pin, root) for case_pin in data["case_pins"]]
     require([row["case"] for row in raw] == expected, "Wrong new seed/arm roster")
+    if "initial_replays" in data:
+        require(group == ASSIGNMENT_GROUP, "Only the assignment diagnostics have a zero-update addendum")
+        _verify_initial_replays(data, raw, root)
     paired_initialization(raw, scope)
     counts = {}
     for table in data["tables"]:
