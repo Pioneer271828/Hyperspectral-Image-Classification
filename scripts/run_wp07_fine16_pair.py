@@ -333,7 +333,7 @@ def counterfactual(root, plan_pin, gpu, out, code):
                     with run.selector_intervention(arm):
                         with training.response_observer(run) as response:
                             measured = run.evaluate(step, detailed=True)
-                    values[arm] = {"metrics": campaign.scoring(measured, 9), "validation": measured, "response": response}
+                    values[arm] = {"metrics": campaign.scoring(measured, 9), "validation": measured, "response": response, "checkpoint_state": baseline_state}
                     graph.require(state_hash(run.model) == baseline_state, "Counterfactual changed model tensors")
                 original = read(pin(dest / "independent.json"), root)["endpoints"][endpoint]
                 graph.require(values["content"]["metrics"] == original["metrics"], "Original selector counterfactual differs")
