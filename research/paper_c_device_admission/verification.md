@@ -24,7 +24,9 @@ No existing model, checkpoint, dataset bank or shared training interface changes
    sequence in each already selected camera group, using catalog sizes only.
 5. Use the final independently pinned auditor revision recorded with the result
    receipt to run `audit_intake.py` and `audit_paired.py`, passing their documented
-   input roots and a new external `--out` JSON path. Run
+   input roots and a new external `--out` JSON path. Paired audit also requires
+   `--aerial-audit <independent-aerial-receipt>` so a failed metadata-center gate
+   cannot disappear during satellite intake. Run
    `python -m unittest discover -s research/paper_c_device_admission -p 'test_*.py' -v`.
    Never overwrite an earlier failed receipt/log or rerun into an existing intake.
 
@@ -41,6 +43,11 @@ Sentinel output retains all acquired dates and raw cloud/snow masks, with explic
 average dates, filter clouds, align10m labels, normalize radiometry, train a model,
 or adopt the upstream benchmark protocol. Public train labels are opt-in and are
 never changed on disk. A distinct raw1..12 mapping uses ignore=-1 for13..19.
+Both reader methods require an independently audited receipt. They reject the
+quarantined example before opening its sample payload. The metadata-center
+tolerance0.21m is a conservative project QA criterion, not a guarantee stated by
+the publisher. Its failure does not diagnose incorrect metadata or invalidate
+all native image-mask classification uses.
 
 Future classification requires its own domain/year split, shared-class objective,
 spatial label aggregation or scene-level target, budget, model seeds and controls.

@@ -12,7 +12,7 @@ def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--run',required=True);p.add_argument('--aerial-audit',required=True);p.add_argument('--paired-audit',required=True);p.add_argument('--reader-receipt',required=True);p.add_argument('--out',required=True);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--run',required=True);p.add_argument('--aerial-audit',required=True);p.add_argument('--paired-audit',required=True);p.add_argument('--reader-receipt',required=True);p.add_argument('--validation-root',required=True);p.add_argument('--out',required=True);a=p.parse_args()
     out=guard(a.expected_commit,a.out)
     if out.exists():raise ValueError('New export package required')
     run=Path(a.run);meta=json.loads((run/'ovh-official-metadata02/manifest.json').read_text());catalog=json.loads((run/'ovh-training-catalog01/manifest.json').read_text());intake=json.loads((run/'public-train-intake01/manifest.json').read_text());paired=json.loads((run/'paired-train-intake01/manifest.json').read_text())
@@ -33,6 +33,10 @@ def main():
             value=json.loads(file.read_text());z.writestr('receipts/'+name,json.dumps(value,indent=2))
         for name in ('tests05.log','tests08.log','tests09.log'):
             file=run/name
+            if file.exists():z.write(file,'receipts/'+name)
+        validation=Path(a.validation_root)
+        for name in ('tests11.log','train-camera-support11.json','final-source-check.json'):
+            file=validation/name
             if file.exists():z.write(file,'receipts/'+name)
     with zipfile.ZipFile(out) as z:
         if z.testzip() is not None:raise ValueError('Export ZIP CRC failure')

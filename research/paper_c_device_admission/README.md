@@ -16,6 +16,14 @@ FLAIR is an optical multispectral alternative, not two hyperspectral instruments
 The elevation channel is not a spectral band. Aerial radiometry is harmonized,
 not physical reflectance; acquisition/time/resolution confounds stay explicit.
 
+Actual result: four image/mask pairs passed byte/role/independent pixel checks;
+three meet the additional conservative metadata-center gate and one is quarantined.
+One52-date real aerial/Sentinel-2 pair is admitted; the other pair inherits that
+quarantine. Both reader APIs require independent receipts before payload access.
+This is runnable public-development intake, with zero model or optimizer calls.
+See `findings.md`, `verification.md`, and `source-review.json` for exact scope,
+source versions, retained failures, environment changes and future experiment gates.
+
 `fetch_metadata.py` obtains bounded official public text/metadata only. It pins the
 Hugging Face repository revision before fetching auxiliary records. No test pixel
 or label payload is requested. Data/metadata stay in the external authorized Linux
