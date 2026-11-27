@@ -35,7 +35,7 @@ SOURCE = {
     "c3": ("paper-c-recovery-20261126", "engineering3-execution01",
            "8263398636b284a27ee5f14cec3494fe0f8dc943195cde7042315d658d8cad17",
            "engineering3-independent-audit01.json",
-           "4b80cb2734b0c1e66c0c229acd3068fd6813fb83398731e642994ea56e02e1116"),
+           "4b80cb2734b0c1e66c0c229acd3068fd6813fb83398731e642994ea56e02e116"),
     "p40": ("paper-a-external-pavia-20261127", "execution",
             "b37d23eab46c331b389a0a9472b277360cbc99a20c4259b8a7ef8a6f671b6e01",
             "full-review.json", "cf23ce22f97f6c7bc789e3bac7cc4c62f7c7fd6e7cfd3c702ac244342c953eab"),
@@ -191,7 +191,8 @@ def material(runs, reader, scene, compute_slic, locked=None):
             slic_members = locked["blocks"][len(metadata)]["slic_members"]
         metadata.append({"unit": unit, "shape": list(obs.spectral.shape), "scale": scale,
                          "grid": list(grid), "native_budget": grid[0] * grid[1],
-                         "spectral_sha256": tensor_hash(obs.spectral), "coordinates_sha256": tensor_hash(obs.coordinates),
+                         "spectral_sha256": tensor_hash(np.array(obs.spectral)),
+                         "coordinates_sha256": tensor_hash(np.array(obs.coordinates)),
                          "wavelength_sha256": tensor_hash(waves), "published_context_sha256": context["normalized"],
                          "partition": obs.partition, "points": points, "slic_members": slic_members,
                          "grid_sha256": tensor_hash(grid_map)})
