@@ -25,6 +25,10 @@ def validate_source(model):
         raise ValueError('Original float CNN layers required')
 
 
+class NonfiniteLightOutput(ValueError):
+    """The light lane cannot publish a prediction for otherwise admitted input."""
+
+
 class LightCNN(nn.Module):
     def __init__(self,source):
         super().__init__();validate_source(source);b=source.backbone
@@ -56,13 +60,13 @@ class LightCNN(nn.Module):
             pixels=stage1.squeeze(0).permute(1,2,0).reshape(h*w,128)
             stage2=self.cnn[1](pixels.reshape(h,w,128).permute(2,0,1).unsqueeze(0),dataset)
             features=stage2.squeeze(0).permute(1,2,0).reshape(h*w,64)
-        if not torch.isfinite(features).all():raise ValueError('Nonfinite light features')
+        if not torch.isfinite(features).all():raise NonfiniteLightOutput('Nonfinite light features')
         return features
 
     def forward(self,dataset,x,*,wavelengths):
         features=self.frozen_features(dataset,x,wavelengths=wavelengths)
         with torch.no_grad():result=F.softmax(self.heads[dataset](features),-1)
-        if not torch.isfinite(result).all():raise ValueError('Nonfinite light output')
+        if not torch.isfinite(result).all():raise NonfiniteLightOutput('Nonfinite light output')
         return result
 
 

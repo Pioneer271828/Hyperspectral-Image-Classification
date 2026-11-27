@@ -8,6 +8,7 @@ from time import perf_counter_ns
 import numpy as np
 import torch
 
+from inference.light_cnn import NonfiniteLightOutput
 from inference.tile_cascade import gate_score
 from model.coverage_config import coverage_forward_kwargs
 from model.learnable_superpixel_graph import LearnableSuperpixelGraph
@@ -102,10 +103,15 @@ def clock_ms(start):
 
 
 class Runtime:
-    def __init__(self, *, device, full=None, light=None, identity=None, graph_policy="rebuild"):
+    def __init__(self, *, device, full=None, light=None, identity=None, graph_policy="rebuild", full_loader=None):
         self.device=torch.device(device)
-        if graph_policy not in ("rebuild","reuse_frozen") or all(x is None for x in (full,light)):
+        if graph_policy not in ("rebuild","reuse_frozen") or all(x is None for x in (full,light,full_loader)):
             raise ValueError("Explicit model and graph policy required")
+        if full_loader is not None:
+            if (not callable(full_loader) or full is not None or graph_policy != "rebuild"
+                    or identity is None or set(identity) != ({"full", "light"} if light is not None else {"full"})
+                    or not isinstance(identity["full"], str) or len(identity["full"]) != 64):
+                raise ValueError("Deferred full deployment requires a pinned state and rebuilt graphs")
         for model in (full,light):
             if model is not None:
                 uninstrumented(model)
@@ -113,10 +119,13 @@ class Runtime:
                     raise ValueError("Authenticate frozen weights on CPU before deployment")
                 model.to(self.device)
         self.full,self.light=full,light
+        self.full_loader = full_loader
         self.identity={k:state_hash(m) for k,m in (("full",full),("light",light)) if m is not None}
+        if full_loader is not None:
+            self.identity["full"] = identity["full"]
         if identity is not None and self.identity!=identity:
             raise ValueError("Deployment model identity differs from the registered pair")
-        self.routable=(full is not None and light is not None and
+        self.routable=("full" in self.identity and light is not None and
                        getattr(light,"source_state",None)==self.identity["full"])
         self.graph_policy=graph_policy
         if graph_policy=="reuse_frozen" and (full is None or type(full.backbone.learnable_graph) is not LearnableSuperpixelGraph
@@ -134,6 +143,16 @@ class Runtime:
             torch.cuda.synchronize(self.device)
 
     def _full(self, request, stats, graph_clock):
+        if self.full is None and self.full_loader is not None:
+            # Preserve tensor version counters for the runtime's mutation guard.
+            with torch.inference_mode(False):
+                model = self.full_loader()
+                uninstrumented(model)
+                if next(model.parameters()).device.type != "cpu" or state_hash(model) != self.identity["full"]:
+                    raise ValueError("Deferred full model differs from its pinned CPU state")
+                model.to(self.device)
+            self.full = model
+            self.versions = self.version()
         model=self.full
         stats["full_calls"]+=1
         if model is None:
@@ -240,7 +259,7 @@ class Runtime:
                             p=(light,)
                             route="light"
                         reason="accepted" if accepted else "confidence_or_control"
-                    except RecoverableLightFailure:
+                    except (NonfiniteLightOutput, RecoverableLightFailure):
                         stats["light_failures"]+=1
                         reason="light_failure"
             if p is None:
