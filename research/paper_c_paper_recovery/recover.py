@@ -67,7 +67,9 @@ def restore(archive, length, checksum, target):
     with tarfile.open(archive, 'r:gz') as tar:
         first = tar.next()
         require(first.isfile() and first.name in ('index.json', 'object-index01.json'), 'Missing first index')
-        index = json.load(tar.extractfile(first))
+        raw_index = tar.extractfile(first).read()
+        (target / 'archive-index.json').write_bytes(raw_index)
+        index = json.loads(raw_index)
         files = index['files']
         rows = files if isinstance(files, list) else [dict(v, name=k) for k, v in files.items()]
         logical = {r['name']: r for r in rows}
@@ -77,7 +79,7 @@ def restore(archive, length, checksum, target):
         objects = index.get('objects')
         expected = dict(objects) if objects is not None else dict(logical)
         seen = set()
-        for member in tar:
+        while (member := tar.next()) is not None:
             relative(member.name)
             require(member.isfile() and not member.issym() and not member.islnk(), 'Only regular files admitted')
             key = member.name.removeprefix('objects/') if objects is not None else member.name
