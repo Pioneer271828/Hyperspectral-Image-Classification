@@ -19,10 +19,13 @@ def verified_object(root,row):
     return Path(root)/row['object']
 
 
-def read_aerial(root,index,*,include_public_train_labels=False):
+def read_aerial(root,index,*,audit_receipt,include_public_train_labels=False):
     root=Path(root);manifest=json.loads((root/'manifest.json').read_text());plan=json.loads((root/'plan.json').read_text())
     if hashlib.sha256((root/'plan.json').read_bytes()).hexdigest()!=manifest['plan_sha256'] or plan['role']!='public_train_intake_only':raise ValueError('Frozen public development plan required')
     s=plan['samples'][index];lookup={r['member']:r for r in manifest['members']}
+    proof=json.loads(Path(audit_receipt).read_text());opaque=hashlib.sha256(s['image_id'].encode()).hexdigest()[:16]
+    approved=[r for r in proof['samples'] if r['sample_opaque_id']==opaque and r['metadata_center_binding_admitted']]
+    if not proof['passed'] or proof['plan_sha256']!=manifest['plan_sha256'] or len(approved)!=1:raise ValueError('Sample quarantined or independent admission receipt differs')
     arr=tifffile.imread(verified_object(root,lookup[s['aerial']['name']]))
     if arr.shape==(5,512,512):arr=arr.transpose(1,2,0)
     if arr.shape!=(512,512,5):raise ValueError('Released optical+height layout differs')
@@ -37,10 +40,13 @@ def read_aerial(root,index,*,include_public_train_labels=False):
     return value
 
 
-def read_satellite(root,index):
+def read_satellite(root,index,*,audit_receipt):
     root=Path(root);m=json.loads((root/'manifest.json').read_text());p=json.loads((root/'plan.json').read_text())
     if hashlib.sha256((root/'plan.json').read_bytes()).hexdigest()!=m['plan_sha256'] or p['role']!='public_train_intake_only':raise ValueError('Frozen public development satellite plan required')
     s=p['pairs'][index];lookup={r['member']:r for r in m['members']};rows={r['name'].rsplit('_',1)[1]:r for r in s['sentinel_members']}
+    proof=json.loads(Path(audit_receipt).read_text());opaque=hashlib.sha256(s['image_id'].encode()).hexdigest()[:16]
+    approved=[r for r in proof['pairs'] if r['pair_opaque_id']==opaque and r['metadata_center_binding_admitted']]
+    if not proof['passed'] or proof['plan_sha256']!=m['plan_sha256'] or len(approved)!=1:raise ValueError('Pair quarantined or independent admission receipt differs')
     data=np.load(verified_object(root,lookup[rows['data.npy']['name']]),allow_pickle=False,mmap_mode='r')
     masks=np.load(verified_object(root,lookup[rows['masks.npy']['name']]),allow_pickle=False,mmap_mode='r')
     products=verified_object(root,lookup[rows['products.txt']['name']]).read_text().splitlines()

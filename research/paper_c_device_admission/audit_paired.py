@@ -32,12 +32,15 @@ def manual_npy(path):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--paired',required=True);p.add_argument('--intake',required=True);p.add_argument('--metadata',required=True);p.add_argument('--out',required=True);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--paired',required=True);p.add_argument('--intake',required=True);p.add_argument('--metadata',required=True);p.add_argument('--aerial-audit',required=True);p.add_argument('--out',required=True);a=p.parse_args()
     repo=Path(__file__).resolve().parents[2];out=Path(a.out).resolve()
     if os.name!='posix' or out.is_relative_to(repo) or out.exists():raise ValueError('New external Linux receipt required')
     if subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()!=a.expected_commit or subprocess.check_output(['git','status','--porcelain'],cwd=repo).strip():raise ValueError('Clean expected audit commit required')
     root=Path(a.paired);parent=Path(a.intake);meta=Path(a.metadata);m=json.loads((root/'manifest.json').read_text());p=json.loads((root/'plan.json').read_text());original=json.loads((parent/'plan.json').read_text());matching=json.loads((meta/'centroid-matching.json').read_text())
     if sha(root/'plan.json')!=m['plan_sha256'] or sha(parent/'plan.json')!=p['parent_plan_sha256'] or sha(meta/'centroid-matching.json')!=p['matching_sha256']:raise ValueError('Paired plan or source identities differ')
+    aa=json.loads(Path(a.aerial_audit).read_text())
+    if not aa['passed'] or aa['plan_sha256']!=sha(parent/'plan.json'):raise ValueError('Independent aerial admission receipt required')
+    admission={x['sample_opaque_id']:x['metadata_center_binding_admitted'] for x in aa['samples']}
     if m['combined_parent_network_bytes']>m['shared_budget_bytes'] or len(p['pairs'])!=2:raise ValueError('Shared byte/pair budget differs')
     members={x['member']:x for x in m['members']};results=[]
     for s in p['pairs']:
@@ -66,6 +69,13 @@ def main():
         aerial_date=dt.date.fromisoformat(s['aerial_date']);delta=min(abs((d-aerial_date).days) for d in dates)
         results.append({'pair_opaque_id':hashlib.sha256(s['image_id'].encode()).hexdigest()[:16],'camera_group_prefix':s['camera_group_prefix'],'camera_raw':s['camera_raw'],'sentinel_platform_ids':sorted(platforms),'sequence_shape':list(data.shape),'crop_shape':list(crop.shape),'dtype':str(data.dtype),'native_released_spectral_columns':10,'acquisitions':len(data),'earliest_product':min(dates).isoformat(),'latest_product':max(dates).isoformat(),'nearest_satellite_to_aerial_days':delta,'mask_range':[int(mask.min()),int(mask.max())],'manual_npy_vs_numpy_exact':True,'released_matching_center_verified':True,'same_instant_acquisition':False,'raw_product_files_sha256':sha(files['products.txt']),'role':'public_train_intake_only'})
     result={'schema':'paper_c_independent_real_paired_intake_audit_v1','auditor':a.expected_commit,'producer':m['producer'],'passed':True,'plan_sha256':m['plan_sha256'],'pairs':results,'classification_intake_gate':'passed; real aerial/Sentinel-2 multispectral development pairs available through an isolated reader','internal_passband_gate':'closed; no native per-camera response binding or same-material controlled internal-band intervention','spatial_correspondence_limit':'Author matching-center dictionary verified. NPY products omit a geotransform, so independent physical registration accuracy and pixelwise label resampling are not certified.','shared_network_bytes':m['combined_parent_network_bytes'],'new_model_calls':0,'new_optimizer_updates':0,'test_or_query_payload_reads':0,'independent_confirmation':False}
+    for row in results:
+        row['metadata_center_binding_admitted']=admission[row['pair_opaque_id']]
+        row['quarantine_reason']=None if row['metadata_center_binding_admitted'] else 'Paired aerial metadata center failed the frozen one-pixel geometric gate; no independent same-location claim.'
+    result['qualified_pairs']=sum(x['metadata_center_binding_admitted'] for x in results)
+    result['quarantined_pairs']=len(results)-result['qualified_pairs']
+    result['classification_intake_gate']='partial; only pairs whose corresponding aerial passed the independent metadata-center gate are admitted'
+    result['aerial_audit_sha256']=sha(a.aerial_audit)
     out.write_text(json.dumps(result,indent=2));print(json.dumps(result))
 
 

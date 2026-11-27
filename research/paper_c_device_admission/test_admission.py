@@ -1,6 +1,11 @@
 """Negative role gates and independently decoded synthetic TIFF bytes."""
 import io
+import hashlib
+import json
+from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import tifffile
@@ -8,6 +13,9 @@ from PIL import Image
 
 from audit_intake import manual_tiff,check_roles
 from catalog import train_member
+from fetch_metadata import fetch
+from public_reader import read_aerial
+import requests
 
 
 class AdmissionGates(unittest.TestCase):
@@ -30,6 +38,17 @@ class AdmissionGates(unittest.TestCase):
         a=np.random.default_rng(17).integers(0,256,size=(180,240),dtype=np.uint8)
         f=io.BytesIO();Image.fromarray(a).save(f,format='TIFF',compression='tiff_lzw')
         _,decoded=manual_tiff(f.getvalue());self.assertTrue(np.array_equal(decoded[:,:,0],a))
+    def test_quarantined_metadata_binding_rejected_before_payload_open(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);plan={'role':'public_train_intake_only','samples':[{'image_id':'IMG_synthetic'}]};raw=json.dumps(plan).encode();(root/'plan.json').write_bytes(raw);digest=hashlib.sha256(raw).hexdigest()
+            (root/'manifest.json').write_text(json.dumps({'plan_sha256':digest,'members':[]}));receipt=root/'audit.json';receipt.write_text(json.dumps({'passed':True,'plan_sha256':digest,'samples':[{'sample_opaque_id':hashlib.sha256(b'IMG_synthetic').hexdigest()[:16],'metadata_center_binding_admitted':False}]}))
+            with self.assertRaisesRegex(ValueError,'quarantined'):read_aerial(root,0,audit_receipt=receipt)
+    def test_failed_fetch_never_reports_signed_redirect_queries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with patch('fetch_metadata.requests.get',side_effect=requests.HTTPError('https://example.invalid/?signed=synthetic-secret')):
+                with self.assertRaises(RuntimeError) as caught:fetch('https://example.invalid/path?signature=synthetic-secret',root,'metadata.json',1024)
+            self.assertNotIn('synthetic-secret',str(caught.exception));receipt=(root/'metadata.json.failure.json').read_text();self.assertNotIn('synthetic-secret',receipt);self.assertEqual(json.loads(receipt)['partial_file_bytes'],0)
 
 
 if __name__=='__main__':unittest.main()
