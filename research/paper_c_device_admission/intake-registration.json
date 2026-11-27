@@ -12,6 +12,7 @@
   "new_model_calls":0,
   "public_train_label_sample_authorization_scope":"intake/shape/taxonomy validation only, no training/effectiveness evaluation",
   "independent_confirmation":false,
+  "proposed_classification_mapping":{"track":"unambiguous_raw1to12_only","raw_ids":[1,2,3,4,5,6,7,8,9,10,11,12],"mapped_ids":"0..11","ignore_raw_ids":[13,14,15,16,17,18,19],"ignore_value":-1,"selected_without_label_content":true,"raw_masks_preserved":true,"scope":"Future separately registered classification track only; not a new training authorization. Raw16/17 name conflict unresolved; original13-class folding is a distinct benchmark track."},
   "effective_work_seconds":null,
   "notes":["Separate operational transfer from scientific work; do not count unattended elapsed as effective work.","Public metadata may describe all splits; only official training-domain pixel members may subsequently be read.","Original 2023 FLAIR and later HF combined release have different rosters. Pin actual version; never pool them silently.","The official HF card's nominal B6=470nm conflicts with MSI conventions; retain the raw source statement pending primary ESA verification, never silently synthesize wavelengths."]
 }

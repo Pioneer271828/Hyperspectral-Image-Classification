@@ -21,20 +21,25 @@ def public_url(url):
 
 def fetch(url,root,name,limit):
     final=root/name;pending=root/(name+'.incoming')
-    if final.exists() or pending.exists():raise ValueError('New file identity required; earlier attempts retained')
+    failure=root/(name+'.failure.json')
+    if final.exists() or pending.exists() or failure.exists():raise ValueError('New file identity required; earlier attempts retained')
     begin=perf_counter();h=hashlib.sha256();size=0
-    with requests.get(url,stream=True,timeout=(15,60),headers={'Accept-Encoding':'identity','User-Agent':'Research-metadata-intake/1'}) as response:
-        response.raise_for_status()
-        if int(response.headers.get('Content-Length','0'))>limit:raise ValueError('Declared source exceeds per-file cap')
-        with pending.open('xb') as f:
-            for raw in response.iter_content(65536):
-                size+=len(raw)
-                if size>limit:raise ValueError('Streaming source exceeds cap; incoming retained')
-                f.write(raw);h.update(raw)
-            f.flush();os.fsync(f.fileno())
-        receipt={'url':public_url(url),'final_url':public_url(response.url),'bytes':size,'sha256':h.hexdigest(),
-            'etag':response.headers.get('ETag'),'content_type':response.headers.get('Content-Type'),
-            'last_modified':response.headers.get('Last-Modified'),'elapsed_seconds':perf_counter()-begin}
+    try:
+        with requests.get(url,stream=True,timeout=(15,60),headers={'Accept-Encoding':'identity','User-Agent':'Research-metadata-intake/1'}) as response:
+            response.raise_for_status()
+            if int(response.headers.get('Content-Length','0'))>limit:raise ValueError('Declared source exceeds per-file cap')
+            with pending.open('xb') as f:
+                for raw in response.iter_content(65536):
+                    size+=len(raw)
+                    if size>limit:raise ValueError('Streaming source exceeds cap; incoming retained')
+                    f.write(raw);h.update(raw)
+                f.flush();os.fsync(f.fileno())
+            receipt={'url':public_url(url),'final_url':public_url(response.url),'bytes':size,'sha256':h.hexdigest(),
+                'etag':response.headers.get('ETag'),'content_type':response.headers.get('Content-Type'),
+                'last_modified':response.headers.get('Last-Modified'),'elapsed_seconds':perf_counter()-begin}
+    except Exception as err:
+        failure.write_text(json.dumps({'url':public_url(url),'error_type':type(err).__name__,'partial_file_bytes':pending.stat().st_size if pending.exists() else 0,'elapsed_seconds':perf_counter()-begin,'signed_redirect_queries_recorded':False},indent=2))
+        raise RuntimeError(type(err).__name__+': bounded metadata request failed; see sanitized failure receipt') from None
     pending.rename(final);return receipt
 
 
@@ -60,7 +65,7 @@ def main():
             used+=rows[name]['bytes'];print(json.dumps({'file':name,'bytes':rows[name]['bytes'],'sha256':rows[name]['sha256']}),flush=True)
     finally:
         manifest={'schema':'paper_c_official_metadata_manifest_v1','source_commit':a.expected_commit,'dataset_repository':REPO,
-            'dataset_revision':revision,'files':rows,'used_bytes':used,'public_train_pixel_reads':0,'test_pixel_or_label_reads':0,
+            'dataset_revision':revision,'files':rows,'successful_bytes':used,'retained_partial_bytes':sum(x.stat().st_size for x in out.glob('*.incoming')),'public_train_pixel_reads':0,'test_pixel_or_label_reads':0,
             'new_optimizer_updates':0,'new_neural_calls':0,'label_decoder_imported':False,
             'license_scope':'HF official card Etalab2 data; code license must be checked separately; paper license is not a data grant.',
             'scope':'Official text/metadata only, no archive or pixel payload. Signed redirect query parameters are not persisted.'}
