@@ -22,7 +22,7 @@ def main():
         remaining=page.insert_textbox(fitz.Rect(rect),content,fontname='decisionCJK',fontsize=size,lineheight=1.45,color=color)
         require(remaining>=0,'Decision text overflow')
     page.draw_rect(fitz.Rect(42,36,553,91),fill=navy,color=navy)
-    text((54,45,541,72),'存储决策：保留逐步恢复，先解决容量',16,(1,1,1))
+    text((54,45,541,74),'存储决策：保留逐步恢复，先解决容量',16,(1,1,1))
     text((54,72,541,88),'C14 / Issue 539   -   现有登记不改，真实训练仍暂停',8.5,(.85,.91,.96))
     text((44,106,551,169),'建议：不替换现有产物，也不降低留存频率。无损分块/差分备选已完成小规模恢复测试；其空间收益不足以解除当前LXC阻塞。未来如采用，须另立版本和预算。',10.4)
     text((44,179,551,214),'测量范围：C13已生成的60个合成状态，原始135.36MB；180个原文件哈希不变。整文件去重节省为0。未运行真实训练或query评分。',9.3)
