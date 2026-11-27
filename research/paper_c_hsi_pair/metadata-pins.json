@@ -11,5 +11,9 @@
   ],
   "raw_public_HTML_scope":"Private provenance evidence only. Never publish full HTML or its embedded expiring signed links/session form values; export sanitized factual summaries and hashes.",
   "metadata_retrieval_route":"Public HTTPS on workstation under C7 authorization, then native SCP to rmvision; parsing/verification code executes on rmvision.",
-  "private_provenance_archive":{"bytes":35045,"sha256":"288639b47f44f233a568ce11160aeb6771ea0bb8d92770a9f415089b5306f613","metadata_files":10,"new_image_GT_weight_or_query_files":0}
+  "private_provenance_archive":{"bytes":35045,"sha256":"288639b47f44f233a568ce11160aeb6771ea0bb8d92770a9f415089b5306f613","metadata_files":10,"new_image_GT_weight_or_query_files":0},
+  "existing_rmvision_legacy_metadata":[
+    {"file":"legacy01/xuzhou-original-task01.json","bytes":4194,"sha256":"d02dc5415e945ed0df4d14839b16856b5dec013409b369ec244cae78a4b5a02c","role":"Original G3 image/GT fingerprints and per-raw-ID aggregate histogram, not new GT decoding."},
+    {"file":"legacy01/xuzhou-original-coverage01.json","bytes":19207,"sha256":"78624b5f08fef0f7b9beb5e3c746063cf9008a64334a91c9532992c564b7c2ea","role":"Previously published full-label-count audit. Its historical exposure is disclosed; do not open any old GT/query array to repeat it."}
+  ]
 }
