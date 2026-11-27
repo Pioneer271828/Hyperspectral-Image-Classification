@@ -1,0 +1,17 @@
+{
+  "schema":"paper_c_public_intake_registration_v1",
+  "issue":521,
+  "first_clock":"2026-11-26T17:47:09Z",
+  "client_date":"2026-11-27",
+  "initial_metadata_budget_bytes":67108864,
+  "future_train_sample_budget_bytes":268435456,
+  "allowed_pixel_role":"official public training domains only; metadata-selected samples before label read",
+  "forbidden_payload_roles":["flair#1-test","flair#2-test","test","query","sealed"],
+  "allowed_initial_metadata":["dataset API","dataset README","auxiliary camera/acquisition metadata","public centroid matching dictionary","upstream reader text for format inspection"],
+  "new_training_updates":0,
+  "new_model_calls":0,
+  "public_train_label_sample_authorization_scope":"intake/shape/taxonomy validation only, no training/effectiveness evaluation",
+  "independent_confirmation":false,
+  "effective_work_seconds":null,
+  "notes":["Separate operational transfer from scientific work; do not count unattended elapsed as effective work.","Public metadata may describe all splits; only official training-domain pixel members may subsequently be read.","Original 2023 FLAIR and later HF combined release have different rosters. Pin actual version; never pool them silently.","The official HF card's nominal B6=470nm conflicts with MSI conventions; retain the raw source statement pending primary ESA verification, never silently synthesize wavelengths."]
+}
