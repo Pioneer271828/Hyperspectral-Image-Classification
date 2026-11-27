@@ -11,7 +11,7 @@ import unittest
 import numpy as np
 import torch
 
-from .fixture import make
+from .fixture import make, future_shape
 from .protocol import METHODS, admit, sha, OPTIMIZER
 from .tasks import Task, dependencies
 from .run import ROOT, execute, paired_plan, seed_all
@@ -95,6 +95,18 @@ class Protocol(unittest.TestCase):
         self.change(lambda v: v['scenes']['toy']['roles'].update(query={'path': '/forbidden/query.npz'}))
         with self.assertRaisesRegex(ValueError, 'Only released'): admit(self.manifest, synthetic=True)
 
+    def test_generated_future_shape_and_bound_review(self):
+        path=future_shape(self.root/'future-shape'); admitted=admit(path)
+        self.assertEqual(admitted['kind'],'synthetic_future_shape')
+        self.assertEqual(sum(r['points'] for r in admitted['ledger']),400)
+        value=json.loads(path.read_text());value['scenes']['xuzhou']['geolocation_error_pixels']=2
+        path.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError,'review scope'):admit(path)
+
+    def test_real_observation_cannot_use_synthetic_authorization(self):
+        self.change(lambda v:v.update(origin='real_observation'))
+        with self.assertRaisesRegex(ValueError,'synthetic authorization'):admit(self.manifest,synthetic=True)
+
 
 class Models(Protocol):
     # Inherit protocol tests intentionally? No: unittest inheritance would repeat
@@ -104,6 +116,8 @@ class Models(Protocol):
     test_parent_buffer_not_center_distance = None
     test_constant_training_band_is_rejected = None
     test_query_tensor_is_not_a_supported_input = None
+    test_generated_future_shape_and_bound_review = None
+    test_real_observation_cannot_use_synthetic_authorization = None
 
     def task(self, method):
         data = admit(self.manifest, synthetic=True)['data']['toy']

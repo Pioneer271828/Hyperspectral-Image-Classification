@@ -156,6 +156,7 @@ def main():
         value = prepare(a, admitted, adapter, author); new_json(a.out, value)
         print(json.dumps({'registration_sha256': sha(a.out), 'updates': value['updates'],
                           'state_bytes_upper_bound': value['state_bytes_upper_bound']})); return
+    require(admitted['kind'] != 'synthetic_future_shape', 'Future-shape fixture is for admission/parameter planning only; no fitting')
     require(a.registration and sha(a.registration) == a.registration_sha256, 'Explicit frozen registration hash required')
     reg = json.loads(Path(a.registration).read_text())
     require(a.budget_release_sha256 == a.registration_sha256, 'Explicit frozen budget release required')

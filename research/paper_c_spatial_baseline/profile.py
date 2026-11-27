@@ -19,7 +19,7 @@ def main():
     adapter, author = dependencies(ROOT, a.native, a.author)
     out = Path(a.out); out.mkdir(exist_ok=False); rows = []
     rng = np.random.default_rng(90413)
-    for scene, bands, classes in [('paviaU',103,9), ('xuzhou',213,9), ('whu-honghu',128,22)]:
+    for scene, bands, classes in [('paviaU',103,9), ('xuzhou',436,9), ('whu-honghu',270,22)]:
         data = {'classes': classes, 'bands': bands, 'wavelengths': np.linspace(420,900,bands).astype('float32'), 'roles': {}}
         for role in ['train','devval']:
             data['roles'][role] = {'spectra': rng.uniform(.1,1.1,(classes,7,7,bands)).astype('float32'),

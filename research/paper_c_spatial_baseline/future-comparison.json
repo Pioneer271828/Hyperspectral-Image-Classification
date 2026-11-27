@@ -9,6 +9,7 @@
   "methods": ["none", "x_residual", "capacity_control", "dsnet"],
   "model_seeds": [64, 512, 2048],
   "scene_classes": {"paviaU": 9, "xuzhou": 9, "whu-honghu": 22},
+  "native_bands": {"paviaU":103,"xuzhou":436,"whu-honghu":270},
   "classes_are_native_not_cross_scene_semantic_equivalences": true,
   "per_scene_per_class": {"train_centers": 5, "development_centers": 5},
   "total_unique_released_center_budget": 400,

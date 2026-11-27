@@ -9,6 +9,7 @@ import numpy as np
 METHODS = ('none', 'x_residual', 'capacity_control', 'dsnet')
 SEEDS = (64, 512, 2048)
 CLASSES = {'paviaU': 9, 'xuzhou': 9, 'whu-honghu': 22}
+BANDS = {'paviaU': 103, 'xuzhou': 436, 'whu-honghu': 270}
 NATIVE = '395caef57fba8ab6a09223538f748179dab552f2'
 AUTHOR = 'e910795073b52373ce0771ac85139a17f250b236'
 LICENSE = '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986'
@@ -64,6 +65,8 @@ def admit(path, *, synthetic=False):
     path = Path(path).resolve(); value = json.loads(path.read_text())
     require(value.get('schema') == 'c13_common_patch_roles_v1', 'Unknown role schema')
     require(value.get('kind') == ('synthetic' if synthetic else 'future_development'), 'Synthetic/real role mismatch')
+    require(value.get('origin') in ['generated_synthetic','real_observation'], 'Input origin must be explicit')
+    require(not synthetic or value['origin']=='generated_synthetic', 'Real observation cannot use synthetic authorization')
     require(value.get('confirmation_access') is False and value.get('query_access') is False, 'Query/confirmation access forbidden')
     require(set(value.get('scenes', {})) == ({'toy'} if synthetic else set(CLASSES)), 'Frozen scene set differs')
     protected = {str(path): sha(path)}
@@ -83,7 +86,7 @@ def admit(path, *, synthetic=False):
     for scene, s in value['scenes'].items():
         c = s['classes']; bands = s['bands']; groups = s['groups']
         require(type(c) is int and c >= 2 and type(bands) is int and bands >= 4, 'Invalid dimensions')
-        require(synthetic or c == CLASSES[scene], 'Native taxonomy differs')
+        require(synthetic or (c == CLASSES[scene] and bands == BANDS[scene]), 'Native taxonomy/band count differs')
         require(set(s['roles']) == {'train', 'devval'}, 'Only released train/devval roles accepted')
         require(s['normalizer'] == 'train_patch_minmax_no_clamp_v1', 'Unregistered normalization')
         wl = np.asarray(s['wavelengths_nm'], dtype=np.float32)
@@ -143,4 +146,5 @@ def admit(path, *, synthetic=False):
         result[scene] = {'classes': c, 'bands': bands, 'wavelengths': wl, 'roles': data,
                          'normalizer_sha256': hashlib.sha256(lo.tobytes()+hi.tobytes()).hexdigest()}
     return {'data': result, 'protected': protected, 'ledger': ledger,
-            'manifest_sha256': protected[str(path)], 'kind': value['kind']}
+            'manifest_sha256': protected[str(path)],
+            'kind': 'synthetic_future_shape' if not synthetic and value['origin']=='generated_synthetic' else value['kind']}

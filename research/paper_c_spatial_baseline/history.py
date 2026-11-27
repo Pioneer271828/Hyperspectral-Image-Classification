@@ -17,7 +17,8 @@ def main():
     require(ap['registration_sha256']==sources['a_registration'],'Historical A registration binding differs')
     totals={'paviaU':42125,'xuzhou':67837,'whu-honghu':380865}; s2_heads=0
     for row in s2['rows']:
-        require(row['precision'] in ['fp32','fp64'] and set(row['scores'])=={'fused','graph','cnn'},'S2 precision/head semantics differ')
+        heads={'fused','graph','cnn'} if row['supervision']=='legacy_three_heads' else {'fused'}
+        require(row['precision'] in ['fp32','fp64'] and set(row['scores'])==heads,'S2 precision/head semantics differ')
         for name, metric in row['scores'].items():
             cm=np.asarray(metric['confusion'],dtype=np.int64)
             require((cm>=0).all() and cm.sum()==totals[row['dataset']],'S2 frozen denominator differs')
