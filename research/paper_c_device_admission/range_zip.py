@@ -1,5 +1,6 @@
 """Bounded seekable HTTP Range reader; never silently download a full archive."""
 import io
+import hashlib
 import re
 
 import requests
@@ -31,7 +32,7 @@ class RangeFile(io.RawIOBase):
             if not match or tuple(map(int,match.groups()))!=(start,end,self.size) or r.headers.get('ETag')!=self.etag:raise ValueError('Range/source identity differs')
             data=r.raw.read(n+1)
             if len(data)!=n:raise ValueError('Range byte count differs')
-        self.received+=len(data);self.offset+=len(data);self.ranges.append({'start':start,'end':end,'bytes':len(data)})
+        self.received+=len(data);self.offset+=len(data);self.ranges.append({'start':start,'end':end,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
         return data
 
 
