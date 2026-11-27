@@ -1,5 +1,8 @@
 # Unlabeled identifiability and recovery
 
+Current findings, exact support sizes, admission failures and recovery limitations
+are in [findings.md](findings.md). No native device evaluation has been admitted.
+
 Issue519; sole writer C. Branch `codex/paper-c-identifiability-20261126`, base
 `c576019372a5ed7d0c91e3cc808adb8119e3b56f`. Only this directory changes.
 The completed C3 experiments and their frozen producers are unchanged.

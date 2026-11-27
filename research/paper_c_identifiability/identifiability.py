@@ -41,6 +41,8 @@ def support(requests,family):
         rows.append({'cohort_id':token([family,key])[:20],'n':n,'k':k,'assignments':str(ways),
                      'alias_quotient_assignments':str(unique),'distinct_inputs':len(aliases)})
     return {'family':family,'cohorts':rows,'assignments':str(total),'alias_quotient_assignments':str(distinct),
+            'workload_shape_verified':all(r['shape'] is not None for r in requests),
+            'missing_shape_limit':'For old shape_only counts this is an unstratified numerical benchmark, not verified shape matching. Legacy saturation survives every shape refinement.' if any(r['shape'] is None for r in requests) else None,
             'multiple_assignments':total>1,'feature_varies_within_randomized_strata':variation,
             'limit':'Uniform legal allocation is a hypothetical allocation benchmark, not a randomized acquisition or causal device experiment.'}
 
