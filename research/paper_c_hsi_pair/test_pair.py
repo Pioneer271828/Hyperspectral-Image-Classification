@@ -56,6 +56,11 @@ class PairGates(unittest.TestCase):
     def test_same_acquisition_cannot_be_both_devices(self):
         with patch('pair_inputs.check_source',side_effect=AssertionError('Source opened')):
             with self.assertRaisesRegex(ValueError,'independent acquisitions'):PairInputs(expected_commit=None,run_root=None,inputs=None,plan_file=None,direction=('xuzhou','xuzhou'))
+    def test_class_legend_commitment_survives_json_round_trip(self):
+        value={'classes':{1:'one',2:'two',10:'ten',22:'twenty-two'}}
+        self.assertEqual(canonical(value),canonical(json.loads(json.dumps(value))))
+    def test_ambiguous_numeric_string_class_keys_fail_closed(self):
+        with self.assertRaisesRegex(ValueError,'Ambiguous'):canonical({1:'a','1':'b'})
 
 
 if __name__=='__main__':unittest.main()

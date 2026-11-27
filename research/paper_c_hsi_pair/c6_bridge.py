@@ -4,11 +4,26 @@ import sys
 
 C6=Path(__file__).resolve().parent.parent/'paper_c_hsi_admission'
 sys.path.insert(0,str(C6))
-from bank_reader import ReleasedBank,canonical,sha,pinned_json
+from bank_reader import ReleasedBank,canonical as _canonical,sha,pinned_json
 from batch import patch_batch
 from inspect_bank import guard
 
 BASE='ed57e389fd83ca9693a973f97168106ca8534074'
+
+
+def canonical(value):
+    # JSON object keys are strings. Normalize before sorting so an integer-keyed
+    # class legend has the same commitment before and after a JSON round trip.
+    def normalized(item):
+        if isinstance(item,dict):
+            result={}
+            for key,child in item.items():
+                if type(key) not in (str,int) or str(key) in result:raise ValueError('Ambiguous JSON object key')
+                result[str(key)]=normalized(child)
+            return result
+        if isinstance(item,(list,tuple)):return [normalized(child) for child in item]
+        return item
+    return _canonical(normalized(value))
 
 
 def check_source(expected):
