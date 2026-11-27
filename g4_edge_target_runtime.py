@@ -11,7 +11,7 @@ import sys
 import torch
 
 from g4_edge_target import (CALIBRATION, CALIBRATION_KEY, CONDITIONS, KEY as BINDING_KEY,
-    POLICY as INITIALIZATION_POLICY, PREFIXES, calibrate, configuration, initialize,
+    POLICY as INITIALIZATION_POLICY, PREFIXES, calibrate, configuration, initialize, load_edge_model_checkpoint,
     verify_calibrated, verify_initialization_binding)
 from g4_support_context import check_files, read
 from g4_support_target import (NoneSupportTargetRuntime, prepare as support_prepare,
@@ -20,7 +20,6 @@ from joint_baseline import NAMES
 from joint_training import run_training
 from loadData.dataset_registry import DATASETS, file_hash
 from model.interaction_config import InteractionConfig
-from model.checkpoint_io import load_model_checkpoint
 from model.research_config import ResearchConfig, digest
 from research_runtime import code_snapshot, require_frozen_code, tensor_hash
 from target_initialization import METHODS, state_id
@@ -127,17 +126,28 @@ class EdgeTargetRuntime(NoneSupportTargetRuntime):
 
     def load_selected(self, path, items, raw_source_path, *, device="cpu"):
         self.validate_inputs(items)
-        model = load_model_checkpoint(path, device=device)
+        model = load_edge_model_checkpoint(path, device=device)
         if not hasattr(self, "interaction_binding"):
             self.build_model(ResearchConfig.from_dict(self.settings["config"]),
                              {self.settings["target"]: DATASETS[self.settings["target"]][2]})
         meta = model.training_config
+        binding = self.edge_binding
+        exported = model.export_config()
+        kwargs = exported["backbone_kwargs"]
+        if "edge_alignment_mode" in kwargs and kwargs["edge_alignment_mode"] is None:
+            # The first message campaign exported this inert constructor
+            # default with its models. Rebind only this proven metadata delta.
+            original_sha = digest(exported)
+            kwargs.pop("edge_alignment_mode")
+            if digest(exported) != binding["architecture_sha256"]:
+                raise ValueError("The legacy edge architecture differs beyond its inert alignment field")
+            binding = {**binding, "architecture_sha256": original_sha}
         self.validate(meta["joint_runtime"])
         if ({k: v for k, v in meta["joint_runtime"].items() if k not in ("executed_optimizer_steps", "selected_step")} != self.settings
                 or meta.get("research_config") != self.settings["config"]
                 or meta.get("target_initialization") != self.initialization
                 or meta.get("support_context_binding") != self.settings["support_context_binding"]
-                or meta.get(KEY) != self.settings[KEY] or meta.get(BINDING_KEY) != self.edge_binding):
+                or meta.get(KEY) != self.settings[KEY] or meta.get(BINDING_KEY) != binding):
             raise ValueError("Selected M6/M7 source/context/condition/configuration differs")
         receipt = meta[CALIBRATION_KEY]
         if file_hash(raw_source_path) != receipt["raw_source_file_sha256"]:
@@ -150,7 +160,7 @@ class EdgeTargetRuntime(NoneSupportTargetRuntime):
             raise ValueError("Nested original calibration receipt identity differs")
         model.training_config["target_bn_calibration"] = copy.deepcopy(legacy)
         verify_calibrated(model, observation(model, items[self.settings["target"]]),
-                          expected_binding=self.edge_binding, source_state_sha256=source)
+                          expected_binding=binding, source_state_sha256=source)
         return model
 
 

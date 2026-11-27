@@ -5,6 +5,7 @@ target optimizer, campaign, query release or common-model changes.
 """
 import copy
 from dataclasses import asdict, replace
+from types import MethodType
 
 import torch
 
@@ -12,8 +13,10 @@ from joint_baseline import forward as legacy_forward
 from loadData.dataset_registry import DATASETS, file_hash
 from m4_ordered_source import OrderedValidation
 from model.VCASAHGCN import MultiDatasetVCASAHGCN
-from model.checkpoint_io import load_model_checkpoint
+from model.checkpoint_io import load_model_checkpoint, read_checkpoint_metadata
+from model.cross_branch_interaction import BidirectionalSelectiveInteraction
 from model.interaction_config import InteractionConfig
+from model.region_pixel_alignment import RegionPixelAlignment
 from model.research_config import digest
 from none_full_transfer import initialize_none_full_target
 from target_bn_calibration import (CONTEXT, GRAPH_POLICY, POLICY as BN_POLICY, calibrate_target,
@@ -26,20 +29,61 @@ KEY = "edge_target_binding"
 CALIBRATION_KEY = "edge_target_calibration"
 CONDITIONS = ("none", "gated", "graph", "gated_graph", "joint", "gated_joint",
               "add_joint", "global_joint")
+RESEARCH_CONTROLS = ("message_global_joint", "capacity_matched_graph", "gated_matched_joint")
 PREFIXES = ("backbone.interaction.", "backbone.edge_updater.")
 
 
+def _global_message_exchange(self, pixels, regions, assignment, _edge_alignment, **kwargs):
+    return BidirectionalSelectiveInteraction.forward_aligned(
+        self, pixels, regions, assignment, RegionPixelAlignment("global"), **kwargs)
+
+
+class RegionalEdgeGlobalMessageTarget(MultiDatasetVCASAHGCN):
+    """Keep the stock stage schedule and select a separate direct-message alignment."""
+    def __init__(self, class_counts, *, edge_alignment_mode, **kwargs):
+        if (edge_alignment_mode != "region" or kwargs.get("alignment_mode") != "global"
+                or kwargs.get("graph_update_mode") != "joint" or kwargs.get("interaction_mode") != "gated"
+                or kwargs.get("interaction_direction") != "both" or kwargs.get("graph_route") is not None):
+            raise ValueError("Expected global messages and regional joint edge alignment")
+        super().__init__(class_counts, **kwargs)
+        self.backbone_kwargs["edge_alignment_mode"] = edge_alignment_mode
+        self.backbone.alignment = RegionPixelAlignment("region")
+        messages = self.backbone.interaction
+        messages.forward_aligned = MethodType(_global_message_exchange, messages)
+
+
+def load_edge_model_checkpoint(path, *, device="cpu"):
+    metadata = read_checkpoint_metadata(path)
+    if metadata is None or "edge_alignment_mode" not in metadata["backbone_kwargs"]:
+        return load_model_checkpoint(path, device=device)
+    kwargs = dict(metadata["backbone_kwargs"])
+    condition = metadata.get("training_config", {}).get(KEY, {}).get("condition")
+    if kwargs["edge_alignment_mode"] is None and condition in ("gated_joint", "capacity_matched_graph"):
+        kwargs.pop("edge_alignment_mode")
+        model = MultiDatasetVCASAHGCN(metadata["class_counts"], **kwargs).to(device)
+        model.backbone_kwargs["edge_alignment_mode"] = None
+    elif kwargs["edge_alignment_mode"] == "region" and condition == "message_global_joint":
+        model = RegionalEdgeGlobalMessageTarget(metadata["class_counts"], **kwargs).to(device)
+    else:
+        raise ValueError("Unrecognized historical or separated joint edge sidecar")
+    model.load_state_dict(torch.load(path, map_location=device, weights_only=True), strict=True)
+    model.training_config = metadata["training_config"]
+    return model.eval()
+
+
 def configuration(condition):
-    if condition not in CONDITIONS:
-        raise ValueError("Explicit existing M7 core-factor condition required")
+    if condition not in (*CONDITIONS, *RESEARCH_CONTROLS):
+        raise ValueError("Explicit M7 core-factor condition required")
     # I7/I9 reuse the existing operators. All six earlier configurations retain
     # their exact values. Global alignment also supplies the joint edge input;
     # graph pooling/broadcasting itself still uses the original Q.
+    global_messages = condition in ("global_joint", "message_global_joint")
     return asdict(replace(InteractionConfig(),
-        alignment_mode="global" if condition == "global_joint" else "region",
+        alignment_mode="global" if global_messages else "region",
         interaction_mode="add" if condition == "add_joint" else
-                         "gated" if condition.startswith("gated") or condition == "global_joint" else "none",
-        graph_update_mode="graph" if condition.endswith("graph") else "joint" if condition.endswith("joint") else "none"))
+                         "gated" if condition.startswith("gated") or global_messages else "none",
+        graph_update_mode="graph" if condition.endswith("graph") else "joint" if condition.endswith("joint") else "none",
+        graph_update_dim=65 if condition == "capacity_matched_graph" else 32))
 
 def operator_signature(module):
     """Bind non-tensor message/edge semantics absent from a tensor hash."""
@@ -66,17 +110,25 @@ def initialize(target, method, condition, *, model_seed, head_seed, source_spec=
         model = base
     else:
         kwargs = {**base.export_config()["backbone_kwargs"], **config}
+        factory = MultiDatasetVCASAHGCN
+        if condition == "message_global_joint":
+            factory = RegionalEdgeGlobalMessageTarget
+            kwargs["edge_alignment_mode"] = "region"
         # Constructor runs on CPU; discarded common parameters cannot consume
         # caller RNG. Original message and edge initializations are retained.
         with torch.random.fork_rng(devices=[]):
             torch.random.default_generator.manual_seed(model_seed)
-            model = MultiDatasetVCASAHGCN({target: DATASETS[target][2]}, **kwargs).to(device)
+            model = factory({target: DATASETS[target][2]}, **kwargs).to(device)
         original, state = base.state_dict(), model.state_dict()
         if (not set(original) <= set(state) or any(not n.startswith(PREFIXES) for n in set(state) - set(original))
                 or any(state[n].shape != v.shape or state[n].dtype != v.dtype for n, v in original.items())):
             raise ValueError("Only new M7 target tensors may extend the unchanged base state")
         state.update({n: v.detach().clone() for n, v in original.items()})
         model.load_state_dict(state, strict=True)
+        if condition == "gated_matched_joint":
+            canonical, _ = initialize(target, method, "joint", model_seed=model_seed,
+                                      head_seed=head_seed, source_spec=source_spec, device=device)
+            model.backbone.edge_updater.load_state_dict(canonical.backbone.edge_updater.state_dict(), strict=True)
     parameters = {n: p.numel() for n, p in model.named_parameters() if n.startswith(PREFIXES)}
     binding = {"policy": POLICY, "target": target, "method": method, "condition": condition,
         "model_seed": model_seed, "head_seed": head_seed, "interaction_config": config,
@@ -94,12 +146,16 @@ def initialize(target, method, condition, *, model_seed, head_seed, source_spec=
 
 def verify_initialization_binding(model, expected):
     backbone = model.backbone
+    separated = isinstance(expected, dict) and expected.get("condition") == "message_global_joint"
+    exchange = getattr(backbone.interaction, "forward_aligned", None)
     if (not isinstance(expected, dict) or expected.get("policy") != POLICY
             or model.training_config.get(KEY) != expected
             or model.training_config.get("target_initialization") != expected["base_initialization"]
             or expected["interaction_config"] != configuration(expected["condition"])
             or asdict(backbone.interaction_config) != expected["interaction_config"]
-            or backbone.alignment.mode != expected["interaction_config"]["alignment_mode"]
+            or backbone.alignment.mode != ("region" if separated else expected["interaction_config"]["alignment_mode"])
+            or separated != isinstance(model, RegionalEdgeGlobalMessageTarget)
+            or separated != (getattr(exchange, "__func__", None) is _global_message_exchange)
             or {"messages": operator_signature(backbone.interaction), "edges": operator_signature(backbone.edge_updater)} != expected["operator_signature"]
             or (backbone.interaction is None) != (expected["interaction_config"]["interaction_mode"] == "none")
             or (backbone.edge_updater is None) != (expected["interaction_config"]["graph_update_mode"] == "none") or backbone.coverage_modulation is not None
@@ -162,7 +218,7 @@ def load_calibrated(path, weight_sha256, sidecar_sha256, observation, *, expecte
     pins = {str(path): weight_sha256, str(path) + ".json": sidecar_sha256}
     if any(file_hash(p) != sha for p, sha in pins.items()):
         raise ValueError("Pinned M7 target weight/sidecar pair required")
-    model = load_model_checkpoint(path, device=device)
+    model = load_edge_model_checkpoint(path, device=device)
     verify_calibrated(model, observation, expected_binding=expected_binding, source_state_sha256=source_state_sha256)
     if any(file_hash(p) != sha for p, sha in pins.items()):
         raise ValueError("M7 target checkpoint pair changed during restore")

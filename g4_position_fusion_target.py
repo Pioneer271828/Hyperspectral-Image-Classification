@@ -31,6 +31,7 @@ KEY = "position_fusion_target_binding"
 CALIBRATION_KEY = "position_fusion_target_calibration"
 CONDITIONS = ("fixed", "position_gate")
 PREFIX = "backbone.position_fusion."
+CAPACITY_BIAS = "backbone.region_residual.control.2.bias"
 CORE_FORWARD = PositionGatedFusion.forward
 ORIGINAL_FUSE = VCASAHGCNBackbone.fuse_features
 
@@ -74,6 +75,19 @@ def _install(model):
     model.backbone.position_fusion = _BoundPositionGate(64, enabled=True, alph=.8, device=p.device, dtype=p.dtype)
 
 
+def _capacity_output(model):
+    if model.backbone.region_residual_mode != "capacity_control":
+        raise ValueError("Exact capacity requires the ordinary M4 control")
+    return model.backbone.region_residual.control[2]
+
+
+def _install_exact_capacity(model):
+    output = _capacity_output(model)
+    if output.bias is None or output.bias.shape != (64,) or torch.count_nonzero(output.bias).item():
+        raise ValueError("Expected the original zero-initialized 64-element output bias")
+    output.register_parameter("bias", None)
+
+
 def operator_signature(model, enabled):
     b = model.backbone
     if enabled:
@@ -103,12 +117,18 @@ def operator_signature(model, enabled):
         "tensor_only_bound_state": True, "enabled": enabled}
 
 
-def initialize(target, method, condition, *, model_seed, head_seed, source_spec=None, device="cpu", mode="none"):
+def initialize(target, method, condition, *, model_seed, head_seed, source_spec=None, device="cpu", mode="none",
+               exact_capacity=False):
     config = configuration(condition)
+    if type(exact_capacity) is not bool or (exact_capacity and (mode != "capacity_control" or source_spec)):
+        raise ValueError("Exact capacity is registered only for the scratch ordinary control")
     model, base = fixed_initialize(target, method, "default", model_seed=model_seed, head_seed=head_seed,
         source_spec=source_spec, device=device, mode=mode)
     before = {n: v.detach().clone() for n, v in model.state_dict().items()}
     rng = torch.get_rng_state().clone()
+    if exact_capacity:
+        _install_exact_capacity(model)
+        del before[CAPACITY_BIAS]
     if config["enabled"]: _install(model)
     if not torch.equal(rng, torch.get_rng_state()):
         raise RuntimeError("Final gate installation consumed CPU RNG")
@@ -127,6 +147,8 @@ def initialize(target, method, condition, *, model_seed, head_seed, source_spec=
         "added_parameter_count": sum(added.values()), "additional_state_bytes": 8 if config["enabled"] else 0,
         "requires_position_aware_loader": config["enabled"], "optimizer_updates": 0,
         "training_executable": False, "query_labels_accessed": False, "full_target_scene_transductive": True}
+    if exact_capacity:
+        binding["exact_capacity"] = True
     model.training_config[KEY] = copy.deepcopy(binding)
     verify_initialization_binding(model, binding)
     return model.eval(), binding
@@ -156,7 +178,12 @@ def verify_initialization_binding(model, expected):
             or {n: p.numel() for n, p in model.named_parameters() if p.requires_grad} != expected["trainable_parameters"]):
         raise ValueError("Actual final fusion/source/architecture/permission identity differs")
     shared = {n: v for n, v in expected["trainable_parameters"].items() if not n.startswith(PREFIX)}
-    if shared != base["trainable_parameters"]:
+    permitted = dict(base["trainable_parameters"])
+    if expected.get("exact_capacity"):
+        if expected["exact_capacity"] is not True or _capacity_output(model).bias is not None \
+                or permitted.pop(CAPACITY_BIAS, None) != 64:
+            raise ValueError("Exact ordinary capacity must omit only the second linear bias")
+    if shared != permitted:
         raise ValueError("Original parameter permissions/budget changed")
     return expected
 
@@ -222,6 +249,8 @@ def load_calibrated(path, weight_sha256, sidecar_sha256, observation, *, expecte
     if meta["training_config"].get(KEY) != expected_binding: raise ValueError("Explicit paired fusion binding required")
     with torch.random.fork_rng(devices=[]), torch.device("cpu"):
         model = MultiDatasetVCASAHGCN(meta["class_counts"], **meta["backbone_kwargs"])
+        if expected_binding.get("exact_capacity"):
+            _install_exact_capacity(model)
         if configuration(expected_binding["condition"])["enabled"]: _install(model)
     model.to(device); model.training_config = copy.deepcopy(meta["training_config"]); model.eval()
     verify_initialization_binding(model, expected_binding)
