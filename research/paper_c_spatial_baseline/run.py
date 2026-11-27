@@ -83,6 +83,7 @@ def audit(registration, out):
     """Read committed aggregates only; no model construction or scoring."""
     reg = json.loads(Path(registration).read_text()); out = Path(out)
     require(sha(out/'registration.json') == sha(registration), 'Run registration differs')
+    require(sha(reg['manifest']) == reg['manifest_sha256'], 'Frozen role manifest changed')
     selected = {}; storage = 0; timings = {}; updates = 0
     manifest = json.loads(Path(reg['manifest']).read_text()); truth = {}
     for scene, s in manifest['scenes'].items():
@@ -140,11 +141,13 @@ def main():
     p.add_argument('--native'); p.add_argument('--author'); p.add_argument('--manifest')
     p.add_argument('--manifest-sha256'); p.add_argument('--synthetic', action='store_true')
     p.add_argument('--registration'); p.add_argument('--registration-sha256')
+    p.add_argument('--execution-root')
     p.add_argument('--max-updates', type=int, default=0); p.add_argument('--max-state-bytes', type=int, default=0)
     p.add_argument('--budget-release-sha256'); p.add_argument('--resume', action='store_true')
     a = p.parse_args(); clean(ROOT, a.expected_commit); torch.set_num_threads(1)
     if a.command == 'audit':
-        new_json(a.out, audit(a.registration, Path(a.registration).parent/'execution'))
+        require(a.registration and a.execution_root, 'Explicit registration and execution root required')
+        new_json(a.out, audit(a.registration, a.execution_root))
         return
     for name in ('native', 'author', 'manifest', 'manifest_sha256'):
         require(getattr(a, name) is not None, f'Missing {name}')
