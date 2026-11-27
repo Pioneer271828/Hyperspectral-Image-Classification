@@ -1,0 +1,286 @@
+{
+  "schema": "D_C5_source_and_semantics_v1",
+  "as_of": "2026-11-27 Asia/Shanghai",
+  "role": "D original-source/code-static audit; C actual payload/header/role intake; no code copied/imported or labels/images/weights opened",
+  "sources": [
+    {
+      "id": "spectralearth-v2",
+      "url": "https://arxiv.org/html/2408.08447v2",
+      "version": "arXiv v2 2025-08-13; accepted JSTARS manuscript",
+      "locator": "III-B EnMAP-CDL/DESIS-CDL/EO1-CDL; VI-D footnote",
+      "permission_scope": "paper CC-BY-4.0, not an inferred data/code/weight grant",
+      "access": "web HTML success"
+    },
+    {
+      "id": "author-code",
+      "url": "https://github.com/AABNassim/spectral_earth/tree/5084a29411945bdd0872fad93d98b48f41e1f3eb",
+      "version": "5084a29411945bdd0872fad93d98b48f41e1f3eb",
+      "locator": "complete Git tree and README; data configs; datasets; downstream cdl/base",
+      "permission_scope": "no LICENSE/LICENCE/COPYING/NOTICE path in inspected complete tree; external imports and template are separate; independent implementation only",
+      "access": "GitHub connector success; no imports or execution"
+    },
+    {
+      "id": "benchmark-download",
+      "url": "https://geoservice.dlr.de/web/datasets/enmap_spectralearth",
+      "version": null,
+      "locator": "author README Pre-training Dataset link and paper footnote 1",
+      "permission_scope": "benchmark-specific grant unresolved; README says create account",
+      "access": "HTTP 403 via web; no account or contact"
+    },
+    {
+      "id": "usda-faq",
+      "url": "https://data.nass.usda.gov/Research_and_Science/Cropland/sarsfaqs2.php",
+      "version": "page last modified 2026-03-12; accessed 2026-11-27",
+      "locator": "description; creation; reliability; restrictions; history; changed attribute names",
+      "permission_scope": "CDL public domain and as-is, not all paired HSI",
+      "access": "web success after lowercase redirect"
+    },
+    {
+      "id": "usda-legend",
+      "url": "https://data.nass.usda.gov/research-and-science/cropland/docs/cdl-legend-colors",
+      "version": "accessed 2026-11-27",
+      "locator": "raw CDL ID to class-name legend",
+      "permission_scope": "USDA public data; bind actual annual release",
+      "access": "web success"
+    },
+    {
+      "id": "usda-ca23",
+      "url": "https://data.nass.usda.gov/Research_and_Science/Cropland/metadata/metadata_ca23.htm",
+      "version": "2023 California",
+      "locator": "accuracy table ID204; attribute definitions",
+      "permission_scope": "CDL layer",
+      "access": "web success"
+    },
+    {
+      "id": "usda-az23",
+      "url": "https://data.nass.usda.gov/Research_and_Science/Cropland/metadata/metadata_az23.htm",
+      "version": "2023 Arizona",
+      "locator": "accuracy table ID204; attribute definitions",
+      "permission_scope": "CDL layer",
+      "access": "web success"
+    },
+    {
+      "id": "enmap-license",
+      "url": "https://www.enmap.org/data/resources/EnMAP_Data_License.pdf",
+      "version": "v1.1 2022-10-19",
+      "locator": "PDF pp2-3 Sections A-D",
+      "permission_scope": "free commercial/noncommercial use, affiliated-user sharing and non-downloadable display under conditions; public distributable original-value data needs explicit grant",
+      "access": "web PDF success; benchmark applicability unresolved"
+    },
+    {
+      "id": "desis-license",
+      "url": "https://geoservice.dlr.de/resources/licenses/desis/DESIS_License_Agreement_for_Scientific_Use.pdf",
+      "version": "status 2024-08-12",
+      "locator": "PDF pp1-2 Sections1.2 and2.1-2.6",
+      "permission_scope": "scientific-only nontransferable/nonsublicensable; third-party data publication forbidden in these mission terms; exact benchmark spectral-product grant unresolved",
+      "access": "web PDF success; 10.2nm described versus benchmark235-band configuration not automatically same product"
+    },
+    {
+      "id": "usgs-eo1",
+      "url": "https://www.usgs.gov/centers/eros/earth-observing-1-general-questions-and-answers",
+      "version": "accessed 2026-11-27",
+      "locator": "Data Products: restrictions; Hyperion bands",
+      "permission_scope": "USGS ALI/Hyperion public domain; does not identify the benchmark's exact preprocessing release",
+      "access": "web search primary source success"
+    },
+    {
+      "id": "usgs-hyperion",
+      "url": "https://www.usgs.gov/centers/eros/science/usgs-eros-archive-earth-observing-one-eo-1",
+      "version": "Hyperion DOI10.5066/P9JXHMO2",
+      "locator": "Hyperion Product Description",
+      "permission_scope": "USGS original instrument archive; benchmark mask/column binding separate",
+      "access": "web primary source success"
+    },
+    {
+      "id": "flair-paper",
+      "url": "https://arxiv.org/html/2310.13336",
+      "version": "v1 2023-10-20; NeurIPS Datasets and Benchmarks",
+      "locator": "3.1/3.2/3.3;7;A.6.1",
+      "permission_scope": "paper CC-BY-SA4.0; data terms separately Open Licence2.0",
+      "access": "web HTML success"
+    },
+    {
+      "id": "flair-card",
+      "url": "https://huggingface.co/datasets/IGNF/FLAIR-1-2",
+      "version": "C-observed HF4e2508962a3316f348a32ee1ae865ecb0212df03; combined#1/#2 task universe; C pins actual OVH bytes separately",
+      "locator": "README YAML license and Context/Data; band list",
+      "permission_scope": "data etalab2.0; code grant separate",
+      "access": "public README success; C reports HF metadata CDN403 and original OVH HEAD200, versions not pooled"
+    },
+    {
+      "id": "flair-official",
+      "url": "https://ignf.github.io/FLAIR/FLAIR2/flair_2.html",
+      "version": "FLAIR2 portal direct links; current93462 metadata is a combined-task pool, not evidence by itself of a chronological release mutation",
+      "locator": "download/metadata/train roles and license",
+      "permission_scope": "Open Licence2.0 attribution; code separate",
+      "access": "C owns actual intake"
+    }
+  ],
+  "author_code": {
+    "commit": "5084a29411945bdd0872fad93d98b48f41e1f3eb",
+    "tree_truncated": false,
+    "checked_files": [
+      {
+        "path": "configs/data/enmap_cdl.yaml",
+        "git_blob_sha1": "52ed7403986f8c8f1fd1e60971e0a705e1080023",
+        "url": "https://github.com/AABNassim/spectral_earth/blob/5084a29411945bdd0872fad93d98b48f41e1f3eb/configs/data/enmap_cdl.yaml"
+      },
+      {
+        "path": "configs/data/desis_cdl.yaml",
+        "git_blob_sha1": "82425b85ed33e6fb9e7f8e5a00442793efed8fdd",
+        "url": "https://github.com/AABNassim/spectral_earth/blob/5084a29411945bdd0872fad93d98b48f41e1f3eb/configs/data/desis_cdl.yaml"
+      },
+      {
+        "path": "configs/data/eo1_cdl.yaml",
+        "git_blob_sha1": "df374b4855ab3412b9bc07dddc5e23fd65220f25",
+        "url": "https://github.com/AABNassim/spectral_earth/blob/5084a29411945bdd0872fad93d98b48f41e1f3eb/configs/data/eo1_cdl.yaml"
+      },
+      {
+        "path": "configs/experiment/downstream/cdl/base.yaml",
+        "git_blob_sha1": "8030abfa0184afe952450c5e408a8cf2dae33db2",
+        "url": "https://github.com/AABNassim/spectral_earth/blob/5084a29411945bdd0872fad93d98b48f41e1f3eb/configs/experiment/downstream/cdl/base.yaml"
+      },
+      {
+        "path": "src/datasets/enmap_cdl_nlcd.py",
+        "git_blob_sha1": "bfee54117bbdb0d780130cc555c68a681bed1d1a",
+        "url": "https://github.com/AABNassim/spectral_earth/blob/5084a29411945bdd0872fad93d98b48f41e1f3eb/src/datasets/enmap_cdl_nlcd.py"
+      },
+      {
+        "path": "src/datasets/desis_cdl.py",
+        "git_blob_sha1": "c60b76050a229ca68f958477f574f5f045a0082c",
+        "url": "https://github.com/AABNassim/spectral_earth/blob/5084a29411945bdd0872fad93d98b48f41e1f3eb/src/datasets/desis_cdl.py"
+      },
+      {
+        "path": "src/datasets/eo1_cdl.py",
+        "git_blob_sha1": "131c214637f01996145f87b0cfd1585b36f60d9e",
+        "url": "https://github.com/AABNassim/spectral_earth/blob/5084a29411945bdd0872fad93d98b48f41e1f3eb/src/datasets/eo1_cdl.py"
+      }
+    ],
+    "readme_blob": "e1b8ad4ddf7e5a89eefed93dd74d89aee641aa01",
+    "config_crop_ids": {
+      "enmap_cdl": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        45,
+        54,
+        69,
+        72,
+        75,
+        76,
+        204,
+        210
+      ],
+      "desis_cdl": [
+        1,
+        2,
+        3,
+        5,
+        42,
+        43,
+        49,
+        54,
+        56,
+        68,
+        69,
+        75,
+        76,
+        204
+      ],
+      "eo1_cdl": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        41,
+        42,
+        43,
+        54,
+        69,
+        75,
+        76,
+        204
+      ]
+    },
+    "candidate_common_ids": {
+      "enmap_desis": [
+        1,
+        2,
+        3,
+        5,
+        54,
+        69,
+        75,
+        76,
+        204
+      ],
+      "enmap_eo1": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        54,
+        69,
+        75,
+        76,
+        204
+      ]
+    },
+    "loader_semantics": "raw0 moved to last ordinal index; any unselected CDL IDs map there; native crop heads14 ignore14; raw IDs and output indices are not interchangeable",
+    "binding_risks": [
+      "DESIS loader default202 versus configured235; src.read() does not prove actual column count",
+      "Hyperion calibrated198 and benchmark198 need actual retained original-column IDs; numerical equality is not identity",
+      "EnMAP split-generation helper random image75/10/15 does not group geography; current fixed text list use is not a field-independent proof",
+      "subset_percent path may reshuffle train/val; do not inherit as a new target-label budget"
+    ],
+    "pretraining_and_repeat_scope": {
+      "source": "SpectralEarth v2 III-A and EnMAP-CDL III-B",
+      "reported_multiple_timestamp_location_fraction": 0.175,
+      "spatial_statement": "curation avoids overlap among fixed patch locations while retaining temporal views",
+      "limit": "Does not establish downstream field-group disjoint splits or pretrained checkpoint exposure exclusion",
+      "retained_band_statement": "III-A reports224 original EnMAP bands and removal127-141 and161-167; original-column index convention and actual delivered map still require binding"
+    }
+  },
+  "candidate_priority": [
+    {
+      "pair": "EnMAP-CDL / DESIS-CDL",
+      "priority": 1,
+      "status": "source-documented compound-domain candidate, payload/license/field-year release blocked",
+      "reason": "real different instruments and overlapping years2022/23;9 raw crop IDs; explicitly not paired geography"
+    },
+    {
+      "pair": "EnMAP-CDL / EO1-CDL",
+      "priority": 2,
+      "status": "historical fallback, not admitted",
+      "reason": "11 raw crop IDs but2002-2016 vs2022-23; early partial-state CDL coverage, recoded release and column map unresolved"
+    },
+    {
+      "pair": "FLAIR author-defined UCE / non-UCE camera groups",
+      "priority": "open optical alternative",
+      "status": "C reports independently audited3publictrain pairs plus1conservative geometry quarantine; bounded camera-group intake executable; no12class coverage or scientific classifier result",
+      "reason": "author operational UCE/non-UCE grouping; exact per-ID model/SRF and causal matching stay unverified; see c5-independent-intake.snapshot.json"
+    }
+  ],
+  "name_by_common_id": {
+    "1": "Corn",
+    "2": "Cotton",
+    "3": "Rice",
+    "4": "Sorghum",
+    "5": "Soybeans",
+    "6": "Sunflower",
+    "54": "Tomatoes",
+    "69": "Grapes",
+    "75": "Almonds",
+    "76": "Walnuts",
+    "204": "Pistachios"
+  },
+  "admitted_new_model_results": 0,
+  "external_contact": 0
+}

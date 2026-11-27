@@ -1,0 +1,176 @@
+{
+  "producer": "102530ff102c842714378527ebdc2aeb8173fee4",
+  "passed": true,
+  "plan_sha256": "0731b598eda0725571b1d6b0024ce62c3656697346e89d9d75d5b71826361d40",
+  "unique_original_points": 40,
+  "point_presentations_two_directions": 80,
+  "rejected_requests_before_arrays": [
+    {
+      "kind": "constructor",
+      "reason": "Only registered data-input development probes; training and confirmation are not authorized",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "constructor",
+      "reason": "Two registered independent acquisitions required",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "constructor",
+      "reason": "Only registered data-input development probes; training and confirmation are not authorized",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "phase_or_tile",
+      "reason": "No query, confirmation, causal-sensor or extra role admitted",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "phase_or_tile",
+      "reason": "Tile is outside this original phase and common-label budget",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "phase_or_tile",
+      "reason": "No query, confirmation, causal-sensor or extra role admitted",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "plan_tamper",
+      "reason": "Frozen in-memory membership changed",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "phase_or_tile",
+      "reason": "No query, confirmation, causal-sensor or extra role admitted",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "phase_or_tile",
+      "reason": "Tile is outside this original phase and common-label budget",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "phase_or_tile",
+      "reason": "No query, confirmation, causal-sensor or extra role admitted",
+      "spectral_arrays_opened": 0
+    },
+    {
+      "kind": "plan_tamper",
+      "reason": "Frozen in-memory membership changed",
+      "spectral_arrays_opened": 0
+    }
+  ],
+  "torch_imported": false,
+  "new_model_calls": 0,
+  "new_optimizer_updates": 0,
+  "new_label_memberships": 0,
+  "new_raw_GT_or_query_reads": 0,
+  "independent_confirmation": false,
+  "directions": [
+    {
+      "source": "xuzhou",
+      "target": "whu-honghu",
+      "phases": [
+        {
+          "phase": "source_fit",
+          "scene": "xuzhou",
+          "original_role": "devtrain",
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "points": 10,
+          "blocks": 7
+        },
+        {
+          "phase": "source_development",
+          "scene": "xuzhou",
+          "original_role": "devval",
+          "common_class_counts": {
+            "0": 5,
+            "1": 5
+          },
+          "points": 10,
+          "blocks": 3
+        },
+        {
+          "phase": "target_adapt",
+          "scene": "whu-honghu",
+          "original_role": "devtrain",
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "points": 10,
+          "blocks": 5
+        },
+        {
+          "phase": "target_development",
+          "scene": "whu-honghu",
+          "original_role": "devval",
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "points": 10,
+          "blocks": 2
+        }
+      ],
+      "payload_reads": 17,
+      "payload_bytes": 19602176
+    },
+    {
+      "source": "whu-honghu",
+      "target": "xuzhou",
+      "phases": [
+        {
+          "phase": "source_fit",
+          "scene": "whu-honghu",
+          "original_role": "devtrain",
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "points": 10,
+          "blocks": 5
+        },
+        {
+          "phase": "source_development",
+          "scene": "whu-honghu",
+          "original_role": "devval",
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "points": 10,
+          "blocks": 2
+        },
+        {
+          "phase": "target_adapt",
+          "scene": "xuzhou",
+          "original_role": "devtrain",
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "points": 10,
+          "blocks": 7
+        },
+        {
+          "phase": "target_development",
+          "scene": "xuzhou",
+          "original_role": "devval",
+          "common_class_counts": {
+            "0": 5,
+            "1": 5
+          },
+          "points": 10,
+          "blocks": 3
+        }
+      ],
+      "payload_reads": 17,
+      "payload_bytes": 19602176
+    }
+  ]
+}

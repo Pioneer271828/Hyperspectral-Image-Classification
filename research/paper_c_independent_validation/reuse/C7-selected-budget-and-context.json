@@ -1,0 +1,116 @@
+[
+  {
+    "scene": "xuzhou",
+    "original_bank_pin": {
+      "bank": "c877232e6cc38e3f8be37eb1b147d69a7253edbeb665f98e5b8cd6acb8e5cb17",
+      "registration": "bc555ce89034dafa4ca99602ba067f8386a685d7528e4eab27793bfc142a6104"
+    },
+    "shape": [
+      500,
+      260,
+      436
+    ],
+    "counts": {
+      "devtrain": {
+        "0": {
+          "original_candidates": 10,
+          "retained_candidates": 10,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "1": 3,
+            "7": 2
+          }
+        },
+        "1": {
+          "original_candidates": 5,
+          "retained_candidates": 5,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "6": 5
+          }
+        }
+      },
+      "devval": {
+        "0": {
+          "original_candidates": 10,
+          "retained_candidates": 10,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "7": 4,
+            "1": 1
+          }
+        },
+        "1": {
+          "original_candidates": 5,
+          "retained_candidates": 5,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "6": 5
+          }
+        }
+      }
+    },
+    "excluded_shared_parent_count": 0,
+    "selected_parent_overlap": 0,
+    "cross_role_observation_box_overlap_pixels": 0,
+    "minimum_role_box_gap_pixels": 4,
+    "normalization_statistics_sha256": "1a5db35f735605518ee1bcee1894d146a4dc2f47dcda64b9c2c7714f6b39c659",
+    "processed_band_metadata_sha256": "d9fa3280c64540ca346e24c46bc1e9aaade7f9a3275edf82b4264e9ce7974627"
+  },
+  {
+    "scene": "whu-honghu",
+    "original_bank_pin": {
+      "bank": "0bbe03fc60abe505c2c48d2f4837ba7494fabbcdeda673280d7220d5bc13dfa9",
+      "registration": "77876433efa118908a90571d0b4124a3e0d0f77b0eb930adfa8ae22a1052d2be"
+    },
+    "shape": [
+      940,
+      475,
+      270
+    ],
+    "counts": {
+      "devtrain": {
+        "0": {
+          "original_candidates": 5,
+          "retained_candidates": 5,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "3": 5
+          }
+        },
+        "1": {
+          "original_candidates": 5,
+          "retained_candidates": 5,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "22": 5
+          }
+        }
+      },
+      "devval": {
+        "0": {
+          "original_candidates": 5,
+          "retained_candidates": 5,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "3": 5
+          }
+        },
+        "1": {
+          "original_candidates": 5,
+          "retained_candidates": 5,
+          "selected": 5,
+          "selected_original_subclass_counts": {
+            "22": 5
+          }
+        }
+      }
+    },
+    "excluded_shared_parent_count": 1,
+    "selected_parent_overlap": 0,
+    "cross_role_observation_box_overlap_pixels": 0,
+    "minimum_role_box_gap_pixels": 4,
+    "normalization_statistics_sha256": "f54fcae652388ad653695b0241d81e66d229db4269eaec0289401c0e65104dcd",
+    "processed_band_metadata_sha256": "05de1a28d1e118b6ceab660fe8e69fdb435c65dccf809e78e5032042eb72b483"
+  }
+]

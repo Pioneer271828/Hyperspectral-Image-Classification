@@ -1,0 +1,37 @@
+[
+  {
+    "file": "C7-independent-audit.json",
+    "bytes": 3952,
+    "sha256": "f66dc28de3a0e3756865caf641add88c8561dc8a09100a8b776be605da771ddc"
+  },
+  {
+    "file": "C7-input-probe-aggregates.json",
+    "bytes": 4604,
+    "sha256": "dd6bb40cca9de1609ea91c32978d8346267e3c35afca579ecb8ec0bbdc29d90b"
+  },
+  {
+    "file": "C7-selected-budget-and-context.json",
+    "bytes": 3160,
+    "sha256": "254c32cbb2b6537c32f0213791e3026fdcf1756decb7bdcbba442cab54921629"
+  },
+  {
+    "file": "D-candidate-class-map.csv",
+    "bytes": 1811,
+    "sha256": "550b20906e0a2dc348c5353e7b266b014d65df67c965a5f1cf2eef0e227ea1dc"
+  },
+  {
+    "file": "D-candidate-pairs30.csv",
+    "bytes": 11667,
+    "sha256": "6becdb93023fd96909e21d950a19a11ba61b659eb25a78ad9c22b8cb35939bf3"
+  },
+  {
+    "file": "D-product-comparability.csv",
+    "bytes": 1637,
+    "sha256": "252596ad67a3d7a6c075d9b7f47e5a2de0a1fd1c7f42f2b0ffc54014d0e9c0dd"
+  },
+  {
+    "file": "D-source-semantics.json",
+    "bytes": 11649,
+    "sha256": "b87fed3f923fd9246a5fb9f1e16282ebc5bf7012887dfb97bfbff525d5b985a4"
+  }
+]

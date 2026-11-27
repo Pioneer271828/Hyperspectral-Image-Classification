@@ -1,0 +1,137 @@
+{
+  "schema": "paper_c_C7_independent_common_pair_audit_v1",
+  "auditor": "102530ff102c842714378527ebdc2aeb8173fee4",
+  "producer": "102530ff102c842714378527ebdc2aeb8173fee4",
+  "passed": true,
+  "plan_sha256": "0731b598eda0725571b1d6b0024ce62c3656697346e89d9d75d5b71826361d40",
+  "directions": [
+    {
+      "source": "xuzhou",
+      "target": "whu-honghu",
+      "phases": [
+        {
+          "phase": "source_fit",
+          "scene": "xuzhou",
+          "original_role": "devtrain",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "processed_columns": 436
+        },
+        {
+          "phase": "source_development",
+          "scene": "xuzhou",
+          "original_role": "devval",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "0": 5,
+            "1": 5
+          },
+          "processed_columns": 436
+        },
+        {
+          "phase": "target_adapt",
+          "scene": "whu-honghu",
+          "original_role": "devtrain",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "processed_columns": 270
+        },
+        {
+          "phase": "target_development",
+          "scene": "whu-honghu",
+          "original_role": "devval",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "processed_columns": 270
+        }
+      ]
+    },
+    {
+      "source": "whu-honghu",
+      "target": "xuzhou",
+      "phases": [
+        {
+          "phase": "source_fit",
+          "scene": "whu-honghu",
+          "original_role": "devtrain",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "processed_columns": 270
+        },
+        {
+          "phase": "source_development",
+          "scene": "whu-honghu",
+          "original_role": "devval",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "processed_columns": 270
+        },
+        {
+          "phase": "target_adapt",
+          "scene": "xuzhou",
+          "original_role": "devtrain",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "1": 5,
+            "0": 5
+          },
+          "processed_columns": 436
+        },
+        {
+          "phase": "target_development",
+          "scene": "xuzhou",
+          "original_role": "devval",
+          "original_unique_points": 10,
+          "common_class_counts": {
+            "0": 5,
+            "1": 5
+          },
+          "processed_columns": 436
+        }
+      ]
+    }
+  ],
+  "spatial": {
+    "xuzhou": {
+      "selected_parent_overlap": 0,
+      "selected_box_overlap_pixels": 0,
+      "minimum_box_gap_pixels": 4,
+      "original_normalizer_fit_role": "devtrain"
+    },
+    "whu-honghu": {
+      "selected_parent_overlap": 0,
+      "selected_box_overlap_pixels": 0,
+      "minimum_box_gap_pixels": 4,
+      "original_normalizer_fit_role": "devtrain"
+    }
+  },
+  "unique_original_points": 40,
+  "actual_presentations_two_directions": 80,
+  "verified_batch_presentations": 34,
+  "independently_decoded_unique_tiles": 17,
+  "unique_tile_payload_bytes": 19602176,
+  "production_tile_reads": 34,
+  "production_tile_payload_bytes": 39204352,
+  "independent_primary_HongHu_legend_and_Xuzhou_CC_BY_verified": true,
+  "membership_rank_raw_label_and_patch_checks_passed": true,
+  "new_model_calls": 0,
+  "new_optimizer_updates": 0,
+  "new_label_memberships": 0,
+  "new_raw_GT_or_query_reads": 0,
+  "classification_scope": "Supported coarse cross-scene/device development input pair with disclosed derived-MAT mapping inference; no accuracy, canonical byte reproduction, independent confirmation or causal sensor-effect claim."
+}
