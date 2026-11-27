@@ -13,6 +13,10 @@ from scripts.summarize_unified_cohort import read_pinned
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if "--pavia-matched-deletion" in argv:
+        from evaluation.wp12_pavia_matched_deletion import main as matched_deletion
+
+        return matched_deletion([arg for arg in argv if arg != "--pavia-matched-deletion"])
     if "--positive-control-case" in argv or "--positive-control-publish" in argv:
         from evaluation.wp12_positive_cli import main as positive_control
 
