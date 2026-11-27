@@ -33,6 +33,14 @@ class Page(HTMLParser):
 def original_points(group):return sorted([list(p) for p in zip(group['indices'],group['labels'],strict=True)])
 
 
+def validate_ontology(value):
+    rows=value['classes']
+    expected=[(0,[1,7],[3]),(1,[6],[22])]
+    if [(r['common_id'],r['xuzhou_original_ids'],r['honghu_original_ids']) for r in rows]!=expected:raise ValueError('Unreviewed common-class mapping')
+    table=value['xuzhou_original_TableIX']
+    if [table[str(i)]['name'] for i in (1,6,7)]!=['Bareland-1','Trees','Bareland-2']:raise ValueError('Original published ordinal names differ')
+
+
 def review(root,inputs):
     source=Path(__file__).parent;pins=json.loads((source/'metadata-pins.json').read_text());payload={}
     for pin in pins['files']:
@@ -53,7 +61,7 @@ def review(root,inputs):
     receipt=pinned_json(custody/'p4-spatial-dev-curator01/receipt.json',CURATOR_PIN);registration=pinned_json(custody/'p4-spatial-dev-curator01/registration.json',receipt['registration_sha256'])
     original_label_pin=next(v for k,v in registration['inputs'].items() if k.endswith('/Xuzhou/xuzhou_gt.mat'))
     if task['label_sha256']!=coverage['label_sha256'] or task['label_sha256']!=original_label_pin or task['image_sha256']!=dev['record']['wp02']['image']['sha256']:raise ValueError('Historical label-count identity does not reach released image/GT custody')
-    ontology=json.loads((source/'ontology.json').read_text());expected={k:v['count'] for k,v in ontology['xuzhou_original_TableIX'].items()}
+    ontology=json.loads((source/'ontology.json').read_text());validate_ontology(ontology);expected={k:v['count'] for k,v in ontology['xuzhou_original_TableIX'].items()}
     if {str(i):task['label_counts'][str(i)] for i in range(1,10)}!=expected or {str(r['class']):r['full'] for r in coverage['rows']}!=expected or len(set(expected.values()))!=9:raise ValueError('Published per-ID class counts disagree; inferred ordinal mapping is not admitted')
     banks={s:ReleasedBank(inputs/s,s,portable_index=inputs/'index.json') for s in ('xuzhou','whu-honghu')};x=banks['xuzhou'];record=dev['record'];original_release=pinned_json(custody/'p4-spatial-dev-curator01/xuzhou-support512-k5.json',x.registration['custody']['label_release']['sha256'])
     if x.registration['custody']['development']['sha256']!=DEVELOPMENT_PIN or x.registration['plan_hash']!=dev['identity']['plan_hash'] or tuple(task['shape'])!=x.pin['shape'] or task['class_count']!=x.pin['classes']:raise ValueError('Prepared image/shape/plan does not reach the original bank')
