@@ -45,8 +45,7 @@ def main():
     source.mkdir(mode=0o700)
     bundles=[(a.source_bundle,'C11.bundle'),(BASE/'backups/paper-c-paper-recovery-A-source01.bundle','A-frozen.bundle'),
              (BASE/'backups/oss-slic-portability-20261127/source.bundle','A-SLIC.bundle'),
-             (BASE/'backups/paper-c-paper-recovery-native01.bundle','Native.bundle'),
-             (BASE/'backups/paper-c-paper-recovery-dsnet01.bundle','DSNet.bundle')]
+             (BASE/'backups/paper-c-paper-recovery-native01.bundle','Native.bundle')]
     source_rows=[]
     for path,name in bundles:
         require(path.resolve().is_relative_to(BASE/'backups'), 'Source bundle outside authorized project')
@@ -58,13 +57,28 @@ def main():
     subprocess.run(['git','clone','-q','--bare',str(source/'C11.bundle'),str(repo)],check=True)
     for name in ('A-frozen.bundle','A-SLIC.bundle'):
         subprocess.run(['git','-C',str(repo),'fetch','-q',str(source/name),'+refs/*:refs/recovery/'+name+'/*'],check=True)
-    for name in ('Native.bundle','DSNet.bundle'):
+    for name in ('Native.bundle',):
         subprocess.run(['git','-C',str(repo),'fetch','-q',str(source/name),'HEAD:refs/recovery/'+name],check=True)
+    # The author clone is partial; retain the exact reused component/license,
+    # authenticated by original Git commit/tree/blob identities, without fetching history.
+    author=BASE/'references/paper1-c-20261126/dsnet'
+    author_rev='e910795073b52373ce0771ac85139a17f250b236'
+    ag=lambda *args:subprocess.check_output(['git','-C',str(author),*args])
+    require(ag('rev-parse','HEAD').decode().strip()==author_rev and not ag('status','--porcelain').strip(),'Author component source differs')
+    for typ, rev, name in [('commit',author_rev,'DSNet.commit'),('tree',author_rev+'^{tree}','DSNet.tree')]:
+        path=source/name;path.write_bytes(ag('cat-file',typ,rev))
+        require(ag('hash-object','-t',typ,str(path)).decode().strip()==ag('rev-parse',rev).decode().strip(),'Author Git object proof differs')
+        source_rows.append({'name':name,'bytes':path.stat().st_size,'sha256':sha(path)})
+    for name in ('model.py','LICENSE'):
+        path=source/('DSNet-'+name);shutil.copyfile(author/name,path)
+        blob=ag('ls-tree',author_rev,name).decode().split()[2]
+        require(ag('hash-object',str(path)).decode().strip()==blob,'Author component differs from fixed Git tree')
+        source_rows.append({'name':path.name,'bytes':path.stat().st_size,'sha256':sha(path),'git_blob':blob})
     revisions=[a.expected_commit,r['producer'],'b36f1c976120eb8abd7d74e7f44295227550e9ea',
                '9d5318803d926eacebf8984bc4e6a7bed388bbc4','7e2d40cf593af3d5ae94f5ae20a5e198c978f650',
                '395caef57fba8ab6a09223538f748179dab552f2','6bb51b7d2b1e01e579fb07aad521f23d1c2ccc17',
                'cbc7e1b9bdc561b2714ea5b2498d34ae8cd5b369','2d14fc6b2d8f1ee40f7bc6c1ebdb1f4542e3392f',
-               '540a97c84ffbeaf7278473966eb80da6be96c8bc','e910795073b52373ce0771ac85139a17f250b236']
+               '540a97c84ffbeaf7278473966eb80da6be96c8bc']
     for revision in revisions:
         subprocess.run(['git','-C',str(repo),'cat-file','-e',revision+'^{commit}'],check=True)
     subprocess.run(['git','-C',str(repo),'fsck','--full'],check=True,stdout=subprocess.DEVNULL)
@@ -73,7 +87,8 @@ def main():
     require(subprocess.check_output(['git','-C',str(current),'rev-parse','HEAD'],text=True).strip()==a.expected_commit
             and not subprocess.check_output(['git','-C',str(current),'status','--porcelain'],text=True).strip(), 'Fresh source checkout differs')
     write(review/'source-recovery.json',{'status':'PASSED','bundles':source_rows,'commit_objects_verified':revisions,
-          'fresh_HEAD':a.expected_commit,'fresh_checkout_clean':True,'full_git_fsck':True,'new_optimizer_updates':0})
+          'fresh_HEAD':a.expected_commit,'fresh_checkout_clean':True,'full_git_fsck':True,'new_optimizer_updates':0,
+          'author_component_commit':author_rev,'author_commit_tree_blob_proofs_verified':True,'author_full_Git_history_backed_up':False})
     archive=work/'recovery-controls.tar.gz'
     names=['increment/manifest.json','available-private.json','layout.json','s2-retention.json']
     names += ['source/'+row['name'] for row in source_rows]
