@@ -89,6 +89,15 @@ def validate_package(experiment, producer, *, replay_fits=False):
             updates += stage_updates
     if len(files) != 52 or updates != 3840:
         raise ValueError('Full fixed endpoint coverage required')
+    identities = 0
+    for source, target in cfg['directions']:
+        for rep in ('raw_distribution', 'legacy_scene_distribution'):
+            for seed in cfg['seeds']:
+                a = files[f'source-{source}-to-{target}/{rep}-s{seed}-source_fit.json'][0]
+                b = files[f'target-{target}-to-{source}/{rep}-s{seed}-target_scratch64.json'][0]
+                if a['theta'] != b['theta']:
+                    raise ValueError('Same-device source/scratch matched identity differs')
+                identities += 1
     frames = {scene: cache(root/'evaluation01'/f'features-{scene}')[0] for scene in cfg['directions'][0]}
     rows = evaluation['rows']
     if len(rows) != 68 or len({r['id'] for r in rows}) != 68:
@@ -128,12 +137,31 @@ def validate_package(experiment, producer, *, replay_fits=False):
         raise ValueError('Evaluation registry or independent decisions differ')
     by_id = {r['id']: r for r in rows}
     comparisons = evaluation['paired_comparisons']
-    if len(comparisons) != 64 or len({(p['A'], p['B']) for p in comparisons}) != 64:
+    expected_pairs = set()
+    def pick(direction, rep, seed, method):
+        found = [r for r in rows if r['direction'] == direction and r['representation'] == rep and r['seed'] == seed and r['method'] == method]
+        if len(found) != 1:
+            raise ValueError('Unique frozen arm evaluation required')
+        return found[0]['id']
+    for direction in cfg['directions']:
+        for rep in ('raw_distribution', 'legacy_scene_distribution'):
+            for seed in cfg['seeds']:
+                for a, b in [('source_fit_transfer', 'target_scratch64'), ('target_adapt', 'target_scratch64'), ('target_adapt', 'target_scratch128')]:
+                    expected_pairs.add((pick(direction, rep, seed, a), pick(direction, rep, seed, b)))
+        for seed in cfg['seeds']:
+            for method in ('source_fit_transfer', 'target_adapt', 'target_scratch64', 'target_scratch128'):
+                expected_pairs.add((pick(direction, 'raw_distribution', seed, method), pick(direction, 'legacy_scene_distribution', seed, method)))
+    for scene in cfg['directions'][0]:
+        for rep in ('raw_distribution', 'legacy_scene_distribution'):
+            a = next(r for r in rows if r['scene'] == scene and r['representation'] == rep and r['method'] == 'centroid_transfer')
+            b = next(r for r in rows if r['scene'] == scene and r['representation'] == rep and r['method'] == 'centroid_same_device')
+            expected_pairs.add((a['id'], b['id']))
+    if len(comparisons) != 64 or {(p['A'], p['B']) for p in comparisons} != expected_pairs:
         raise ValueError('All 64 paired comparisons required')
     for pair in comparisons:
         assert_close(pair, pair_reference(by_id[pair['A']], by_id[pair['B']]))
     directions = evaluation['direction_differences']
-    if len(directions) != 8:
+    if len(directions) != 8 or {(r['representation'], r['method']) for r in directions} != {(rep, method) for rep in ('raw_distribution', 'legacy_scene_distribution') for method in ('source_fit_transfer', 'target_adapt', 'target_scratch64', 'target_scratch128')}:
         raise ValueError('All eight directional summaries required')
     for result in directions:
         groups = [[next(r for r in rows if r['direction'] == direction and r['representation'] == result['representation'] and r['method'] == result['method'] and r['seed'] == seed) for seed in cfg['seeds']] for direction in cfg['directions']]
