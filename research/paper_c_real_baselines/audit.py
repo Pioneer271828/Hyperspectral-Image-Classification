@@ -82,7 +82,7 @@ def validate_package(experiment, producer, *, replay_fits=False):
                     ref = centroid_reference(X[entry['representation']], X['y']) if kind == 'centroid' else replay(X[entry['representation']], X['y'], seed=entry['seed'], steps=count, start=start)
                     assert_close(model['theta'], ref, atol=1e-10, rtol=1e-9, path='independent coefficient replay')
                     replay_updates += count
-                files[str(path)] = (model, entry, folder)
+                files[folder.name+'/'+entry['file']] = (model, entry, folder)
                 stage_updates += count
             if actual_registry != expected_registry or len(manifest['models']) != len(expected_registry) or stage_updates != expected_updates or manifest['optimizer_updates'] != stage_updates:
                 raise ValueError('Endpoint registry or stage update total differs')
@@ -101,8 +101,11 @@ def validate_package(experiment, producer, *, replay_fits=False):
     actual_evaluations = set()
     argmax_changes = 0
     for row in rows:
-        model, entry, _ = files[row['model_file']]
-        actual_evaluations.add((row['model_file'], row['scene'], row['method']))
+        # Recorded absolute paths remain provenance, while restored validation
+        # resolves only the sealed stage/file pair inside this restored root.
+        model_key = '/'.join(Path(row['model_file']).parts[-2:])
+        model, entry, _ = files[model_key]
+        actual_evaluations.add((model_key, row['scene'], row['method']))
         frame = frames[row['scene']]
         assert_close(row['point_ids'], frame['point_ids'].tolist())
         assert_close(row['parent_ids'], frame['parent_ids'].tolist())
