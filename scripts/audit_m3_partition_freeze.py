@@ -140,6 +140,7 @@ def geometry(row, block, arm):
         if value > maximum[i]:
             maximum[i], hard[i] = value, j
     area = np.bincount(hard, minlength=regions)
+    centroid_error = None
     if arm != "native":
         check(np.array_equal(q_i, np.arange(pixels)) and np.all(q_value == 1)
               and np.all(area > 0), "Fixed Q must assign one nonempty region per pixel")
@@ -151,8 +152,13 @@ def geometry(row, block, arm):
             check(np.array_equal(hard, block["slic_members"]), "The registered SLIC assignment was bypassed")
             idx = np.arange(pixels)
             points = np.column_stack(((idx//w + .5)/h, (idx%w + .5)/w))
-            check(np.allclose(positions, np.stack([points[hard == j].mean(0) for j in range(regions)]),
-                              atol=1e-6, rtol=0), "Wrong SLIC region centers")
+            exact = np.stack([points[hard == j].mean(0) for j in range(regions)])
+            fp32 = np.zeros((regions, 2), dtype=np.float32)
+            np.add.at(fp32, hard, points.astype(np.float32))
+            fp32 /= area[:, None].astype(np.float32)
+            check(np.array_equal(positions.astype(np.float32), fp32),
+                  "Recorded SLIC centers differ from independent FP32 accumulation")
+            centroid_error = float(np.max(np.abs(positions - exact)))
             expected = {(j, j) for j in range(regions)}
             for i, j in independent_support(hard, (h, w), diagonal=True):
                 expected |= {(int(hard[i]), int(hard[j])), (int(hard[j]), int(hard[i]))}
@@ -186,7 +192,8 @@ def geometry(row, block, arm):
                 four_neighbor_boundaries=len(borders), known_neighbor_pairs=len(neighbor_pairs),
                 known_semantic_boundaries=len(semantic), captured_semantic_boundaries=sum(p in borders for p in semantic),
                 labeled_region_purity_numerator=purity_numerator, labeled_points=len(known),
-                pool_max_abs_error=pool_error, broadcast_max_abs_error=broadcast_error), hard
+                pool_max_abs_error=pool_error, broadcast_max_abs_error=broadcast_error,
+                centroid_max_abs_error_fp64=centroid_error), hard
 
 
 def dumps(value):
