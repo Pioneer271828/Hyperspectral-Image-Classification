@@ -1,0 +1,15 @@
+{
+  "training_resumed": false,
+  "retained_failures": [
+    {"attempt": "restore01", "reason": "Tar iterator revisited the already-consumed first index", "resolution": "Use sequential tar.next; add archive corruption and path-boundary tests"},
+    {"attempt": "restore02", "reason": "Manually transcribed role archive checksum had 65 hex characters", "resolution": "Read machine hash in fixed halves; validate every frozen pin has exactly 64 hex characters"},
+    {"attempt": "legacy read-only probe", "reason": "Old archive begins with a log rather than JSON", "resolution": "Use its authenticated embedded/sidecar index and check all physical objects"},
+    {"attempt": "source seal06", "reason": "Native dependency commit absent from collected project/A bundles", "resolution": "Bundle the clean original LXC native checkout separately"},
+    {"attempt": "author history bundle", "reason": "Partial clone attempted a promisor fetch; GitHub TLS failed; own attempt interrupted", "resolution": "Preserve reused model and license with authenticated commit/tree/blob proofs; do not claim full author history"},
+    {"attempt": "source seal08", "reason": "Bare bundle clone inherited unborn default HEAD", "resolution": "Select the explicit published branch for bare and working clones; retain failed directories"},
+    {"attempt": "repository checker", "exit_code": 1, "reason": "Inherited current-status Markdown is stale", "resolution": "Report separately; shared status files outside sole-writer scope"}
+  ],
+  "destructive_cleanup": false,
+  "credentials_recorded": false,
+  "new_real_fits_or_query_scoring": 0
+}
