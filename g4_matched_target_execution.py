@@ -12,6 +12,7 @@ from joint_training import run_training
 from loadData.dataset_registry import file_hash
 from model.research_config import digest
 from research.reproduction.m4g4b.none_source_campaign import wait_gpu
+from transfer.shared_gpu_lease import indexed_physical_lease
 from research_runtime import code_snapshot, external_directory, require_frozen_code, write_json
 from scripts.train_joint_m4 import graph_binding
 from target_data_context import load_target_context
@@ -187,7 +188,9 @@ def worker_main():
         if any(file_hash(p) != h for p, h in pins.items()):
             raise ValueError("Protected full registration/source/target input changed")
     finish()
-    wait_gpu(registration["gpu"], external_directory(registration["out_dir"]))
-    result = run_training(case["settings"], items, case["out"], provenance, code, device="cuda",
-        resume=args.resume, stop_after=args.stop_after, finish_guard=finish, runtime_adapter=runtime(case, items))
+    gpu = registration["gpu"]
+    inventory = wait_gpu(gpu, external_directory(registration["out_dir"]))
+    with indexed_physical_lease(gpu, inventory=inventory):
+        result = run_training(case["settings"], items, case["out"], provenance, code, device="cuda",
+            resume=args.resume, stop_after=args.stop_after, finish_guard=finish, runtime_adapter=runtime(case, items))
     print(json.dumps({k: result[k] for k in ("operation", "updates_this_call")}), flush=True)

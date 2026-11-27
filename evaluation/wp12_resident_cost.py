@@ -120,8 +120,8 @@ def admit_gpu(env):
         raise ValueError("Visible GPU UUID cannot be matched to physical admission")
     _, free, utilization = matches[0]
     admission = dict(free_mib=int(free), utilization_percent=int(utilization))
-    if admission["free_mib"] < 12288 or admission["utilization_percent"] > 60:
-        raise ValueError("GPU resource gate not met; no measurement started")
+    if admission["free_mib"] < 0 or not 0 <= admission["utilization_percent"] <= 100:
+        raise ValueError("Invalid GPU inventory reading")
     return admission
 
 

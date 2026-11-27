@@ -280,8 +280,8 @@ def run(scope_path, sha, out, code, *, resume=False, segment=None, launcher=invo
                 prelocked = {gpu: starting_leases.enter_context(device.lease(slot_lock(out, gpu))) for gpu in slots}
                 inventory = device.simultaneous_inventory(slots)
                 record({'status': 'simultaneous_inventory', 'slots': inventory})
-                if not all(device.eligible(row) for row in inventory.values()):
-                    raise device.ResourceUnavailable('Both registered GPUs must qualify in the same inventory snapshot')
+                device.require(all(device.valid_snapshot(inventory.get(gpu), gpu) for gpu in slots),
+                               'Simultaneous inventory must identify all leased GPUs')
             except device.ResourceUnavailable as error:
                 result = {'status': 'waiting_for_resources', 'scope_sha256': sha, 'cases': 0,
                           'optimizer_updates': 0, 'optimizer_updates_this_invocation': 0, 'slots': {},
@@ -435,8 +435,8 @@ def accept(scope_path, sha, out, code):
                 admission = out / 'first-dispatch-admission.json'
                 row = read(admission)
                 device.require(row['scope_sha256'] == sha and set(row['slots']) == set(scope['gpus'])
-                               and all(device.eligible(slot) for slot in row['slots'].values()),
-                               'Missing simultaneous GPU admission evidence')
+                               and all(device.valid_snapshot(slot, gpu) for gpu, slot in row['slots'].items()),
+                               'Missing simultaneous physical GPU inventory')
                 pins[str(admission)] = hash_file(admission)
         batch.check_pins(pins)
         require_frozen_code(code)

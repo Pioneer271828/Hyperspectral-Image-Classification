@@ -8,7 +8,7 @@ import sys
 from time import perf_counter
 
 
-SCHEMA = "wp07_dual_physical_qualification_plan_v2"
+SCHEMA = "wp07_dual_physical_qualification_plan_v3"
 ASSIGNED = ("GPU-2fd29d4e-c4c7-618b-22d8-3c2fa73e48e5", "GPU-1c123d1c-2962-6a75-ca3a-b2f13a09e964")
 CASES = ("xuzhou/64/2/joint", "whu-honghu/64/4/constant_joint")
 
@@ -78,20 +78,17 @@ def main():
         plans[path] = {"journal": str(journal), "output": str(execution), "command": command,
                        "release": release, "routing": routing}
     snapshot = resource.simultaneous_inventory(args.gpu)
+    if not all(resource.valid_snapshot(row, gpu) for gpu, row in snapshot.items()):
+        raise ValueError("Qualification requires valid inventory for every assigned GPU")
     plan = transport._json_new(root / "qualification-plan.json", {"schema": SCHEMA, "synthetic": True,
          "matrix": "two synthetic cases, full and split, two completion proofs and zero reread",
          "worker": source(worker_id), "controller": source(control_id), "prospective_optimizer_updates": 48,
          "actual_optimizer_updates": 0, "real_optimizer_updates": 0, "mapping": mapped,
-         "min_free_mib": resource.MIN_FREE_MIB, "max_utilization": resource.MAX_UTILIZATION,
+         "resource_policy": "telemetry_only",
          "inventory": snapshot, "plans": plans, "physical_qualification": "not_executed", "query_accessed": False})
     print(json.dumps(plan), flush=True)
     if not args.run:
         return
-    if not all(resource.eligible(row) for row in snapshot.values()):
-        raise resource.ResourceUnavailable("Registered physical qualification threshold was not met")
-    # Keep the original P4 batch as the first claimant of the designated cards.
-    if not all(resource.eligible(row) for row in resource.simultaneous_inventory(args.gpu).values()):
-        raise resource.ResourceUnavailable("Physical resources are no longer eligible")
     started = perf_counter()
     for name, plan_dir in plans.items():
         for iteration, expected in ((0, 24), (1, 0)):

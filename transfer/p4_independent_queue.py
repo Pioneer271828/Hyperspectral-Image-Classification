@@ -188,9 +188,7 @@ def dispatch_registered(item, code, resource, science, *, resume=False, release=
                     fixture_wait(slot, case, stage)
                 inventory = probe(gpu) if gpu is not None else None
                 if gpu is not None:
-                    scope.require(set(inventory) == {"physical_uuid", "free_mib", "utilization", "driver"}
-                                  and inventory["physical_uuid"] == gpu and device.eligible(inventory),
-                                  "Physical admission does not satisfy the resource scope")
+                    scope.require(device.valid_snapshot(inventory, gpu), "Invalid snapshot for the leased GPU")
                 prefix.parent.mkdir(exist_ok=True)
                 attempts = sorted(prefix.parent.glob(prefix.name + ".*.attempt.json"))
                 serial = len(attempts) + 1

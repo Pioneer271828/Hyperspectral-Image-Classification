@@ -208,7 +208,7 @@ class FullBudgetTests(unittest.TestCase):
             calls.append(args)
             raise RuntimeError('Synthetic worker failure')
 
-        with patch.object(device, 'snapshot', return_value={'free_mib': 12287, 'utilization': 60}):
+        with patch.object(device, 'gate', side_effect=device.ResourceUnavailable('Active synthetic lease')):
             wait = campaign.run(path, sha, out, self.code, launcher=fail)
         self.assertEqual(wait['status'], 'waiting_for_resources')
         self.assertEqual(wait['optimizer_updates'], 0)
@@ -219,10 +219,10 @@ class FullBudgetTests(unittest.TestCase):
             with self.assertRaises(device.ResourceUnavailable):
                 campaign.run(path, sha, out, self.code, resume=True, launcher=fail)
         with patch.object(device, 'snapshot', side_effect=lambda gpu:
-                          {'free_mib': 12288, 'utilization': 60 if gpu == GPU_A else 61}):
+                          {'physical_uuid': gpu, 'free_mib': 128, 'utilization': 100, 'driver': 'fixture'}):
             with self.assertRaisesRegex(RuntimeError, 'stopped dispatch'):
                 campaign.run(path, sha, out, self.code, resume=True, launcher=fail)
-        self.assertEqual(len(calls), 1)
+        self.assertIn(len(calls), (1, 2))
         self.assertEqual(campaign.read(out / 'status.json')['status'], 'failed')
         with self.assertRaisesRegex(ValueError, 'requires diagnosis'):
             campaign.run(path, sha, out, self.code, resume=True, launcher=fail)

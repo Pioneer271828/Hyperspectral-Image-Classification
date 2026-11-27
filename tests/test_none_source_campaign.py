@@ -57,14 +57,16 @@ class NoneSourceCampaignTests(unittest.TestCase):
             with self.assertRaises(ValueError): accepted_short(root, sha, producer)
             with self.assertRaises(ValueError): accepted_short(root, "0" * 64, producer)
 
-    def test_single_gpu_queue_waits_at_fixed_memory_and_utilization_gates(self):
+    def test_single_gpu_queue_reports_telemetry_and_returns_without_waiting(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CUDA_VISIBLE_DEVICES": "1"}):
             with self.assertRaises(ValueError): wait_gpu(2, Path(temp))
-            with patch("subprocess.check_output", side_effect=["12287, 0", "24000, 61", "12288, 60"]), patch("time.sleep") as sleep:
-                wait_gpu(1, Path(temp))
-                self.assertEqual(sleep.call_count, 2)
-                self.assertEqual(sleep.call_args.args, (30,))
-                self.assertEqual(json.loads((Path(temp) / "status.json").read_text())["status"], "waiting_for_resources")
+            uuid = "GPU-11111111-1111-1111-1111-111111111111"
+            with patch("subprocess.check_output", return_value=f"1, {uuid}, 128, 100\n") as query, \
+                    patch("time.sleep") as sleep:
+                self.assertEqual(wait_gpu(1, Path(temp)),
+                    {"gpu": 1, "physical_uuid": uuid, "free_mib": 128, "utilization": 100})
+                query.assert_called_once()
+                sleep.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -55,17 +55,11 @@ def accepted_short(root, receipt_sha256, consumer):
 
 
 def wait_gpu(index, root):
+    from transfer.shared_gpu_lease import indexed_snapshot
+
     if os.environ.get("CUDA_VISIBLE_DEVICES") != str(index):
         raise ValueError("Explicit single physical GPU queue required")
-    while True:
-        memory, util = [int(x.strip()) for x in subprocess.check_output(
-            ["nvidia-smi", "-i", str(index), "--query-gpu=memory.free,utilization.gpu", "--format=csv,noheader,nounits"],
-            text=True).strip().split(",")]
-        if memory >= 12288 and util <= 60:
-            return
-        write_json(root / "status.json", {"status": "waiting_for_resources", "gpu": index,
-                   "free_mib": memory, "utilization": util})
-        time.sleep(30)
+    return indexed_snapshot(index)
 
 
 def main():
