@@ -1,0 +1,15 @@
+{
+  "schema":"c14_storage_contract_review_v1",
+  "issue":539,
+  "base":"7c27dd9261bc04d406eaf858f45d93e69bd17c4d",
+  "sole_write_scope":"research/paper_c_storage/",
+  "research_route":{"source":"research/模块化搭建与测试消融实施计划_2026-10-28.md §18.5","requires":"configuration/code/data/role hashes, seeds, actual steps, selection, weights/structure, predictions/diagnostics/costs","does_not_generally_mandate":"one independent uncompressed tensor ZIP per optimizer step for every historical study"},
+  "C3":{"source":"research/paper_c_recovery/transactions.py and delivery-review.md","frozen_requirements":["every initial/update committed state","parameters/buffers/Adam/allCPU_RNG/module_modes/cursor/selection_history","exact state/intent/record SHA chain","pending optimizer intent never replayed automatically"],"old_physical_contract":"immutable stages/NNNNNN/state.pt + intent.json + record.json; do not replace historical paths"},
+  "C13":{"source":"research/paper_c_spatial_baseline/future-comparison.json checkpoint_policy and run.py prepare","explicit_future_requirement":"complete state each update; no reduction in retention frequency","registration_not_authorized_for_real_execution":true,"original_reserve_bytes":897169554672,"reserve_derivation":"per state24*trainable_parameters +4MiB +256*selection_events*devval_centers; multiplied by every saved initial/update state","reserve_is_not_measured_state_volume":true},
+  "C11":{"source":"research/paper_c_paper_recovery/findings.md and recover.py","reuse":"whole-file SHA content-addressing and original-byte verification","priority_capsules":"initial/selected/current coverage and incremental dependency closure","omitted_intermediates":"transport/recovery exposure accounting, not permission to delete source states or lower future retention","historical_assets_rewritten":false},
+  "new_optional_v2":{"version":"c14_sqlite_cas_v2","reversible_physical_choices":["64KiB lossless chunk compression","ZIP-member-aligned chunks and bounded XOR+zlib deltas","SQLite WAL/FULL atomic objects+frame publication"],"unchanged_logical_contract":"every committed state and all original bytes recoverable with original full-file SHA","max_delta_depth":2,"chunk_bytes":65536,"max_component_bytes":67108864,"no_tensor_repacking_or_precision_change":true,"no_history_truncation_or_optimizer_reconstruction":true,"historical_files_and_registrations_untouched":true},
+  "production_integration":"explicit separate future runner/registration required; optional transaction API is not a monkeypatch of historical C3/C13 writer",
+  "migration_limit":"post-hoc importer leaves originals present and therefore increases current occupied space; no deletion or move authorized",
+  "storage_approval":"only existing authorized LXC roots used for pilot; no new mount/device/offhost destination approved or selected",
+  "real_training_and_query_scoring":false
+}
