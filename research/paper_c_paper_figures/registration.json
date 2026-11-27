@@ -1,0 +1,24 @@
+{
+  "D_source_archive_sha256": "f0e4c215002928ffcfeb68080606025692ea5cf9b13173a24e03a04412aaef25",
+  "sole_writer": "C",
+  "input_manifest_sha256": "0e32e35abceed70f77d139d3e723d062322c12b57c1b209eabb43c15c0df5641",
+  "issue": 535,
+  "base": "3752b89c6c42807053f2aef94d0a4c3831a4abf5",
+  "D_manuscript_modified": false,
+  "branch": "codex/paper-c-paper-figures-20261127",
+  "started_client": "2026-11-27T10:12:23.9341982+08:00",
+  "publication_widths_mm": [
+    85,
+    175
+  ],
+  "new_figures": [
+    "R1-S2-four-cells",
+    "R2-WP04-class-protection",
+    "D1-admission-flow",
+    "D2-support-units"
+  ],
+  "query_scoring": 0,
+  "private_data_reads": 0,
+  "allowed_path": "research/paper_c_paper_figures/",
+  "new_real_fits": 0
+}
