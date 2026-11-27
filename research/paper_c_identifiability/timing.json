@@ -1,0 +1,9 @@
+{
+  "schema":"paper_c_package4_timing_v1",
+  "first_recorded_clock_after_directive":"2026-11-26T11:54:19Z",
+  "clock_source":"clock.curr_time",
+  "coordination_before_first_recorded_clock":"A few minutes of read-only handoff/index preparation are excluded, not retroactively timed.",
+  "effective_work_seconds":null,
+  "pure_wait_seconds":null,
+  "note":"No training or artificial waits to fill a target; archive transfer overlaps independent metadata work. Do not mix source date -u with clock-tool timestamps."
+}
