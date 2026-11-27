@@ -55,7 +55,7 @@ class MetadataEvidence(unittest.TestCase):
             out = Path(tmp)/'tables'
             receipt = b.build(out)
             self.assertEqual(receipt['newly_ready_second_HSI_pairs'], 0)
-            self.assertEqual(len(list(out.iterdir())), 6)
+            self.assertEqual(len(list(out.iterdir())), 7)
             with (out/'original30-current-qualification.csv').open(encoding='utf-8') as stream:
                 projected = list(__import__('csv').DictReader(stream))
             with (b.HERE/'reuse/D-candidate-pairs30.csv').open(encoding='utf-8-sig') as stream:
@@ -69,6 +69,13 @@ class MetadataEvidence(unittest.TestCase):
         control = next(r for r in rows if r['id'] == 'HyRANK-scene-control')
         self.assertIn('COVERAGE_UNKNOWN', control['semantic_status'])
         self.assertFalse(any(d['id'] in ('erato', 'nefeli', 'kirki') for d in data))
+
+    def test_each_HongHu_class_has_one_validation_parent_not_two(self):
+        _, _, _, rows, _ = b.tables()
+        row = next(r for r in rows if r['scene'] == 'whu-honghu' and r['original_role'] == 'devval')
+        self.assertEqual(row['per_class_parent_count'], {'0': 1, '1': 1})
+        self.assertEqual(row['selected_parent_count_reported'], 2)
+        self.assertIsNone(row['validated_independent_parcels'])
 
 
 if __name__ == '__main__':

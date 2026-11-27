@@ -74,6 +74,16 @@ def tables():
             if {p['blocks'] for p in phase_rows if p['original_role'] == role} != {item[key]}:
                 raise ValueError('Reported C8 parents and C7 selected blocks disagree; do not infer independence')
             spatial.append(dict(scene=scene, original_role=role, released_points=10, per_common_class=5, selected_parent_count_reported=item[key], C7_selected_blocks=item[key], original_acquisition_images=1, validated_independent_parcels=None, original_role_parent_overlap=0, minimum_box_gap_pixels=4, nominal_minimum_axis_gap_m=4*by_id[scene]['GSD_m'], untouched_confirmation_units_released=0, role_status='previously_exposed_development', parent_independence_inference='not established', per_class_parent_count=None))
+    hh = read(HERE/'honghu-parent-receipt.json')
+    if hh['source'] != '7dc59390e38269b3ff36735932836e29ea78b7dc' or hh['scene'] != 'whu-honghu' or not hh['independent_label_box_parent_join_passed'] or hh['original_NPY_members_decoded'] or hh['untouched_confirmation_units_released']:
+        raise ValueError('Original metadata-only parent audit identity/scope differs')
+    for row in spatial:
+        if row['scene'] == 'whu-honghu':
+            role = next(r for r in hh['roles'] if r['original_role'] == row['original_role'])
+            if role['total_points'] != 10 or role['selected_parents'] != row['selected_parent_count_reported'] or any(c['points'] != 5 or c['independently_verified_parcels'] is not None for c in role['classes']):
+                raise ValueError('Audited per-class parent counts cannot imply parcel independence')
+            row['per_class_parent_count'] = {str(c['common_class']): c['original_parents'] for c in role['classes']}
+            row['per_class_parent_evidence_source'] = hh['source']
     return datasets, comparisons, projected, spatial, intersections
 
 
@@ -92,6 +102,8 @@ def build(out):
     out.mkdir()
     for name, rows in [('candidate-evidence.csv', datasets), ('paper-experiment-matrix.csv', comparisons), ('original30-current-qualification.csv', projected), ('spatial-unit-evidence.csv', spatial), ('source-evidence.csv', read(HERE/'sources.json')['sources'])]:
         write_csv(out/name, rows)
+    hh = read(HERE/'honghu-parent-receipt.json')
+    write_csv(out/'honghu-class-parent-evidence.csv', [dict(scene='whu-honghu', role=r['original_role'], common_class=c['common_class'], points=c['points'], original_parents=c['original_parents'], independently_verified_parcels=None, original_acquisition_images=1, confirmation_units_released=0) for r in hh['roles'] for c in r['classes']])
     result = dict(candidate_records=len(datasets), paper_comparison_rows=len(comparisons), original_directions_preserved=len(projected), same_family_original_directions=sum(r['C9_relation'] == 'same_published_family' for r in projected), different_family_original_directions=sum(r['C9_relation'] == 'different_published_families' for r in projected), unbound_local_original_directions=sum(r['C9_relation'] == 'local_identity_unbound' for r in projected), C7_common2_directions=2, unique_C7_points=40, C7_selected_tiles=17, C7_original_acquisition_images=2, new_independent_confirmation_units=0, newly_ready_second_HSI_pairs=0, candidate_CDL_raw_intersections=intersections, new_image_GT_download_bytes=0, optimizer_updates=0, query_reads=0, null_means='Unknown, never zero or an independence certificate', existing_records_superseded=False, scope='Bounded existing candidate roster, not exhaustive proof that no other dataset exists')
     (out/'table-receipt.json').write_text(json.dumps(result, indent=2)+'\n')
     return result

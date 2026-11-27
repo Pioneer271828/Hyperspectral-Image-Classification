@@ -1,0 +1,66 @@
+{
+  "scene": "whu-honghu",
+  "roles": [
+    {
+      "original_role": "devtrain",
+      "total_points": 10,
+      "selected_parents": 5,
+      "selected_tiles": 5,
+      "classes": [
+        {
+          "common_class": 0,
+          "points": 5,
+          "original_parents": 2,
+          "independently_verified_parcels": null
+        },
+        {
+          "common_class": 1,
+          "points": 5,
+          "original_parents": 3,
+          "independently_verified_parcels": null
+        }
+      ]
+    },
+    {
+      "original_role": "devval",
+      "total_points": 10,
+      "selected_parents": 2,
+      "selected_tiles": 2,
+      "classes": [
+        {
+          "common_class": 0,
+          "points": 5,
+          "original_parents": 1,
+          "independently_verified_parcels": null
+        },
+        {
+          "common_class": 1,
+          "points": 5,
+          "original_parents": 1,
+          "independently_verified_parcels": null
+        }
+      ]
+    }
+  ],
+  "shared_parent_count_excluded": 1,
+  "cross_role_parent_overlap": 0,
+  "minimum_box_gap_pixels": 4,
+  "original_acquisition_images": 1,
+  "independent_acquisition_replicates_established": false,
+  "independently_verified_parcels": null,
+  "untouched_confirmation_units_released": 0,
+  "original_NPY_members_decoded": 0,
+  "new_point_memberships": 0,
+  "query_reads": 0,
+  "independent_label_box_parent_join_passed": true,
+  "source": "7dc59390e38269b3ff36735932836e29ea78b7dc",
+  "original_archive_sha256": "57326bbac7f67907372db51bf91a494adc23a581b65dc01c825a5f14a3d1a5be",
+  "extracted_JSON_members": 274,
+  "extracted_JSON_bytes": 399275,
+  "skipped_other_archive_members": 77,
+  "archive_note": "Compressed archive is scanned; spectral members are skipped without member extraction/array interpretation",
+  "native_full_class_role_points": {
+    "devtrain": 110,
+    "devval": 110
+  }
+}
