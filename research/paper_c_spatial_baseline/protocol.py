@@ -66,9 +66,20 @@ def admit(path, *, synthetic=False):
     require(value.get('kind') == ('synthetic' if synthetic else 'future_development'), 'Synthetic/real role mismatch')
     require(value.get('confirmation_access') is False and value.get('query_access') is False, 'Query/confirmation access forbidden')
     require(set(value.get('scenes', {})) == ({'toy'} if synthetic else set(CLASSES)), 'Frozen scene set differs')
+    protected = {str(path): sha(path)}
     if not synthetic:
-        require(value.get('custodian_review') == 'spatial_groups_and_release_verified' and hex64(value.get('custodian_receipt_sha256')), 'External spatial-role provenance not admitted')
-    protected = {str(path): sha(path)}; result = {}; ledger = []
+        receipt = value.get('custodian_receipt', {})
+        require(isinstance(receipt, dict) and hex64(receipt.get('sha256')) and isinstance(receipt.get('path'), str), 'External spatial-role provenance not admitted')
+        rp = (path.parent/receipt['path']).resolve()
+        require(rp.is_relative_to(path.parent) and rp.is_file() and sha(rp) == receipt['sha256'], 'Custodian receipt bytes differ')
+        review = json.loads(rp.read_text())
+        require(review.get('schema') == 'c13_external_spatial_review_v1'
+                and review.get('scene_contracts_sha256') == digest(value['scenes'])
+                and review.get('decision') == 'parent_footprints_uncertainty_and_development_release_verified'
+                and isinstance(review.get('reviewer'), str) and bool(review['reviewer'])
+                and review.get('confirmation_issued') is False, 'External review scope differs')
+        protected[str(rp)] = receipt['sha256']
+    result = {}; ledger = []
     for scene, s in value['scenes'].items():
         c = s['classes']; bands = s['bands']; groups = s['groups']
         require(type(c) is int and c >= 2 and type(bands) is int and bands >= 4, 'Invalid dimensions')
