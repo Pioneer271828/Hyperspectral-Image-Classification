@@ -142,12 +142,32 @@ def run(backup, expected):
     path = backup / 'review/rebuilt-routing.csv'
     with path.open('x',newline='') as stream:
         writer=csv.DictWriter(stream,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
+    dependencies = read(backup/'increment/manifest.json')['files']
+    summary_pin = next(r for r in dependencies if r['path'].endswith('/m4s2-issue135-analysis02/summary.json'))
+    saved = read(backup/'increment-restored'/summary_pin['sha256'])
+    paper1 = []
+    for condition, cell in saved['tables']['fp32'].items():
+        series = [('macro','oa',cell['macro_oa'])]
+        series += [(scene,metric,values) for scene,metrics in cell['datasets'].items() for metric,values in metrics.items()]
+        for scene, metric, values in series:
+            samples = np.asarray(values['values'],dtype=float)
+            mean,sd = float(samples.mean()),float(samples.std(ddof=1))
+            require(len(samples)==3 and np.isclose(mean,values['mean'],atol=1e-12,rtol=0)
+                    and np.isclose(sd,values['std'],atol=1e-12,rtol=0), 'Restored historical seed summary differs')
+            paper1.append({'condition':condition,'scene':scene,'metric':metric,'unit':'percent',
+                           'seed64':float(samples[0]),'seed512':float(samples[1]),'seed2048':float(samples[2]),
+                           'mean':mean,'sample_sd':sd,'protocol':'Historical S2 joint transductive NUM-2 amended FP32; fixed splits, model-seed variation only'})
+    p1 = backup/'review/rebuilt-paper1-historical.csv'
+    with p1.open('x',newline='') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(paper1[0]));writer.writeheader();writer.writerows(paper1)
     receipt = {'status':'PASSED','verifier':expected,'case':case,'restored_states_inspected':state_count,
                'restored_role_blocks_read':bank.payload_reads,'distinct_original_development_points':110,
                'route_requests':len(roster),'stage_reconstructions':36,'view_metric_rows':len(rows),
                'aggregate_differences':0,'source_backbone_fresh_target_heads_RNG_optimizer_exact':True,
                'restored_input_geometry_wavelength_normalization_hashes_exact':True,'selected_checkpoint_readout_exact':True,
                'table_sha256':sha(path),'new_neural_calls':0,'optimizer_updates':0,'query_arrays_decoded':0,
+               'paper1_historical_aggregate_rows_rebuilt':len(paper1),'paper1_table_sha256':sha(p1),
+               'paper1_summary_scope':'Recomputed seed means/SD from archived aggregate values, not new query scoring. Original probability policy not stably passed; NUM-2 amendment retained.',
                'scope':'Saved native-source3/target3 engineering; 3 stride views plus approximate <=1000nm cut share the same 110 points. Six rounds are timing repeats, not independent samples.',
                'cross_host_optimizer_continuation_exercised':False}
     write(backup/'review/rebuild-receipt.json',receipt)

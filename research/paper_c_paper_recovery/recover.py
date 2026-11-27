@@ -176,6 +176,8 @@ def main():
                     and archive.stat().st_size == length, 'Reused original archive differs')
             index = read(prior / 'index.json')
             require(index == read(prior / 'archive-index.json'), 'Reused archive index differs')
+            with tarfile.open(archive) as tar:
+                require(json.load(tar.extractfile(tar.next())) == index, 'Reused index differs from pinned archive')
             files = index['files']
             logical = {r['name']: r for r in files} if isinstance(files, list) else {k: dict(v, name=k) for k,v in files.items()}
             for name, row in logical.items():
