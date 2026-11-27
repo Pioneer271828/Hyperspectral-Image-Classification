@@ -21,6 +21,8 @@ def main():
     def read(name):return json.loads((root/name).read_text())
     facts=read('review02/primary-custody01.json');envelope=read('plan06/common2-plan02.json');probe=read('validation07/common2-probe02.json');audit=read('validation07/common2-independent02.json');backup=read('preservation07.tar.gz.receipt.json');stale=read('validation07/stale-plan07.json');admission=json.loads((source/'admission.json').read_text())
     if not facts['passed'] or not probe['passed'] or not audit['passed'] or backup['mismatches'] or not backup['restored_all_phase_input_outputs_match_original'] or not stale['old_typed_key_plan_rejected']:raise ValueError('Completed metadata/input/audit/recovery evidence required')
+    fact_identity={key:value for key,value in facts.items() if key!='producer'}
+    if sha(canonical(fact_identity))!=admission['metadata_review_sha256']:raise ValueError('Exported primary fact commitment differs')
     if probe['plan_sha256']!=admission['plan_sha256'] or audit['plan_sha256']!=admission['plan_sha256'] or sha(canonical(envelope['plan']))!=admission['plan_sha256']:raise ValueError('Final evidence plan differs')
     subset=[]
     for scene in envelope['plan']['scenes']:
