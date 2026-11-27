@@ -82,6 +82,14 @@ def _load(registration, *, source_validation_only=False):
     paths = [str(Path(p['path']).resolve()) for p in pins]
     if len(set(paths))!=len(paths) or str(Path(v['labels']['path']).resolve()) in paths:
         raise ValueError('Input roles must have distinct files')
+    if source_validation_only:
+        deferred = Path(v['labels']['path'])
+        for path in paths:
+            try:
+                if Path(path).samefile(deferred):
+                    raise ValueError('A deferred label file cannot alias source-role evidence')
+            except FileNotFoundError:
+                pass
     _read(v['model'])
     evidence = json.loads(_read(v['model_evidence']))
     ef = {'version','kind','model_sha256','known','heads','feature_dimensions',

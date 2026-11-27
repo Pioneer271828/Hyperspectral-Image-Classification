@@ -9,6 +9,8 @@ import unittest
 import numpy as np
 
 from evaluation.wp09_registered_workflow import _counts, _reserve
+from evaluation.registered_open_set import _load
+from tests.test_registered_open_set import fixture
 
 
 class RegisteredWP09WorkflowTests(unittest.TestCase):
@@ -42,3 +44,10 @@ class RegisteredWP09WorkflowTests(unittest.TestCase):
                 _reserve({"path":str(pre),"sha256":"a"*64},(label,))
             with self.assertRaisesRegex(ValueError,"deferred label directory"):
                 _reserve({"path":str(custody/"not-released"),"sha256":"a"*64},(label,))
+
+    def test_source_validation_freeze_refuses_a_deferred_label_inode_alias(self):
+        with TemporaryDirectory() as tmp:
+            reg, value, _ = fixture(Path(tmp))
+            os.link(value["model"]["path"], value["labels"]["path"])
+            with self.assertRaisesRegex(ValueError,"cannot alias source-role evidence"):
+                _load(reg,source_validation_only=True)
