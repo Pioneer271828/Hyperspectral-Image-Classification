@@ -1,0 +1,13 @@
+{
+  "runtime_source": "9436235b360b242b77f2889e09eccbd385e70a7e",
+  "archive_bytes": 5325388,
+  "archive_sha256": "d65cb4e8855ab354c9d0da51baedad3b0ae51b9985109ff2362a1a9fde791713",
+  "restored_files": 574,
+  "file_mismatches": 0,
+  "tables_reproduced_identically": 7,
+  "HongHu_C7_and_independent_parent_join_reproduced": true,
+  "spectral_members_decoded": 0,
+  "new_real_fitting_updates": 0,
+  "same_host_backup_only": true,
+  "source_bundle_sha256": "654f5d3be82c3a22f6b8c977481b4ae9fe190684d9ff90a570e866d5ea2e6070"
+}

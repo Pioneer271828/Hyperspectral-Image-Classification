@@ -1,0 +1,68 @@
+{
+  "source": "9436235b360b242b77f2889e09eccbd385e70a7e",
+  "independent_standard_library_table_audit": true,
+  "original30_all_cells_preserved": true,
+  "candidate_rows": 17,
+  "paper_matrix_rows": 16,
+  "HongHu_parent_counts_independently_joined": true,
+  "structural_bootstrap_support": {
+    "scene": "whu-honghu",
+    "observed_validation_parents": 2,
+    "parents_per_class": [
+      1,
+      1
+    ],
+    "ordered_parent_bootstrap_draws": 4,
+    "AA_draws_with_both_classes": 2,
+    "valid_class0_recall_draws": 3,
+    "valid_class1_recall_draws": 3,
+    "interpretation": "Structural support only; no real logits, accuracy or confidence-coverage claim"
+  },
+  "python": "3.10.20",
+  "tests_passed": 8,
+  "real_spectral_members_decoded": 0,
+  "new_image_GT_download_bytes": 0,
+  "new_label_roles": 0,
+  "real_fitting_updates": 0,
+  "query_reads": 0,
+  "repository_check_exit": 1,
+  "repository_failure": "Inherited stale status Markdown; full checker did not pass",
+  "source_clean": true,
+  "tables": [
+    {
+      "name": "candidate-evidence.csv",
+      "bytes": 9242,
+      "sha256": "a11d73db7a9829d87352f5909ed01a3a330b691497abef055d6236ed23e8c5a5"
+    },
+    {
+      "name": "honghu-class-parent-evidence.csv",
+      "bytes": 260,
+      "sha256": "f60821f141259964aa4e1955fc5df916c41189e5a6c453e1c3117817ee97a69f"
+    },
+    {
+      "name": "original30-current-qualification.csv",
+      "bytes": 14012,
+      "sha256": "991b4911fe889fddb890816c2f447d89321dceffafd48d59dca93520e0943417"
+    },
+    {
+      "name": "paper-experiment-matrix.csv",
+      "bytes": 10395,
+      "sha256": "27d990b61c61a6266ec3d0c8779ab7a1e4ffce81f8434f978ded1be70355a3b0"
+    },
+    {
+      "name": "source-evidence.csv",
+      "bytes": 4366,
+      "sha256": "87f5da9481f52f215ba6a07608ace0f21650e1a8da61e065e8a9d4939264f3c5"
+    },
+    {
+      "name": "spatial-unit-evidence.csv",
+      "bytes": 863,
+      "sha256": "754e16c2907a173ffc6544e1c484d53eeb22aa97e2c531ba89aed83f630cb16b"
+    },
+    {
+      "name": "table-receipt.json",
+      "bytes": 1009,
+      "sha256": "9b2111a8955d9303903056804a4d8324e9fbd52d7dc64dc8fe4e5ad76778d95e"
+    }
+  ]
+}

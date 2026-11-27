@@ -10,6 +10,8 @@ C9 / Issue529：WP02、WP05独立验证条件核查。C独占写入本目录；�
 `candidates.json`覆盖17个既有产品/候选记录，`comparisons.json`登记16条论文比较。
 公开影像/patch总数、已选parent数、独立地块和独立采集不互相替代。未知写null；
 已释放独立确认单元0仅表示项目未准入，不断言候选数据实际没有可用地块。
+比较表的`project_comparison_task_points_admitted`只计该共同任务已冻结的监督点，
+不抹掉C5已合法准入的3幅图像/mask和1条序列，也不把公开patch总数当成监督预算。
 
 执行仅限授权LXC，使用干净、已发布完整SHA：
 
