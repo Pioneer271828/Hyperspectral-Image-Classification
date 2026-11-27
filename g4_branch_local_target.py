@@ -28,13 +28,16 @@ CALIBRATION = "g4_m6_branch_local_ordered_population_bn_v1"
 KEY = "branch_local_target_binding"
 CALIBRATION_KEY = "branch_local_target_calibration"
 CONDITIONS = ("none", "gated", "branch_local")
+LOCAL_MATCHES = {"branch_local": "gated", "local_add": "add",
+                 "local_cnn": "graph_to_cnn", "local_graph": "cnn_to_graph"}
 PREFIX = "backbone.interaction."
 
 
 class BranchLocalSelectiveInteraction(BidirectionalSelectiveInteraction):
     """Original gated transforms fed only by their own intermediate branch."""
-    def __init__(self, channels=128, hidden_dim=32, strength=.1, chunk_size=16384):
-        super().__init__(channels=channels, mode="gated", direction="both",
+    def __init__(self, channels=128, hidden_dim=32, strength=.1, chunk_size=16384,
+                 *, mode="gated", direction="both"):
+        super().__init__(channels=channels, mode=mode, direction=direction,
                          hidden_dim=hidden_dim, strength=strength, chunk_size=chunk_size)
         self.channels = channels
         self.register_buffer("protocol_version", torch.tensor(1, dtype=torch.int64))
@@ -53,7 +56,7 @@ class BranchLocalSelectiveInteraction(BidirectionalSelectiveInteraction):
                 collect_stats=False, return_diagnostics=False):
         if region_at_pixels is not None or pixels_at_regions is not None:
             raise ValueError("Branch-local control refuses external cross messages")
-        if (self.mode != "gated" or self.direction != "both" or int(self.protocol_version) != 1
+        if (self.mode not in ("add", "gated") or int(self.protocol_version) != 1
                 or any(not torch.is_tensor(x) or x.ndim != 2 or x.shape[1] != self.channels
                        or x.dtype not in (torch.float32, torch.float64) or not torch.isfinite(x).all()
                        for x in (pixels, regions))
@@ -62,6 +65,9 @@ class BranchLocalSelectiveInteraction(BidirectionalSelectiveInteraction):
         result, info = [], {}
         for label, module, value in (("pixel_local", self.graph_to_cnn, pixels),
                                      ("region_local", self.cnn_to_graph, regions)):
+            if module is None:
+                result.append(value)
+                continue
             updated, gate = module(value, value)
             result.append(updated)
             if collect_stats:
@@ -72,15 +78,18 @@ class BranchLocalSelectiveInteraction(BidirectionalSelectiveInteraction):
 
 
 def configuration(condition):
-    if condition not in CONDITIONS: raise ValueError("Explicit branch-local capacity condition required")
-    return {"matching_M6_condition": "none" if condition == "none" else "gated",
-            "source_scope": "branch_local" if condition == "branch_local" else ("disabled" if condition == "none" else "original_cross_branch"),
-            "parameter_matched": condition == "branch_local", "compute_budget_matched": False}
+    if condition not in CONDITIONS and condition not in LOCAL_MATCHES:
+        raise ValueError("Explicit branch-local capacity condition required")
+    local = condition in LOCAL_MATCHES
+    return {"matching_M6_condition": LOCAL_MATCHES.get(condition, condition),
+            "source_scope": "branch_local" if local else ("disabled" if condition == "none" else "original_cross_branch"),
+            "parameter_matched": local, "compute_budget_matched": False}
 
 
 def local_operator(config):
     return BranchLocalSelectiveInteraction(channels=128, hidden_dim=config["interaction_hidden_dim"],
-        strength=config["interaction_strength"], chunk_size=config["interaction_chunk_pixels"])
+        strength=config["interaction_strength"], chunk_size=config["interaction_chunk_pixels"],
+        mode=config["interaction_mode"], direction=config["interaction_direction"])
 
 def schema(model):
     return {n: {"shape": list(v.shape), "dtype": str(v.dtype)} for n, v in model.state_dict().items()}
@@ -90,7 +99,8 @@ def initialize(target, method, condition, **kwargs):
     config = configuration(condition)
     model, base = base_initialize(target, method, config["matching_M6_condition"], **kwargs)
     previous = {n: v.detach().clone() for n, v in model.state_dict().items()}
-    if condition == "branch_local":
+    local = config["parameter_matched"]
+    if local:
         with torch.random.fork_rng(devices=[]), torch.device("cpu"):
             control = local_operator(base["interaction_config"])
         state = control.state_dict()
@@ -98,7 +108,7 @@ def initialize(target, method, condition, **kwargs):
         control.load_state_dict(state, strict=True)
         model.backbone.interaction = control.to(next(model.parameters()).device)
     after = model.state_dict()
-    expected_new = {PREFIX + "protocol_version"} if condition == "branch_local" else set()
+    expected_new = {PREFIX + "protocol_version"} if local else set()
     if set(after) - set(previous) != expected_new or any(not torch.equal(v, after[n]) for n, v in previous.items()):
         raise ValueError("Only declared local-control version buffer may extend matching M6 state")
     binding = {"policy": POLICY, "target": target, "method": method, "condition": condition,
@@ -106,9 +116,9 @@ def initialize(target, method, condition, **kwargs):
         "matching_M6_initial_state_sha256": base["initial_state_sha256"], "initial_state_sha256": state_id(model),
         "architecture_sha256": digest(model.export_config()), "operator_signature": operator_signature(model.backbone.interaction),
         "capacity_parameter_count": base["message_parameter_count"], "additional_trainable_parameters": 0,
-        "additional_state_bytes": 8 if condition == "branch_local" else 0,
+        "additional_state_bytes": 8 if local else 0,
         "trainable_parameters": {n: p.numel() for n, p in model.named_parameters() if p.requires_grad},
-        "requires_local_aware_loader": condition == "branch_local", "optimizer_updates": 0,
+        "requires_local_aware_loader": local, "optimizer_updates": 0,
         "training_executable": False, "query_labels_accessed": False,
         "export_kwargs_scope": "original_gated_shape_custom_branch_local_semantics_in_this_binding"}
     model.training_config[KEY] = copy.deepcopy(binding)
@@ -118,7 +128,7 @@ def initialize(target, method, condition, **kwargs):
 
 def verify_initialization_binding(model, expected):
     b = model.backbone; base = expected["base_binding"]; control = b.interaction
-    config = configuration(expected["condition"]); local = expected["condition"] == "branch_local"
+    config = configuration(expected["condition"]); local = config["parameter_matched"]
     if (expected.get("policy") != POLICY or expected["configuration"] != config or model.training_config.get(KEY) != expected
             or base.get("policy") != BASE_POLICY or base["target"] != expected["target"] or base["method"] != expected["method"]
             or expected["matching_M6_initial_state_sha256"] != base["initial_state_sha256"]
@@ -138,13 +148,18 @@ def verify_initialization_binding(model, expected):
             or expected["trainable_parameters"] != base["trainable_parameters"]):
         raise ValueError("Actual local-control/M6/source/architecture/permission identity differs")
     if local:
+        active = base["interaction_config"]["interaction_direction"]
+        slots = (("graph_to_cnn", control.graph_to_cnn), ("cnn_to_graph", control.cnn_to_graph))
         if (type(control) is not BranchLocalSelectiveInteraction or control.channels != 128
+                or control.mode != base["interaction_config"]["interaction_mode"] or control.direction != active
                 or getattr(control.forward, "__func__", None) is not BranchLocalSelectiveInteraction.forward
                 or getattr(control.forward_aligned, "__func__", None) is not BranchLocalSelectiveInteraction.forward_aligned
                 or int(control.protocol_version) != 1 or set(dict(control.named_buffers())) != {"protocol_version"}
-                or any(type(m) is not SelectiveMessage or getattr(m.forward, "__func__", None) is not SelectiveMessage.forward
-                       or getattr(m._chunk, "__func__", None) is not SelectiveMessage._chunk
-                       for m in (control.graph_to_cnn, control.cnn_to_graph))):
+                or any(((active in ("both", name)) != (m is not None))
+                       or (m is not None and (type(m) is not SelectiveMessage
+                           or getattr(m.forward, "__func__", None) is not SelectiveMessage.forward
+                           or getattr(m._chunk, "__func__", None) is not SelectiveMessage._chunk))
+                       for name, m in slots)):
             raise ValueError("Branch-local method/version/original message identity differs")
     elif operator_signature(control) != base["operator_signature"]:
         raise ValueError("Original matching M6 operator differs")
@@ -163,7 +178,7 @@ def load_calibrated(path, weight_sha256, sidecar_sha256, observation, *, expecte
     if meta["training_config"].get(KEY) != expected_binding: raise ValueError("Pinned explicit branch-local binding required")
     with torch.random.fork_rng(devices=[]), torch.device("cpu"):
         model = MultiDatasetVCASAHGCN(meta["class_counts"], **meta["backbone_kwargs"])
-        if expected_binding["condition"] == "branch_local":
+        if configuration(expected_binding["condition"])["parameter_matched"]:
             model.backbone.interaction = local_operator(expected_binding["base_binding"]["interaction_config"])
     model.to(device); model.load_state_dict(torch.load(path, map_location=device, weights_only=True), strict=True)
     model.training_config = copy.deepcopy(meta["training_config"]); model.eval()

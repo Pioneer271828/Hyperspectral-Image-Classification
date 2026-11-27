@@ -117,18 +117,17 @@ class ResidentCostTests(unittest.TestCase):
                         self.assertRaises(ValueError):
                     measure(job)
 
-    def test_resource_gate_matches_physical_uuid_and_does_not_wait(self):
+    def test_resource_snapshot_matches_physical_uuid_without_a_load_limit(self):
         physical = "GPU-12340000-0000-0000-0000-000000000001"
         env = {"gpu": {"uuid": physical}}
-        for free, util, allowed in ((12288, 60, True), (12287, 0, False), (20000, 61, False)):
+        for free, util in ((12288, 60), (128, 100), (20000, 61)):
             output = f"GPU-12340000-0000-0000-0000-000000000002, 24000, 0\n{physical}, {free}, {util}\n"
             with self.subTest(free=free, util=util), patch(
                     "evaluation.wp12_resident_cost.subprocess.check_output", return_value=output):
-                if allowed:
-                    self.assertEqual(admit_gpu(env)["free_mib"], free)
-                else:
-                    with self.assertRaisesRegex(ValueError, "resource gate"):
-                        admit_gpu(env)
+                self.assertEqual(admit_gpu(env), {"free_mib": free, "utilization_percent": util})
+        with patch("evaluation.wp12_resident_cost.subprocess.check_output", return_value=f"{physical}, 4, 101\n"):
+            with self.assertRaisesRegex(ValueError, "Invalid GPU inventory"):
+                admit_gpu(env)
 
     def test_fresh_process_cli_output_and_exclusive_write(self):
         with TemporaryDirectory() as directory:
@@ -201,7 +200,14 @@ class ResidentCostTests(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("WP12_COST_DEVICE") == "cuda", "Explicit eligible GPU required")
     def test_cuda_native_worker(self):
         with TemporaryDirectory() as directory:
-            result = measure(fixture(Path(directory), "cuda"))
+            root = Path(directory)
+            job = root / "job.json"
+            job.write_text(json.dumps(fixture(root, "cuda")))
+            output = root / "result.json"
+            worker = run_cli(["--out", output, "measure", "--job", job, "--job-sha256", hash_file(job)])
+            self.assertEqual(worker.returncode, 0, worker.stderr)
+            result = json.loads(output.read_bytes())
+            self.assertTrue(result["fresh_process"])
             self.assertGreater(result["row"]["cost"]["peak_bytes"], 0)
             self.assertEqual(result["environment"]["memory"],
                              "measured_forward_peak_allocated_bytes_including_resident_tensors")

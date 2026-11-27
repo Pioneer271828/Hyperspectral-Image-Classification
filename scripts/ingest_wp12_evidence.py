@@ -13,6 +13,10 @@ from scripts.summarize_unified_cohort import read_pinned
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    if "--pavia-matched-deletion" in argv:
+        from evaluation.wp12_pavia_matched_deletion import main as matched_deletion
+
+        return matched_deletion([arg for arg in argv if arg != "--pavia-matched-deletion"])
     if "--positive-control-case" in argv or "--positive-control-publish" in argv:
         from evaluation.wp12_positive_cli import main as positive_control
 
@@ -55,6 +59,10 @@ def main(argv=None):
         from evaluation.wp12_wp10_deployment import main as wp10_deployment
 
         return wp10_deployment([arg for arg in argv if arg != "--wp10-deployment-review"])
+    if "--wp09-workflow" in argv:
+        from evaluation.wp09_registered_workflow import main as wp09_workflow
+
+        return wp09_workflow([arg for arg in argv if arg != "--wp09-workflow"])
     if "--wp09-review" in argv:
         from evaluation.wp09_stream_review import main as wp09_review
 

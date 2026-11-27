@@ -56,7 +56,15 @@ def snapshot(gpu):
 
 
 def eligible(row):
+    """Evaluate the resource limit recorded by legacy frozen experiments."""
     return row['free_mib'] >= MIN_FREE_MIB and row['utilization'] <= MAX_UTILIZATION
+
+
+def valid_snapshot(row, gpu):
+    return (isinstance(row, dict) and set(row) == {'physical_uuid', 'free_mib', 'utilization', 'driver'}
+            and row['physical_uuid'] == gpu and type(row['free_mib']) is int and row['free_mib'] >= 0
+            and type(row['utilization']) is int and 0 <= row['utilization'] <= 100
+            and isinstance(row['driver'], str) and bool(row['driver']))
 
 
 def simultaneous_inventory(gpus):
@@ -72,9 +80,11 @@ def simultaneous_inventory(gpus):
     return rows
 
 
-def gate(gpu):
+def gate(gpu, *, enforce_resource_thresholds=False):
+    """Validate the device inventory and apply an explicit legacy limit when requested."""
     row = snapshot(gpu)
-    if not eligible(row):
+    require(valid_snapshot(row, gpu), 'Invalid physical GPU inventory')
+    if enforce_resource_thresholds and not eligible(row):
         raise ResourceUnavailable(f'{gpu} has {row["free_mib"]} MiB free and {row["utilization"]}% utilization')
     return row
 
@@ -205,17 +215,18 @@ class _CudaGraphKernels(TorchFunctionMode):
 
 
 @contextmanager
-def arithmetic(protocol, gpu=None, *, kernel_calls=None, resource_admission=None):
+def arithmetic(protocol, gpu=None, *, kernel_calls=None, resource_admission=None,
+               enforce_resource_thresholds=False):
     """Apply a versioned arithmetic protocol and restore process settings on exit."""
     require(protocol in (CPU, *CUDA_PROTOCOLS) and (gpu is None) == (protocol == CPU), 'Device/protocol mismatch')
     details = {'protocol': protocol, 'physical_uuid': gpu, 'device': 'cpu' if gpu is None else 'cuda:0',
                'torch': str(torch.__version__), 'torch_threads': 1,
                'machine': platform.machine(), 'host': platform.node()}
     if gpu is not None:
-        # Gate before creating a CUDA context and require the coordinator's isolation.
-        row = gate(gpu) if resource_admission is None else resource_admission
-        require(row.get('physical_uuid') == gpu and eligible(row),
-                'Resource admission differs from the leased physical GPU')
+        row = snapshot(gpu) if resource_admission is None else resource_admission
+        require(valid_snapshot(row, gpu), 'Resource snapshot differs from the leased physical GPU')
+        if enforce_resource_thresholds and not eligible(row):
+            raise ResourceUnavailable(f'{gpu} does not meet the explicit legacy resource limit')
         require(os.environ.get('CUDA_VISIBLE_DEVICES') == gpu and
                 os.environ.get('CUBLAS_WORKSPACE_CONFIG') == WORKSPACE,
                 'Expose only the assigned UUID with the registered cuBLAS workspace')

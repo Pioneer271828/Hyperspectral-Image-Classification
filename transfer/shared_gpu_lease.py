@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import subprocess
 
 
 DEFAULT_ROOT = "/home/lbx/hsi-pioneer271828/runs/.p4_gpu_leases"
@@ -66,13 +67,37 @@ def physical_lease(gpu, inherited_fd=None):
     yield
 
 
-def observed_cuda_device(gpu):
+def indexed_snapshot(index):
+    """Read a physical-index inventory row for legacy integer-index CLI arguments."""
+    if type(index) is not int or index < 0:
+        raise ValueError("A nonnegative physical GPU index is required")
+    result = subprocess.check_output(["nvidia-smi", "-i", str(index),
+        "--query-gpu=index,uuid,memory.free,utilization.gpu", "--format=csv,noheader,nounits"], text=True)
+    actual, physical, free, util = (field.strip() for field in result.strip().split(","))
+    if int(actual) != index or int(free) < 0 or not 0 <= int(util) <= 100:
+        raise ValueError("Invalid GPU inventory for the requested physical index")
+    return {"gpu": index, "physical_uuid": canonical_gpu_uuid(physical),
+            "free_mib": int(free), "utilization": int(util)}
+
+
+@contextmanager
+def indexed_physical_lease(index, *, inventory=None):
+    """Use the same physical lease for integer-index workers and UUID workers."""
+    row = indexed_snapshot(index) if inventory is None else inventory
+    if row["gpu"] != index or os.environ.get("CUDA_VISIBLE_DEVICES") != str(index):
+        raise ValueError("Expose only the registered physical GPU index")
+    with dispatch_lease(row["physical_uuid"]):
+        observed_cuda_device(row["physical_uuid"], visibility=str(index))
+        yield row
+
+
+def observed_cuda_device(gpu, *, visibility=None):
     """Bind the actual CUDA logical device to the full UUID of a held lease."""
     import torch
 
     visible = os.environ.get("CUDA_VISIBLE_DEVICES")
-    if visible != gpu or canonical_gpu_uuid(gpu) != gpu:
-        raise ValueError("Expose exactly the leased physical CUDA UUID")
+    if visible != (gpu if visibility is None else visibility) or canonical_gpu_uuid(gpu) != gpu:
+        raise ValueError("Expose exactly the leased physical CUDA device")
     if not torch.cuda.is_available() or torch.cuda.device_count() != 1 or torch.cuda.current_device() != 0:
         raise ValueError("Expected exactly one visible logical CUDA device at cuda:0")
     props = torch.cuda.get_device_properties(0)

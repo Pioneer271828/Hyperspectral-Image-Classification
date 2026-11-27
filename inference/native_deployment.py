@@ -3,12 +3,16 @@
 from collections import Counter
 from contextlib import nullcontext
 from dataclasses import dataclass
+from threading import Lock
 from time import perf_counter_ns
+from types import MappingProxyType
 
 import numpy as np
 import torch
 
+from inference.light_cnn import NonfiniteLightOutput, validate_source
 from inference.tile_cascade import gate_score
+from model.VCASAHGCN import MultiDatasetVCASAHGCN
 from model.coverage_config import coverage_forward_kwargs
 from model.learnable_superpixel_graph import LearnableSuperpixelGraph
 from model.research_config import digest
@@ -19,6 +23,7 @@ from transfer.g3_training import state_hash
 STATIC = ("full", "light")
 ROUTED = ("adaptive", "random")
 COUNTS = ("light_calls","full_calls","graph_builds","graph_reuses","gate_calls","coverage_fallbacks","light_failures")
+PARTITIONS = ("native", "grid", "slic")
 
 
 @dataclass(frozen=True)
@@ -92,7 +97,8 @@ def uninstrumented(model):
     owner=getattr(model,"backbone",None)
     if owner is not None:
         sites=("cnn_stage1","cnn_stage2","graph_stage1","graph_stage2","fuse_features")
-        if (set(sites)&vars(owner).keys() or "build_graph" in vars(owner.learnable_graph)
+        if (set(sites)&vars(owner).keys() or (owner.learnable_graph is not None
+                and "build_graph" in vars(owner.learnable_graph))
                 or owner.adapter.cache_attention):
             raise ValueError("Deployment refuses mutable diagnostics or spectral caches")
 
@@ -102,21 +108,37 @@ def clock_ms(start):
 
 
 class Runtime:
-    def __init__(self, *, device, full=None, light=None, identity=None, graph_policy="rebuild"):
+    def __init__(self, *, device, full=None, light=None, identity=None, graph_policy="rebuild",
+                 full_loader=None, partition="native"):
         self.device=torch.device(device)
-        if graph_policy not in ("rebuild","reuse_frozen") or all(x is None for x in (full,light)):
+        if self.device.type == "cuda" and self.device.index is None:
+            self.device = torch.device("cuda", torch.cuda.current_device())
+        if graph_policy not in ("rebuild","reuse_frozen") or all(x is None for x in (full,light,full_loader)):
             raise ValueError("Explicit model and graph policy required")
+        if partition not in PARTITIONS or (partition != "native" and (
+                self.device.type not in ("cpu", "cuda") or graph_policy != "rebuild"
+                or (full is None and full_loader is None))):
+            raise ValueError("M3 partition deployment requires a full CPU/CUDA path and rebuilt graphs")
+        self._partition = partition
+        self._run_lock = Lock()
+        if full_loader is not None:
+            if (not callable(full_loader) or full is not None or graph_policy != "rebuild"
+                    or identity is None or set(identity) != ({"full", "light"} if light is not None else {"full"})
+                    or not isinstance(identity["full"], str) or len(identity["full"]) != 64
+                    or any(c not in "0123456789abcdef" for c in identity["full"])):
+                raise ValueError("Deferred full deployment requires a pinned state and rebuilt graphs")
         for model in (full,light):
             if model is not None:
-                uninstrumented(model)
-                if next(model.parameters()).device.type!="cpu":
-                    raise ValueError("Authenticate frozen weights on CPU before deployment")
-                model.to(self.device)
+                self._prepare_model(model, full_path=model is full)
         self.full,self.light=full,light
-        self.identity={k:state_hash(m) for k,m in (("full",full),("light",light)) if m is not None}
-        if identity is not None and self.identity!=identity:
+        self.full_loader = full_loader
+        states = {k:state_hash(m) for k,m in (("full",full),("light",light)) if m is not None}
+        if full_loader is not None:
+            states["full"] = identity["full"]
+        if identity is not None and states != identity:
             raise ValueError("Deployment model identity differs from the registered pair")
-        self.routable=(full is not None and light is not None and
+        self._identity = MappingProxyType(states)
+        self.routable=("full" in self.identity and light is not None and
                        getattr(light,"source_state",None)==self.identity["full"])
         self.graph_policy=graph_policy
         if graph_policy=="reuse_frozen" and (full is None or type(full.backbone.learnable_graph) is not LearnableSuperpixelGraph
@@ -125,15 +147,74 @@ class Runtime:
         self.cache={}
         self.versions=self.version()
 
+    @property
+    def partition(self):
+        return self._partition
+
+    @property
+    def identity(self):
+        return dict(self._identity)
+
     def version(self):
         return tuple((n,p.data_ptr(),p._version) for m in (self.full,self.light) if m is not None
                      for n,p in tuple(m.named_parameters())+tuple(m.named_buffers()))
+
+    def _check_device(self, model):
+        if any(value.device != self.device for value in (*model.parameters(), *model.buffers())):
+            raise ValueError("Deployment model is on a foreign device")
+
+    def _prepare_model(self, model, *, full_path, expected=None):
+        uninstrumented(model)
+        if any(value.device.type != "cpu" or value.is_inference()
+               for value in (*model.parameters(), *model.buffers())):
+            raise ValueError("Authenticate frozen weights on CPU before deployment")
+        if expected is not None and state_hash(model) != expected:
+            raise ValueError("Deferred full model differs from its pinned CPU state")
+        if full_path:
+            self._validate_partition_model(model)
+        model.to(self.device)
+        self._check_device(model)
+
+    def _validate_partition_model(self, model):
+        if self.partition == "native":
+            return
+        if (type(model) is not MultiDatasetVCASAHGCN or model.backbone.norm_type != "group_norm"
+                or type(model.backbone.learnable_graph) is not LearnableSuperpixelGraph
+                or model.backbone.graph_assignment_mode != "learned"
+                or model.backbone.graph_adjacency_mode != "learned"):
+            raise ValueError("M3 partitions require the plain GroupNorm learned graph")
+        validate_source(model)
+
+    def _partition_graph(self, builder, original, request, features, scale, *, assignment_mode, adjacency_mode):
+        if scale != request.scale or assignment_mode != "learned" or adjacency_mode != "learned":
+            raise ValueError("M3 partitions require the registered native scale and learned adjacency")
+        if self.partition == "grid":
+            return original(features, scale, assignment_mode="fixed_grid", adjacency_mode="learned")
+        import skimage
+        from scripts.m3_partition_graph import slic_graph
+        from transfer.slic_assignment import slic_assignment
+
+        if skimage.__version__ != "0.25.2":
+            raise ValueError("M3 SLIC deployment requires the qualified scikit-image 0.25.2 release")
+        grid = builder._grid_shape(*features.shape[:2], scale)
+        spectral = request.x[:, :, :request.waves.numel()].cpu().numpy()
+        labels, _ = slic_assignment(spectral, regions=grid[0]*grid[1])
+        return slic_graph(builder, features, labels, grid)
 
     def sync(self):
         if self.device.type=="cuda":
             torch.cuda.synchronize(self.device)
 
     def _full(self, request, stats, graph_clock):
+        if self.full is None and self.full_loader is not None:
+            # Preserve tensor version counters for the runtime's mutation guard.
+            with torch.inference_mode(False), torch.no_grad():
+                model = self.full_loader()
+                self._prepare_model(model, full_path=True, expected=self.identity["full"])
+            if self.version() != self.versions:
+                raise ValueError("Frozen deployment model changed during deferred load")
+            self.full = model
+            self.versions = self.version()
         model=self.full
         stats["full_calls"]+=1
         if model is None:
@@ -156,7 +237,8 @@ class Runtime:
             if self.device.type=="cuda":
                 event=(torch.cuda.Event(enable_timing=True),torch.cuda.Event(enable_timing=True))
                 event[0].record()
-            result=load(features,*args,**kwargs)
+            result = (load(features, *args, **kwargs) if self.partition == "native"
+                      else self._partition_graph(builder, load, request, features, *args, **kwargs))
             if event is None:
                 graph_clock.append(clock_ms(started))
             else:
@@ -192,6 +274,10 @@ class Runtime:
 
     @torch.inference_mode()
     def run(self, requests, mode, *, threshold=None, min_coverage=0., random_fast=None, faults=None):
+        with self._run_lock:
+            return self._run(requests, mode, threshold, min_coverage, random_fast, faults)
+
+    def _run(self, requests, mode, threshold, min_coverage, random_fast, faults):
         if mode not in (*STATIC,*ROUTED) or not requests or len({r.key for r in requests})!=len(requests):
             raise ValueError("Explicit deployment path and unique native requests required")
         if mode in ROUTED and not self.routable:
@@ -205,6 +291,16 @@ class Runtime:
             raise ValueError("Frozen deployment model changed")
         if any(r.x.device!=self.device for r in requests):
             raise ValueError("Request is resident on a foreign device")
+        for model in (self.full, self.light):
+            if model is not None:
+                self._check_device(model)
+                if any(module.training for module in model.modules()):
+                    raise ValueError("Frozen deployment model left evaluation mode")
+        if mode != "light" and self.partition != "native" and any(
+                not r.known or r.coverage != 1 or r.widths is not None or r.waves is None
+                or r.waves.ndim != 1 or r.waves.numel() == 0 or r.waves.device != self.device
+                or r.waves.dtype != torch.float32 or r.x.dtype != torch.float32 for r in requests):
+            raise ValueError("M3 partitions require full FP32 native-band blocks with known wavelengths")
         stats=Counter(dict.fromkeys(COUNTS,0))
         routes, probability, graph_clock=[],[],[]
         faults={} if faults is None else faults
@@ -240,7 +336,7 @@ class Runtime:
                             p=(light,)
                             route="light"
                         reason="accepted" if accepted else "confidence_or_control"
-                    except RecoverableLightFailure:
+                    except (NonfiniteLightOutput, RecoverableLightFailure):
                         stats["light_failures"]+=1
                         reason="light_failure"
             if p is None:

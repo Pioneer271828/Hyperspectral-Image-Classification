@@ -17,6 +17,8 @@ import sys
 import threading
 import time
 
+from transfer.shared_gpu_lease import indexed_physical_lease, indexed_snapshot
+
 POLICY = "g4_registered_resource_handoff_v1"
 HERE = Path(__file__).resolve().parent
 STEPS = {"first2": ("interrupted", 2), "continue": ("completed", 1498), "readonly": ("verified_completed", 0)}
@@ -142,15 +144,10 @@ class Ledger:
 
 def gate(gpu, slot, aborted=lambda: False, *, once=False):
     if os.environ.get("CUDA_VISIBLE_DEVICES") not in (None, str(gpu)): raise ValueError("Explicit physical GPU mismatch")
-    while not aborted():
-        free, util = map(int, subprocess.check_output(["nvidia-smi", "-i", str(gpu),
-            "--query-gpu=memory.free,utilization.gpu", "--format=csv,noheader,nounits"], text=True).strip().split(","))
-        write(slot, {"status": "ready" if free >= 12288 and util <= 60 else "waiting_for_resources",
-                     "gpu": gpu, "free_mib": free, "utilization": util})
-        if free >= 12288 and util <= 60: return True
-        if once: return False
-        time.sleep(5)
-    return False
+    if aborted():
+        return False
+    write(slot, {"status": "ready", **indexed_snapshot(gpu)})
+    return True
 
 
 def load_amendment(path, expected):
@@ -205,9 +202,13 @@ def worker(args):
     case, _ = b["read_full_case"](a["launch"]["path"], a["launch"]["sha256"], a["registration"]["path"],
         a["registration"]["sha256"], a["producer"], (case["target"], case["seed"], case["method"], case["mode"]))
     slot = Path(args.amendment).parent / ("gpu-" + str(args.gpu) + ".json")
+    with indexed_physical_lease(args.gpu) as inventory:
+        write(slot, {"status": "ready", **inventory})
+        run_stage(args, a, b, case)
+
+
+def run_stage(args, a, b, case):
     if args.stage == "audit":
-        if not gate(args.gpu, slot, once=True):
-            print(json.dumps({'operation': 'resource_wait', 'updates_this_call': 0})); return
         row = b["audit_case"](case, a["producer"], a["launch"]["sha256"], a["registration"]["sha256"])
         out = Path(args.amendment).parent / "events" / (args.case + "-audit.json")
         if out.exists(): raise ValueError("Audit output already exists")
@@ -216,8 +217,6 @@ def worker(args):
     if (args.stage == "first2" and current != "first2") or (args.stage == "continue" and current != "continue") or (args.stage == "readonly" and current != "readonly"):
         raise ValueError("Case cursor does not match assigned operation")
     items, value, finish = provenance(case, a, b); finish()
-    if not gate(args.gpu, slot, once=True):
-        print(json.dumps({'operation': 'resource_wait', 'updates_this_call': 0})); return
     before = tree(case["out"]) if args.stage == "readonly" else None
     result = b["run_training"](case["settings"], items, case["out"], value, a["producer"], device="cuda",
         resume=args.stage != "first2", stop_after=2 if args.stage == "first2" else None,

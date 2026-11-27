@@ -135,12 +135,23 @@ class AdmissionTests(unittest.TestCase):
                        purpose=registration.ADMISSION, protocol=device.CUDA_AUDITED, gpus=(GPU_A, GPU_B))
         sha = hash_file(path)
         scope, reg = registration.load(path, sha, self.code)
-        reported = {GPU_A: {'free_mib': 12288, 'utilization': 60}, GPU_B: {'free_mib': 12287, 'utilization': 0}}
+        reported = {gpu: {'physical_uuid': gpu, 'free_mib': 128, 'utilization': 100, 'driver': 'fixture'}
+                    for gpu in (GPU_A, GPU_B)}
+        out = self.root / 'telemetry-dispatch'
+        dispatched = []
+
+        def worker_failure(*args):
+            dispatched.append(args)
+            raise RuntimeError('Actual worker error propagates')
+
         with (patch.object(registration, 'load', return_value=({**scope, 'synthetic': False}, reg)),
-              patch.object(device, 'simultaneous_inventory', return_value=reported)):
-            status = campaign.run(path, sha, self.root / 'blocked', self.code,
-                                  launcher=lambda *args: self.fail('Worker dispatched before both GPUs qualified'))
-        self.assertEqual((status['status'], status['optimizer_updates']), ('waiting_for_resources', 0))
+              patch.object(device, 'simultaneous_inventory', return_value=reported),
+              patch.object(device, 'snapshot', side_effect=reported.__getitem__)):
+            with self.assertRaisesRegex(RuntimeError, 'stopped dispatch'):
+                campaign.run(path, sha, out, self.code, launcher=worker_failure)
+        self.assertTrue(dispatched)
+        self.assertEqual(campaign.read(out / 'first-dispatch-admission.json')['slots'], reported)
+        self.assertEqual(campaign.read(out / 'status.json')['status'], 'failed')
 
     def test_actual_paired_paths_hold_exact_checkpoint_and_nominal_audit(self):
         out = self.root / 'paired-execution'

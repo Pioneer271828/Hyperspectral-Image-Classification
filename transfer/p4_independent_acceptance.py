@@ -29,11 +29,7 @@ def verify_attempt(item, out, case, slot, stage, index, serial, attempt):
         scope.require(attempt["inventory"] is None, "CPU dispatch cannot claim a physical snapshot")
     else:
         inventory = attempt["inventory"]
-        scope.require(set(inventory) == {"physical_uuid", "free_mib", "utilization", "driver"}
-                      and inventory["physical_uuid"] == gpu and device.eligible(inventory)
-                      and type(inventory["free_mib"]) is int and type(inventory["utilization"]) is int
-                      and 0 <= inventory["utilization"] <= 100,
-                      "Missing eligible per-operation physical admission")
+        scope.require(device.valid_snapshot(inventory, gpu), "Missing per-operation physical GPU snapshot")
     # A coordinator can die after worker commit and before the last stdout
     # flush. The worker ledger, rather than stdout, is the commit authority.
     return scope.pin(log) if log.is_file() else None
