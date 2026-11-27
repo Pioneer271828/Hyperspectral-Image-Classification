@@ -16,6 +16,8 @@ from unittest.mock import patch
 import g4_resource_handoff as m
 from research_runtime import ROOT, code_snapshot, write_json
 from loadData.dataset_registry import file_hash
+from transfer import shared_gpu_lease
+from transfer.p4_runtime_device import ResourceUnavailable
 
 
 class ResourceTests(unittest.TestCase):
@@ -78,17 +80,38 @@ class ResourceTests(unittest.TestCase):
             write_json(root/'progress.json',{'status':'completed','cursor':1500});write_json(root/'result.json',{})
             self.assertEqual(m.phase(case),'readonly')
 
-    def test_gate_enforces_physical_device_memory_and_utilization(self):
+    def test_gate_records_telemetry_and_checks_physical_identity(self):
+        uuid = "GPU-11111111-1111-1111-1111-111111111111"
+        inventory = f"3, {uuid}, 128, 100\n"
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ,{},clear=True), \
-             patch.object(m.subprocess,'check_output',side_effect=['12000,10','13000,61','13000,60']) as query, \
-             patch.object(m.time,'sleep'):
-            self.assertTrue(m.gate(3,Path(temp)/'slot.json'))
-            self.assertEqual(query.call_count,3)
-            self.assertEqual(m.read(Path(temp)/'slot.json')['status'],'ready')
+             patch.object(m.subprocess,'check_output',return_value=inventory) as query, \
+             patch.object(m.time,'sleep') as sleep:
+            slot = Path(temp) / 'slot.json'
+            self.assertTrue(m.gate(3, slot))
+            self.assertEqual(m.read(slot), {"status": "ready", "gpu": 3, "physical_uuid": uuid,
+                                           "free_mib": 128, "utilization": 100})
+            query.assert_called_once()
+            sleep.assert_not_called()
             os.environ['CUDA_VISIBLE_DEVICES']='6'
             with self.assertRaises(ValueError):m.gate(3,Path(temp)/'wrong.json')
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ,{},clear=True),patch.object(m.subprocess,'check_output') as query:
             self.assertFalse(m.gate(3,Path(temp)/'slot.json',lambda:True));query.assert_not_called()
+
+    def test_index_and_uuid_workers_share_one_physical_lease(self):
+        uuid = "GPU-11111111-1111-1111-1111-111111111111"
+        row = {"gpu": 3, "physical_uuid": uuid, "free_mib": 128, "utilization": 100}
+        with tempfile.TemporaryDirectory() as root, patch.dict(os.environ, {
+                "CUDA_VISIBLE_DEVICES": "3", "HSI_GPU_LEASE_ROOT": root}), \
+                patch.object(shared_gpu_lease, "indexed_snapshot", return_value=row), \
+                patch.object(shared_gpu_lease, "observed_cuda_device") as observed:
+            with shared_gpu_lease.indexed_physical_lease(3) as inventory:
+                self.assertEqual(inventory, row)
+                observed.assert_called_once_with(uuid, visibility="3")
+                with self.assertRaises(ResourceUnavailable), shared_gpu_lease.dispatch_lease(uuid):
+                    self.fail("Indexed and UUID workers leased the same device")
+            with shared_gpu_lease.dispatch_lease(uuid):
+                with self.assertRaises(ResourceUnavailable), shared_gpu_lease.indexed_physical_lease(3):
+                    self.fail("UUID and indexed workers leased the same device")
 
     def test_process_identity_rejects_pid_reuse_and_changed_files(self):
         pin=m.process(os.getpid());self.assertTrue(m.same_process(pin))
