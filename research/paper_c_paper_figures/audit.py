@@ -82,9 +82,11 @@ def main():
         width=int(path.stem.split('-')[-1].removesuffix('mm'));doc=pymupdf.open(path);page=doc[0];text=' '.join(page.get_text().split())
         require(len(doc)==1 and abs(page.rect.width*25.4/72-width)<.02 and not page.get_images(),'Fixed-width/vector PDF audit failed')
         require(page.get_fonts() and all(doc.extract_font(f[0])[3] for f in page.get_fonts()),'Font not embedded')
+        font_sizes=[s['size'] for b in page.get_text('dict')['blocks'] if 'lines' in b for line in b['lines'] for s in line['spans'] if s['text'].strip()]
+        require(font_sizes and min(font_sizes)>=7,'Print text smaller than7pt')
         if path.name.startswith('D1'):require('No performance values available' in text and 'not run' in text,'Admission diagram lost unmeasured qualification')
         if path.name.startswith('D2'):require('confirmation units: 0' in text and 'not four acquisitions' in text,'Support table lost denominator qualification')
-        pdfs[path.name]={'width_mm':width,'embedded_font_count':len(page.get_fonts()),'raster_image_objects':0}
+        pdfs[path.name]={'width_mm':width,'height_mm':page.rect.height*25.4/72,'minimum_font_pt':min(font_sizes),'embedded_font_count':len(page.get_fonts()),'raster_image_objects':0}
     require(len(pdfs)==8,'Print-width variants missing')
     receipt={'status':'PASSED','verifier':a.expected_commit,'R1_OA_values_checked':48,'R2_selected_fused_class_effects_checked':81,
              'S2_fixed_evaluation_points':{k:int(sum(next(iter(v)))) for k,v in supports.items()},'S2_model_seeds':[64,512,2048],

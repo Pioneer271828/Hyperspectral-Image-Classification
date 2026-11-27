@@ -20,11 +20,11 @@ trained predictions.
 Per-class recall changes for the message and joint-edge main effects in the
 common-initialization WP04 Xuzhou factorial. Each main effect averages its two
 conditional contrasts; the plot uses selected fused outputs. Open marker shapes
-show model seeds64,512,2048 and diamonds show their means. Each class has five
+show model seeds 64, 512, 2048 and diamonds show their means. Each class has five
 development points, and every model uses the same 45 points. The dashed line is
 the preregistered -2 percentage-point class-protection floor. Although mean OA
 is positive and two seeds improve for each main effect, the message effect
-breaches protection for classes4,5,8 and the joint-edge effect for class8, so
+breaches protection for classes 4, 5, 8 and the joint-edge effect for class 8, so
 neither effect meets the adoption rule. The interaction is descriptive and is
 provided in the source table, rather than being granted a new adoption test.
 This K1/V5, twelve-step, fixed-topology experiment is separate from S2's
@@ -51,14 +51,14 @@ zero; the diagram contains no unmeasured performance values.
 
 Support ledger for the established C7 two-class development inputs. G/T denotes
 coarsened ground/tree, with five released points per class and role. Selected
-parent-tile counts are7/3 for Xuzhou fit/development and5/2 for HongHu. In HongHu,
-the per-class parent counts are2/3 for fitting and1/1 for development; thus each
+parent-tile counts are 7/3 for Xuzhou fit/development and 5/2 for HongHu. In HongHu,
+the per-class parent counts are 2/3 for fitting and 1/1 for development; thus each
 class's five development points occupy one parent. Xuzhou's per-class parent
 counts have not been verified by this aggregate record. Parent tiles are not
 validated independent parcels. One original image per scene is reused across
 roles and analyses; summing role rows does not yield four acquisitions. Both
-directions together retain40 unique points, even though they present them80
-times. Untouched confirmation units remain0. The40 potential new Hyperion points
+directions together retain 40 unique points, even though they present them 80
+times. Untouched confirmation units remain 0. The 40 potential new Hyperion points
 in C10 are conditional requirements, not released support or measured outcomes.
 
 ## Cross-figure denominator note
