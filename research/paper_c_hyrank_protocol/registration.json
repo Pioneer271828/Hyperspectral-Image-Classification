@@ -1,0 +1,17 @@
+{
+  "issue":531,
+  "base":"11d7a8b398c03c421fb6fb50ca881e182ac1f360",
+  "branch":"codex/paper-c-hyrank-protocol-20261127",
+  "sole_writer":"C",
+  "allowed_path":"research/paper_c_hyrank_protocol/",
+  "started_client_time":"2026-11-27T08:20:05+08:00",
+  "focus":"One candidate only: HyRANK Hyperion versus existing Xuzhou HySpex. Bind the original class/product/spatial metadata needed for a new water/woody-cover task; do not expand the candidate catalog.",
+  "authority":"Public metadata and authorized LXC checks; independent paper inserts and an unsent data-request draft. No research fitting/query/new imagery or label/parcel list acquisition.",
+  "new_image_GT_download_budget_bytes":0,
+  "new_label_or_spatial_roles":0,
+  "real_optimizer_updates":0,
+  "outbound_requests_sent":0,
+  "training_state":"paused",
+  "D_manuscript_modified":false,
+  "source_reuse":"Original C6 ReleasedBank and patch context; C8 fixed descriptor/model definitions; C7/C9 fact and role evidence. No new decoder, model or training framework."
+}

@@ -1,0 +1,18 @@
+{
+  "provider":"HyRANK maintainers, Remote Sensing Laboratory, National Technical University of Athens",
+  "version":"HyRANK Hyperspectral Satellite Dataset I v001, DOI10.5281/zenodo.1222202",
+  "status":"DRAFT_NOT_SENT",
+  "scope_now":"Existing public documentation and permitted aggregate metadata only; no images, GT arrays, point coordinates, private parcel lists or hidden benchmark labels requested/acquired.",
+  "fields":[
+    {"id":"R01","field":"member_identity","purpose":"Bind original release to Dioni/Loukia files","minimum":"Existing manifest/header text: names, dimensions, dtype, interleave/axis order, sizes, checksums; no data payload.","required_for":"ingress format/version identity"},
+    {"id":"R02","field":"delivered_class_codebook","purpose":"Bind reported class ordinals to actual array values and ignore codes","minimum":"Original numeric-value/name table including unlabeled/nodata/ignore; water/forest entries and source dictionary version.","required_for":"proposed semantic consumer"},
+    {"id":"R03","field":"water_forest_definitions","purpose":"Assess operational coarse mapping","minimum":"Existing definitions/CLC correspondence and stated mixture/cover/height or watercourse/inland/coastal distinctions; unknown if unspecified.","required_for":"annotation-defined task, not exact physical/species equivalence"},
+    {"id":"R04","field":"acquisition_processing_columns","purpose":"Bind delivered numerical observations","minimum":"EO1 scene IDs/dates, radiometric stage/units/scale/offset/nodata, atmospheric/geometric/resampling notes,176 retained original IDs/numbering/wavelengths where available.","required_for":"observation/processing provenance; measuredSRF not required"},
+    {"id":"R05","field":"spatial_units_overlap","purpose":"Assess possible role/context separation","minimum":"Existing public footprints or CRS/transform/overlap statement plus aggregate original polygon/group counts by scene/class. No private geometry or parcel list at this stage.","required_for":"geometry feasibility; no automatic independence certificate"},
+    {"id":"R06","field":"candidate_support_counts","purpose":"Check K5/V5 feasibility before selecting any point","minimum":"Aggregate annotated pixels and original groups for water and three forest labels in each public training scene; absent/unknown explicit.","required_for":"class/role feasibility, not target model selection"},
+    {"id":"R07","field":"original_roles_terms_history","purpose":"Preserve publisher/project boundaries","minimum":"Public-training product confirmation, exact-version license/attribution/revision and assembly/annotation history available to maintainers. No certification of third-party checkpoint histories.","required_for":"applicable original release, followed by separate project authorization"}
+  ],
+  "later_subset_only_if_project_authorized":{"scenes":["Dioni","Loukia"],"mapped_classes":2,"fit_per_class":5,"development_per_class":5,"prospective_centers_total":40,"context":"Only authorized observations needed for clipped7x7 patches and original group/role identity","full_archive_required":false,"hidden_validation_requested":false,"current_authorization":false},
+  "source_side_project_work":"Retain C6 Xuzhou original raw2/6 K5/V5 identities; bind new semantic roles and inherited preprocessing/exposure. Fresh proposed linear initialization, no old model/head reuse.",
+  "outbound_messages_sent":0
+}
