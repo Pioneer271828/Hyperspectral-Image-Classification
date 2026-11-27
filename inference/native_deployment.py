@@ -211,6 +211,8 @@ class Runtime:
             with torch.inference_mode(False), torch.no_grad():
                 model = self.full_loader()
                 self._prepare_model(model, full_path=True, expected=self.identity["full"])
+            if self.version() != self.versions:
+                raise ValueError("Frozen deployment model changed during deferred load")
             self.full = model
             self.versions = self.version()
         model=self.full

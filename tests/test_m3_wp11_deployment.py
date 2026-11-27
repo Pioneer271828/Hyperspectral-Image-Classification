@@ -1,6 +1,7 @@
 """Regression checks for the native partition route and deferred state guard."""
 
 import copy
+from contextlib import contextmanager
 from dataclasses import replace
 from unittest.mock import patch
 
@@ -8,8 +9,11 @@ import pytest
 import torch
 
 from inference.native_deployment import Request, RouteFailure, Runtime
+from inference import wp11_frozen_deployment
 from tests.test_tile_cascade import setup
 from transfer.g3_training import state_hash
+from transfer.p4_runtime_device import ResourceUnavailable
+from transfer.shared_gpu_lease import dispatch_lease
 
 
 def fixture():
@@ -55,6 +59,57 @@ def test_deferred_wrong_state_and_mode_retry_only_publish_an_admitted_model():
     full.train()
     with pytest.raises(ValueError, match="left evaluation mode"):
         runtime.run(requests, "full")
+
+
+def test_deferred_load_cannot_replace_the_resident_mutation_guard():
+    full, light, requests = fixture()
+
+    def mutate_and_load():
+        next(light.parameters()).add_(1.)
+        return full
+
+    runtime = Runtime(device="cpu", light=light, full_loader=mutate_and_load,
+                      identity={"full": state_hash(full), "light": state_hash(light)})
+    with pytest.raises(RouteFailure) as caught:
+        runtime.run(requests, "full")
+    assert "changed during deferred load" in str(caught.value.__cause__)
+    assert runtime.full is None
+    with pytest.raises(ValueError, match="Frozen deployment model changed"):
+        runtime.run(requests, "light")
+
+
+def test_frozen_cuda_deployment_holds_the_shared_device_lease(monkeypatch, tmp_path):
+    gpu = "GPU-11111111-1111-1111-1111-111111111111"
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", gpu)
+    monkeypatch.setenv("HSI_GPU_LEASE_ROOT", str(tmp_path))
+    observed = []
+
+    def bind(uuid):
+        observed.append(uuid)
+        with pytest.raises(ResourceUnavailable, match="Active lease"):
+            with dispatch_lease(uuid):
+                pytest.fail("A second local worker acquired the active device")
+
+    @contextmanager
+    def numeric(protocol, uuid, *, kernel_calls):
+        assert protocol == wp11_frozen_deployment.CUDA_FP64_WEIGHT
+        assert observed == [uuid]
+        yield {"physical_uuid": uuid}
+
+    monkeypatch.setattr(wp11_frozen_deployment, "observed_cuda_device", bind)
+    monkeypatch.setattr(wp11_frozen_deployment, "arithmetic", numeric)
+    with dispatch_lease(gpu):
+        with pytest.raises(ResourceUnavailable, match="Active lease"):
+            with wp11_frozen_deployment.deployment_arithmetic(gpu):
+                pytest.fail("Deployment proceeded under a foreign lease")
+    assert not observed
+    with wp11_frozen_deployment.deployment_arithmetic(gpu) as evidence:
+        assert evidence["physical_uuid"] == gpu
+        with pytest.raises(ResourceUnavailable, match="Active lease"):
+            with dispatch_lease(gpu):
+                pytest.fail("Deployment released its lease during inference")
+    with dispatch_lease(gpu):
+        assert observed == [gpu]
 
 
 def test_partition_route_falls_back_to_selected_grid_and_rejects_invalid_metadata():

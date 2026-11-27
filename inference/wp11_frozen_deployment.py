@@ -1,5 +1,6 @@
 """Open the pinned Xuzhou WP11 development capsule without reading labels."""
 
+from contextlib import contextmanager, nullcontext
 from dataclasses import replace
 import hashlib
 import io
@@ -14,6 +15,7 @@ from inference.route_controls import request_hash
 from model.research_config import digest
 from transfer.p4_runtime_device import CPU, CUDA_FP64_WEIGHT, arithmetic
 from transfer.registered_development import _load_source
+from transfer.shared_gpu_lease import observed_cuda_device, physical_lease
 
 
 def sha(path):
@@ -42,10 +44,15 @@ def read_inputs(base, expected):
     return inputs, requests
 
 
+@contextmanager
 def deployment_arithmetic(gpu, *, kernel_calls=None):
-    """Record actual contention without a fixed resource threshold."""
-    return arithmetic(CPU if gpu is None else CUDA_FP64_WEIGHT, gpu, kernel_calls=kernel_calls,
-                      enforce_resource_thresholds=False)
+    """Bind CUDA deployment to a shared physical lease without a utilization limit."""
+    with physical_lease(gpu) if gpu is not None else nullcontext():
+        if gpu is not None:
+            observed_cuda_device(gpu)
+        protocol = CPU if gpu is None else CUDA_FP64_WEIGHT
+        with arithmetic(protocol, gpu, kernel_calls=kernel_calls) as numeric:
+            yield numeric
 
 
 def place_requests(requests, device):
