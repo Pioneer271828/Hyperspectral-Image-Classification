@@ -4,6 +4,7 @@ import ast
 import datetime as dt
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -26,7 +27,7 @@ def manual_npy(path):
         header=ast.literal_eval(f.read(n).decode('latin1'));offset=f.tell()
     dtype=np.dtype(header['descr']);shape=header['shape']
     if dtype.hasobject or header['fortran_order'] or len(shape)!=4 or any(type(x)!=int or x<=0 for x in shape):raise ValueError('Unsafe/unsupported NPY axes or object dtype')
-    if Path(path).stat().st_size!=offset+int(np.prod(shape))*dtype.itemsize:raise ValueError('NPY byte count and shape disagree')
+    if Path(path).stat().st_size!=offset+math.prod(shape)*dtype.itemsize:raise ValueError('NPY byte count and shape disagree')
     return np.memmap(path,mode='r',dtype=dtype,offset=offset,shape=shape,order='C')
 
 

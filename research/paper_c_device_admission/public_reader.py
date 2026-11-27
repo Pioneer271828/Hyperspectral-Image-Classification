@@ -6,12 +6,15 @@ import zlib
 
 import numpy as np
 import tifffile
+from PIL import Image
 
 from catalog import train_member
 
 
 def verified_object(root,row):
-    train_member(row['member']);raw=(Path(root)/row['object']).read_bytes()
+    train_member(row['member'])
+    if row['object']!='objects/'+row['sha256'] or len(row['sha256'])!=64 or any(c not in '0123456789abcdef' for c in row['sha256']):raise ValueError('Content-addressed sample path required')
+    raw=(Path(root)/row['object']).read_bytes()
     if len(raw)!=row['bytes'] or hashlib.sha256(raw).hexdigest()!=row['sha256'] or zlib.crc32(raw)!=row['crc32']:raise ValueError('Public sample object identity differs')
     return Path(root)/row['object']
 
@@ -25,7 +28,7 @@ def read_aerial(root,index,*,include_public_train_labels=False):
     if arr.shape!=(512,512,5):raise ValueError('Released optical+height layout differs')
     value={'optical_hwc':arr[:,:,:4],'height_hw':arr[:,:,4],'released_band_ids':('red','green','blue','nir'),'wavelength_nm':None,'spectral_response_authenticated':False,'camera_group_prefix':s['camera_group_prefix'],'camera_raw':s['camera_raw'],'role':'public_train_intake_only','radiometry':'released harmonized integer values; no physical reflectance conversion','native_spatial_resolution_m':0.2}
     if include_public_train_labels:
-        raw=tifffile.imread(verified_object(root,lookup[s['labels']['name']])).squeeze()
+        with Image.open(verified_object(root,lookup[s['labels']['name']])) as im:raw=np.array(im).squeeze()
         if raw.shape!=(512,512) or not np.all((raw>=1)&(raw<=19)):raise ValueError('Released raw taxonomy differs')
         value['labels_hw_raw']=raw
         # A separate, explicit future protocol track; never modifies the raw mask.

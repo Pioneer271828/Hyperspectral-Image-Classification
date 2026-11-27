@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 import tifffile
+from PIL import Image
 
 from audit_intake import manual_tiff,check_roles
 from catalog import train_member
@@ -25,6 +26,10 @@ class AdmissionGates(unittest.TestCase):
         with self.assertRaises(ValueError):manual_tiff(f.getvalue())
         f=io.BytesIO();tifffile.imwrite(f,np.ones((6,8),dtype=np.uint8),metadata=None)
         with self.assertRaises(ValueError):manual_tiff(f.getvalue()[:-10])
+    def test_independent_lzw_decoder_matches_pillow_across_dictionary_width_changes(self):
+        a=np.random.default_rng(17).integers(0,256,size=(180,240),dtype=np.uint8)
+        f=io.BytesIO();Image.fromarray(a).save(f,format='TIFF',compression='tiff_lzw')
+        _,decoded=manual_tiff(f.getvalue());self.assertTrue(np.array_equal(decoded[:,:,0],a))
 
 
 if __name__=='__main__':unittest.main()
