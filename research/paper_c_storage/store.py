@@ -138,9 +138,10 @@ class Store:
 
     def decode_file(self,frame,name):
         f=frame['files'][name];parts=[];offset=0
+        require(0<f['bytes']<=MAX_FILE,'Decoded component outside size bound')
         for row in f['segments']:
             require(row['offset']==offset,'Segment gap/overlap');raw,_=self.get(row['object'])
-            require(len(raw)==row['bytes'],'Segment length differs');parts.append(raw);offset+=len(raw)
+            require(len(raw)==row['bytes'] and offset+len(raw)<=f['bytes'],'Segment length/size differs');parts.append(raw);offset+=len(raw)
         raw=b''.join(parts);require(len(raw)==f['bytes'] and hashed(raw)==f['sha256'],'Original file SHA differs')
         return raw
 
