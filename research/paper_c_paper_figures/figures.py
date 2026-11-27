@@ -68,7 +68,7 @@ def r1(data,width):
             for i,seed in enumerate(SEEDS):
                 y=[next(r['oa_percent'] for r in data if (r['scene'],r['residual'],r['supervision'],r['seed'])==(scene,mode,s,seed)) for s in ('legacy_three_heads','primary_only')]
                 x=np.arange(2)+offset+(i-1)*.018
-                ax.plot(x,y,color=color,ls=ls,lw=.65,alpha=.48,marker=MARKERS[i],ms=3.7,mfc='white',mew=.85)
+                ax.plot(x,y,color=color,ls=ls,lw=.7,alpha=.65,marker=MARKERS[i],ms=3.7,mfc='white',mew=.85)
                 vals+=y;series.append(y)
             ax.plot(np.arange(2)+offset,np.mean(series,axis=0),color=color,ls=ls,lw=1.8,zorder=4)
         span=max(vals)-min(vals);ax.set_ylim(min(vals)-max(.13,span*.15),max(vals)+max(.13,span*.15))
@@ -76,15 +76,18 @@ def r1(data,width):
         ax.grid(axis='y',color='#E7EBEE',lw=.5);ax.set_axisbelow(True)
     handles=[Line2D([],[],color=COLORS['off'],ls='--',label='Residual off'),Line2D([],[],color=COLORS['on'],label='Residual on')]
     handles += [Line2D([],[],color='#56616A',lw=0,marker=m,mfc='white',ms=4,label=str(s)) for s,m in zip(SEEDS,MARKERS)]
-    fig.legend(handles=handles,loc='upper center',bbox_to_anchor=(.5,1),ncol=3 if narrow else 5,frameon=False,fontsize=7.7,columnspacing=.9,handlelength=1.6)
+    if narrow:
+        fig.legend(handles=handles[:2],loc='upper center',bbox_to_anchor=(.5,1),ncol=2,frameon=False,fontsize=7.7)
+        fig.legend(handles=handles[2:],loc='upper center',bbox_to_anchor=(.5,.965),ncol=3,frameon=False,fontsize=7.7)
+    else:fig.legend(handles=handles,loc='upper center',bbox_to_anchor=(.5,1),ncol=5,frameon=False,fontsize=7.7,columnspacing=.9,handlelength=1.6)
     fig.text(.5,.018,'S2: 12 models; 3 paired seeds; fixed scene splits.\nNUM-2 amended readout; y-axes are cropped.',ha='center',va='bottom',fontsize=7.5)
     return fig
 
 
 def r2(data,width):
     narrow=width==85
-    fig,axes=plt.subplots(2 if narrow else 1,1 if narrow else 2,figsize=(width/25.4,(147 if narrow else 85)/25.4))
-    fig.subplots_adjust(left=.18 if narrow else .10,right=.97,top=.88,bottom=.17 if narrow else .25,hspace=.58,wspace=.30)
+    fig,axes=plt.subplots(2 if narrow else 1,1 if narrow else 2,figsize=(width/25.4,(153 if narrow else 95)/25.4))
+    fig.subplots_adjust(left=.18 if narrow else .10,right=.97,top=.84 if narrow else .76,bottom=.17 if narrow else .22,hspace=.66,wspace=.30)
     for ax,effect,title in zip(np.asarray(axes).ravel(),('message','joint_edge'),('Message main effect','Joint-edge main effect')):
         rows=[r for r in data if r['effect']==effect];means=[]
         for i,seed in enumerate(SEEDS):
@@ -96,9 +99,9 @@ def r2(data,width):
         ys=[r['delta_recall_pp'] for r in rows];ax.set_ylim(min(-15,min(ys)-6),max(25,max(ys)+6))
         ax.axhspan(ax.get_ylim()[0],-2,color=COLORS['red'],alpha=.06);ax.axhline(-2,color=COLORS['red'],ls='--',lw=.9)
         ax.axhline(0,color='#AAB4BB',lw=.6);ax.set_xticks(range(1,10));ax.set_xlim(.5,9.5)
-        ax.set_xlabel('Original numeric class ID');ax.set_ylabel('Recall change (pp)');ax.set_title(title,loc='left')
+        ax.set_xlabel('Original numeric class ID');ax.set_ylabel('Recall change (pp)');ax.set_title(title,loc='left',pad=26)
         failed=', '.join(str(c) for c,v in enumerate(means,1) if v < -2-1e-10)
-        ax.text(.02,.97,'Not admitted: class '+failed,transform=ax.transAxes,va='top',fontsize=7.3,color=COLORS['red'])
+        ax.text(0,1.018,'Not admitted: class '+failed,transform=ax.transAxes,va='bottom',fontsize=7.3,color=COLORS['red'])
     handles=[Line2D([],[],color='#6D7E88',lw=0,marker=m,mfc='white',ms=4,label=str(s)) for s,m in zip(SEEDS,MARKERS)]
     handles += [Line2D([],[],color=COLORS['ink'],lw=0,marker='D',ms=4,label='Seed mean')]
     fig.legend(handles=handles,loc='upper center',ncol=4,frameon=False,fontsize=7.5,columnspacing=.8,handletextpad=.3)
@@ -115,7 +118,7 @@ def box(ax,x,y,w,h,text,*,prospective=False):
 
 
 def d1(width,hyp):
-    narrow=width==85;fig,ax=plt.subplots(figsize=(width/25.4,(235 if narrow else 126)/25.4));fig.subplots_adjust(left=.02,right=.98,bottom=.03,top=.99)
+    narrow=width==85;fig,ax=plt.subplots(figsize=(width/25.4,(185 if narrow else 126)/25.4));fig.subplots_adjust(left=.02,right=.98,bottom=.03,top=.99)
     ax.set(xlim=(0,1),ylim=(0,1));ax.axis('off')
     current=['Reported device models\nXuzhou: HySpex\nHongHu: Nano-Hyperspec\nSerial/SRF calibration unverified',
              'Frozen ground/tree development roles\nK5 fit + V5 development per class\n40 unique points across both scenes\nBoth directions reuse these points',
@@ -139,7 +142,7 @@ def d1(width,hyp):
 
 
 def d2(roles,width):
-    narrow=width==85;fig,ax=plt.subplots(figsize=(width/25.4,(170 if narrow else 92)/25.4));fig.subplots_adjust(left=.045,right=.955,bottom=.02,top=.98);ax.axis('off')
+    narrow=width==85;fig,ax=plt.subplots(figsize=(width/25.4,(145 if narrow else 92)/25.4));fig.subplots_adjust(left=.045,right=.955,bottom=.02,top=.98);ax.axis('off')
     rows=[]
     for r in roles:
         scene='Xuzhou' if r['scene']=='xuzhou' else 'HongHu';role='fit' if r['original_role']=='devtrain' else 'dev'

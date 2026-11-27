@@ -87,7 +87,7 @@ def main():
         pdfs[path.name]={'width_mm':width,'embedded_font_count':len(page.get_fonts()),'raster_image_objects':0}
     require(len(pdfs)==8,'Print-width variants missing')
     receipt={'status':'PASSED','verifier':a.expected_commit,'R1_OA_values_checked':48,'R2_selected_fused_class_effects_checked':81,
-             'S2_fixed_evaluation_points':{k:sum(next(iter(v))) for k,v in supports.items()},'S2_model_seeds':[64,512,2048],
+             'S2_fixed_evaluation_points':{k:int(sum(next(iter(v)))) for k,v in supports.items()},'S2_model_seeds':[64,512,2048],
              'WP04_unique_development_points':45,'WP04_points_per_class':5,'WP04_adoption':adoption,
              'C7_unique_points':40,'C7_original_images':{'xuzhou':1,'whu-honghu':1},'C7_confirmatory_units_released':0,
              'cross_figure_unique_point_total':None,'cross_figure_point_warning':'S2, WP04 and C7 are different releases. Their overlap is not resolved by these aggregates; do not sum their point counts.',
