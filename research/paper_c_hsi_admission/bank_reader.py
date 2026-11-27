@@ -78,13 +78,15 @@ class ReleasedBank:
         for item in self.index['members']:
             row=self.rows[item['id']]
             if item['role']!=row['role'] or item['name']!=f"tile-{row['id']}.json":raise ValueError('Bank member role/name differs')
-            meta=pinned_json(safe_member(self.root,item['name']),item['sha256'])
-            if meta['row']!=row or meta['registration']!=self.pin['registration'] or meta['member']!=f"tile-{row['id']}.npy" or meta['dtype']!='<f4':raise ValueError('Tile manifest differs from original authority')
             y0,y1,x0,x1=row['box'];width=self.pin['shape'][1]
             points=sorted([[int(i),int(c)] for i,c in role_points[row['role']] if y0<=i//width<y1 and x0<=i%width<x1])
             if row['released_samples']!={'count':len(points),'sha256':sha(canonical(points))}:raise ValueError('Original row sample digest differs')
-            self.samples[row['id']]=points;self.members[row['id']]=meta
-        if set(self.members)!=set(self.rows):raise ValueError('Original completed bank roster differs')
+            self.samples[row['id']]=points
+            if not points:continue # A preserves labeled tiles only, not the complete observation bank.
+            meta=pinned_json(safe_member(self.root,item['name']),item['sha256'])
+            if meta['row']!=row or meta['registration']!=self.pin['registration'] or meta['member']!=f"tile-{row['id']}.npy" or meta['dtype']!='<f4':raise ValueError('Tile manifest differs from original authority')
+            self.members[row['id']]=meta
+        if set(self.samples)!=set(self.rows) or set(self.members)!={i for i in self.rows if self.samples[i]}:raise ValueError('Original completed bank or labeled-subset roster differs')
         for role,points in role_points.items():
             gathered=[p for i,r in self.rows.items() if r['role']==role for p in self.samples[i]]
             if sorted(gathered)!=sorted([list(p) for p in points]):raise ValueError('Original released labels are not covered exactly once')
