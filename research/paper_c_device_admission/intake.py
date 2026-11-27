@@ -36,9 +36,9 @@ def select(metadata,catalogs):
     return selected
 
 
-def retrieve(kind,members,catalog_manifest,out,remaining):
+def retrieve(kind,members,catalog_manifest,out,remaining,*,request_cap=16*1024**2):
     expected=catalog_manifest['archives'][kind]
-    rf=RangeFile(BASE+ARCHIVES[kind],budget=remaining,request_cap=16*1024**2)
+    rf=RangeFile(BASE+ARCHIVES[kind],budget=remaining,request_cap=request_cap)
     if rf.etag!=expected['etag'] or rf.size!=expected['archive_bytes']:raise ValueError('Archive changed since the catalog selection')
     receipts=[]
     try:
@@ -46,7 +46,7 @@ def retrieve(kind,members,catalog_manifest,out,remaining):
             for row in members:
                 train_member(row['name']);info=z.getinfo(row['name']);validate_member(info,cap=64*1024**2)
                 if (info.CRC,info.file_size,info.compress_size,info.header_offset)!=(row['crc32'],row['bytes'],row['compressed_bytes'],row['header_offset']):raise ValueError('Selected ZIP member differs from frozen catalog')
-                if info.compress_size>16*1024**2:raise ValueError('Selected member exceeds per-request intake cap')
+                if info.compress_size>request_cap:raise ValueError('Selected member exceeds per-request intake cap')
                 raw=z.read(info) # zipfile verifies the complete decoded member CRC.
                 digest=hashlib.sha256(raw).hexdigest();dest=out/'objects'/digest
                 if dest.exists():
