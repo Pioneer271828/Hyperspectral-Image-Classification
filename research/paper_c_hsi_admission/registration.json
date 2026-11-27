@@ -1,0 +1,21 @@
+{
+  "schema":"paper_c_real_hsi_pair_intake_registration_v1",
+  "issue":523,
+  "first_authoritative_clock":"2026-11-26T19:49:28Z",
+  "client_date":"2026-11-27",
+  "candidate_pair":["xuzhou_historical9_HySpex436","whu_honghu_NanoHyperspec270"],
+  "allowed_initial_reads":["primary paper/provider/data-license metadata","existing preservation manifests and hash indexes","original already-released devtrain/devval authority records"],
+  "allowed_initial_payload_scope":"Only original authenticated released development-bank tile IDs, after role and byte-identity admission; no raw GT or full-scene bypass.",
+  "public_metadata_download_budget_bytes":16777216,
+  "selected_existing_tile_migration_budget_bytes":134217728,
+  "no_new_label_membership":true,
+  "forbidden_roles":["query","test","sealed","confirmation"],
+  "initial_new_optimizer_updates":0,
+  "initial_real_neural_calls":0,
+  "shared_taxonomy_state":"pending original-to-local ordinal evidence, explicit mapping and source/target support counts; numeric IDs alone are not shared semantics",
+  "spatial_state":"Reuse original development parents and footprints. Exclude cross-role shared parents for a proposed stricter subset only after feasibility is checked from admitted metadata; never call exposed devval independent confirmation.",
+  "native_response_state":"unknown; no physical mapping/SRF claim from processed columns",
+  "training_gate":"Concrete same-budget baseline/selection/seed/context registration and budget/time notice required, subject to existing user authorization. This metadata intake registration authorizes zero training.",
+  "effective_work_seconds":null,
+  "wait_seconds":null
+}
