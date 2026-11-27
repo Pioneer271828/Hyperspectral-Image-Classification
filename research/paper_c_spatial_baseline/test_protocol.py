@@ -13,10 +13,10 @@ import torch
 
 from .fixture import make, future_shape
 from .protocol import METHODS, admit, sha, OPTIMIZER
-from .tasks import Task, dependencies
+from .tasks import Task, dependencies, author_module
 from .run import ROOT, execute, paired_plan, seed_all
 
-ADAPTER = AUTHOR = None
+ADAPTER = AUTHOR = AUTHOR_ROOT = None
 
 
 def equal(a, b):
@@ -183,9 +183,29 @@ class Models(Protocol):
         def forbidden(): raise AssertionError('Unsafe resume constructed model')
         with self.assertRaisesRegex(ValueError, 'Pending'): execute(destination, c, forbidden, resume=True)
 
+    def test_portable_author_source_authentication(self):
+        packet=self.root/'source-packet';packet.mkdir()
+        if (Path(AUTHOR_ROOT)/'DSNet.commit').exists():
+            for name in ['DSNet.commit','DSNet.tree','DSNet-model.py','DSNet-LICENSE']:
+                (packet/name).write_bytes((Path(AUTHOR_ROOT)/name).read_bytes())
+        else:
+            for kind,name in [('commit','DSNet.commit'),('tree','DSNet.tree')]:
+                ref='HEAD' if kind=='commit' else 'HEAD^{tree}'
+                (packet/name).write_bytes(subprocess.check_output(['git','-C',str(AUTHOR_ROOT),'cat-file',kind,ref]))
+            for src,dst in [('model.py','DSNet-model.py'),('LICENSE','DSNet-LICENSE')]:
+                (packet/dst).write_bytes((Path(AUTHOR_ROOT)/src).read_bytes())
+        original=self.task('dsnet');source=author_module(packet,ADAPTER)
+        restored=ADAPTER.Adapter(source,8,2);restored.load_state_dict(original.model.state_dict())
+        original.model.eval();restored.eval();x=original.inputs('devval',0).permute(2,0,1).unsqueeze(0).contiguous()
+        with torch.no_grad():
+            self.assertTrue(all(torch.equal(a,b) for a,b in zip(original.model(x),restored(x))))
+        (packet/'DSNet-model.py').write_bytes((packet/'DSNet-model.py').read_bytes()+b'\n')
+        with self.assertRaisesRegex(ValueError,'packet file'):author_module(packet,ADAPTER)
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(); p.add_argument('--native', required=True); p.add_argument('--author', required=True)
     a, rest = p.parse_known_args(); torch.set_num_threads(1)
     ADAPTER, AUTHOR = dependencies(ROOT, a.native, a.author)
+    AUTHOR_ROOT = a.author
     unittest.main(argv=[sys.argv[0]]+rest)

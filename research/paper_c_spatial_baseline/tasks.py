@@ -1,5 +1,6 @@
 """Only model adapters. Reuses the pinned C3 components, never an author trainer."""
 import copy
+import hashlib
 import importlib.util
 from pathlib import Path
 import subprocess
@@ -23,11 +24,37 @@ def module(path, name):
     return m
 
 
+def git_object(kind, raw):
+    return hashlib.sha1(kind.encode()+b' '+str(len(raw)).encode()+b'\0'+raw).hexdigest()
+
+
+def author_module(author, adapter):
+    author = Path(author)
+    if not (author/'DSNet.commit').exists():
+        require(sha(author/'LICENSE') == LICENSE, 'Author license bytes differ')
+        return adapter.load_author_model(author)
+    # Portable two-file source closure from C11. Authenticate the original
+    # author commit and root tree, not a newly invented replacement Git commit.
+    commit=(author/'DSNet.commit').read_bytes(); tree=(author/'DSNet.tree').read_bytes()
+    require(git_object('commit',commit)==AUTHOR, 'Author packet commit differs')
+    require(commit.splitlines()[0]==b'tree '+git_object('tree',tree).encode(), 'Author packet tree differs')
+    members={}; pos=0
+    while pos<len(tree):
+        end=tree.index(b'\0',pos); entry=tree[pos:end]; mode,name=entry.split(b' ',1)
+        require(end+21<=len(tree), 'Truncated author tree')
+        members[name.decode()]=(mode.decode(),tree[end+1:end+21].hex());pos=end+21
+    for original,saved,expected in [('model.py','DSNet-model.py','86d6843ade5a18b2187e20854a0b66d183baf5df'),
+                                     ('LICENSE','DSNet-LICENSE','f288702d2fa16d3cdf0035b15a9fcbc552cd88e7')]:
+        raw=(author/saved).read_bytes()
+        require(members[original]==('100644',expected) and git_object('blob',raw)==expected, 'Author packet file differs')
+    require(sha(author/'DSNet-LICENSE')==LICENSE, 'Author packet license differs')
+    return module(author/'DSNet-model.py','c13_authenticated_author_packet')
+
+
 def dependencies(root, native, author):
     clean(native, NATIVE)
-    require(sha(Path(author)/'LICENSE') == LICENSE, 'Author license bytes differ')
     adapter = module(Path(root)/'research/paper1_c/adapter.py', 'c13_prior_adapter')
-    upstream = adapter.load_author_model(author)
+    upstream = author_module(author,adapter)
     # The clean frozen native checkout has first import priority.
     require(not any(n == 'model' or n.startswith('model.') for n in sys.modules), 'Native model imported before dependency pin')
     sys.path.insert(0, str(Path(native).resolve()))

@@ -153,8 +153,8 @@ def main():
         require(getattr(a, name) is not None, f'Missing {name}')
     require(sha(a.manifest) == a.manifest_sha256, 'Explicit manifest hash differs')
     admitted = admit(a.manifest, synthetic=a.synthetic)
-    adapter, author = dependencies(ROOT, a.native, a.author)
     if a.command == 'register':
+        adapter, author = dependencies(ROOT, a.native, a.author)
         require(a.max_updates > 0 and a.max_state_bytes > 0, 'Explicit budget required')
         value = prepare(a, admitted, adapter, author); new_json(a.out, value)
         print(json.dumps({'registration_sha256': sha(a.out), 'updates': value['updates'],
@@ -166,12 +166,22 @@ def main():
     require(reg['producer'] == a.expected_commit and reg['hostname'] == socket.gethostname()
             and reg['native_root'] == str(Path(a.native).resolve()) and reg['author_root'] == str(Path(a.author).resolve())
             and reg['manifest_sha256'] == admitted['manifest_sha256'] and reg['kind'] == admitted['kind'], 'Run binding differs')
+    out = Path(a.out)
+    if out.exists() and a.resume and all((out/c['id']/'done.json').exists() for c in reg['cases']):
+        # Author DSNet construction itself has a dummy shape forward. Complete
+        # reentry must return before prepare() or ANY model constructor.
+        clean(a.native, NATIVE)
+        value = audit(a.registration, out)
+        require(json.loads((out/'execution-audit.json').read_text()) == value, 'Completed audit differs')
+        print(json.dumps({'completed_reentry': True, 'new_updates': 0, 'new_neural_calls': 0, 'new_model_constructors': 0}))
+        return
+    adapter, author = dependencies(ROOT, a.native, a.author)
     # Rebuild every contract from admitted inputs and the published registration.
     a.max_updates = reg['requested_update_ceiling']; a.max_state_bytes = reg['requested_state_ceiling']
     expected = prepare(a, admitted, adapter, author)
     for key in ('cases', 'updates', 'ledger', 'state_bytes_upper_bound', 'selection_forward_calls'):
         require(reg[key] == expected[key], f'Registered {key} differs')
-    out = Path(a.out); out.parent.mkdir(parents=True, exist_ok=True)
+    out.parent.mkdir(parents=True, exist_ok=True)
     if out.exists():
         require(a.resume and sha(out/'registration.json') == a.registration_sha256, 'Explicit unchanged resume required')
     else:
