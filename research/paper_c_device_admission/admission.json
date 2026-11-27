@@ -3,7 +3,7 @@
   "issue":521,
   "draft_pr":522,
   "scientific_auditor":"db2432fc6c1df0419bfcfb1d1abc5cdd09bc062e",
-  "aerial_plan_sha256":"f1fad543f63e82b377bb2cbd824946e9fcf09de49a53fff835acc35284ae8d665",
+  "aerial_plan_sha256":"f1fad543f63e82b377bb2cbd824946e9fcf09de49a53ff835acc35284ae8d665",
   "paired_plan_sha256":"98e2662c4e7fb1f904a2bc67eb2104ce07a0fce8b06b9fafb1bd5934f0f5d155",
   "data_role":"official public training domains; development intake only",
   "new_roles_or_test_query_payloads":0,
