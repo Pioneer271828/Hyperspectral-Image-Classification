@@ -1,0 +1,29 @@
+{
+  "reviewed_client": "2026-11-27T10:42:20.2927556+08:00",
+  "rendering": "Actual vector PDFs rendered with PyMuPDF at300dpi",
+  "remaining_visual_defects": [],
+  "preview_sha256": {
+    "D1-admission-flow-85mm.png": "81f1725fa033b2b55509a482b858ad42a27a8be120044ee84148d7bcea5c44b2",
+    "R2-WP04-class-protection-175mm.png": "0f986a71b42d54b41eac9a8288d7de8789431117ed1aeb483e039122a7412bad",
+    "D2-support-units-85mm.png": "502a6f4fb904ee3df3cd0752da94dd3cef5e9b4fab14f0d1f016a5883a8352fb",
+    "D1-admission-flow-175mm.png": "15b660aa08dea56d506af89b4ef589e7dd652ecec9922bfa1285d8604294ffc1",
+    "R2-WP04-class-protection-85mm.png": "a94fce36aca44cf3d22bc42c1a7c2bd9d8f34abbf82cde93e7a80cc8f02b66c8",
+    "R1-S2-four-cells-85mm.png": "993cc37f8f36201eca0edd787fc644ab20df6b765ee3ee0f010da2f18ef35aa8",
+    "D2-support-units-175mm.png": "7e32d91f5ca4a191d7672a419035fb194eb940a8c8ee18c0c4ffc3d5955608b7",
+    "R1-S2-four-cells-175mm.png": "0b85122ef00bc4e7c4052247f1d4784a0e5979e09e5c9347a550b8d45bb75330"
+  },
+  "D_prior_figures_redrawn": false,
+  "widths_mm": [
+    85,
+    175
+  ],
+  "figure_producer": "b86d005c90de4052abefe4611a3ef288f2bc5b9c",
+  "all_eight_inspected": true,
+  "repaired": [
+    "Single-column R1 y-label clipped: enlarged left margin",
+    "R2 class annotation overlapped seed point: moved outside data region",
+    "Single-column flow235mm compacted to185mm",
+    "Support table170mm compacted to145mm",
+    "Seed legend grouped and seed strokes strengthened"
+  ]
+}
