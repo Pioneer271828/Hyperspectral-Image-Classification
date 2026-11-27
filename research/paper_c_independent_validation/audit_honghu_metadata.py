@@ -17,6 +17,34 @@ from c6_bridge import ReleasedBank
 from build_plan import select_scene
 
 
+def independent_parent_check(registration, labels, selected):
+    """Join existing label IDs to original boxes without C7 selection helpers."""
+    width = registration['shape'][1]
+    rows = [r for r in registration['rows'] if r['blocked'] is None]
+    parents = {role: {r['parent_tile'] for r in rows if r['role'] == role} for role in ('devtrain', 'devval')}
+    shared = parents['devtrain'] & parents['devval']
+    result = []
+    for role, key in [('devtrain', 'support'), ('devval', 'validation')]:
+        retained = []
+        for point, raw_class in zip(labels[key]['indices'], labels[key]['labels']):
+            if raw_class not in (3, 22):
+                continue
+            yy, xx = divmod(point, width)
+            matches = [r for r in rows if r['role'] == role and r['box'][0] <= yy < r['box'][1] and r['box'][2] <= xx < r['box'][3]]
+            if len(matches) != 1:
+                raise ValueError('Independent point-to-original-box join is not unique')
+            if matches[0]['parent_tile'] not in shared:
+                retained.append((point, raw_class, matches[0]['parent_tile']))
+        if {p for p, _, _ in retained} != {p['point_id'] for p in selected['roles'][role]} or len(retained) != 10:
+            raise ValueError('Independent released-label membership differs from C7')
+        for common, raw in [(0, 3), (1, 22)]:
+            group = [r for r in retained if r[1] == raw]
+            if len(group) != 5:
+                raise ValueError('Original common-class K5/V5 differs')
+            result.append(dict(role=role, common_class=common, points=5, original_parents=len({r[2] for r in group})))
+    return result
+
+
 def metadata_summary(bank, ontology):
     selected = select_scene(bank, ontology)
     roles = []
@@ -75,6 +103,11 @@ def main():
     bank = ReleasedBank(out/'whu-honghu/bank', 'whu-honghu', label_release=out/'whu-honghu/label-release.json')
     ontology = json.loads((ROOT/'research/paper_c_hsi_pair/ontology.json').read_text())
     result = metadata_summary(bank, ontology)
+    independent = independent_parent_check(json.loads((out/'whu-honghu/bank/registration.json').read_text()), json.loads((out/'whu-honghu/label-release.json').read_text()), select_scene(bank, ontology))
+    actual = [{'role': r['original_role'], **{k: c[k] for k in ('common_class', 'points', 'original_parents')}} for r in result['roles'] for c in r['classes']]
+    if independent != actual:
+        raise ValueError('Independent role/class/parent counts differ')
+    result['independent_label_box_parent_join_passed'] = True
     result.update(source=args.expected_commit, original_archive_sha256=expected, extracted_JSON_members=len(extracted), extracted_JSON_bytes=size, skipped_other_archive_members=skipped, archive_note='Compressed archive is scanned; spectral members are skipped without member extraction/array interpretation', native_full_class_role_points={'devtrain':110, 'devval':110}, source_metadata_manifest=extracted)
     (out/'aggregate.json').write_text(json.dumps(result, indent=2))
     print(json.dumps({k: v for k, v in result.items() if k != 'source_metadata_manifest'}))

@@ -55,7 +55,7 @@ class MetadataEvidence(unittest.TestCase):
             out = Path(tmp)/'tables'
             receipt = b.build(out)
             self.assertEqual(receipt['newly_ready_second_HSI_pairs'], 0)
-            self.assertEqual(len(list(out.iterdir())), 5)
+            self.assertEqual(len(list(out.iterdir())), 6)
             with (out/'original30-current-qualification.csv').open(encoding='utf-8') as stream:
                 projected = list(__import__('csv').DictReader(stream))
             with (b.HERE/'reuse/D-candidate-pairs30.csv').open(encoding='utf-8-sig') as stream:

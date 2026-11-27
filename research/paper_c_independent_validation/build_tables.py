@@ -90,7 +90,7 @@ def build(out):
     out = Path(out)
     datasets, comparisons, projected, spatial, intersections = tables()
     out.mkdir()
-    for name, rows in [('candidate-evidence.csv', datasets), ('paper-experiment-matrix.csv', comparisons), ('original30-current-qualification.csv', projected), ('spatial-unit-evidence.csv', spatial)]:
+    for name, rows in [('candidate-evidence.csv', datasets), ('paper-experiment-matrix.csv', comparisons), ('original30-current-qualification.csv', projected), ('spatial-unit-evidence.csv', spatial), ('source-evidence.csv', read(HERE/'sources.json')['sources'])]:
         write_csv(out/name, rows)
     result = dict(candidate_records=len(datasets), paper_comparison_rows=len(comparisons), original_directions_preserved=len(projected), same_family_original_directions=sum(r['C9_relation'] == 'same_published_family' for r in projected), different_family_original_directions=sum(r['C9_relation'] == 'different_published_families' for r in projected), unbound_local_original_directions=sum(r['C9_relation'] == 'local_identity_unbound' for r in projected), C7_common2_directions=2, unique_C7_points=40, C7_selected_tiles=17, C7_original_acquisition_images=2, new_independent_confirmation_units=0, newly_ready_second_HSI_pairs=0, candidate_CDL_raw_intersections=intersections, new_image_GT_download_bytes=0, optimizer_updates=0, query_reads=0, null_means='Unknown, never zero or an independence certificate', existing_records_superseded=False, scope='Bounded existing candidate roster, not exhaustive proof that no other dataset exists')
     (out/'table-receipt.json').write_text(json.dumps(result, indent=2)+'\n')
