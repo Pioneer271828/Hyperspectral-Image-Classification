@@ -1,0 +1,14 @@
+{
+  "schema":"paper_c_shared_HSI_taxonomy_draft_v1",
+  "status":"NOT_YET_ADMITTED",
+  "scope":"Proposed broad shared classes only; no shared semantic head may run while source-to-local ordinal evidence is unresolved.",
+  "candidate_classes":["bare ground","tree canopy","red roof"],
+  "whu_honghu_original_ids":{"bare ground":[3],"tree canopy":[22],"red roof":[1]},
+  "xuzhou_historical9_original_ids":null,
+  "honghu_primary_definition":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm section1.3/Table3",
+  "xuzhou_required_evidence":["Original2019 nine-class table and exact ID definitions, distinct from later thirteen-class products","Local cube/label production or release lineage sufficient to bind original ordinal names and spatial reshape","Dataset-specific rights/version record applicable to this retained436-column local product"],
+  "known_counterevidence":"Historical project names assign coal/cement to5/6 while original9-class TableIX assigns3/4. Original numeric bank IDs remain unchanged; no guessed relabeling.",
+  "numeric_equal_ids_across_datasets_imply_same_class":false,
+  "C6_classification_native_response_requirement":"Exact SRF is not required for classification. Unknown native band response remains explicit and blocks causal passband interpretation only.",
+  "new_optimizer_updates":0
+}

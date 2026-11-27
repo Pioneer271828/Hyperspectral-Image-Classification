@@ -1,0 +1,21 @@
+{
+  "schema":"paper_c_same_budget_HSI_baseline_draft_v1",
+  "status":"PROPOSAL_ONLY_ZERO_UPDATES_AUTHORIZED",
+  "gates_before_real_model_calls":["Complete shared semantic mapping and applicable data-use/version qualification","Hash-pinned spatial/label/context role plan and independent batch audit","Concrete runtime/cost profile and prior budget/time notice under existing user authorization"],
+  "directions":[["xuzhou","whu-honghu"],["whu-honghu","xuzhou"]],
+  "roles":{"source_fit":"Original source devtrain subset only","source_selection":"Original exposed source devval subset only","target_adaptation":"Original target devtrain subset only","target_development_validation":"Original exposed target devval subset only; no independent holdout/confirmation claim"},
+  "geometry":{"exclude_cross_role_shared_parents":true,"context":"Same clipped7x7 patches for all proposed model arms; original tile boundary enforced with replicated edges","whole_tile_vs_patch":"A separate whole-tile arm would require its own context/exposure accounting and cannot be labeled matched-context.","normalization":"Each original bank's frozen training-only statistics, not refitted on common-class subset or target validation"},
+  "supports":{"K_per_shared_class":5,"V_per_shared_class":5,"membership":"Subsets of the already published K5/V5 identities, no new labels or role promotion","many_to_one_mapping":"If a source class merge supplies more thanK, freeze deterministic hash-ranked selection before any fit. Do not choose via accuracy."},
+  "model":{"reference":"Existing project native shared spectral-adapter/CNN/local-graph comparator, prior source395caef57fba8ab6a09223538f748179dab552f2; no default change","configuration":"Prior native64/32 GroupNorm learned graph with residual/coverage/interaction none; exact input/head mapping must be registered after taxonomy closure","physical_metadata":"No claim that historical approximate wavelength vectors authenticate native detectors or SRF"},
+  "seeds":[64,512,2048],
+  "optimizer":{"name":"Adam","lr":0.0001,"betas":[0.9,0.999],"eps":1e-8,"weight_decay":0.0,"scheduler":null},
+  "proposed_steps":{"source_pretrain":64,"target_adapt":64,"scratch_target_budget":64,"scratch_update_count_budget":128},
+  "arms":[{"id":"true_source_transfer","source":"Original source shared-class labels","source_updates":64,"target_updates":64},{"id":"permuted_source_transfer","source":"Same source observations/label counts, fixed seeded class-label permutation as registered negative control","source_updates":64,"target_updates":64},{"id":"target_scratch_same_target","source":null,"source_updates":0,"target_updates":64},{"id":"target_scratch_same_update_count","source":null,"source_updates":0,"target_updates":128}],
+  "matching_limits":{"first_two":"Same model capacity, source/target inputs, per-stage update counts, label exposure, seed and selection schedule; source semantic supervision differs","third":"Only target adaptation budget matched; transfer pretraining cost additional and reported","fourth":"Total optimizer-step count matched; differing source/target band dimensions prevent an unmeasured equal-FLOP or equal-wall-time claim"},
+  "source_update_reuse_accounting":"Count unique source fits once when reused, and report inherited source cost per target. Do not count model seeds as independent acquisition geographies.",
+  "selection":"Freeze source/target development CE NLL event schedule and first-min tie rule before fit. No test/query selection, no mid-run tuning.",
+  "efficacy_claim":"None. K5/V5 and three model seeds are a development screen, not proof of power, convergence, geographic independence or sensor causality.",
+  "new_real_optimizer_updates_authorized":0,
+  "new_real_model_calls_authorized":0,
+  "runtime_estimate_status":"Pending a measured profile of the final admitted common-head/native input mapping. Historical shape costs are planning context only."
+}
