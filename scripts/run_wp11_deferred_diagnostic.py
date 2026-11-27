@@ -4,8 +4,6 @@ import argparse
 from collections import Counter, defaultdict
 from contextlib import nullcontext
 import csv
-import hashlib
-import io
 import json
 import os
 from pathlib import Path
@@ -18,11 +16,8 @@ from unittest.mock import patch
 import numpy as np
 import torch
 
-from inference.light_cnn import load_light
-from inference.native_deployment import Request, Runtime, matched_random
-from inference.route_controls import request_hash
-from model.research_config import digest
-from transfer.registered_development import _load_source
+from inference.native_deployment import matched_random
+from inference.wp11_frozen_deployment import open_runtime, read_inputs, sha
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,36 +26,10 @@ REPEATS = 6
 SEED = 64
 
 
-def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def write(path, value):
     with path.open("x") as stream:
         json.dump(value, stream, indent=2, allow_nan=False)
         stream.write("\n")
-
-
-def read_inputs(base, expected):
-    manifest = base/"inputs.json"
-    if sha(manifest) != expected:
-        raise ValueError("Frozen input capsule differs")
-    inputs = json.loads(manifest.read_text())
-    if (inputs["release"] != "9a4493d2c25c6cff64d6b8ee8958e467546985865b72df41540327262d24aacb"
-            or inputs["original_manifest"] != "583e3949b6ed1aad09025b06984123d05654c88424d2598bc874f93f4df096fb"):
-        raise ValueError("Original WP11 release differs")
-    raw = (base/"requests.pt").read_bytes()
-    if hashlib.sha256(raw).hexdigest() != inputs["files"]["requests.pt"]:
-        raise ValueError("Frozen request bytes differ")
-    rows = torch.load(io.BytesIO(raw), map_location="cpu", weights_only=True)
-    if len(rows) != 5 or request_hash(rows) != inputs["input_hash"]:
-        raise ValueError("Frozen request tensors differ")
-    requests = [Request(row["id"], "xuzhou", digest(row["id"]), inputs["input_hash"],
-                        "original_full", row["x"], row["wavelengths"], None, None,
-                        row["scale"], 1., True) for row in rows]
-    if len({x.key for x in requests}) != len(requests) or any(row["dataset"] != "xuzhou" for row in rows):
-        raise ValueError("Expected exact Xuzhou development requests")
-    return inputs, requests
 
 
 def freeze(requests, input_sha, commit):
@@ -87,22 +56,9 @@ def worker(base, plan, arm, out):
     start = perf_counter()
     inputs, requests = read_inputs(base, plan["inputs_sha256"])
     input_ms = (perf_counter()-start)*1000
-    files = inputs["files"]
-    states = dict(inputs["states"])
     loaded = []
-
-    def load_full():
-        t = perf_counter()
-        full = _load_source({"path":str(base/"full.pt"), "sha256":files["full.pt"]},
-                            {"path":str(base/"full.json"), "sha256":files["full.json"]})
-        loaded.append((perf_counter()-t)*1000)
-        return full.requires_grad_(False).eval()
-
     start = perf_counter()
-    light = None if arm == "full" else load_light(base/"light.pt", files["light.pt"])
-    if arm == "full":
-        del states["light"]
-    runtime = Runtime(device="cpu", light=light, full_loader=load_full, identity=states)
+    runtime = open_runtime(base, inputs, arm, full_loads=loaded)
     setup_ms = (perf_counter()-start)*1000
     start = perf_counter()
     fast = plan["matched_random_fast"] if arm == "matched_random" else plan["geometry_fast"]
@@ -110,7 +66,7 @@ def worker(base, plan, arm, out):
     selection_ms = (perf_counter()-start)*1000
     context = nullcontext()
     if arm == "nonfinite_light":
-        head = light.heads["xuzhou"]
+        head = runtime.light.heads["xuzhou"]
         actual = head.forward
         target = plan["requests"].index(plan["fault"])
         calls = iter(range(len(requests)))
