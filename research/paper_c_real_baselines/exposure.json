@@ -1,0 +1,18 @@
+{
+  "schema": "paper_c_C8_exposure_review_v1",
+  "basis": "Reused C7 accepted admission and historical C8 metadata-only inventory01; no new real spectral reads in the LXC engineering continuation.",
+  "C7_base": "77081efa4862f6358dcce290a098e0f232fec5f8",
+  "C7_plan_sha256": "0731b598eda0725571b1d6b0024ce62c3656697346e89d9d75d5b71826361d40",
+  "scenes": [
+    {"scene":"xuzhou","processed_columns":436,"frozen_statistics_role":"devtrain","statistics_authorized_rows":73,"statistics_box_pixel_sum":55888,"normalizer_sha256":"1a5db35f735605518ee1bcee1894d146a4dc2f47dcda64b9c2c7714f6b39c659","selected_training_parents":7,"selected_development_parents":3},
+    {"scene":"whu-honghu","processed_columns":270,"frozen_statistics_role":"devtrain","statistics_authorized_rows":261,"statistics_box_pixel_sum":198984,"normalizer_sha256":"f54fcae652388ad653695b0241d81e66d229db4269eaec0289401c0e65104dcd","selected_training_parents":5,"selected_development_parents":2}
+  ],
+  "statistics_limit":"Pixel sums are metadata-derived original-box areas, not new independent normalization recomputation or a claim that only the ten selected fitting points influenced those statistics.",
+  "legacy_features":"Use the original scene-specific devtrain per-band minmax. Target inference consequently uses broader target-scene statistics; this is a separately named statistics-exposed transfer scheme.",
+  "raw_features":"Use delivered raw_fp32 bank values before project minmax, with fixed samplewise quantile functionals. Author preprocessing already exists; the reused frontend also loads target role/ontology metadata and computes an unused normalized branch. A source-trained numeric classifier is not pristine full-pipeline G2 confirmation.",
+  "weights":"No historical checkpoint is admitted. Historical source/init metadata includes ancestry that is not target-free; all proposed nine-parameter linear endpoints start fresh except adaptation from their exact newly sealed source endpoint.",
+  "spectral_alignment":{"common_wavelength_grid":false,"index_interpolation":false,"authenticated_native_band_map":false,"FWHM_present":false,"SRF_authenticated":false,"note":"No physical wavelength-equivalence claim. Earlier inventory01 mislabeled the FWHM-presence test as SRF_present; both recorded false. This review distinguishes the two concepts."},
+  "label_exposure":"C7 coarse two-class task and fixed K5/V5 points are already exposed development material. Xuzhou mapping is corroborated inference. Historical full-GT count custody and curator label-assisted class stratification remain disclosed in C7. No new query access or labels are admitted.",
+  "research_limits":["Two original scenes are not replicated sensor families.","Repeated directions/seeds/arms do not multiply forty unique labeled observations.","Two/three validation parents support descriptive sensitivity only, not calibrated population confidence coverage.","Seven-pixel context covers different ground area across scenes.","The descriptor baseline does not test native VCA or establish that physical wavelength alignment helps."],
+  "current_real_learning_state":"paused; no C8 real classification result"
+}

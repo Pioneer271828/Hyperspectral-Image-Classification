@@ -1,0 +1,46 @@
+{
+  "source": "c1e516e5404f135bdd5f7002a74b579207b54a95",
+  "branch": "codex/paper-c-real-baselines-20261127",
+  "hostname": "lbx",
+  "virtualization": "lxc",
+  "python": "3.10.20",
+  "packages": {
+    "numpy": "2.0.2",
+    "scipy": "1.15.3",
+    "sklearn": "1.7.2"
+  },
+  "installed_reference_module_sha256": {
+    "sklearn.linear_model._linear_loss": "a90497f9bc58c802a4f1b436cf7ddbfe91c130ba75c175668f9673e5a0a01334",
+    "sklearn._loss.loss": "ff7f59d25bdd54bfe1b3c2e5b7f3e3766ca82b0b7347ee1cbc8285bfdbf58758",
+    "sklearn.neighbors._nearest_centroid": "6bce635f4b7acfae2d23a69f1f34aa8d6d2b074bb084005057d0d4d743b42c84"
+  },
+  "started_UTC": "2026-11-27T07:23:36.575919+00:00",
+  "ended_UTC": "2026-11-27T07:23:41.526367+00:00",
+  "wall_seconds": 4.950509465998039,
+  "tests_run": 31,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "synthetic_tests_passed": true,
+  "repository_check_exit": 1,
+  "repository_acceptance_passed": false,
+  "synthetic_array_opens": 244,
+  "denied_real_array_or_weight_opens": [],
+  "real_dataset_reads": 0,
+  "real_fitting_updates": 0,
+  "query_reads": 0,
+  "training_state": "paused_by_current_user_instruction",
+  "scope": "Synthetic engineering only; generated complete package replay/export/copy restore is not real classification",
+  "files": [
+    {
+      "name": "repository.log",
+      "bytes": 709,
+      "sha256": "f854f507b7b73ec1702311bc3a3915888b332096bb5111783abd736ec7052136"
+    },
+    {
+      "name": "tests.log",
+      "bytes": 3232,
+      "sha256": "4dfb2686276b578ea0c6dc143391d01e6fb911f108bdc557e5c7064876a630a8"
+    }
+  ]
+}

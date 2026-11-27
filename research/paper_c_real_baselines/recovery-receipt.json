@@ -1,0 +1,10 @@
+{
+  "archive": "/home/lbx/hsi-pioneer271828/backups/paper-c-real-baselines-engineering-20261127-01/preservation05.tar.gz",
+  "archive_bytes": 5102664,
+  "archive_sha256": "b6911a9d1fcf8442433aa973dc4b0cfce8b3ccbdfa1efd660d33babb545beef4",
+  "restored_files": 7,
+  "file_mismatches": 0,
+  "restored_clean_source": "c1e516e5404f135bdd5f7002a74b579207b54a95",
+  "new_real_fitting_updates": 0,
+  "same_host_backup_only": true
+}
