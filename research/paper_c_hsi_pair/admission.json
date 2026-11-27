@@ -1,0 +1,22 @@
+{
+  "schema":"paper_c_C7_coarse_development_admission_v1",
+  "status":"METADATA_CORROBORATED_DEVELOPMENT_INPUT_PLAN",
+  "runtime_purpose":"development_input_probe_only",
+  "plan_producer":"11f29ac2c7de9c528cfe6f7f3aab60b1d9a3f0ca",
+  "plan_sha256":"0731b598eda0725571b1d6b0024ce62c3656697346e89d9d75d5b71826361d40",
+  "metadata_review_sha256":"6455adfd3e91520426da622bb9cdb6db1aaba48e6686d42ded687ca44ff337d9",
+  "ontology_sha256":"bf30a3d74beb6e90d821e8144d4067a5a9aab2b5a107009714f0d01b7e81a0f3",
+  "directions":[["xuzhou","whu-honghu"],["whu-honghu","xuzhou"]],
+  "labels":"Two coarse classes, originalK5/V5 subsets,10 fitting+10 exposed development labels per scene;40 unique already released point identities in total.",
+  "claim_limit":"Evidence-based development ontology with disclosed derived-MAT lineage inference. No publisher byte certification, untouched confirmation, learned-transfer result or causal sensor-effect claim.",
+  "device_evidence":{"xuzhou":"HySpex VNIR-1600 and SWIR-384,2014, already merged436-column product","whu-honghu":"Headwall Nano-Hyperspec17mm,2017-11-20,270-column product"},
+  "permission_scope":"Xuzhou CC-BY4.0 with attribution; HongHu academic-use/citation and no-commercial-use condition. Current pair restricted to authorized noncommercial academic research; raw files not redistributed.",
+  "original_conversion_limit":"Original all_x/data.mat to local derived xuzhou.mat conversion script/header not recovered. README/product facts, exact per-ID count vector and original image/GT curator/release fingerprints corroborate this limited mapping; stronger canonical-product reproduction remains unqualified.",
+  "new_model_calls_authorized":0,
+  "new_optimizer_updates_authorized":0,
+  "new_label_memberships_authorized":0,
+  "independent_confirmation_authorized":false,
+  "SRF_required_for_this_input_plan":false
+  ,"checkpoint_permission":"None. Historical source-weight references in original bank custody are provenance only; they are not admitted learned-transfer initializers. Any future source-only/target-unseen experiment must register a fresh or independently qualified initializer without target-data ancestry."
+  ,"canonicalization_revision":"JSON-key normalization reissues the proof/plan commitments. Every selected original point, raw label, role and context is unchanged from plan03; both versions remain private evidence."
+}

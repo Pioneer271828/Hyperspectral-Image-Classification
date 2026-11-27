@@ -1,0 +1,16 @@
+{
+  "schema":"paper_c_C7_coarse_common_ontology_v1",
+  "scope":"Two broad land-cover classes for an explicitly restricted development comparison; no fine material/species identity or original full-scene objective equivalence.",
+  "classes":[
+    {"common_id":0,"name":"exposed bare ground","xuzhou_original_ids":[1,7],"honghu_original_ids":[3],"interpretation":"Explicit coarse grouping of published Bareland-1/2 and Bare soil. Substrate, contamination, subclass balance and spatial resolution may differ; no claim of identical soil material."},
+    {"common_id":1,"name":"tree canopy","xuzhou_original_ids":[6],"honghu_original_ids":[22],"interpretation":"Published Trees/Tree at broad canopy level only, not matched species or tree age."}
+  ],
+  "xuzhou_original_TableIX":{"1":{"name":"Bareland-1","count":26396},"2":{"name":"Lakes","count":4027},"3":{"name":"Coals","count":2783},"4":{"name":"Cement","count":5214},"5":{"name":"Crops-1","count":13184},"6":{"name":"Trees","count":2436},"7":{"name":"Bareland-2","count":6990},"8":{"name":"Crops-2","count":4777},"9":{"name":"Red-tiles","count":3070}},
+  "table_review":{"DOI":"10.1109/JSTARS.2019.2892975","printed_page":634,"table":"IX","original_PDF_sha256":"da083e590f7c300c90ef51bf8a42d3a4903a350b3c55a4a1ae413b8048182c65","C6_visual_crop_sha256":"2e9fb86ced63ed200093819e7b0706b208975fa836b74101f31864372ad33cb0","review":"Previously rendered/read by C and independently visually agreed by D. C7 reuses that table-only review, not the GT figure."},
+  "excluded_xuzhou_ids":{"2":"Lakes: no corresponding HongHu water class.","3":"Coals: not Bare soil or a generic ground label.","4":"Cement: not bare soil and not necessarily a road.","5":"Crops-1: no authoritative cultivar alignment with HongHu crop names.","8":"Crops-2: no authoritative cultivar alignment with HongHu crop names.","9":"Red-tiles is not automatically the object-level Red roof label."},
+  "excluded_honghu_ids":[1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21],
+  "local_mapping_evidence_level":"Corroborated development mapping: original published ordinal table plus exact per-ID historical count vector, same image/GT fingerprints through the curator/release chain and matching local/provider README. Not publisher byte-identical certification of the project's derived MAT conversion.",
+  "old_names_rejected":"Historical manualG3 names5=Coal/6=Cement conflict with the original table; they do not relabel any stored array or override numeric release IDs.",
+  "unlabeled_zero":"Original raw0 means unannotated, not common class0. Only original labeled samples mapped by this explicit table receive common class0.",
+  "future_claim_scope":"Metadata-corroborated coarse cross-scene/device few-shot development classification; independent confirmation and causal sensor effect are not admitted."
+}

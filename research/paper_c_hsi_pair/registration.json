@@ -1,0 +1,20 @@
+{
+  "schema":"paper_c_C7_real_HSI_pair_registration_v1",
+  "issue":525,
+  "first_observed_clock_tool_UTC":"2026-11-26T21:18:49Z",
+  "client_date":"2026-11-27",
+  "base":"ed57e389fd83ca9693a973f97168106ca8534074",
+  "scope":"Existing Xuzhou HySpex436 / WHU-Hi HongHu Nano-Hyperspec270 preserved development inputs, primary version/permission metadata, and an auditable common-ontology input plan.",
+  "public_metadata_budget_bytes":16777216,
+  "new_raw_image_or_GT_download_budget_bytes":0,
+  "existing_private_metadata_migration":"Only original bounded JSON custody/preparation records, fingerprinted and directly streamed LXC to rmvision; no GT/image/model payload.",
+  "original_C6_private_snapshot":{"bytes":118312928,"sha256":"cd5ab7ea5b20b5281b88e4edf37a85d2f5669bd7199965bdc728ab8b897727eb","verified_restored_files":260},
+  "metadata_stage":"Primary Xuzhou DOI rights/9-class product description recovered byte-identical to prior WP05 record; local ordinal/derivation review still in progress at registration.",
+  "role_policy":"Original released devtrain and exposed devval only; any common-class subset removes memberships without promoting observations or introducing new labels. Strict parent exclusion precedes deterministic fixed-budget selection.",
+  "forbidden":["query or hidden benchmark-validation labels","new confirmation role","raw GT file reads","new raw dataset download via workstation","questionnaires or accounts","unregistered real model/optimizer execution"],
+  "new_real_model_calls_authorized":0,
+  "new_optimizer_updates_authorized":0,
+  "new_label_memberships_authorized":0,
+  "effective_work_seconds":null,
+  "wait_seconds":null
+}

@@ -1,0 +1,19 @@
+{
+  "schema":"paper_c_C7_primary_metadata_pin_v1",
+  "files":[
+    {"file":"xuzhou-datacite01.json","bytes":5532,"sha256":"2b557937c24111886b83fabeacca91ddf9620938d256fde039b77317281a94b4","url":"https://api.datacite.org/dois/10.21227/t3c9-h862","role":"Original depositor metadata; same bytes as priorWP05. CC-BY4.0 and historical9-class436-band product."},
+    {"file":"ieee-xuzhou-page01.html","bytes":64435,"sha256":"019b0f3079faf5231f5c3053f704871a3524faf98c5f2cc329c474726d8ab0ad","url":"https://ieee-dataport.org/documents/xuzhou-hyspex-dataset","role":"Current primary provider description, license and file declarations; protected dataset-file download not accessed."},
+    {"file":"xuzhou-author-page01.html","bytes":142845,"sha256":"4c5c3e837010dd58c8401bada6da740fb05770c6895531bb8b21f7fc18f3bf6a","url":"https://www.3sobs.cn/share","role":"Author description and filename instructions; download leads to form, not submitted. Adjacent datasets' permissions are not inherited."},
+    {"file":"honghu-provider-page01.html","bytes":70168,"sha256":"b0a0e733e0bb1ae3532dda3c094464fd7085976a1c78e664ca8c476e84a093d3","url":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm","role":"Primary instrument/date/22-class legend and academic-use/citation/noncommercial terms."},
+    {"file":"hyrank-zenodo01.json","bytes":4872,"sha256":"660f64ded5897348dbc6db20be1ee9b7fed391710959ef672090b8e808a87092","url":"https://zenodo.org/api/records/1222202","role":"Alternative original dataset record, now explicitCC-BY4.0. No image or label payload acquired."},
+    {"file":"muufl-zenodo01.json","bytes":4101,"sha256":"6fdd03c3399b95aa2fb8450f184182bbb7620415ad051f9bcb5cf248fc20d7f9","url":"https://zenodo.org/api/records/1186326","role":"Alternative original dataset record:other-open, not a recovered dataset-specific MIT or CC-BY grant."},
+    {"file":"local-Xuzhou-Readme01.txt","bytes":1398,"sha256":"f5701ba89e56a570822adbf53234096882d8b09d1850313e8f78ac85e61cb3d7","url":null,"role":"Read-only legacy local README; unchanged original remains in place. Same fingerprint as prior LXC inventory; matched provider product/instructions are corroborating evidence."}
+  ],
+  "raw_public_HTML_scope":"Private provenance evidence only. Never publish full HTML or its embedded expiring signed links/session form values; export sanitized factual summaries and hashes.",
+  "metadata_retrieval_route":"Public HTTPS on workstation under C7 authorization, then native SCP to rmvision; parsing/verification code executes on rmvision.",
+  "private_provenance_archive":{"bytes":35045,"sha256":"288639b47f44f233a568ce11160aeb6771ea0bb8d92770a9f415089b5306f613","metadata_files":10,"new_image_GT_weight_or_query_files":0},
+  "existing_rmvision_legacy_metadata":[
+    {"file":"legacy01/xuzhou-original-task01.json","bytes":4194,"sha256":"d02dc5415e945ed0df4d14839b16856b5dec013409b369ec244cae78a4b5a02c","role":"Original G3 image/GT fingerprints and per-raw-ID aggregate histogram, not new GT decoding."},
+    {"file":"legacy01/xuzhou-original-coverage01.json","bytes":19207,"sha256":"78624b5f08fef0f7b9beb5e3c746063cf9008a64334a91c9532992c564b7c2ea","role":"Previously published full-label-count audit. Its historical exposure is disclosed; do not open any old GT/query array to repeat it."}
+  ]
+}

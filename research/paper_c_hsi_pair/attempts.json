@@ -1,0 +1,12 @@
+{
+  "schema":"paper_c_C7_attempts_and_limits_v1",
+  "preserved_attempts":[
+    {"stage":"Original custody connection","result":"One bounded SSH connection timeout","resolution":"Retried after independent public-metadata work; original metadata subsequently read, hashed and streamed successfully."},
+    {"stage":"LXC metadata interpreter","result":"Bare python not present in noninteractive PATH","resolution":"Used existing absolute authorized interpreter only for file/JSON backup operations; no LXC science test or training."},
+    {"stage":"Historical metadata location","result":"Old transfer-protocol directory absent at the assumed LXC root","resolution":"Located the retained original G3 metadata at its existing rmvision project root; raw arrays were not opened."},
+    {"stage":"C7 source06 publication","result":"Connector create-tree transport failure before any commit/ref mutation","resolution":"Checked actual branch ref remained source05 and retried successfully; no force update."},
+    {"stage":"Evidence canonicalization","result":"Integer class keys could serialize in a different sorted order after JSON reloading","resolution":"Normalize object keys before committing evidence and reject numeric/string collisions; reissue plan/proof digests, preserve identical40 memberships and both versions."}
+  ],
+  "research_limits":["Derived MAT conversion to original publisher bytes not certified; mapping is disclosed metadata-corroborated development inference.","No independent query/confirmation role or causal-device identification.","No model/optimizer execution or new image/GT download in C7."],
+  "credentials_or_expiring_access_URLs_in_this_record":false
+}
