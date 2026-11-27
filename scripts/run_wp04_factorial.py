@@ -941,9 +941,7 @@ def stage(args, code, reg, out):
     numeric = reg.get("arithmetic")
     require(numeric is None or gpu is not None, "Strict arithmetic requires a registered physical GPU")
     calls = Counter()
-    compute = (p4.arithmetic(numeric, gpu, kernel_calls=calls,
-                              enforce_resource_thresholds=reg["scope"] not in REAL_SCOPES)
-               if numeric else nullcontext(None))
+    compute = p4.arithmetic(numeric, gpu, kernel_calls=calls) if numeric else nullcontext(None)
     lease = physical_lease(gpu, inherited_fd=args.lease_fd) if gpu else nullcontext()
     with lease, compute as details:
         inventory = (p4.snapshot(gpu) if numeric else p4.gate(gpu)) if gpu else None
