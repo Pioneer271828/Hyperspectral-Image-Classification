@@ -7,10 +7,14 @@ import tarfile
 import tempfile
 import unittest
 
-from recover import relative, restore, sha
+from recover import ARCHIVES, relative, restore, sha
 
 
 class RecoveryTests(unittest.TestCase):
+    def test_archive_pins_are_full_sha256(self):
+        for _, (_, size, checksum) in ARCHIVES.items():
+            self.assertRegex(checksum, r'^[a-f0-9]{64}$')
+            self.assertGreater(size, 0)
     def archive(self, root, *, direct=False, corrupt=False, missing=False):
         raw = b'frozen synthetic evidence'
         key = hashlib.sha256(raw).hexdigest()
