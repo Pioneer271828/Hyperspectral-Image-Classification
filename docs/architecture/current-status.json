@@ -2,7 +2,7 @@
   "schema_version": 1,
   "as_of": "2026-11-27",
   "issue": 463,
-  "development_branch": "codex/wp12-matched-edge-integration-20261127",
+  "development_branch": "codex/wp12-gpu-lease-release-20261127",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "54c6cb0bf0f45c1d04a8cf0bcd43434d3ac87b6c",
   "main_merge": "reviewed_batches_merged",
@@ -42,7 +42,9 @@
     "wp11_wp12_public_cli_candidate": "ea4b0f845c831180744a6af2ab991aa9648375f0",
     "wp06_wp08_pavia_frozen_producer": "cd263c9e64ff7538d6fc7b831157df025a038b58",
     "wp06_wp08_pavia_independent_audit": "e4aa84077ff66a3173bb047aa3c6452c9bc123b1",
-    "wp12_matched_edge_public_entry": "a74dc254c3556015d9dd33839dfbeb21a84fe102"
+    "wp12_matched_edge_public_entry": "a74dc254c3556015d9dd33839dfbeb21a84fe102",
+    "gpu_dispatch_telemetry_candidate": "88e7051f3693296e3ce0995abb79982851b5b8f9",
+    "g4_shared_lease_regressions": "8f4f486c5a0549844dfaea86e0a1b1759742d4a2"
   },
   "frozen_runtime_reference": "8289e227275eabbafbb1eaea75cf4d6b0c1e8580",
   "frozen_runtime_paths": [
@@ -78,6 +80,13 @@
     "tests/test_wp12_pavia_matched_deletion.py"
   ],
   "modules": [
+    {
+      "id": "WP12 GPU 补测与候选发布准备",
+      "state": "RM Vision GPU0 五项通过，准备交主审",
+      "evidence": "实测提交 88e7051f3693296e3ce0995abb79982851b5b8f9。五个正常入口在 RTX 4090 启动空闲 9,552 MiB 条件下完成原生发布、P4 分段同卡、WP12 只读成本、G4 匹配 CLI 和交接。CPU 两轮合计 33 个通过用例，索引与 UUID 共用租约。",
+      "remaining": "结论限合成夹具和冻结协议工程验证。历史六项按原提交验收，真实优化、新校准和封存 query 暂停，候选待主审。",
+      "report": "research/reports/WP12_GPU补测与候选发布核验_20261127.md"
+    },
     {
       "id": "WP12 真实三景解码缓存暖态受控对照",
       "state": "GPU3 三景真实暖态均达既定门槛，独立复算通过，具备复审资格",
