@@ -1,0 +1,16 @@
+{
+  "runtime_source": "7cf87d22e7a1c835af845c31b507a88475bc02d6",
+  "archive_bytes": 5175021,
+  "archive_sha256": "9e79f8ec24ccbaa5e7705099899d2f2df2bd0d761479fd92af28abf4a6c3b920",
+  "restored_files": 16,
+  "file_mismatches": 0,
+  "regenerated_delivery_files_identical": 11,
+  "English_artifacts_identical": 5,
+  "original_dictionary_still_pending": true,
+  "data_request_sent": false,
+  "real_optimizer_updates": 0,
+  "new_images_GT_or_parcel_lists": 0,
+  "query_reads": 0,
+  "same_host_backup_only": true,
+  "source_bundle_sha256": "6f1df40cb0d0a158f1a47eec977c26481862de914a123a114765cb431258723c"
+}

@@ -1,0 +1,39 @@
+{
+  "schema":"C10_conditional_development_protocol_v1",
+  "status":"SPECIFIED_NOT_RUN_INPUT_ROLES_BLOCKED",
+  "task_id":"water_woody_C10_v1",
+  "authorized_real_updates":0,
+  "authorized_new_Hyperion_points":0,
+  "current_C7_ontology_reused":false,
+  "classes":[
+    {"common_id":0,"label":"annotation-defined inland water","xuzhou_original_ids":[2],"HyRANK_figure_ordinals":[13],"HyRANK_delivered_values":null,"condition":"ConfirmWater scope excludes coastal labels and its delivered value; broad annotation coarsening, not matched physical water composition."},
+    {"common_id":1,"label":"annotation-defined woody cover","xuzhou_original_ids":[6],"HyRANK_figure_ordinals":[6,7,8],"HyRANK_delivered_values":null,"condition":"Confirm original broadleaf/conifer/mixed forest labels and explicitly accept forest-versus-crown mixed-pixel differences. Not species or canopy-threshold equivalence."}
+  ],
+  "excluded":"Other original classes remain excluded; no unlabeled code is assigned a target class. Xuzhou raw0 is unannotated; HyRANK unlabeled/nodata code remains unknown until original dictionary arrives. No numerical ordinal-to-array-value assumption.",
+  "scenes":[
+    {"id":"X","dataset":"xuzhou","family":"HySpex_merged","fit_points_if_released":10,"evaluation_points_if_released":10,"label_basis":"Original C6 nativeK5/V5 labels2 and6; newly proposed semantic consumer/role binding still required. Do not reuse C7 bare-ground labels or weights."},
+    {"id":"D","dataset":"HyRANK-Dioni-v001","family":"Hyperion","fit_points_if_released":10,"evaluation_points_if_released":10,"label_basis":"Prospective K5/V5 per mapped class; class coverage/geometry/roles unknown; no points acquired."},
+    {"id":"L","dataset":"HyRANK-Loukia-v001","family":"Hyperion","fit_points_if_released":10,"evaluation_points_if_released":10,"label_basis":"Same prospective rule; same-instrument scene control; not an independent family."}
+  ],
+  "primary_hypotheses":[
+    {"id":"HX_D","source":"X","target":"D","question":"Does a classifier fitted only on X carry development-label signal toD?","descriptive_success_rule":"Across all three fixed initialization seeds, meanOA>0.5 AND meanNLL<log(2); report each seed and paired OA/NLL gap toD-fitted local reference. No significance or population claim."},
+    {"id":"HD_X","source":"D","target":"X","question":"Does the reverse source-only classifier carry signal toX?","descriptive_success_rule":"Same rule, assessed separately; report each seed and paired gap toX-fitted local reference. Existing exposed X evaluation cannot be upgraded to independent confirmation."}
+  ],
+  "evaluation_cells":[
+    {"source":"X","target":"D","role":"primary_different_family"},
+    {"source":"D","target":"X","role":"primary_different_family"},
+    {"source":"X","target":"L","role":"secondary_different_family_scene_check"},
+    {"source":"L","target":"X","role":"secondary_different_family_scene_check"},
+    {"source":"D","target":"L","role":"same_instrument_cross_scene_control"},
+    {"source":"L","target":"D","role":"same_instrument_cross_scene_control"},
+    {"source":"X","target":"X","role":"same_scene_matched_local_reference"},
+    {"source":"D","target":"D","role":"same_scene_matched_local_reference"},
+    {"source":"L","target":"L","role":"same_scene_matched_local_reference"}
+  ],
+  "fitting":{"source_scenes":["X","D","L"],"root_seeds":[64,512,2048],"representation":"C8 raw_distribution only;8 fixed samplewise/band-order-invariant features; no population normalization or physical wavelength grid","model":"C8 nine-parameter logistic model, fresh random initialization","steps":64,"learning_rate":0.5,"l2":0.01,"selection":"Fixed terminal endpoint, class1 iff logit>0; no target validation/model/threshold selection","per_transfer_arm_target_optimizer_updates":0,"external_pretrained_weights_allowed":false,"source_checkpoints_shared_between_source_scenes":false,"centroid_references":3,"centroid_state":"16 class-mean entries plus derived9 linear coefficients, fixed score temperature1; no fake seed replication"},
+  "budget_if_separately_authorized":{"source_linear_fits":9,"producer_updates":576,"independent_replay_updates":576,"maximum_total_real_updates":1152,"unique_source_fitting_points":30,"unique_evaluation_points":30,"total_unique_points":60,"new_Hyperion_role_points_required_if_feasible":40,"linear_evaluation_rows":27,"centroid_evaluation_rows":9,"prediction_presentations":360,"actual_updates_now":0,"runtime_notice":"Measured profile and renewed training authority required before launch; no timing or training permission inferred from this draft."},
+  "access_and_selection":{"source_stages":"One scene's fit arrays only, fixed analytic feature function and fresh RNG; freeze and hash all source endpoints before any evaluation-array read. Other scene source fits are separate control arms and cannot alter a transfer source endpoint.","ingress":"Reuse C6 authenticated ReleasedBank/patch extraction after exact original product/role records and any format conversion are admitted; reuse C8 transform/model/auditor. C7 PairInputs is not a water/forest adapter and must not be used under its unchanged admission.","context":"Original role-local7x7 clipped context with replicated edges. Nominal full side5.11m onX versus210m onHyperion, not equal ground area. No whole-scene graph, halo or target-statistics fit.","membership":"X keeps original releasedK5/V5 identities for raw2/6. D/L require custodian-approved, parent-disjoint project roles within public training scenes; eligibility fixed before deterministic SHA256 ranking using task_id/scene/role/common_class/original_point_id, selecting5 per class. Missing support blocks the affected protocol; no automatic scene/class replacement.","forbidden_scenes":["Erato","Nefeli","Kirki","Kiriki"],"target_metadata":"Class definitions/device/version descriptions are known during protocol design; report this exposure. No unqualified pristine-target or causal-device claim."},
+  "statistics":{"constant_reference":"Balanced two-class p=0.5 hasOA/AA0.5,NLLlog(2),binaryBrier0.25; exact tie predicts0","per_endpoint":"Confusion2x2,class denominators5/5,OA,AA,macroF1,NLL,Brier; all registered cells/three seeds","pairing":"Within the same target point set and seed: every cross-scene source versus that target's local source; additionallyX→L versusD→L andX→D versusL→D. No point pairing across different scenes.","uncertainty":"Observed-parent descriptive sensitivity only. Exact ordered cluster enumeration ifm<=3; ifm>3,10000 resamples with RNG seed531064 fixed before labels/scores, recording undefined-class draw counts and linear2.5/97.5 percentiles. C8 exact-enumeration helper cannot be silently called beyond its3-parent cap; bounded extension needs implementation/test after ingress admission.","repetition":"Three model seeds are initialization repeats;D/L are named same-family scenes with unverified geographic/acquisition independence. Do not multiply unique sample count by directions, cells or seeds."},
+  "launch_conditions":["Original member dictionary and class-value/scene/units binding","Applicable exact-version data terms and project role authorization","Audited per-scene/class counts, parent/footprint overlap and observation history","Input conversion/bank identity and complete context/statistics provenance","Source-only stage guards, fixed arithmetic and independent numerical audit","Measured short-run cost notice and actual user authority; research training currently paused"],
+  "scientific_claim_limit":"Conditional development diagnostics for this proposed annotation coarsening; not nativeVCA efficacy, physical response equivalence or independent unseen-family confirmation."
+}
