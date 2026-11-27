@@ -1,0 +1,19 @@
+{
+  "issue":529,
+  "base":"c6526763b874df55fab4991e3076a235adcac174",
+  "branch":"codex/paper-c-independent-validation-20261127",
+  "sole_writer":"C",
+  "allowed_path":"research/paper_c_independent_validation/",
+  "started_client_time":"2026-11-27T07:30:26+08:00",
+  "started_observed_clock_UTC":"2026-11-26T23:30:25Z",
+  "scope":"WP02/WP05 independent validation conditions, existing candidate/source/role records and publication evidence tables; not a new data reader or training framework.",
+  "reuse":"C6/C7 admission and C8 exposure/paused protocol; D fixed original30-pair roster and SpectralEarth product/ontology audit. Original records stay immutable; added columns distinguish historical from current evidence.",
+  "execution":"Authorized LXC only; metadata and synthetic consistency checks. Windows editing/Git/native file inspection and SSH/SCP only.",
+  "new_image_or_GT_download_budget_bytes":0,
+  "new_point_or_role_memberships":0,
+  "real_fitting_updates":0,
+  "query_reads":0,
+  "training_state":"paused",
+  "not_authorized":["contact or questionnaire/account submission","untouched observation/label release","opening query to estimate counts","inheriting external train/val randomization or weights"],
+  "unknown_rule":"Unknown independent acquisitions, polygons, sample counts and payload grants remain null; zero means no currently admitted project units, not physical nonexistence."
+}
