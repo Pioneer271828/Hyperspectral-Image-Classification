@@ -22,6 +22,6 @@
 
 待恢复训练后才能验收的内容为：48个真实线性端点及4个类别中心、3840次主拟合及另外3840次独立重放、真实原始影像到特征复算、双向真实逐点及逐类分类表，以及真实拟合产物的私有恢复。登记预算仍为CPU5–15分钟计算及核验、30分钟硬上限，固定终点且禁止按目标V5选表示或预算。本包不填造任何真实精度，也不证明VCA或物理光谱对齐有效。
 
-LXC备份为 `/home/lbx/hsi-pioneer271828/backups/paper-c-real-baselines-engineering-20261127-01/`。`preservation05.tar.gz`为5,102,664字节，SHA256 `b6911a9d1fcf8442433aa973dc4b0cfce8b3ccbdfa1efd660d33babb545beeef4`；7个文件恢复无差异，恢复出的完整源码05为上述干净验收SHA。它是同主机备份，不是异地灾备，不包含真实数据或权重。去身份审阅包 `review05.zip`为5,428字节、7项，SHA256 `fa5b3a02296aabeddaf33ce6289aa678d75b5362309135f0a727616e67bd08009`。
+LXC备份为 `/home/lbx/hsi-pioneer271828/backups/paper-c-real-baselines-engineering-20261127-01/`。`preservation05.tar.gz`为5,102,664字节，SHA256 `b6911a9d1fcf8442433aa973dc4b0cfce8b3ccbdfa1efd660d33babb545beef4`；7个文件恢复无差异，恢复出的完整源码05为上述干净验收SHA。它是同主机备份，不是异地灾备，不包含真实数据或权重。去身份审阅包 `review05.zip`为5,428字节、7项，SHA256 `fa5b3a02296aabeddaf33ce6289aa678d75b5362309135f0a727616e67bd0809`。
 
-失败记录包括：在登录目录核验bundle缺少仓库上下文；delta04实际只登记HEAD而按分支名fetch失败；一次README上下文不符导致原子补丁拒绝；审阅包一次SCP新连接超时。前两项随后在独立仓库中按实际ref完成；失败没有覆盖旧checkout或引发训练。原始测试日志和独立回执留在备份及去身份审阅包中。
+失败记录包括：在登录目录核验bundle缺少仓库上下文；delta04实际只登记HEAD而按分支名fetch失败；一次README上下文不符导致原子补丁拒绝；审阅包一次SCP新连接超时；终端换行导致两项人工转录哈希多出一位，被Windows核验拒绝。前两项随后在独立仓库中按实际ref完成；哈希由机器回执读入纠正，回传ZIP及其中日志均与远端一致。失败没有覆盖旧checkout或引发训练。原始测试日志和独立回执留在备份及去身份审阅包中。
