@@ -135,7 +135,8 @@ def accepted_cases(runs, cohort):
         directory = root / execution / case_name
         done = read(directory / "done.json")
         step = checked["selected_step"]
-        check(done["selected_step"] == step and done["contract"] == digest(case) == checked["contract_sha256"],
+        saved = read(directory / "contract.json", checked["contract_sha256"])
+        check(saved == case and done["selected_step"] == step and done["contract"] == digest(case),
               "Original selected cursor or completed contract differs")
         record_path = directory / "stages" / f"{step:06d}" / "record.json"
         record = read(record_path)
@@ -146,7 +147,7 @@ def accepted_cases(runs, cohort):
         cases.append({"seed": seed, "checkpoint": str(checkpoint.relative_to(runs)),
                       "checkpoint_sha256": record["state_sha256"], "checked_step": step,
                       "expected_fused": checked["selected_metrics"], "record_sha256": sha(record_path),
-                      "contract_sha256": done["contract"]})
+                      "contract_identity": done["contract"], "contract_file_sha256": checked["contract_sha256"]})
     return {"scene": scene, "sweeps": sweep_count, "cases": cases,
             "producer": register["producer"], "registration_sha256": reg_sha, "review_sha256": audit_sha}
 
