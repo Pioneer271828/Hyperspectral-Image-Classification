@@ -2,7 +2,7 @@
   "schema_version": 1,
   "as_of": "2026-11-27",
   "issue": 463,
-  "development_branch": "codex/wp12-gpu-lease-release-20261127",
+  "development_branch": "codex/wp12-unified-review-20261127",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
   "main_snapshot": "54c6cb0bf0f45c1d04a8cf0bcd43434d3ac87b6c",
   "main_merge": "reviewed_batches_merged",
@@ -44,7 +44,8 @@
     "wp06_wp08_pavia_independent_audit": "e4aa84077ff66a3173bb047aa3c6452c9bc123b1",
     "wp12_matched_edge_public_entry": "a74dc254c3556015d9dd33839dfbeb21a84fe102",
     "gpu_dispatch_telemetry_candidate": "88e7051f3693296e3ce0995abb79982851b5b8f9",
-    "g4_shared_lease_regressions": "8f4f486c5a0549844dfaea86e0a1b1759742d4a2"
+    "g4_shared_lease_regressions": "8f4f486c5a0549844dfaea86e0a1b1759742d4a2",
+    "frozen_deployment_lease_review": "4951942e63b0b056f9fa8a7cf795509fe7dbf74e"
   },
   "frozen_runtime_reference": "8289e227275eabbafbb1eaea75cf4d6b0c1e8580",
   "frozen_runtime_paths": [
@@ -80,6 +81,13 @@
     "tests/test_wp12_pavia_matched_deletion.py"
   ],
   "modules": [
+    {
+      "id": "WP12 统一候选兼容性评审",
+      "state": "兼容整改通过，候选待主审",
+      "evidence": "RM Vision 干净提交 4951942e63b0b056f9fa8a7cf795509fe7dbf74e 的 22 项定向 CPU 回归全部通过。RTX 4090 空闲 9,499 MiB 时完成部署算术，拒绝第二租约，并在退出后释放。延迟载入仍拒绝已驻留模型变更。",
+      "remaining": "全量与增量保留各自 tested SHA。六项成功路径需精确历史版本。真实优化、新校准与封存 query 暂停，自动验收运行器待注册。",
+      "report": "research/reports/WP12_统一候选评审与验收边界_20261127.md"
+    },
     {
       "id": "WP12 GPU 补测与候选发布准备",
       "state": "RM Vision GPU0 五项通过，准备交主审",
