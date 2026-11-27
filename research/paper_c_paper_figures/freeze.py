@@ -65,7 +65,16 @@ def main():
     for tex in sorted((droot/'paper').rglob('*.tex')):
         for name in re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}',tex.read_text()):
             image=(tex.parent/name).resolve()
+            resolution='relative_to_fragment'
+            if not image.is_file() and image.suffix=='.pdf' and image.with_suffix('.svg').is_file():
+                image=image.with_suffix('.svg');resolution='existing_SVG_PDF_generated_at_build'
+            if not image.is_file():
+                candidates=list((droot/'paper').rglob(Path(name).name))
+                if not candidates:candidates=list((droot/'paper').rglob(Path(name).with_suffix('.svg').name))
+                require(not candidates or len({sha(p) for p in candidates})==1,'Ambiguous included-fragment figure source')
+                if candidates:image=candidates[0];resolution='including_document_vector_source'
             inventory.append({'tex':str(tex.relative_to(droot)),'reference':name,'exists':image.is_file(),
+                              'resolution':resolution,'source_file':str(image.relative_to(droot)),
                               'figure_sha256':sha(image) if image.is_file() else None})
     require(inventory and all(r['exists'] for r in inventory),'Frozen D figure reference cannot be resolved')
     write(frozen/'D-figure-inventory.json',{'D_revision':'79f34c681d02e7849305e850befb2beca6fed97a',

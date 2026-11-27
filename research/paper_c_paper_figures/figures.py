@@ -159,7 +159,7 @@ def d2(roles,width):
           'HongHu parents by class: fit 2 / 3, dev 1 / 1. Xuzhou per-class parent counts unverified.\n'
           'Parent tiles are not validated independent parcels. Untouched confirmation units: 0.\n'
           'C10 Hyperion role points acquired: 0; 40 new points are conditional requirements, not released support.')
-    if narrow:note='\n'.join(textwrap.fill(line,43) for line in note.splitlines())
+    note='\n'.join(textwrap.fill(line,43 if narrow else 107) for line in note.splitlines())
     ax.text(0,.515 if narrow else .345,note,ha='left',va='top',fontsize=8.0,linespacing=1.45)
     return fig
 

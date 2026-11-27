@@ -75,7 +75,7 @@ def main():
             and hyp['authorized_real_updates']==0 and hyp['authorized_new_Hyperion_points']==0,'Prospective plan was presented as a result')
     pdfs={}
     for path in sorted((out/'figures').glob('*.pdf')):
-        width=int(path.stem.split('-')[-1].removesuffix('mm'));doc=pymupdf.open(path);page=doc[0];text=page.get_text()
+        width=int(path.stem.split('-')[-1].removesuffix('mm'));doc=pymupdf.open(path);page=doc[0];text=' '.join(page.get_text().split())
         require(len(doc)==1 and abs(page.rect.width*25.4/72-width)<.02 and not page.get_images(),'Fixed-width/vector PDF audit failed')
         require(page.get_fonts() and all(doc.extract_font(f[0])[3] for f in page.get_fonts()),'Font not embedded')
         if path.name.startswith('D1'):require('No performance values available' in text and 'not run' in text,'Admission diagram lost unmeasured qualification')
