@@ -32,6 +32,9 @@ def main():
     for name in ('reconciliation.json','rebuild-receipt.json','rebuilt-routing.csv','rebuilt-paper1-historical.csv'):
         shutil.copyfile(b/'review'/name,review/name)
     shutil.copyfile(b/'pavia-source-audit.json',review/'pavia-source-audit.json')
+    shutil.copyfile(b/'residual-exposure.json',review/'residual-exposure.json')
+    environment=read(b/'environment.json');environment['host']='authorized_LXC'
+    write(review/'environment.json',environment)
     r=read(b/'review/reconciliation.json')
     c=read(b/'review/rebuild-receipt.json')
     require(c['status']=='PASSED' and c['aggregate_differences']==0 and r['increment']['fresh_restore_differences']==0,
@@ -54,7 +57,8 @@ def main():
         require(sha(path)==sha(dest), 'Source bundle copy differs')
         source_rows.append({'name':name,'bytes':dest.stat().st_size,'sha256':sha(dest)})
     repo=work/'source-restored.git'
-    subprocess.run(['git','clone','-q','--bare',str(source/'C11.bundle'),str(repo)],check=True)
+    branch='codex/paper-c-paper-recovery-20261127'
+    subprocess.run(['git','clone','-q','--bare','-b',branch,str(source/'C11.bundle'),str(repo)],check=True)
     for name in ('A-frozen.bundle','A-SLIC.bundle'):
         subprocess.run(['git','-C',str(repo),'fetch','-q',str(source/name),'+refs/*:refs/recovery/'+name+'/*'],check=True)
     for name in ('Native.bundle',):
@@ -83,14 +87,15 @@ def main():
         subprocess.run(['git','-C',str(repo),'cat-file','-e',revision+'^{commit}'],check=True)
     subprocess.run(['git','-C',str(repo),'fsck','--full'],check=True,stdout=subprocess.DEVNULL)
     current=work/'source-restored-checkout'
-    subprocess.run(['git','clone','-q',str(repo),str(current)],check=True)
+    subprocess.run(['git','clone','-q','-b',branch,str(repo),str(current)],check=True)
     require(subprocess.check_output(['git','-C',str(current),'rev-parse','HEAD'],text=True).strip()==a.expected_commit
             and not subprocess.check_output(['git','-C',str(current),'status','--porcelain'],text=True).strip(), 'Fresh source checkout differs')
     write(review/'source-recovery.json',{'status':'PASSED','bundles':source_rows,'commit_objects_verified':revisions,
           'fresh_HEAD':a.expected_commit,'fresh_checkout_clean':True,'full_git_fsck':True,'new_optimizer_updates':0,
           'author_component_commit':author_rev,'author_commit_tree_blob_proofs_verified':True,'author_full_Git_history_backed_up':False})
     archive=work/'recovery-controls.tar.gz'
-    names=['increment/manifest.json','available-private.json','layout.json','s2-retention.json']
+    names=['increment/manifest.json','available-private.json','layout.json','s2-retention.json',
+           'environment.json','pavia-source-audit.json','residual-exposure.json']
     names += ['source/'+row['name'] for row in source_rows]
     with tarfile.open(archive,'x:gz',compresslevel=1) as tar:
         for name in names:
@@ -115,7 +120,8 @@ def main():
           'storage_scope':'SAME_LXC_HOST_ONLY','source_sealer':a.expected_commit,'new_neural_calls':0,'optimizer_updates':0,
           'limit':'Opaque archival copies include frozen historical S2 input files. No GT/query array is decoded or scored. Existing critical archives remain required alongside the incremental store.'})
     allow={'reconciliation.json','rebuild-receipt.json','rebuilt-routing.csv','rebuilt-paper1-historical.csv',
-           'dependency-summary.json','source-recovery.json','preservation.json','pavia-source-audit.json'}
+           'dependency-summary.json','source-recovery.json','preservation.json','pavia-source-audit.json',
+           'residual-exposure.json','environment.json'}
     require({p.name for p in review.iterdir()}==allow,'Explicit deidentified export allowlist differs')
     package=work/'review.zip'
     with zipfile.ZipFile(package,'x',compression=zipfile.ZIP_DEFLATED) as z:

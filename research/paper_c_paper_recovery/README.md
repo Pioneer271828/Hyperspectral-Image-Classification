@@ -20,3 +20,10 @@ The script checks archive identities, restores every indexed critical object,
 reconciles unique historical states, and creates an incremental dependency store
 only for hashes absent from the inspected existing archives. It never modifies
 an existing backup, source artifact or training directory.
+
+The executed inventory producer is `75671680fb92c6392c50c993440a051dd375c3c3`;
+the reconstruction verifier is `9b811174f8c4952e469c0edb1aedb37fee381da0`.
+The final source/control seal identifies its own exact commit in
+`source-recovery.json` and `preservation.json`. See [findings](findings.md) and
+[retained failures](failures.json). The original complete history remains an
+incomplete off-host backup; this package completes a bounded recovery audit.
