@@ -15,6 +15,12 @@ from c6_bridge import canonical,sha,patch_batch,check_source as _c7_source
 def protocol():return json.loads((Path(__file__).parent/'protocol.json').read_text())
 
 
+def require_learning_enabled():
+    """Fail before input access while the current user instruction pauses training."""
+    if protocol().get('execution_state')!='real_learning_enabled':
+        raise RuntimeError('Research training is paused; only synthetic engineering checks may run')
+
+
 def clean(expected):
     _c7_source(expected)
     subprocess.run(['git','merge-base','--is-ancestor',BASE,expected],cwd=ROOT,check=True,capture_output=True)

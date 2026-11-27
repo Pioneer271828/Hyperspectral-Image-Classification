@@ -6,13 +6,14 @@ from time import perf_counter
 
 import numpy as np
 
-from c8_bridge import clean,fresh,write,read,digest,canonical,sha,protocol
+from c8_bridge import clean,fresh,write,read,digest,canonical,sha,protocol,require_learning_enabled
 from phase_data import PhaseData
 from features import REPRESENTATIONS
 from models import fit,centroid
 
 
 def main():
+    require_learning_enabled()
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--stage',choices=('source','target'),required=True);p.add_argument('--direction',nargs=2,required=True);p.add_argument('--c7-root',required=True);p.add_argument('--inputs',required=True);p.add_argument('--plan',required=True);p.add_argument('--source-stage');p.add_argument('--out',required=True);a=p.parse_args();out=fresh(a.expected_commit,a.out);out.mkdir();began=perf_counter();cfg=protocol();config_hash=sha(canonical(cfg))
     if tuple(a.direction) not in (('xuzhou','whu-honghu'),('whu-honghu','xuzhou')):raise ValueError('Unregistered direction')
     if (a.stage=='target')!=(a.source_stage is not None):raise ValueError('Target stage requires exact sealed source stage only')
