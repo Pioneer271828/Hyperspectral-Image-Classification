@@ -35,8 +35,8 @@ def inspect(bank):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--scene',required=True);p.add_argument('--bank',required=True);p.add_argument('--labels',required=True);p.add_argument('--out',required=True);a=p.parse_args();out=guard(a.expected_commit,a.out)
-    bank=ReleasedBank(a.bank,a.scene,a.labels);result={'schema':'paper_c_existing_hsi_role_audit_v1','producer':a.expected_commit,'metadata':inspect(bank),'new_model_calls':0,'new_optimizer_updates':0,'new_label_memberships':0,'raw_GT_or_query_reads':0}
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--scene',required=True);p.add_argument('--bank',required=True);p.add_argument('--labels');p.add_argument('--portable-index');p.add_argument('--out',required=True);a=p.parse_args();out=guard(a.expected_commit,a.out)
+    bank=ReleasedBank(a.bank,a.scene,a.labels,portable_index=a.portable_index);result={'schema':'paper_c_existing_hsi_role_audit_v1','producer':a.expected_commit,'metadata':inspect(bank),'new_model_calls':0,'new_optimizer_updates':0,'new_label_memberships':0,'raw_GT_or_query_reads':0}
     out.write_text(json.dumps(result,indent=2));print(json.dumps(result))
 
 

@@ -11,6 +11,7 @@ PINS={
     'xuzhou':{'bank':'c877232e6cc38e3f8be37eb1b147d69a7253edbeb665f98e5b8cd6acb8e5cb17','registration':'bc555ce89034dafa4ca99602ba067f8386a685d7528e4eab27793bfc142a6104','shape':(500,260,436),'classes':9},
     'whu-honghu':{'bank':'0bbe03fc60abe505c2c48d2f4837ba7494fabbcdeda673280d7220d5bc13dfa9','registration':'77876433efa118908a90571d0b4124a3e0d0f77b0eb930adfa8ae22a1052d2be','shape':(940,475,270),'classes':22}
 }
+PORTABLE_INDEX_SHA256='8c5d0528b2a9b0f59d2ecc10994f590b82764b3c6bc43b74ecc346a1f8ed2f37'
 
 
 def sha(raw):return hashlib.sha256(raw).hexdigest()
@@ -39,14 +40,30 @@ class ReleasedBank:
     Storage root may be a private restored copy. Original JSON bytes and their
     old absolute provenance paths remain unchanged; no path is rewritten in-place.
     """
-    def __init__(self,root,scene,label_release):
+    def __init__(self,root,scene,label_release=None,*,portable_index=None):
         if scene not in PINS:raise ValueError('Scene has no registered original bank pin')
         self.root=Path(root).resolve();self.scene=scene;self.pin=PINS[scene];self.payload_reads=0;self.payload_bytes=0
         self.registration=pinned_json(safe_member(self.root,'registration.json'),self.pin['registration'])
         self.index=pinned_json(safe_member(self.root,'bank.json'),self.pin['bank'])
         reg=self.registration
         if tuple(reg['shape'])!=self.pin['shape'] or reg['classes']!=self.pin['classes'] or reg['scene']!=scene or self.index['registration']!=self.pin['registration']:raise ValueError('Original scene shape/class authority differs')
-        label_pin=reg['custody']['label_release'];self.label_release=pinned_json(Path(label_release),label_pin['sha256'])
+        if (label_release is None)==(portable_index is None):raise ValueError('Exactly one original label release or frozen portable release required')
+        if portable_index is not None:
+            portable=pinned_json(Path(portable_index),PORTABLE_INDEX_SHA256)
+            original=portable['releases'][scene]
+            if original['pin']['registration']!=self.pin['registration'] or original['pin']['sha256']!=self.pin['bank']:raise ValueError('Portable source pin differs from original bank')
+            release=original['release'];rows=release['rows']
+            if any(release[k]!=reg[k] for k in ('scene','classes','shape','bands','statistics','plan_hash','profile','custody','source')):raise ValueError('Portable release identity differs from original registration')
+            for row in rows:
+                identity={k:v for k,v in row.items() if k!='samples'};identity['released_samples']={'count':len(row['samples']),'sha256':sha(canonical(row['samples']))}
+                if identity not in reg['rows']:raise ValueError('Portable row/sample digest differs from original registration')
+            if len(rows)!=len(reg['rows']) or len({r['id'] for r in rows})!=len(rows):raise ValueError('Portable release roster differs')
+            self.label_release={'scene':scene,'development_roles_hash':None,'release_hash':PORTABLE_INDEX_SHA256}
+            for role,key in [('devtrain','support'),('devval','validation')]:
+                points=[p for r in rows if r['role']==role for p in r['samples']]
+                self.label_release[key]={'per_class':5,'indices':[p[0] for p in points],'labels':[p[1] for p in points]}
+        else:
+            label_pin=reg['custody']['label_release'];self.label_release=pinned_json(Path(label_release),label_pin['sha256'])
         labels=self.label_release
         if labels['scene']!=scene or set(labels)!={'scene','development_roles_hash','support','validation','release_hash'}:raise ValueError('Only the original two-role K5 release is admitted')
         self.rows={r['id']:r for r in reg['rows'] if r['blocked'] is None};self.samples={};self.members={};seen=set();role_points={}
