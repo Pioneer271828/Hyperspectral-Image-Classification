@@ -28,3 +28,40 @@ budget/time notice and the applicable existing authorization.
 
 FLAIR remains a completed auxiliary multispectral case; this task does not start
 a large FLAIR experiment or repeat its intake.
+
+## What can actually run
+
+The released numeric development inputs for Xuzhou436 and HongHu270 are readable
+with their own9/22-class heads and originalK5/V5 memberships. A four-block
+source/target input probe and independent112-block byte/normalization/patch audit
+passed on rmvision. These checks call no classifier and make no accuracy claim.
+The shared taxonomy remains blocked for the precise materials listed in
+`pair-feasibility.json`; `source-review.json` and `taxonomy-draft.json` preserve
+the original table review and explicitly qualified candidate mapping.
+
+Use a clean checkout at the complete registered SHA and an unused external
+output path. Existing input root is a read-only preserved copy maintained by A:
+`/home/rmvision/hsi-pioneer271828/runs/paper-a-three-scene-20261127/roles`.
+Its `index.json` SHA256 is
+`8c5d0528b2a9b0f59d2ecc10994f590b82764b3c6bc43b74ecc346a1f8ed2f37`.
+The index reconstructs each original sample digest against the original pinned
+registration; it grants no additional labels or observations.
+
+```sh
+export PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+python -m unittest discover -s research/paper_c_hsi_admission -p test_bank_reader.py -v
+python research/paper_c_hsi_admission/development_probe.py --expected-commit <complete-SHA> --root <released-roles-root> --out <new-external-output.json>
+python research/paper_c_hsi_admission/audit_inputs.py --expected-commit <complete-SHA> --root <released-roles-root> --out <new-external-audit.json>
+python research/paper_c_hsi_admission/spatial_plan.py --expected-commit <complete-SHA> --root <released-roles-root> --out <private-new-external-plan.json>
+```
+
+`spatial_plan.py` includes already released point identities and original boxes;
+keep its full output private on Linux. Export only counts/digests. Windows and
+the Git review package receive source and aggregate receipts; full papers,
+spectral arrays, raw labels and training artifacts stay outside checkout.
+
+The strict parent subset is a proposal preserving original roles. It loses
+HongHu class21 entirely and one class7 development point, so it cannot be called
+a balanced22-class K5/V5 experiment. Repeated seeds cannot replace independent
+acquisitions, semantic labels or untouched validation. The baseline registration
+is still a draft; all actual training/forward budgets remain zero.

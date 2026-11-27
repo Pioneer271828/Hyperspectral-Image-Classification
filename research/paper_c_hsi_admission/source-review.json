@@ -1,0 +1,44 @@
+{
+  "schema":"paper_c_C6_HSI_primary_source_review_v1",
+  "reviewed_UTC":"2026-11-26",
+  "external_code_copied_or_executed":[],
+  "implementation":"Independent narrow reader of this project's already released NPY bank. No author trainer, label partition, model, checkpoint, spectral interpolation or calibration algorithm imported.",
+  "xuzhou":{
+    "provider":"https://www.3sobs.cn/share",
+    "paper_DOI":"10.1109/JSTARS.2019.2892975",
+    "paper_author_host":"https://s3.3sobs.cn/paper/2019/Tan%20et%20al_2019_A%20Parallel%20Gaussian%E2%80%93Bernoulli%20Restricted%20Boltzmann%20Machine%20for%20Mining%20Area2.pdf",
+    "reviewed_paper_SHA256":"da083e590f7c300c90ef51bf8a42d3a4903a350b3c55a4a1ae413b8048182c65",
+    "original_instrument":"HySpex VNIR-1600 plus SWIR-384, VNIR resampled to SWIR spatial resolution before delivered cube; not two model-input modalities.",
+    "product":"Historical nine-class500x260x436, November2014, nominal0.73m; not the later thirteen-class product.",
+    "processed_bands":"Paper describes160VNIR+288SWIR before removing overlap/absorption bands; delivered436-column stream does not retain an authenticated camera-to-column map here.",
+    "local_image_SHA256":"3733fd46e7bb17b9db037700c36e245feb915326749abf5d8fc6ce0d6234e3c3",
+    "local_semantic_evidence":"All9 numeric-ID counts in the previously published G3V2 audit agree with TableIX; image fingerprint agrees across prior preparation and bank records. This is strong consistent version evidence, not a recovered original label-release/header chain. No full GT was read again.",
+    "class_counts_TableIX":[26396,4027,2783,5214,13184,2436,6990,4777,3070],
+    "data_rights":{"DOI":"10.21227/t3c9-h862","prior_DataCite_record_SHA256":"2b557937c24111886b83fabeacca91ddf9620938d256fde039b77317281a94b4","prior_record_reported_license":"CC BY4.0, exact retained product binding explicitly unresolved in prior WP05 review","current_primary_record_retrieval":"Web API failed. rmvision environment-proxy transport failed; one process-local direct-HTTPS diagnostic also failed DNS. Cached record bytes not yet recovered.","provider_scope":"Xuzhou section asks citation. Permission text in another dataset section is not applied to Xuzhou.","decision":"Existing user-authorized released development bytes only; no new public redistribution or fully qualified shared-class product admission."},
+    "author_code":"No exact licensed implementation of this2019 method was established by this bounded original/provider review; the method is not implemented or needed for a bank reader."
+  },
+  "honghu":{
+    "provider":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm",
+    "primary_sections":["1.3","Table3","data sharing terms"],
+    "instrument":"Headwall Nano-Hyperspec,17mm, DJI Matrice600Pro",
+    "acquisition":"2017-11-20 16:23-17:37",
+    "product":"WHU-Hi HongHu,940x475x270, nominal0.043m",
+    "local_image_SHA256":"394eebb36e70931711b02d127f73c641ad67a83a5bbfc5294b695b2f7336dfce",
+    "shared_candidate_IDs":{"3":"Bare soil","22":"Tree"},
+    "data_rights":"Provider permits academic use with prescribed citations and prohibits commercial use; project use remains within the already authorized academic development release. No questionnaire, account or author contact performed.",
+    "author_code":{"repository":"https://github.com/RSIDEA-WHU2020/FreeNet","commit":"2cbfcd8216f1aa8a55720cf064a8b7475ccc993f","scope":"Existing fixed primary-lab tree review; GPL3 code permission is not data permission. No code reused/executed in C6; no measured per-band SRF found by that review."}
+  },
+  "bounded_alternative":{
+    "repository":"https://github.com/GatorSense/MUUFLGulfport",
+    "commit":"144fb301b2194ce7ee139aa97e60f592f3c3612b",
+    "DOI":"10.5281/zenodo.1186326",
+    "Zenodo_version":"v0.1,2018-02-28, dataset resource,406.6MB archive; not fetched",
+    "actual_inspected_files":["README.md","LICENSE","MUUFLGulfportSceneLabels/README.md"],
+    "LICENSE_blob_SHA1":"f5010d59700db93929d3d32819af49b22fe38cdd",
+    "license_text_scope":"Root MIT text grants Software and associated documentation. Public repository/datatype visibility alone is not an additional authenticated data-specific license binding.",
+    "actual_documented_scene_label_product":"muufl_gulfport_campus_1_hsi_220_label.mat,325x220x64; first4/last4 noisy bands removed; delivered wavelength and remove_band_index fields documented.",
+    "important_version_correction":"Author README dated2018-12-06 corrects the report:7=building shadow,8=buildings; use Materials_Type in exact MAT. Do not import an unverified325x337x72 benchmark description.",
+    "decision":"Metadata lead only. Zenodo rights label did not expose a license value in current browser text; record API unavailable. No payload/GT/label arrays downloaded or decoded, no development memberships created. Original collection report/instrument and exact permitted label product must be reviewed before a new pair is registered."
+  },
+  "spectral_claim_limit":"Unknown exact SRF does not block numeric cross-device classification input intake. It blocks causal native-response/certified-band-overlap claims. Scene/device/date/resolution/class composition remain confounded."
+}
