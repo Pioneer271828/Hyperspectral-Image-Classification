@@ -14,7 +14,7 @@ versus C10 prospective admission diagrams.
 ```
 python research/paper_c_paper_figures/freeze.py --expected-commit FULL_SHA --run NEW_RUN
 python research/paper_c_paper_figures/figures.py --expected-commit FULL_SHA --run RUN --out NEW_OUTPUT
-python research/paper_c_paper_figures/audit.py --run RUN --output OUTPUT --out NEW_RECEIPT
+python research/paper_c_paper_figures/audit.py --expected-commit FULL_SHA --run RUN --output OUTPUT --out NEW_RECEIPT
 ```
 
 The frozen inputs contain deidentified confusion/summary values only. Three

@@ -59,8 +59,8 @@ def derive(frozen,out):
 def r1(data,width):
     narrow=width==85
     fig,axes=plt.subplots(4 if narrow else 2,1 if narrow else 2,figsize=(width/25.4,(170 if narrow else 124)/25.4))
-    fig.subplots_adjust(left=.17 if narrow else .10,right=.97,bottom=.09 if narrow else .13,top=.90 if narrow else .87,
-                        hspace=.49 if narrow else .57,wspace=.30)
+    fig.subplots_adjust(left=.24 if narrow else .12,right=.97,bottom=.09 if narrow else .13,top=.90 if narrow else .87,
+                        hspace=.49 if narrow else .57,wspace=.35)
     for ax,scene,title in zip(np.asarray(axes).ravel(),('macro','paviaU','xuzhou','whu-honghu'),('Macro OA','PaviaU','Xuzhou','HongHu')):
         vals=[]
         for mode,color,ls,offset in [('none',COLORS['off'],'--',-.055),('x_residual',COLORS['on'],'-',.055)]:

@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 
 import numpy as np
 import pymupdf
@@ -19,7 +20,10 @@ def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--run',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--expected-commit',required=True);p.add_argument('--run',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args()
+    root=Path(__file__).resolve().parents[2]
+    git=lambda *args:subprocess.check_output(['git','-C',str(root),*args],text=True).strip()
+    require(git('rev-parse','HEAD')==a.expected_commit and not git('status','--porcelain'),'Exact clean independent-audit source required')
     frozen=a.run/'frozen';out=a.output
     original=read(frozen/'s2-results.json');expected={};supports={}
     require(original['optimizer_updates']==0,'Archived readout must be zero-update')
@@ -82,7 +86,7 @@ def main():
         if path.name.startswith('D2'):require('confirmation units: 0' in text and 'not four acquisitions' in text,'Support table lost denominator qualification')
         pdfs[path.name]={'width_mm':width,'embedded_font_count':len(page.get_fonts()),'raster_image_objects':0}
     require(len(pdfs)==8,'Print-width variants missing')
-    receipt={'status':'PASSED','R1_OA_values_checked':48,'R2_selected_fused_class_effects_checked':81,
+    receipt={'status':'PASSED','verifier':a.expected_commit,'R1_OA_values_checked':48,'R2_selected_fused_class_effects_checked':81,
              'S2_fixed_evaluation_points':{k:sum(next(iter(v))) for k,v in supports.items()},'S2_model_seeds':[64,512,2048],
              'WP04_unique_development_points':45,'WP04_points_per_class':5,'WP04_adoption':adoption,
              'C7_unique_points':40,'C7_original_images':{'xuzhou':1,'whu-honghu':1},'C7_confirmatory_units_released':0,
