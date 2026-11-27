@@ -111,6 +111,9 @@ def development(root):
         else:
             admitted = custody.PROVIDERS[scene](root)
             opened = bank.Bank(publication, root, admitted.release)
+        statistics = opened.release.statistics
+        require(statistics["fit_partition"] == "train" and statistics.get("fit_role") in ("devtrain", None),
+                "Expected the original training normalization authority")
         rows = opened.role_rows("devval")
         require(len(rows) == expected_tiles, f"Wrong released devval roster: {scene}")
         for ordinal, row in enumerate(rows, 1):
@@ -119,8 +122,9 @@ def development(root):
             yield f"{scene}-{ordinal:02d}", scene, scale, view.observation.spectral, {
                 "publication_sha256": checksum, "bank_sha256": opened.pin["sha256"],
                 "observed_sha256": context["normalized"],
-                "fit_partition": context["statistics"]["fit_partition"],
-                "fit_role": context["statistics"].get("fit_role"),
+                "fit_partition": statistics["fit_partition"],
+                "fit_role": statistics.get("fit_role"),
+                "statistics_sha256": statistics["statistics_hash"],
             }
         require(opened.reads == expected_tiles, "Unexpected decoded block count")
         opened.verify_authority(opened.pin)
