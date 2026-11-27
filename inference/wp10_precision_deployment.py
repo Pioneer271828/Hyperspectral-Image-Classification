@@ -13,7 +13,7 @@ import torch
 
 from compression.int8_torchao_onednn import OneDNNExecutionError, OneDNNUnavailable, load_backend
 from compression.int8_torchao_reference import TorchAOAffine
-from compression.low_rank_recovery_audit import HEADS
+from compression.low_rank_recovery_audit import HEADS, load_package as load_rank_package
 from compression.precision_cost import ResidentPrecisionTile, _tile_identity
 from compression.precision_fallback import LAYER_ORDER
 from compression.precision_recovery_audit import load_package
@@ -149,7 +149,10 @@ def _load(root, plan, arm, provider):
     package["weights"] = _local(root, arm+".pt", package["weights"])
     if package["sidecar"] is not None:
         package["sidecar"] = _local(root, arm+".pt.json", package["sidecar"])
-    model = load_package(package)
+    if plan["kind"] == "wp10_frozen_onednn_pair_v1":
+        model = load_package(package)
+    else:
+        model = load_rank_package(package)
     model.backbone.adapter.cache_attention = False
     if arm == "qat-first":
         model = load_backend(_local(root, "backend.json", plan["backend"]), TorchAOAffine(provider),

@@ -1,8 +1,10 @@
 """Check release- and target-specific precision decisions."""
 
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
-from inference.wp10_precision_deployment import _choice, _passes
+from inference.wp10_precision_deployment import _choice, _load, _passes
 
 
 class WP10UnifiedPrecisionTests(unittest.TestCase):
@@ -35,3 +37,16 @@ class WP10UnifiedPrecisionTests(unittest.TestCase):
                                   "cnn":{"passes_metric_guards":False}}))
         with self.assertRaisesRegex(ValueError,"three|fused"):
             _passes({"fused":{"passes_metric_guards":True}})
+
+    def test_retained_rank_control_uses_its_original_state_digest_schema(self):
+        pin = {"path":"/old", "sha256":"a"*64}
+        archive = {"kind":"wp10-low-rank", "cases":{
+            f"s{s}-dense":{"package":{"weights":pin,"sidecar":pin,"format":"fp32"}}
+            for s in (64,512,2048)
+        }}
+        with patch("inference.wp10_precision_deployment.load_rank_package") as rank_loader:
+            with patch("inference.wp10_precision_deployment.load_package") as qat_loader:
+                _, adjusted = _load(Path("/capsule"),archive,"s512-dense",None)
+            qat_loader.assert_not_called()
+            rank_loader.assert_called_once_with(adjusted)
+            self.assertTrue(adjusted["weights"]["path"].endswith("s512-dense.pt"))
