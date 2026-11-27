@@ -1,5 +1,6 @@
 """Open the pinned Xuzhou WP11 development capsule without reading labels."""
 
+from dataclasses import replace
 import hashlib
 import io
 import json
@@ -11,6 +12,7 @@ from inference.light_cnn import load_light
 from inference.native_deployment import Request, Runtime
 from inference.route_controls import request_hash
 from model.research_config import digest
+from transfer.p4_runtime_device import CPU, CUDA_FP64_WEIGHT, arithmetic
 from transfer.registered_development import _load_source
 
 
@@ -40,7 +42,18 @@ def read_inputs(base, expected):
     return inputs, requests
 
 
-def open_runtime(base, inputs, mode, *, partition="native", full_loads=None):
+def deployment_arithmetic(gpu, *, kernel_calls=None):
+    """Record actual contention without a fixed resource threshold."""
+    return arithmetic(CPU if gpu is None else CUDA_FP64_WEIGHT, gpu, kernel_calls=kernel_calls,
+                      enforce_resource_thresholds=False)
+
+
+def place_requests(requests, device):
+    return [replace(r, x=r.x.to(device), waves=r.waves.to(device),
+                    widths=None if r.widths is None else r.widths.to(device)) for r in requests]
+
+
+def open_runtime(base, inputs, mode, *, partition="native", full_loads=None, device="cpu"):
     files = inputs["files"]
     states = dict(inputs["states"])
 
@@ -57,4 +70,4 @@ def open_runtime(base, inputs, mode, *, partition="native", full_loads=None):
         light = None
     else:
         light = load_light(base/"light.pt", files["light.pt"])
-    return Runtime(device="cpu", light=light, full_loader=load_full, identity=states, partition=partition)
+    return Runtime(device=device, light=light, full_loader=load_full, identity=states, partition=partition)

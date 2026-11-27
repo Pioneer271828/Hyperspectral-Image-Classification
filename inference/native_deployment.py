@@ -116,8 +116,9 @@ class Runtime:
         if graph_policy not in ("rebuild","reuse_frozen") or all(x is None for x in (full,light,full_loader)):
             raise ValueError("Explicit model and graph policy required")
         if partition not in PARTITIONS or (partition != "native" and (
-                self.device.type != "cpu" or graph_policy != "rebuild" or (full is None and full_loader is None))):
-            raise ValueError("M3 partition deployment requires an explicit full path, CPU and rebuilt graphs")
+                self.device.type not in ("cpu", "cuda") or graph_policy != "rebuild"
+                or (full is None and full_loader is None))):
+            raise ValueError("M3 partition deployment requires a full CPU/CUDA path and rebuilt graphs")
         self._partition = partition
         self._run_lock = Lock()
         if full_loader is not None:
@@ -196,7 +197,7 @@ class Runtime:
         if skimage.__version__ != "0.25.2":
             raise ValueError("M3 SLIC deployment requires the qualified scikit-image 0.25.2 release")
         grid = builder._grid_shape(*features.shape[:2], scale)
-        spectral = request.x[:, :, :request.waves.numel()].numpy()
+        spectral = request.x[:, :, :request.waves.numel()].cpu().numpy()
         labels, _ = slic_assignment(spectral, regions=grid[0]*grid[1])
         return slic_graph(builder, features, labels, grid)
 
