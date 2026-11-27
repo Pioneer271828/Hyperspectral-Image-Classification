@@ -11,6 +11,7 @@ import numpy as np
 import bank_reader as reader
 from batch import patch_batch
 from spatial_plan import strict_plan
+from admission import pair_plan,require_role
 
 
 class OriginalRoleGates(unittest.TestCase):
@@ -61,6 +62,23 @@ class OriginalRoleGates(unittest.TestCase):
         with patch('bank_reader.np.load',side_effect=AssertionError('payload opened')):result=strict_plan(bank)
         self.assertEqual(result['excluded_shared_parents'],[0]);self.assertEqual(result['common_K5_V5_feasible_original_classes'],[]);self.assertEqual(result['new_array_reads'],0)
         self.assertEqual(result['roles']['devtrain']['tiles'],[]);self.assertEqual(result['roles']['devval']['tiles'],[])
+    def test_purpose_does_not_promote_validation_to_source_fitting(self):
+        bank=self.bank()
+        with patch('bank_reader.np.load',side_effect=AssertionError('payload opened')):
+            for role,tile,purpose in [('devval',1,'source_fit'),('devtrain',0,'confirmation'),('devtrain',2,'target_adapt')]:
+                with self.assertRaises(ValueError):require_role(bank,role,tile,purpose=purpose)
+        self.assertEqual(bank.payload_reads,0)
+    def test_two_roles_of_same_scene_are_not_two_acquisitions(self):
+        bank=self.bank()
+        with self.assertRaisesRegex(ValueError,'independently acquired'):pair_plan(bank,bank)
+        self.assertEqual(bank.payload_reads,0)
+    def test_unresolved_shared_head_and_confirmation_fail_before_arrays(self):
+        from types import SimpleNamespace
+        source=self.bank();target=SimpleNamespace(scene='whu-honghu')
+        with patch('bank_reader.np.load',side_effect=AssertionError('payload opened')):
+            with self.assertRaisesRegex(ValueError,'Shared-head'):pair_plan(source,target,mode='shared_head')
+            with self.assertRaisesRegex(ValueError,'untouched'):pair_plan(source,target,heldout_scenes=('third',))
+        self.assertEqual(source.payload_reads,0)
 
 
 if __name__=='__main__':unittest.main()
