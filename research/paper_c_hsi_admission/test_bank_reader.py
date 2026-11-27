@@ -9,6 +9,8 @@ from unittest.mock import patch
 import numpy as np
 
 import bank_reader as reader
+from batch import patch_batch
+from spatial_plan import strict_plan
 
 
 class OriginalRoleGates(unittest.TestCase):
@@ -50,6 +52,15 @@ class OriginalRoleGates(unittest.TestCase):
     def test_symlink_bank_member_rejected(self):
         p=self.root/'tile-0.npy';target=self.root/'other.npy';p.rename(target);p.symlink_to(target)
         with self.assertRaisesRegex(ValueError,'immutable root'):self.bank().read_tile('devtrain',0)
+    def test_patch_edges_never_read_an_external_halo(self):
+        cube=np.arange(3*6*3,dtype=np.float32).reshape(3,6,3);actual,centers=patch_batch(cube,[0],[0,3,0,6],12)
+        self.assertEqual(centers,((0,0),));self.assertTrue(np.array_equal(actual[0,:,0,0],cube[0,0]));self.assertTrue(np.array_equal(actual[0,:,6,6],cube[2,3]))
+        with self.assertRaisesRegex(ValueError,'escapes tile'):patch_batch(cube,[7],[0,3,0,6],12)
+    def test_strict_parent_subset_never_promotes_validation_or_reads_payload(self):
+        bank=self.bank();bank.rows[1]['parent_tile']=0 # Synthetic metadata case: both roles share parent0.
+        with patch('bank_reader.np.load',side_effect=AssertionError('payload opened')):result=strict_plan(bank)
+        self.assertEqual(result['excluded_shared_parents'],[0]);self.assertEqual(result['common_K5_V5_feasible_original_classes'],[]);self.assertEqual(result['new_array_reads'],0)
+        self.assertEqual(result['roles']['devtrain']['tiles'],[]);self.assertEqual(result['roles']['devval']['tiles'],[])
 
 
 if __name__=='__main__':unittest.main()
