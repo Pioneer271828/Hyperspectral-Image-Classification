@@ -12,6 +12,9 @@ import torch
 
 from .store import Store
 from .codec import hashed,MAX_DEPTH
+from .bridge import materialize,inspect
+from research.paper_c_spatial_baseline.protocol import OPTIMIZER
+from research.paper_c_recovery.transactions import digest
 
 
 def files(step):
@@ -113,6 +116,32 @@ class Storage(unittest.TestCase):
         torch.nn.Module.__call__=forbidden
         try:self.assertEqual(s.decode_file(s.frames('toy')[0],'state.pt'),files(0)['state.pt'])
         finally:torch.nn.Module.__call__=original
+        s.close()
+
+    def test_unready_materialization_cannot_be_resumed_by_original_engine(self):
+        c={'roster':[0],'sweeps':1,'seed':64,'plan':[0],'updates':1,'selection_steps':[0,1],
+           'device':'cpu','query_reads':0,'confirmation':False,'optimizer':OPTIMIZER,'protected':{}}
+        f=files(0);record={'step':0,'contract':digest(c),'previous':None,'state_sha256':hashed(f['state.pt']),
+                          'intent_sha256':hashed(f['intent.json']),'optimizer_updates':0,'block':None,'selected_step':0}
+        f['record.json']=json.dumps(record).encode();s=Store(self.root/'publish',layout='zip-xor')
+        with s.transaction('toy',0,f['intent.json'],json.dumps(c).encode()) as tx:tx.commit(f)
+        for phase in ['after_file','before_ready']:
+            dest=self.root/phase
+            def fail(point):
+                if point==phase:raise RuntimeError('injected restoration interruption')
+            with self.assertRaises(RuntimeError):materialize(s,'toy',dest,fault=fail)
+            self.assertTrue((dest/'.restore-pending').exists())
+            with self.assertRaisesRegex(ValueError,'Unexpected run artifact'):inspect(dest,c)
+        dest=materialize(s,'toy',self.root/'ready');self.assertEqual(len(inspect(dest,c)[0]),1)
+        s.close()
+
+    def test_old_prefix_is_forensic_and_pending_intent_blocks_normal_restore(self):
+        s=Store(self.root/'old',layout='zip-xor');add(s,0);add(s,1)
+        with self.assertRaisesRegex(ValueError,'latest'):materialize(s,'toy',self.root/'wrong',through=0)
+        def fail(point):
+            if point=='after_intent':raise RuntimeError('uncommitted optimizer boundary')
+        with self.assertRaises(RuntimeError):add(s,2,fault=fail)
+        with self.assertRaisesRegex(ValueError,'Uncertain intent'):materialize(s,'toy',self.root/'unsafe')
         s.close()
 
 

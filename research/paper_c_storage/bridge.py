@@ -5,7 +5,7 @@ import sys
 from time import perf_counter
 
 from .store import Store
-from .codec import require,hashed
+from .codec import require,hashed,create,fsync_dir
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'research/paper_c_recovery'))
@@ -32,7 +32,7 @@ def import_case(store,source,name):
     return {'name':name,'source_contract_sha256':hashed(contract),'stages':len(rows),'identities':identities,'timings':timings}
 
 
-def materialize(store,name,destination,*,through=None,forensic=False):
+def materialize(store,name,destination,*,through=None,forensic=False,fault=lambda phase:None):
     """New output only; arbitrary historical prefixes are forensic test replay.
 
     Pending intent always blocks ordinary restoration for continued training.
@@ -44,13 +44,22 @@ def materialize(store,name,destination,*,through=None,forensic=False):
     end=len(rows)-1 if through is None else through
     require(type(end) is int and 0<=end<len(rows),'Requested committed stage missing')
     require(forensic or end==len(rows)-1,'Only latest committed stage can be a normal continuation')
-    dest=Path(destination);dest.mkdir(mode=0o700,exist_ok=False);(dest/'stages').mkdir()
+    dest=Path(destination);dest.mkdir(mode=0o700,exist_ok=False)
+    # Original C3 inspect rejects this extra file before constructing a task.
+    # It remains after any interrupted materialization, including an empty prefix.
+    marker=dest/'.restore-pending';create(marker,b'Unpublished restoration; never resume training')
+    (dest/'stages').mkdir();fsync_dir(dest)
     contract,seal=store.db.execute('SELECT contract,seal FROM streams WHERE name=?',(name,)).fetchone()
-    (dest/'contract.json').write_bytes(contract)
+    create(dest/'contract.json',contract)
     for step,row in enumerate(rows[:end+1]):
         folder=dest/'stages'/f'{step:06d}';folder.mkdir()
-        for key in ['state.pt','record.json','intent.json']:(folder/key).write_bytes(store.decode_file(row,key))
-    if seal is not None and end==len(rows)-1:(dest/'done.json').write_bytes(bytes.fromhex(json.loads(seal)['original_done_hex']))
+        for key in ['state.pt','record.json','intent.json']:
+            create(folder/key,store.decode_file(row,key));fault('after_file')
+        fsync_dir(folder)
+    fsync_dir(dest/'stages')
+    if seal is not None and end==len(rows)-1:create(dest/'done.json',bytes.fromhex(json.loads(seal)['original_done_hex']))
+    fsync_dir(dest);fault('before_ready')
+    marker.unlink();fsync_dir(dest)
     # Inspect exact original state/intent/record SHA chains, not just tensors.
     inspect(dest,json.loads(contract))
     return dest
