@@ -1,0 +1,19 @@
+{
+  "schema":"paper_c_shared_HSI_taxonomy_draft_v1",
+  "status":"NOT_YET_ADMITTED",
+  "scope":"Proposed broad shared classes only; no shared semantic head may run while source-to-local ordinal evidence is unresolved.",
+  "candidate_classes":["coarse bare ground","tree canopy"],
+  "whu_honghu_original_ids":{"coarse bare ground":[3],"tree canopy":[22]},
+  "xuzhou_published9_candidate_ids":{"coarse bare ground":[1,7],"tree canopy":[6]},
+  "xuzhou_historical9_local_semantics_admitted":false,
+  "xuzhou_original_TableIX":{"1":"Bareland-1","2":"Lakes","3":"Coals","4":"Cement","5":"Crops-1","6":"Trees","7":"Bareland-2","8":"Crops-2","9":"Red-tiles"},
+  "original_table_review":{"doi":"10.1109/JSTARS.2019.2892975","printed_page":634,"table":"IX","PDF_sha256":"da083e590f7c300c90ef51bf8a42d3a4903a350b3c55a4a1ae413b8048182c65","crop_sha256":"2e9fb86ced63ed200093819e7b0706b208975fa836b74101f31864372ad33cb0","review":"C rendered and visually read the table only; D independently visually agreed. No GT map or coordinates were inspected."},
+  "semantic_limits":["Trees is a broad canopy category, not species equivalence.","Combining Bareland-1/2 with Bare soil is a proposed coarse land-cover ontology, not identical material composition.","Red-tiles9 is not automatically HongHu Red roof1; this candidate is excluded."],
+  "honghu_primary_definition":"https://rsidea.whu.edu.cn/e-resource_WHUHi_sharing.htm section1.3/Table3",
+  "xuzhou_required_evidence":["Local cube/label production or release lineage sufficient to bind original ordinal names and spatial reshape","Dataset-specific rights/version record applicable to this retained436-column local product"],
+  "support_budget_if_later_admitted":{"per_shared_class_per_original_role":5,"xuzhou_bare_ground_original_candidates_per_role":10,"merge_selection":"Before a fit, hash-rank the original numeric point identities with fixed salt and retain5; record that stricter subset. No replacement from outside the original role.","xuzhou_tree_candidates_per_role":5,"honghu_each_candidate_per_role":5,"parent_disjoint_HongHu_feasibility":"IDs3 and22 retain originalK5/V5 after removing shared parent65; this is numeric feasibility only."},
+  "known_counterevidence":"Historical project names assign coal/cement to5/6 while original9-class TableIX assigns3/4. Original numeric bank IDs remain unchanged; no guessed relabeling.",
+  "numeric_equal_ids_across_datasets_imply_same_class":false,
+  "C6_classification_native_response_requirement":"Exact SRF is not required for classification. Unknown native band response remains explicit and blocks causal passband interpretation only.",
+  "new_optimizer_updates":0
+}

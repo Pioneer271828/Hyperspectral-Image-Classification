@@ -1,0 +1,21 @@
+{
+  "schema":"paper_c_C6_ordered_pair_gate_v1",
+  "pairs":[
+    {"source":"xuzhou","target":"whu-honghu","native_numeric_new_head_inputs":"PASSED","source_K5_V5_points_each":45,"target_K5_V5_points_each":110,"shared_head":"BLOCKED","source_native_classes":9,"target_fresh_native_classes":22},
+    {"source":"whu-honghu","target":"xuzhou","native_numeric_new_head_inputs":"PASSED","source_K5_V5_points_each":110,"target_K5_V5_points_each":45,"shared_head":"BLOCKED","source_native_classes":22,"target_fresh_native_classes":9}
+  ],
+  "shared_head_missing_materials":[
+    "Original Xuzhou nine-class label product or sufficient original delivery/conversion record with its numeric legend, reshape convention and retained cube/version identity. An accompanying original legend plus verified conversion lineage can suffice; no publisher signature or measured SRF is being required.",
+    "Recover exact dataset-specific use terms/version record applying to that retained product, e.g. deposited DOI metadata and original delivery/README chain. Historical CC-BY record summary is retained as a lead, not silently applied to another product."
+  ],
+  "shared_taxonomy_candidates":"Only tree canopy(XZ6,HH22) and explicit coarse bare ground(XZ1+7,HH3); published-XZ-to-local mapping still pending. Red-tiles9 versus Red roof1 is excluded.",
+  "strict_parent_subset":"Metadata-only exclusion retains all9 XZ classesK5/V5; HH21 is lost and HH7 devval falls to4. The two proposed shared classes HH3/22 remainK5/V5 numerically feasible; this does not open the shared taxonomy.",
+  "heldout_acquisition_confirmation":"BLOCKED: no untouched third acquisition or confirmation label role is released; original devval is previously exposed development validation.",
+  "new_real_models":0,
+  "new_optimizer_updates":0,
+  "real_training_budget_authorized":0,
+  "model_accuracy_or_transfer_efficacy":"NOT_TESTED",
+  "causal_sensor_effect":"NOT_IDENTIFIED",
+  "SRF_missing_alone_blocks_classification":false,
+  "alternative_MUUFL_pair":"NOT_ADMITTED: exact data rights/product and new development-only role registration not closed; no new raw payload accessed."
+}

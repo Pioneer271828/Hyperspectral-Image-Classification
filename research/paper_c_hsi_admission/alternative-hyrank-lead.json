@@ -1,0 +1,14 @@
+{
+  "schema":"paper_c_C6_bounded_HSI_alternative_v1",
+  "status":"PRIMARY_REPORT_READ_NO_PAYLOAD_OR_NEW_ROLE_ADMITTED",
+  "dataset_DOI":"10.5281/zenodo.1222202",
+  "primary_report":"https://www.isprs.org/society/si/SI-2017/ISPRS-SI2017-TC3_WG4_Karantzalos_Report.pdf",
+  "primary_findings":"ISPRS initiative, NTUA Remote Sensing Laboratory. NASA EO-1 Hyperion surface-reflectance scenes acquired in2006;176 processed bands. Dioni250x1376 and Loukia249x945 are the original openly labeled training scenes. Erato, Nefeli and Kirki are benchmark validation scenes with hidden validation labels; they are excluded from any proposed C6 intake.",
+  "potential_pair":"One original public HyRANK training scene versus existing HongHu Nano-Hyperspec; common broad ontology must first be explicitly justified from original class legend. No numeric-ID matching or guessed class merger.",
+  "rights":"Original dataset record/API could not be read. A third-party HuggingFace mirror declaresCC-BY4.0; that is recorded only as a retrieval lead, not primary license proof. Do not transfer the report's own publication license to dataset bytes.",
+  "network_observation":"rmvision DNS returned gaierror errno-3 for Zenodo, DataCite, GitHub, ISPRS and the checked Tencent hostname. SSH remains available. Existing source13 inputs and restore verification completed locally on rmvision. User was asked for restoration of external DNS/authorized connectivity; no global network settings changed.",
+  "next_gate":"Recover original data-specific permission and exact product/class legend; pre-register a development-only observation/label footprint and byte budget before any new image/label payload read. Preserve original publisher training versus hidden validation distinction.",
+  "new_payload_bytes":0,
+  "new_label_memberships":0,
+  "new_optimizer_updates":0
+}
