@@ -44,6 +44,10 @@ def test_deferred_wrong_state_and_mode_retry_only_publish_an_admitted_model():
     again = runtime.run(requests, "full")
     assert first["counts"]["graph_builds"] == again["counts"]["graph_builds"] == len(requests)
     assert runtime.full is full and runtime.identity == model_states
+    identity_copy = runtime.identity
+    assert isinstance(identity_copy, dict)
+    identity_copy["full"] = "0" * 64
+    assert runtime.identity == model_states
     assert {p.device.type for p in full.parameters()} == {"cpu"}
     for a, b in zip(first["predictions"], again["predictions"], strict=True):
         for x, y in zip(a, b, strict=True):

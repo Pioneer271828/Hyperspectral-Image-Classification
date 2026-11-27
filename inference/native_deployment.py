@@ -153,7 +153,7 @@ class Runtime:
 
     @property
     def identity(self):
-        return self._identity
+        return dict(self._identity)
 
     def version(self):
         return tuple((n,p.data_ptr(),p._version) for m in (self.full,self.light) if m is not None
