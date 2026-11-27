@@ -116,8 +116,12 @@ def run(backup, expected):
                 step = 0 if role=='initial' else c['selected_step'] if role=='selected' else c['updates']
                 adam = state['optimizer']['state']
                 require(state['step']==step and set(state['rng'])=={'python','numpy','torch_cpu'}
+                        and state['module_modes'] and all(type(v) is bool for v in state['module_modes'].values())
+                        and state['rng']['torch_cpu'].dtype==torch.uint8
                         and all(torch.isfinite(v).all() for v in state['model'].values())
                         and ((not adam) if not step else bool(adam) and all(float(v['step'])==step for v in adam.values())), 'Archived state envelope differs')
+                if role=='current':
+                    require(state['best']['step']==c['selected_step'], 'Current state selection pointer differs')
                 state_count += 1
     target = next(c for c in index['transfer']['recovery'] if c['case']==case)
     target_contract = read(layout['transfer'] / 'restored/execution01' / case / 'contract.json')

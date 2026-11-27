@@ -126,6 +126,10 @@ def legacy_coverage(out, available):
         with tarfile.open(path) as tar:
             for member in tar:
                 relative(member.name)
+                if member.name == index_name:
+                    require(member.isfile() and json.load(tar.extractfile(member)) == index,
+                            'Archived older index differs from sidecar')
+                    continue
                 require(member.isfile() and member.name in pending, 'Older capsule member differs')
                 pending.remove(member.name)
                 row = pins[member.name]
@@ -297,6 +301,14 @@ def main():
             pins.update(c.get('protected', {}))
     obj = out / 'increment/objects'
     obj.mkdir(parents=True, mode=0o700)
+    planned = {checksum: Path(name).stat().st_size for name, checksum in pins.items()
+               if Path(name).is_file() and checksum not in available}
+    existing_restore = {checksum: Path(name).stat().st_size for name, checksum in pins.items()
+                        if Path(name).is_file() and checksum in available}
+    required = 2*sum(planned.values())+sum(existing_restore.values())
+    free = shutil.disk_usage(out).free
+    require(required + max(2*1024**3,free//10) < free, 'Insufficient free storage with reserve; no partial bulk copy')
+    print(json.dumps({'increment_new_unique_bytes_planned':sum(planned.values()),'space_needed_including_fresh_restore':required,'free_bytes':free}),flush=True)
     manifest = []
     missing_paths = []
     for name, checksum in sorted(pins.items()):
