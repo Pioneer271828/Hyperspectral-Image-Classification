@@ -3,17 +3,22 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 
-def slic_assignment(cube, *, scale):
+def slic_assignment(cube, *, scale=None, regions=None):
     """Return canonical labels and one sparse Q entry per input pixel."""
     from skimage.segmentation import slic
 
     if (not isinstance(cube, np.ndarray) or cube.dtype != np.float32 or cube.ndim != 3
             or not all(cube.shape) or not np.isfinite(cube).all()):
         raise ValueError("Expected a finite FP32 HSI block in HWC order")
-    if type(scale) is not int or scale < 1:
-        raise ValueError("Positive integer region scale required")
     pixels = cube.shape[0] * cube.shape[1]
-    requested = max(1, pixels // scale)
+    if regions is None:
+        if type(scale) is not int or scale < 1:
+            raise ValueError("Positive integer region scale required")
+        requested = max(1, pixels // scale)
+    else:
+        if scale is not None or type(regions) is not int or not 1 <= regions <= pixels:
+            raise ValueError("Use one explicit region budget between one and the pixel count")
+        requested = regions
     labels = slic(cube, n_segments=requested, compactness=0.5, max_num_iter=20, sigma=1,
                   convert2lab=False, enforce_connectivity=True, min_size_factor=0.1,
                   max_size_factor=2, slic_zero=False, start_label=0, channel_axis=-1)
