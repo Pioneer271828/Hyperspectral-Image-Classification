@@ -47,6 +47,11 @@ predicted here. Figure archive and source are separate from C11's private model
 history; no private payload is moved to a new destination. D remains paused and
 no manuscript is edited.
 
+The standalone delivery also carries original deidentified C7/C9/C10/C11
+receipts, not just references to their old directories. Their exact byte hashes
+are listed in an origin manifest. This addition changes no figure or numeric
+data; the same24 regenerated assets must continue to match their reviewed hashes.
+
 Retained failed attempts: a password prompt expired before source transfer; two
 new SSH/SCP connections timed out and one established connection reset; small
 Git increments were subsequently sent through the already authenticated LXC

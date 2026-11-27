@@ -12,7 +12,7 @@ import zipfile
 
 import pymupdf
 
-from freeze import BASE, clean, read, require, sha, write
+from freeze import BASE, REC, clean, read, require, sha, write
 
 STEMS=('R1-S2-four-cells','R2-WP04-class-protection','D1-admission-flow','D2-support-units')
 SHORT={
@@ -35,6 +35,15 @@ def main():
     for path in (delivery/'reused-D').iterdir():shutil.copyfile(path,reuse/path.name)
     for path in (output/'figures').iterdir():shutil.copyfile(path,delivery/('print-previews' if path.suffix=='.png' else 'figures')/path.name)
     own=root/'research/paper_c_paper_figures';shutil.copytree(own,delivery/'source',ignore=shutil.ignore_patterns('__pycache__'))
+    origins=delivery/'original-receipts';origins.mkdir()
+    for path,name in [(run/'inputs/manifest.json','registered-input-manifest.json'),
+                      (run/'inputs/table-receipt.json','C9-original-table-receipt.json'),
+                      (run/'inputs/paper-c-hsi-pair-review09.zip','C7-original-deidentified-review.zip'),
+                      (root/'research/paper_c_hyrank_protocol/independent-audit-receipt.json','C10-original-independent-audit.json')]:
+        shutil.copyfile(path,origins/name)
+    for name in ('reconciliation','rebuild-receipt','preservation'):
+        shutil.copyfile(REC/'seal03/review'/f'{name}.json',origins/f'C11-{name}.json')
+    write(origins/'origin-manifest.json',{p.name:{'bytes':p.stat().st_size,'sha256':sha(p)} for p in origins.iterdir()})
     shutil.copyfile(own/'captions.md',delivery/'captions.md');shutil.copyfile(a.audit,delivery/'receipts/independent-numeric-audit.json')
     shutil.copyfile(own/'visual-review.json',delivery/'receipts/visual-review.json');shutil.copyfile(output/'figure-receipt.json',delivery/'receipts/figure-receipt.json')
     write(delivery/'receipts/environment.json',{'python':sys.version.split()[0],
@@ -75,6 +84,9 @@ byte-identical copies; their original mean-only limitations still apply.
 producer SHA. `frozen/` contains only aggregate counts/metadata, never image
 arrays, trained tensors, raw labels or point identities. See the denominator
 ledger before quoting sample counts. S2, WP04 and C7 are different releases.
+`original-receipts/` includes the original C7 deidentified review, C9 table receipt,
+C10 independent audit and C11 preservation/reconstruction receipts, with exact
+source identities and a separate file-hash manifest.
 
 Restore the complete source bundle on the authorized LXC:
 
