@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-20",
+  "as_of": "2026-11-27",
   "issue": 463,
-  "development_branch": "codex/f-drive-primary",
+  "development_branch": "codex/integrated-candidate-20261127",
   "main_repair_branch": "codex/issue-167-main-cache-repair",
-  "main_snapshot": "465526c643d03c4ce11dc14a1f68dbf7c79b343d",
+  "main_snapshot": "54c6cb0bf0f45c1d04a8cf0bcd43434d3ac87b6c",
   "main_merge": "reviewed_batches_merged",
   "ci_runner": "registration_required",
   "real_training_started_by_this_task": false,
@@ -30,7 +30,16 @@
     "tool_integration": "1c40f249e2277a4356d63c8e8db35d6aa9282791",
     "native_coverage_release_candidate": "7f319f2146185575fc96287a44bdbbde091f0c16",
     "wp12_unified_real_candidate": "11a95837a1dbcbe01218a7847553503f231afeaf",
-    "wp11_deployment_cost_candidate": "e5020e3ef1665802472f60f4875ca4622df44e51"
+    "wp11_deployment_cost_candidate": "e5020e3ef1665802472f60f4875ca4622df44e51",
+    "current_development_primary": "a339ce8d7e5f0a600363b1a8826b96d8a16ae794",
+    "wp12_frozen54_review": "d3b65ce2e2e8b6aa4539ddac9915071f456ec5a1",
+    "wp12_reviewed_decoded_cache": "c7a6afbd02030bce195b32753869d401863a19c3",
+    "wp04_comparable_development": "5319c5e0159bc79a4449a6a1925c3edc8e8e1c22",
+    "m3_slic_candidate": "4ff44b1393b0b0b1a5fc3e27f65501e686f10879",
+    "wp11_partition_device_candidate": "ac3759bc31b54edc96e965e4c6025bc9c24724d1",
+    "wp10_guarded_deployment_candidate": "7b30f0aea1b929c89801559479cbbe3716001964",
+    "wp09_source_threshold_candidate": "22b40e3c9d5e1792c983d07d27e6938eb1bf349b",
+    "wp11_wp12_public_cli_candidate": "ea4b0f845c831180744a6af2ab991aa9648375f0"
   },
   "frozen_runtime_reference": "8289e227275eabbafbb1eaea75cf4d6b0c1e8580",
   "frozen_runtime_paths": [
@@ -54,9 +63,28 @@
     "tests/test_monitoring_probes.py",
     "tests/test_monitoring_interventions.py",
     "evaluation/g4_target.py",
-    "evaluation/g4_target_verification.py"
+    "evaluation/g4_target_verification.py",
+    "inference/wp11_frozen_deployment.py",
+    "inference/wp10_precision_deployment.py",
+    "evaluation/wp09_registered_workflow.py",
+    "scripts/ingest_wp12_wp04.py",
+    "tests/test_integrated_deployment_cli.py"
   ],
   "modules": [
+    {
+      "id": "WP12 真实三景解码缓存暖态受控对照",
+      "state": "GPU3 三景真实暖态均达既定门槛，独立复算通过，具备复审资格",
+      "evidence": "027b3833c1b8aa49ea632adf0c8e9bf06e59e9d9，原三景同权重与无标签输入36对72次加12暖身，三头分数及判决逐次一致。原buffered到cache的p50为642→179、918→246、2723→677毫秒；CUDA峰值逐景相同。审计92b93b852abba46243a89875710015602c2e77154287a0bde7483b0221b3e572。",
+      "remaining": "原buffered生产默认保留，真实结果限GPU3、CPU核24及已登记暖态。已有CPU徐州波动与洪湖RSS负项保留；真实优化、新冷态及标签访问为零。",
+      "report": "research/reports/WP12_真实三景解码缓存暖态受控对照_20261122.md"
+    },
+    {
+      "id": "WP12 已验证解码观测暖态复用",
+      "state": "工程通过，GPU3三景均达既有暖态门槛；CPU徐州波动、洪湖RSS未通过",
+      "evidence": "d06989200083495ff8b0762e4f709d0f11e0ccc7，授权LXC合成三景CPU/GPU3暖态72对144次，加24暖身；同设备三头分数与决策逐次一致。GPU3 p50 658→170、932→251、2632→628毫秒，峰值显存逐景一致。相关回归24通过、2跳过，仓库检查通过。",
+      "remaining": "工程夹具不等于真实部署；CPU负项保留，原默认buffered。真实暖态须独立新登记，冷态未测。真实优化、原GT与封存query为零。",
+      "report": "research/reports/WP12_已验证解码观测暖态复用_20261122.md"
+    },
     {
       "id": "WP12 冻结 54 冷暖端到端实测",
       "state": "GPU3 真实 54 例冷暖测量及原时间线独审完成",
@@ -659,6 +687,20 @@
       "remaining": "验证显存路径与数值一致性，登记后处理恢复。真实全54接受、复盘和同协议评分待完成。",
       "report": "research/reports/G4LightTrainvalReview_训练复盘与评分前置验收_20261107.md",
       "chat_report": "本聊天2026-11-07 Issue249训练复盘工程与异常进度。"
+    },
+    {
+      "id": "WP03 Issue505 新登记全54正式冻结评价",
+      "state": "独审完成，原冻结模型54/54正式评价完成，两项主比较均不通过",
+      "evidence": "原训练81000步，原2例与续跑52例独审，候选入口及旧回归14项通过。97098e3574997025f9245be83e2b710066b43776按独立批准在GPU0一次评分退出0，新更新0；正式回执0705c6991168598d4c41410e94a0be987017fe157db3e712886f13e483088c2c。",
+      "remaining": "原预登记结果仅用于正式报告，逐例结果隔离留容器；旧249失败单列。该测试集退出开发与调参，原批不重训。",
+      "report": "research/reports/WP03_Issue505正式负结果与开发短测归档_20261122.md"
+    },
+    {
+      "id": "WP03 Issue505 BN对齐与VCA低学习率开发短测",
+      "state": "两项三景单种子121步配对已验收，保留负结果，未扩大训练",
+      "evidence": "固定K10/V5与模型种子64。BN重估新增726步，低LR新增363步并复用旧组363步；平均融合OA 50.91%→55.08%与52.86%。徐州类6答对2/5→0/5与1/5；洪湖11/12/14融合均0/5。开发线未使用封存结果。",
+      "remaining": "单种子、每类5点限制；BN重估增加成本，低LR同卡异时成本仅描述。跨批成本不用于选型，不用测试集继续挑学习率。",
+      "report": "research/reports/WP03_Issue505正式负结果与开发短测归档_20261122.md"
     },
     {
       "id": "MON持续窗口与条件保护",
@@ -1668,9 +1710,9 @@
     {
       "id": "WP05 P4 物理 UUID 独立资源与三臂前置",
       "state": "真实独立队列已提交1200/2400步，GPU6的10/20例通过独立复算",
-      "evidence": "PR475。生产worker冻结3a6381。CPU两队列20例2400合成步，完结重入0，故障时另一worker保留60步。主审接受6f59b7a637478804ff9a47cb8acef596f93d9d54的490文件原十例保留链与15项最小回归及合并拒绝工程。读原独审30bafc44496bff71174a789e1b15b53f7cdcd581637396933a115be6e4c67e2a和冻结轨迹，十臂均在第30步选中，同组五臂三头OA和逐类召回相同，新增优化和前向0。两条路径仅用于恢复验证。WP12归档增量：270→135偶数列，活跃臂57个锚点无回退，8个实例194参数参与，4620次同点分数全部变化、0改类，4602次满足原赢家差大于最大分数变化两倍的充分条件。",
-      "remaining": "GPU6独立槽10/10、1200/1200完成，原GPU1两组10例仍0/1200。9de32c37f77826675a59884cd1f1ffa494458278 的 GPU4 单卡串行两组五臂、1200 步已有批准且本轮复核有效。GPU1和GPU4未达原显存门槛，均未续跑。GPU3通过生产算术数值资格，同卡9类合成60+2/120步后待资源，22类未启，只有未签署的串行范围草案。13500和180000暂停。",
-      "report": "research/reports/WP05_WP06_WP12_洪湖P4资源复核与决策归因_20261120.md",
+      "evidence": "PR475。生产worker冻结3a6381。CPU两队列20例2400合成步，完结重入0，故障时另一worker保留60步。主审接受6f59b7a637478804ff9a47cb8acef596f93d9d54的490文件原十例保留链与15项最小回归及合并拒绝工程。读原独审30bafc44496bff71174a789e1b15b53f7cdcd581637396933a115be6e4c67e2a和冻结轨迹，十臂均在第30步选中，同组五臂三头OA和逐类召回相同，新增优化和前向0。两条路径仅用于恢复验证。",
+      "remaining": "GPU6独立槽10/10、1200/1200完成，原GPU1两组10例仍0/1200。9de32c37f77826675a59884cd1f1ffa494458278已封存GPU4单卡串行新登记。仍为两组完整五臂、单物理槽1200步，复用GPU4完整资格。原双卡登记模式有效。真实发布待审核，接管未发生。13500和180000暂停。",
+      "report": "research/reports/WP05_WP07_WP12_短训练与释放点生产验收_20261114.md",
       "chat_report": "外部报告更正版在授权容器 runs/wp05-honghu-fit-existing-ten-erratum01/review.md，包SHA-256 90ca34f0818c724431e365aa05ddfa3ca02e74d807e6a1d2ad2e1ca243a3f34a。GPU4串行scope与待审release位于 runs/wp05-resource-migration-serial-control01。"
     },
     {
@@ -1921,10 +1963,45 @@
       "evidence": "127训练、41开发验证块，各角色9类各5点。真实生产初态13配置各82视图含48空视图，两带各45点，三头逐点复算与预检一致。39例合成走生产全程和分段共312步，完成重入0；WP12接入合成审计并保有旧表。",
       "remaining": "早期 GPU3 69% 资源拒绝保留。后续落盘的 factor4/joint 连续 4 步、分段 2+2 步和完成态零更新经第十四包只读逐位验收。后续签收的真实 39 例 2340 步见第十五包按原已发布开发点复核，独立确认、可信物理轴与完整研究待验。",
       "report": "research/reports/WP02_WP05_WP07_WP12_PaviaU固定空间发布与原生接入_20261118.md"
+    },
+    {
+      "id": "WP04 → WP12 徐州开发对照",
+      "state": "已验开发比较接入候选，待主审",
+      "evidence": "冻结 5319c5e0 中七协议 123 条记录与 96 个原始案例；徐州 K1/V5，三种子、每类五个开发点，最高单种子融合 11/45",
+      "remaining": "独立空间重复，等容量新四格训练和真实入组待审批",
+      "report": "research/reports/WP12_开发候选整合与版本边界_20261127.md"
+    },
+    {
+      "id": "M3/WP11 冻结分区、延迟加载与设备",
+      "state": "已验工程实现接入候选，待主审",
+      "evidence": "保留原生分区默认；可选固定网格和 scikit-image 0.25.2 SLIC，原分支有 GPU 同卡与回退证据",
+      "remaining": "独立标签辖区、阈值确认和跨场景评价仍待准入",
+      "report": "research/reports/WP12_开发候选整合与版本边界_20261127.md"
+    },
+    {
+      "id": "WP10 共享精度部署入口",
+      "state": "已验部署实现接入候选，待主审",
+      "evidence": "默认 FP32、CPU 单层整数可用、GPU FP32 回退、低秩稠密保护与洪湖保留全通道",
+      "remaining": "更大独立评价和硬件收益待验证",
+      "report": "research/reports/WP12_开发候选整合与版本边界_20261127.md"
+    },
+    {
+      "id": "WP09 固定源阈值与 WP12 发布恢复",
+      "state": "合成工程通过的源码接入候选，待主审",
+      "evidence": "原分支 24 合成流与两阶段冻结发布、逐类和开集分母；历史 PaviaU 无标签回执仅复核顺序与开销",
+      "remaining": "主审确认真实源支持、源验证及独立已知/未知评价；真实遗忘、开集精度与新训练待准入",
+      "report": "research/reports/WP12_开发候选整合与版本边界_20261127.md"
+    },
+    {
+      "id": "WP12 开发候选整合",
+      "state": "版本候选待主审",
+      "evidence": "保留冻结 54 历史版本、热读取授权门与原证据消费者；项目冻结模型与训练默认由原仓库检查校验",
+      "remaining": "真实训练、查询评分和独立数据准入按主审授权执行；CI 运行器尚待登记",
+      "report": "research/reports/WP12_开发候选整合与版本边界_20261127.md"
     }
   ],
   "primary_workspace": "F:/E2E_VCA",
-  "execution_state": "wp11_deployment_cost_candidate_pending_review_wp05_long_training_paused",
+  "execution_state": "candidate_integration_primary_wp04_wp09_wp10_wp11_wp12_pending_main_review_no_research_training",
   "long_training_policy": "2026-11-06用户继续授权按两份计划逐模块推进和自主登记长训练，启动前报预算/估时、结束复盘、每模块验收后在本聊天报告；模块搭建/一般测试/独立验收/冻结评价在正常工作回合连续完成；仅已启动的真实长训练使用定时值守，批次完成或失败后停止本批次定时值守，在最后一次唤醒的当前回合承接验收/诊断和下一依赖；下一已登记长训练实际启动才重新启用值守，短测不启用。2026-11-07用户指定真实训练使用2～3张卡。长训练启动后定时任务值守，正常工作回合继续模块搭建、改进和测试。2026-11-08用户要求暂缓长训练，继续按既有清单完成模块搭建和测试。 2026-11-10用户要求完成当前Issue333后停止新模块，按两份技术文档汇报已完成/未完成、剩余搭建测试计划及现有指标；未收到新的恢复指令前不启动下一模块或训练。 2026-11-10随后用户明确恢复按WP01—WP12连续推进，模块交付后继续；真实长训练另行登记预算/估时并实际启动后交给定时值守。本轮Issue335先补CUR登记/恢复CLI，尚未启动真实长训练。",
   "main_merge_evidence": [
     {

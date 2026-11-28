@@ -55,6 +55,10 @@ def main(argv=None):
         from evaluation.wp12_wp10_deployment import main as wp10_deployment
 
         return wp10_deployment([arg for arg in argv if arg != "--wp10-deployment-review"])
+    if "--wp09-workflow" in argv:
+        from evaluation.wp09_registered_workflow import main as wp09_workflow
+
+        return wp09_workflow([arg for arg in argv if arg != "--wp09-workflow"])
     if "--wp09-review" in argv:
         from evaluation.wp09_stream_review import main as wp09_review
 

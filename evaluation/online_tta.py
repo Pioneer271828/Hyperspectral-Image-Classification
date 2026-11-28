@@ -76,7 +76,7 @@ def _frozen_run(item, admission, label_path):
                                           replay_sha256=replay_pin['sha256'])
 
 
-def _labels(pin, reg):
+def _labels(pin, reg, *, reserved_directory=None, expected_files=None):
     if reg.provenance['kind'] == 'e4b_pavia_development':
         raise ValueError('The historical E4b observation release carries no scoring authorization')
     if reg.provenance['kind'] != 'synthetic':
@@ -100,9 +100,13 @@ def _labels(pin, reg):
                 or row['observation_sha256'] != reg.observation_identity(frames[frame_id])):
             raise ValueError('Label frame ID or observation pin differs')
         validate_pin(row['labels'])
+        if reserved_directory is not None and not Path(row['labels']['path']).is_relative_to(reserved_directory):
+            raise ValueError('Release label belongs outside its declared custody directory')
         pins[frame_id] = row['labels']
     if pins.keys() != frames.keys():
         raise ValueError('Label release omits registered frame identities')
+    if expected_files is not None and {tuple(sorted(p.items())) for p in pins.values()} != expected_files:
+        raise ValueError('Released label files differ from the deferred pins')
     for frame_id, label_pin in pins.items():
         data = np.load(BytesIO(read_pin(label_pin)), allow_pickle=False)
         shape = reg.observation(frames[frame_id]['observation'])[0].shape[:2]
@@ -248,6 +252,15 @@ def score(plan, *, authority=None, admission=None, source_receipt=None):
         labels = released_labels(request['label_release'], expected, reg)
         small = [c for c, n in zip(expected['class_ids'], expected['training_class_counts'], strict=True) if n <= 25]
         scope = expected['scope']
+    result = _score_verified_runs(request['version'], runs, reg, labels, small, scope)
+    if expected is not None:
+        result.update(label_release=request['label_release'], authority_sha256=authority['sha256'],
+                      source_admission_sha256=admission['sha256'], label_role=expected['role'],
+                      annotation_costs=reg.admission['annotation_costs'])
+    return result
+
+
+def _score_verified_runs(version, runs, reg, labels, small, scope):
     online, forgetting, frame_scores = {}, {}, {}
     for key, (reg, predictions, replay) in runs.items():
         classes = reg.value['class_ids']
@@ -279,13 +292,8 @@ def score(plan, *, authority=None, admission=None, source_receipt=None):
             first_frame_id=trajectory[0]['frame_id'], last_frame_id=trajectory[-1]['frame_id'],
             worst_frame_versus_frozen=_worst(trajectory, 'versus_frozen', small),
             worst_frame_versus_original_order=_worst(trajectory, 'versus_original_order', small))
-    result = dict(version=request['version'], population=reg.population, label_scope=scope, small_classes=small,
+    return dict(version=version, population=reg.population, label_scope=scope, small_classes=small,
                 online_pre_update=result, zero_update_anchor_replay=forgetting)
-    if expected is not None:
-        result.update(label_release=request['label_release'], authority_sha256=authority['sha256'],
-                      source_admission_sha256=admission['sha256'], label_role=expected['role'],
-                      annotation_costs=reg.admission['annotation_costs'])
-    return result
 
 
 def main():

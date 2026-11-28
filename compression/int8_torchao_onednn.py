@@ -19,6 +19,14 @@ from transfer import matched_route_admission as admission, registered_developmen
 POLICY = "wp10-static-int8-onednn-frozen-v1"
 
 
+class OneDNNUnavailable(RuntimeError):
+    """The frozen integer package cannot be packed by the current backend."""
+
+
+class OneDNNExecutionError(RuntimeError):
+    """The actual integer operator failed after successful package admission."""
+
+
 class OneDNNPointConv(nn.Module):
     """Keep the exact packed WP10 affine contract and invoke the CPU U8/S8 kernel."""
 
@@ -36,8 +44,13 @@ class OneDNNPointConv(nn.Module):
         self.weight_zero = torch.zeros_like(self.weight_scales, dtype=torch.int64)
         self.bias = None if p["bias"] is None else p["bias"].detach().clone()
         weight = p["weight"][:, :, None, None].contiguous()
-        self.packed = torch.ops.onednn.qconv_prepack(weight, self.weight_scales, self.input_scale,
-                                                    self.input_zero, [1, 1], [0, 0], [1, 1], 1, None)
+        try:
+            self.packed = torch.ops.onednn.qconv_prepack(weight, self.weight_scales, self.input_scale,
+                                                        self.input_zero, [1, 1], [0, 0], [1, 1], 1, None)
+        except (RuntimeError, NotImplementedError) as error:
+            if isinstance(error, torch.OutOfMemoryError):
+                raise
+            raise OneDNNUnavailable("Frozen oneDNN prepack failed") from error
         if self.packed.layout != torch._mkldnn:
             raise ValueError("oneDNN kernel failed to prepack integer weights")
         self.eval()
@@ -58,9 +71,15 @@ class OneDNNPointConv(nn.Module):
         return quantized.int_repr().contiguous(memory_format=torch.channels_last)
 
     def integer_conv(self, codes):
-        return torch.ops.onednn.qconv2d_pointwise(codes, self.input_scale, self.input_zero, self.packed, self.weight_scales,
-                    self.weight_zero, self.bias, [1, 1], [0, 0], [1, 1], 1,
-                    self.output_scale, self.output_zero, torch.uint8, "none", [], "")
+        try:
+            return torch.ops.onednn.qconv2d_pointwise(
+                codes, self.input_scale, self.input_zero, self.packed, self.weight_scales,
+                self.weight_zero, self.bias, [1, 1], [0, 0], [1, 1], 1,
+                self.output_scale, self.output_zero, torch.uint8, "none", [], "")
+        except (RuntimeError, NotImplementedError) as error:
+            if isinstance(error, torch.OutOfMemoryError):
+                raise
+            raise OneDNNExecutionError("Frozen oneDNN integer convolution failed") from error
 
     def dequantize_output(self, codes):
         return (codes.to(torch.float32) - self.output_zero) * self.output_scale

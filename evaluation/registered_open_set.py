@@ -67,7 +67,7 @@ def _pack(pin, role, dimensions, classes):
     return data
 
 
-def _load(registration):
+def _load(registration, *, source_validation_only=False):
     v = json.loads(_read(registration))
     fields = {'version','kind','known','unknown','heads','temperature','known_coverage',
               'model','model_evidence','source','calibration','evaluation','labels','calibration_role'}
@@ -75,7 +75,21 @@ def _load(registration):
             v['heads'] != HEADS or v['calibration_role'] not in ('source_validation','independent_development') or
             not isinstance(v['temperature'], list) or len(v['temperature']) != 3):
         raise ValueError('Complete three-head development registration required')
+    if source_validation_only and v['calibration_role'] != 'source_validation':
+        raise ValueError('WP09 workflow requires a separate source validation role')
     _deferred(v['labels'])
+    pins = [registration] + [v[k] for k in ('model','model_evidence','source','calibration','evaluation')]
+    paths = [str(Path(p['path']).resolve()) for p in pins]
+    if len(set(paths))!=len(paths) or str(Path(v['labels']['path']).resolve()) in paths:
+        raise ValueError('Input roles must have distinct files')
+    if source_validation_only:
+        deferred = Path(v['labels']['path'])
+        for path in paths:
+            try:
+                if Path(path).samefile(deferred):
+                    raise ValueError('A deferred label file cannot alias source-role evidence')
+            except FileNotFoundError:
+                pass
     _read(v['model'])
     evidence = json.loads(_read(v['model_evidence']))
     ef = {'version','kind','model_sha256','known','heads','feature_dimensions',
@@ -96,10 +110,6 @@ def _load(registration):
     groups = [set(d['sample_ids'].tolist()) for d in (source,cal,target)]
     if any(groups[i] & groups[j] for i,j in ((0,1),(0,2),(1,2))):
         raise ValueError('Source/calibration/evaluation sample overlap')
-    pins = [registration] + [v[k] for k in ('model','model_evidence','source','calibration','evaluation')]
-    paths = [str(Path(p['path']).resolve()) for p in pins]
-    if len(set(paths))!=len(paths) or str(Path(v['labels']['path']).resolve()) in paths:
-        raise ValueError('Input roles must have distinct files')
     return v,evidence,source,cal,target,pins
 
 
@@ -131,8 +141,9 @@ def _output(out,pins):
     return out
 
 
-def freeze_open_set(registration,*,out,expected_commit):
-    code=_code(expected_commit);v,e,source,cal,target,pins=_load(registration)
+def freeze_open_set(registration,*,out,expected_commit,source_validation_only=False):
+    code=_code(expected_commit)
+    v,e,source,cal,target,pins=_load(registration, source_validation_only=source_validation_only)
     rows=_rows(v,e,source,cal);folder=_output(out,pins+[v['labels']])
     for pin in pins:_read(pin)
     require_frozen_code(code)

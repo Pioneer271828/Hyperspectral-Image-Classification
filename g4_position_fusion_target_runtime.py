@@ -29,7 +29,7 @@ POLICY = "g4_m8_position_fusion_target_ordered_engineering_v1"
 KEY = "target_position_fusion_policy"
 
 
-def settings(base, condition):
+def settings(base, condition, *, exact_capacity=False):
     declared = configuration(condition)
     config = ResearchConfig.from_dict(base["config"])
     if (base["profile"] != "engineering" or base["optimizer_steps"] != 12 or KEY in base
@@ -49,6 +49,10 @@ def settings(base, condition):
     if config.model.region_residual_mode != "none":
         value[KEY].update(combination_version=1, residual_mode=config.model.region_residual_mode,
                          source="accepted_full_m4_source_position_fusion_target")
+    if exact_capacity:
+        if config.model.region_residual_mode != "capacity_control" or base["method"] != METHODS[0]:
+            raise ValueError("Exact position-fusion capacity control requires scratch")
+        value[KEY]["exact_capacity"] = True
     return value
 
 
@@ -59,7 +63,7 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
         base = support_settings(options["target"], options["method"], options["config"]["model"]["region_residual_mode"], model_seed=options["model_seed"],
             support_seed=options["support_seed"], per_class=options["support_per_class"],
             binding=options["support_context_binding"], source_spec=self.source_spec, device=options["config"]["device"])
-        expected = settings(base, options[KEY]["condition"])
+        expected = settings(base, options[KEY]["condition"], exact_capacity=options[KEY].get("exact_capacity", False))
         if {k: v for k, v in options.items() if k not in ("executed_optimizer_steps", "selected_step")} != expected:
             raise ValueError("Position-fusion condition/source/context/configuration/budget differs")
         return True
@@ -70,7 +74,8 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
             raise ValueError("Position-fusion target class counts differ")
         model, self.position_binding = initialize(target, self.settings["method"], self.settings[KEY]["condition"],
             model_seed=self.settings["model_seed"], head_seed=self.settings["head_seed"],
-            source_spec=self.source_spec, device=config.device, mode=config.model.region_residual_mode)
+            source_spec=self.source_spec, device=config.device, mode=config.model.region_residual_mode,
+            exact_capacity=self.settings[KEY].get("exact_capacity", False))
         self.initialization = copy.deepcopy(self.position_binding["base_binding"]["base_initialization"])
         return model
 
@@ -175,10 +180,10 @@ class PositionFusionTargetRuntime(NoneSupportTargetRuntime):
         return model
 
 
-def prepare(manifest, manifest_sha256, out, *, condition, mode="none", **kwargs):
+def prepare(manifest, manifest_sha256, out, *, condition, mode="none", exact_capacity=False, **kwargs):
     configuration(condition)
     base, items, provenance, code, _, guard = support_prepare(manifest, manifest_sha256, out, mode=mode, **kwargs)
-    options = settings(base, condition)
+    options = settings(base, condition, exact_capacity=exact_capacity)
     runtime = PositionFusionTargetRuntime(options, items, out, source_spec=kwargs.get("source_spec"))
     return options, items, {**provenance, "position_fusion_runtime": POLICY, "position_fusion_policy_sha256": digest(options[KEY])}, code, runtime, guard
 
